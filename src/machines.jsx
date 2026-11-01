@@ -1,0 +1,3218 @@
+import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three'; // testované s three r128
+
+/* Interaktívne modely konvenčných obrábacích strojov (React + Three.js r128).
+   Mierka: 1 jednotka scény = 100 mm, obsluha stojí na strane +Z. */
+
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const approach = (cur, target, step) => { const d = target - cur; return Math.abs(d) <= step ? target : cur + Math.sign(d) * step; };
+const logNear = (arr, v) => arr.reduce((bi, a, i) => (Math.abs(Math.log(a / v)) < Math.abs(Math.log(arr[bi] / v)) ? i : bi), 0);
+const fanAngles = (n, a) => Array.from({ length: n }, (_, i) => (n === 1 ? 0 : a - i * 2 * a / (n - 1)));
+
+const CSS = `
+:root{
+  --bg:#eef0eb; --panel:#fbfcf9; --panel-2:#f0f2ec; --border:#d9ddd3; --text:#1c2419; --muted:#5d6858;
+  --accent:#4f7f3b; --accent-soft:#e1ecd8; --run:#2f8a45; --stop:#bf3a2c;
+  --danger:#b3362a; --danger-soft:#f9e3df; --warn:#94600a; --warn-soft:#fbefd7; --info:#285f9c; --info-soft:#e1ecf8;
+  --scene-bg:#dde2da; --floor:#b7bcb2; --grid-1:#8b9386; --grid-2:#a6ac9f;
+  --dro-bg:#0b100c; --dro-ink:#69f28f; --hl:#ff8a1f;
+  --f-ui:"Barlow",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
+  --f-head:"Barlow Condensed","Barlow",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"Share Tech Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111511; --panel:#171c16; --panel-2:#1f251d; --border:#2c3429; --text:#e5ebe1; --muted:#98a492;
+  --accent:#7fb565; --accent-soft:#25331f; --run:#2f8a45; --stop:#bf3a2c;
+  --danger:#f07767; --danger-soft:#3a1d19; --warn:#efb453; --warn-soft:#382b14; --info:#76acec; --info-soft:#162a40;
+  --scene-bg:#1a1f19; --floor:#272d25; --grid-1:#485244; --grid-2:#343b31; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#111511; --panel:#171c16; --panel-2:#1f251d; --border:#2c3429; --text:#e5ebe1; --muted:#98a492;
+  --accent:#7fb565; --accent-soft:#25331f; --run:#2f8a45; --stop:#bf3a2c;
+  --danger:#f07767; --danger-soft:#3a1d19; --warn:#efb453; --warn-soft:#382b14; --info:#76acec; --info-soft:#162a40;
+  --scene-bg:#1a1f19; --floor:#272d25; --grid-1:#485244; --grid-2:#343b31; color-scheme:dark;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
+.machine-app{background:var(--bg);color:var(--text);font-family:var(--f-ui);min-height:100%}
+.scene-wrap{height:58vh;min-height:320px;background:var(--scene-bg);touch-action:none}
+.panel{background:var(--panel);border-top:1px solid var(--border)}
+@media (min-width:768px){
+  .machine-app{height:100%}
+  .scene-wrap{height:auto;min-height:0}
+  .panel{width:380px;flex:none;border-top:0;border-left:1px solid var(--border);height:100%;overflow-y:auto}
+}
+.sec{padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--border)}
+.sec-title{font-family:var(--f-head);font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
+.app-title{font-family:var(--f-head);font-size:26px;line-height:1.05;font-weight:700;margin:0;text-wrap:balance}
+.muted{color:var(--muted)} .ink{color:var(--text)} .tnum{font-variant-numeric:tabular-nums}
+.range{width:100%;accent-color:var(--accent);margin-top:6px;cursor:pointer}
+.range:disabled{opacity:.45;cursor:not-allowed}
+.btn{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s;font-family:var(--f-ui)}
+.btn:hover{border-color:var(--accent)}
+.btn.active{background:var(--accent-soft);border-color:var(--accent)}
+.btn-run{width:100%;border-radius:9px;padding:12px;font-weight:700;font-size:16px;letter-spacing:.04em;text-transform:uppercase;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--f-head)}
+.btn-run.start{background:var(--run)} .btn-run.stop{background:var(--stop)}
+.btn:focus-visible,.btn-run:focus-visible,.range:focus-visible,.part-label:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dro{background:var(--dro-bg);border-radius:8px;padding:10px 14px;font-family:var(--f-mono);color:var(--dro-ink);box-shadow:inset 0 0 0 1px #000,inset 0 2px 12px rgba(0,0,0,.65)}
+.dro-row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.dro-row b{font-size:28px;font-weight:400;letter-spacing:.06em;text-shadow:0 0 8px rgba(105,242,143,.45)}
+.dro-sub{display:flex;justify-content:space-between;gap:8px;font-size:13px;opacity:.78;margin-top:4px;border-top:1px solid rgba(105,242,143,.2);padding-top:6px}
+.msg{font-size:13px;border-radius:7px;padding:8px 10px;margin-top:10px;min-height:40px;display:flex;align-items:center;gap:8px;line-height:1.3}
+.msg-idle{background:var(--panel-2);color:var(--muted)}
+.msg-run{background:var(--accent-soft);color:var(--text)}
+.msg-warn{background:var(--warn-soft);color:var(--warn)}
+.msg-danger{background:var(--danger-soft);color:var(--danger)}
+.msg-info{background:var(--info-soft);color:var(--info)}
+.lamp{width:9px;height:9px;border-radius:50%;flex:none;background:currentColor}
+.sw{width:36px;height:20px;border-radius:999px;background:var(--border);position:relative;transition:background .15s;flex:none}
+.sw i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.sw.on{background:var(--accent)} .sw.on i{left:18px}
+.part-label{position:absolute;left:0;top:0;opacity:0;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(18,24,17,.8);color:#fff;border:1px solid rgba(255,255,255,.2);white-space:nowrap;cursor:pointer;will-change:transform;font-family:var(--f-ui);transition:opacity .2s}
+.part-label.is-active{background:var(--hl);color:#1b1204;border-color:#ffc58f}
+.chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(18,24,17,.78);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.hint{font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:4px 8px;border-radius:6px}
+.part-btn{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:var(--f-ui)}
+.part-btn:hover{border-color:var(--hl)}
+.part-btn.active{background:var(--hl);border-color:var(--hl);color:#1b1204}
+.desc{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin-top:10px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.seg button{padding:3px 9px;font-size:12px;font-weight:600;background:var(--panel-2);color:var(--muted);border:0;cursor:pointer;font-family:var(--f-ui)}
+.seg button.on{background:var(--accent);color:#fff}
+.mode-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:rgba(18,24,17,.82);border:1px solid rgba(255,255,255,.18)}
+.mode-seg button{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:7px;border:0;background:transparent;color:#d9e0d5;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f-ui)}
+.mode-seg button.on{background:var(--accent);color:#fff}
+.mode-seg button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.manual-frame{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px var(--accent)}
+.ctl-tip{position:absolute;left:0;top:0;display:none;max-width:250px;pointer-events:none;z-index:5;background:rgba(14,19,14,.92);color:#fff;border:1px solid rgba(120,170,255,.45);border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.35}
+.ctl-tip b{font-weight:700} .ctl-tip span{display:block;opacity:.72;font-size:11.5px;margin-top:2px}
+.ctl-list{font-size:12.5px;line-height:1.45;margin-top:8px;padding-left:16px;list-style:disc;color:var(--muted)}
+.ctl-list li{margin-top:3px} .ctl-list b{color:var(--text);font-weight:600}
+.menu{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--f-ui)}
+.menu-inner{max-width:1240px;margin:0 auto;padding-top:clamp(28px,6vh,64px);padding-bottom:48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.menu-kicker{font-family:var(--f-head);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.menu-title{font-family:var(--f-head);font-size:clamp(32px,5.4vw,52px);line-height:1;font-weight:700;margin:8px 0 12px;text-wrap:balance}
+.menu-lead{font-size:16px;line-height:1.5;color:var(--muted);max-width:62ch}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;color:var(--text);font-family:var(--f-ui);padding:0;width:100%}
+.card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 10px 26px -18px rgba(0,0,0,.5)}
+.card-art{background:var(--scene-bg);border-bottom:1px solid var(--border);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--accent);width:100%}
+.card-art svg{width:86%;height:auto}
+.card-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card-meta{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.card-name{font-family:var(--f-head);font-size:26px;font-weight:700;line-height:1.02}
+.spec{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.spec span{font-size:12px;padding:3px 8px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted)}
+.card-cta{margin-top:auto;padding-top:8px;font-weight:700;color:var(--accent);font-size:14px}
+@media (prefers-reduced-motion: reduce){.sw i,.part-label,.card{transition:none}}
+`;
+
+// ---------- ovládanie kamery ----------
+function createOrbit(camera, dom, onUser, enabled) {
+  const target = new THREE.Vector3();
+  const sph = { r: 20, theta: 0, phi: 1 };
+  const sync = () => {
+    const o = camera.position.clone().sub(target);
+    sph.r = o.length(); sph.theta = Math.atan2(o.x, o.z); sph.phi = Math.acos(clamp(o.y / sph.r, -1, 1));
+  };
+  const apply = () => {
+    sph.phi = clamp(sph.phi, 0.03, 1.5); sph.r = clamp(sph.r, 4, 50);
+    const s = Math.sin(sph.phi);
+    camera.position.set(target.x + sph.r * s * Math.sin(sph.theta), target.y + sph.r * Math.cos(sph.phi), target.z + sph.r * s * Math.cos(sph.theta));
+    camera.lookAt(target);
+  };
+  const vR = new THREE.Vector3(), vU = new THREE.Vector3();
+  const pan = (dx, dy) => {
+    camera.updateMatrix();
+    vR.setFromMatrixColumn(camera.matrix, 0); vU.setFromMatrixColumn(camera.matrix, 1);
+    const k = sph.r * 0.0017;
+    target.addScaledVector(vR, -dx * k).addScaledVector(vU, dy * k);
+    target.y = clamp(target.y, 0, 16);
+  };
+  const pts = new Map();
+  let mode = null, pinch = 0, mid = null;
+  const two = () => {
+    const [a, b] = [...pts.values()];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  };
+  const down = (e) => {
+    if (!enabled()) return;
+    try { dom.setPointerCapture(e.pointerId); } catch (err) { /* ignorované */ }
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) mode = (e.button === 2 || e.shiftKey) ? 'pan' : 'rot';
+    else if (pts.size === 2) { mode = 'pinch'; const t = two(); pinch = t.d; mid = t.m; }
+  };
+  const move = (e) => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    if (!enabled()) { pts.clear(); mode = null; return; }
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (mode === 'rot') { sph.theta -= dx * 0.0065; sph.phi -= dy * 0.0065; }
+    else if (mode === 'pan') pan(dx, dy);
+    else if (mode === 'pinch' && pts.size >= 2) {
+      const t = two(); if (t.d > 0) sph.r *= pinch / t.d; pinch = t.d;
+      pan(t.m.x - mid.x, t.m.y - mid.y); mid = t.m;
+    } else return;
+    onUser(); apply();
+  };
+  const up = (e) => { pts.delete(e.pointerId); mode = pts.size === 1 ? 'rot' : null; };
+  const wheel = (e) => { if (!enabled()) return; e.preventDefault(); sph.r *= Math.exp(e.deltaY * 0.0012); onUser(); apply(); };
+  const ctx = (e) => e.preventDefault();
+  dom.addEventListener('pointerdown', down); dom.addEventListener('pointermove', move);
+  dom.addEventListener('pointerup', up); dom.addEventListener('pointercancel', up);
+  dom.addEventListener('wheel', wheel, { passive: false }); dom.addEventListener('contextmenu', ctx);
+  const dispose = () => {
+    dom.removeEventListener('pointerdown', down); dom.removeEventListener('pointermove', move);
+    dom.removeEventListener('pointerup', up); dom.removeEventListener('pointercancel', up);
+    dom.removeEventListener('wheel', wheel); dom.removeEventListener('contextmenu', ctx);
+  };
+  return { target, sync, apply, dispose };
+}
+
+// ---------- spoločná scéna: renderer, prostredie, svetlá, podlaha ----------
+function createStage(mount) {
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.domElement.style.display = 'block';
+  mount.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+
+  // jednoduché prostredie pre odlesky kovov
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  envScene.add(new THREE.Mesh(new THREE.BoxGeometry(60, 30, 60), new THREE.MeshBasicMaterial({ color: 0x4d5450, side: THREE.BackSide })));
+  const envPanel = (x, y, z, w, h, col) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); envScene.add(m);
+  };
+  envPanel(0, 14, 0, 34, 12, 0xffffff); envPanel(-26, 6, 12, 12, 9, 0xdde6ff); envPanel(22, 6, -18, 14, 9, 0xfff0dc);
+  const envRT = pmrem.fromScene(envScene, 0.04);
+  scene.environment = envRT.texture;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3f4a3d, 0.35));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.25);
+  sun.position.set(-8, 20, 14); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 });
+  sun.shadow.bias = -0.0005;
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(12, 8, -10); scene.add(fill);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.95, metalness: 0 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  let grid = null;
+  const applyTheme = () => {
+    const cs = getComputedStyle(document.documentElement);
+    const col = (n, d) => new THREE.Color((cs.getPropertyValue(n) || '').trim() || d).convertSRGBToLinear();
+    scene.background = col('--scene-bg', '#dde2da');
+    scene.fog = new THREE.Fog(scene.background, 45, 95);
+    floor.material.color = col('--floor', '#b7bcb2');
+    if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+    grid = new THREE.GridHelper(80, 80, col('--grid-1', '#8b9386'), col('--grid-2', '#a6ac9f'));
+    grid.position.y = 0.005; scene.add(grid);
+  };
+  applyTheme();
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener('change', applyTheme);
+  const mo = new MutationObserver(applyTheme);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  const resize = () => {
+    const w = mount.clientWidth || 1, h = mount.clientHeight || 1;
+    renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+  };
+  const ro = new ResizeObserver(resize); ro.observe(mount); resize();
+
+  const dispose = () => {
+    ro.disconnect(); mq.removeEventListener('change', applyTheme); mo.disconnect();
+    scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+    });
+    envRT.dispose(); pmrem.dispose(); renderer.dispose();
+    try { renderer.forceContextLoss(); } catch (err) { /* ignorované */ }
+    if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+  };
+  return { renderer, scene, camera, dispose };
+}
+
+// ---------- materiály a súprava tvarov ----------
+const std = (hex, roughness, metalness, o = {}) => new THREE.MeshStandardMaterial({ color: new THREE.Color(hex).convertSRGBToLinear(), roughness, metalness, ...o });
+const mkTex = (w, h, draw, rx, ry) => {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+  const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(rx, ry);
+  tx.encoding = THREE.sRGBEncoding; tx.anisotropy = 4; return tx;
+};
+const baseMats = (g1, g2, g3) => ({
+  green: std(g1, 0.6, 0.05), greenDark: std(g2, 0.65, 0.05), greenDeep: std(g3, 0.7, 0.05),
+  steel: std(0xc9ced2, 0.3, 0.85), steelDark: std(0x81888e, 0.4, 0.75), ways: std(0xdfe3e6, 0.18, 0.9),
+  black: std(0x1d1f21, 0.45, 0.2), red: std(0xc8322b, 0.45, 0.1), yellow: std(0xf1c40f, 0.5, 0.05),
+  blue: std(0x1f6fd1, 0.5, 0.05), white: std(0xeceee8, 0.6, 0), panel: std(0x2b3035, 0.6, 0.2),
+  btnGreen: std(0x2e9b4a, 0.45, 0.05), insert: std(0xd4ab38, 0.35, 0.8), lamp: std(0x1f5f33, 0.4, 0.1),
+});
+
+function makeKit(M) {
+  const add = (p, geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.castShadow = true; o.receiveShadow = true; o.position.set(x, y, z); p.add(o); return o; };
+  const box = (p, x0, x1, y0, y1, z0, z1, m) => add(p, new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  const cylX = (p, r0, r1, x0, x1, y, z, m, seg = 32) => { const g = new THREE.CylinderGeometry(r1, r0, x1 - x0, seg); g.rotateZ(-Math.PI / 2); return add(p, g, m, (x0 + x1) / 2, y, z); };
+  const cylY = (p, r0, r1, y0, y1, x, z, m, seg = 24) => add(p, new THREE.CylinderGeometry(r1, r0, y1 - y0, seg), m, x, (y0 + y1) / 2, z);
+  const cylZ = (p, r0, r1, z0, z1, x, y, m, seg = 24) => { const g = new THREE.CylinderGeometry(r1, r0, z1 - z0, seg); g.rotateX(Math.PI / 2); return add(p, g, m, x, y, (z0 + z1) / 2); };
+  const ball = (p, r, x, y, z, m) => add(p, new THREE.SphereGeometry(r, 16, 12), m, x, y, z);
+  const lever = (p, x, y, z, len, rx, rz, knob = M.black) => {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.set(rx, 0, rz); p.add(g);
+    cylY(g, 0.045, 0.035, 0, len, 0, 0, M.steel, 12); ball(g, 0.11, 0, len, 0, knob); ball(g, 0.09, 0, 0, 0, M.steelDark);
+    return g;
+  };
+  // neviditeľná väčšia úchopová zóna pre malé ovládacie prvky
+  const hitMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+  const hitProxy = (p, r, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), hitMat); m.position.set(x, y, z); p.add(m); };
+  // páka na otočnom čape: uhol polohy = pivot.rotation.z
+  const pivotLever = (p, x, y, z, len, tilt) => {
+    const pv = new THREE.Group(); pv.position.set(x, y, z); p.add(pv);
+    hitProxy(lever(pv, 0, 0, 0, len, tilt, 0), 0.2, 0, len * 0.8, 0);
+    return pv;
+  };
+  const detents = (p, x, y, z, r, angles, s = 0.035) => angles.forEach((a) => cylZ(p, s, s, z, z + 0.012, x - Math.sin(a) * r, y + Math.cos(a) * r, M.white, 10));
+  // ručné koleso: os otáčania = lokálna Z (pre 'x' / '-x' otočená na svetovú ±X)
+  const handwheel = (p, R, x, y, z, axis, crankLen) => {
+    const outer = new THREE.Group(); outer.position.set(x, y, z);
+    if (axis === 'x') outer.rotation.y = Math.PI / 2;
+    if (axis === '-x') outer.rotation.y = -Math.PI / 2;
+    p.add(outer);
+    const spin = new THREE.Group(); outer.add(spin);
+    add(spin, new THREE.TorusGeometry(R, R * 0.075, 10, 40), M.steel);
+    cylZ(spin, R * 0.2, R * 0.2, -0.12, 0.12, 0, 0, M.steel);
+    for (let i = 0; i < 3; i++) {
+      const a = i * TAU / 3 + Math.PI / 2;
+      const s = add(spin, new THREE.BoxGeometry(R * 0.85, R * 0.09, R * 0.07), M.steel, Math.cos(a) * R * 0.52, Math.sin(a) * R * 0.52, 0);
+      s.rotation.z = a;
+    }
+    const hx = Math.cos(-Math.PI / 6) * R * 0.95, hy = Math.sin(-Math.PI / 6) * R * 0.95;
+    cylZ(spin, R * 0.07, R * 0.06, 0, crankLen, hx, hy, M.black, 12); ball(spin, R * 0.1, hx, hy, crankLen, M.black);
+    return spin;
+  };
+  // kľuka s jedným ramenom, os otáčania = lokálna Z
+  const crank = (p, len, x, y, z) => {
+    const spin = new THREE.Group(); spin.position.set(x, y, z); p.add(spin);
+    cylZ(spin, 0.13, 0.13, -0.06, 0.1, 0, 0, M.steel, 20);
+    add(spin, new THREE.BoxGeometry(len, 0.1, 0.07), M.steel, len / 2, 0, 0.06);
+    cylZ(spin, 0.055, 0.05, 0.09, 0.42, len, 0, M.black, 12); ball(spin, 0.075, len, 0, 0.42, M.black);
+    hitProxy(spin, len * 0.62, len * 0.5, 0, 0.15);
+    return spin;
+  };
+  // pomocná skupina pre bočné steny: lokálna +Z = normála steny
+  const face = (p, x, y, z, ry) => { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; p.add(g); return g; };
+  // valec natiahnutý medzi dvoma bodmi (tyče, hadice, prúd chladiva)
+  const up = new THREE.Vector3(0, 1, 0);
+  const orient = (o, a, b) => { const d = b.clone().sub(a); o.position.copy(a).addScaledVector(d, 0.5); o.scale.set(1, d.length(), 1); o.quaternion.setFromUnitVectors(up, d.normalize()); };
+  const rod = (p, a, b, r, m, seg = 12) => { const o = add(p, new THREE.CylinderGeometry(r, r, 1, seg), m); orient(o, a, b); return o; };
+  return { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel, crank, face, orient, rod };
+}
+
+// ---------- častice: triesky a iskry ----------
+function createParticles(scene, geo, mat, n, shadow = true) {
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(geo, mat); m.visible = false; m.castShadow = shadow; scene.add(m);
+    list.push({ m, v: new THREE.Vector3(), w: new THREE.Vector3(), life: 0, rest: false, g: 14 });
+  }
+  let idx = 0;
+  const spawn = (p, v, life, g = 14, spin = 20) => {
+    const ch = list[idx++ % n];
+    ch.m.position.copy(p); ch.v.copy(v); ch.w.set(Math.random() * spin, Math.random() * spin, Math.random() * spin);
+    Object.assign(ch, { life, g, rest: false }); ch.m.visible = true;
+  };
+  const update = (dt, floorAt) => {
+    for (const ch of list) {
+      if (ch.life <= 0) continue;
+      ch.life -= dt;
+      if (ch.life <= 0) { ch.m.visible = false; continue; }
+      if (ch.rest) continue;
+      ch.v.y -= ch.g * dt; ch.m.position.addScaledVector(ch.v, dt);
+      ch.m.rotation.x += ch.w.x * dt; ch.m.rotation.y += ch.w.y * dt; ch.m.rotation.z += ch.w.z * dt;
+      const fy = floorAt(ch.m.position);
+      if (ch.m.position.y <= fy && ch.v.y < 0) { ch.m.position.y = fy; ch.rest = true; }
+    }
+  };
+  return { spawn, update };
+}
+
+// ---------- výšková mapa obrobku: horná plocha + bočné steny, obrobené miesta sú svetlé ----------
+function createHeightField({ NX, NZ, W, D, H, raw, cut, mat }) {
+  const VN = (NX + 1) * (NZ + 1), dX = W / NX, dZ = D / NZ;
+  const hgt = new Float32Array(VN).fill(H), mask = new Uint8Array(VN);
+  const GX = NX + 3, GZ = NZ + 3, pos = new Float32Array(GX * GZ * 3), col = new Float32Array(GX * GZ * 3), idx = [];
+  for (let j = 0; j < GZ - 1; j++) for (let i = 0; i < GX - 1; i++) { const a = j * GX + i, d = a + GX; idx.push(a, d, a + 1, a + 1, d, d + 1); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx);
+  const RAW = new THREE.Color(raw).convertSRGBToLinear(), CUT = new THREE.Color(cut).convertSRGBToLinear();
+  const rebuild = () => {
+    for (let jj = 0; jj < GZ; jj++) for (let ii = 0; ii < GX; ii++) {
+      const i = clamp(ii - 1, 0, NX), j = clamp(jj - 1, 0, NZ), ring = ii === 0 || jj === 0 || ii === GX - 1 || jj === GZ - 1;
+      const k = jj * GX + ii, vi = j * (NX + 1) + i, c3 = !ring && mask[vi] ? CUT : RAW;
+      pos[k * 3] = -W / 2 + i * dX; pos[k * 3 + 1] = ring ? 0 : hgt[vi]; pos[k * 3 + 2] = -D / 2 + j * dZ;
+      col[k * 3] = c3.r; col[k * 3 + 1] = c3.g; col[k * 3 + 2] = c3.b;
+    }
+    geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
+    geo.computeVertexNormals(); geo.computeBoundingSphere(); geo.computeBoundingBox();
+  };
+  const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
+  // uzly v obdĺžniku [x0, x1] × [z0, z1] v súradniciach obrobku (stred = 0)
+  const eachRect = (x0, x1, z0, z1, fn) => {
+    const i0 = Math.max(0, Math.ceil((x0 + W / 2) / dX)), i1 = Math.min(NX, Math.floor((x1 + W / 2) / dX));
+    const j0 = Math.max(0, Math.ceil((z0 + D / 2) / dZ)), j1 = Math.min(NZ, Math.floor((z1 + D / 2) / dZ));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) fn(j * (NX + 1) + i, -W / 2 + i * dX, -D / 2 + j * dZ);
+  };
+  const reset = () => { hgt.fill(H); mask.fill(0); rebuild(); };
+  rebuild();
+  return { hgt, mask, mesh, rebuild, reset, eachRect };
+}
+
+// ---------- ručné ovládanie prvkov stroja (kolesá, páky, tlačidlá, posuvné diely) ----------
+function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
+  const ray = new THREE.Raycaster();
+  const ctrls = [], meshCtl = new Map(), pend = {};
+  const push = (k, v) => { c[k] = v; pend[k] = v; };
+  const reg = (k, obj) => {
+    Object.assign(k, { pivot: obj, meshes: [], glow: 0, pressT: -9, pressed: false });
+    obj.traverse((o) => { if (o.isMesh && !meshCtl.has(o)) { o.material = o.material.clone(); meshCtl.set(o, k); k.meshes.push(o); } });
+    if (k.type === 'lever') { k.angle = k.angles[k.getIdx()]; obj.rotation.z = k.angle; }
+    if (k.type === 'button') k.z0 = obj.position.z;
+    ctrls.push(k);
+  };
+  const setGlow = (k, v) => k.meshes.forEach((m) => {
+    const mat = m.material; if (!mat.emissive) return;
+    if (v > 0) { mat.emissive.setHex(0x2f8bff); mat.emissiveIntensity = v; }
+    else { mat.emissive.setHex(getHL().includes(m) ? 0xff8a1f : 0x000000); mat.emissiveIntensity = 1; }
+  });
+
+  const ptr = { x: 0, y: 0, cx: 0, cy: 0, in: false, dirty: false };
+  const drag = { ctl: null, id: null, x: 0, y: 0, moved: 0 };
+  let hover = null, ctlUsed = false, introT = -9, prevManual = false, tipHtml = '', wheelAcc = 0;
+  const ndc = new THREE.Vector2();
+  const setRay = (cx, cy) => {
+    const r = dom.getBoundingClientRect();
+    ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    camera.updateMatrixWorld(); ray.setFromCamera(ndc, camera);
+  };
+  const ctlAt = (cx, cy) => {
+    setRay(cx, cy);
+    const h = ray.intersectObjects(root.children, true)[0], k = h && meshCtl.get(h.object);
+    return k ? { k, point: h.point } : null;
+  };
+  // otáčanie: pohyb myši sa premietne na dotyčnicu k obvodu v mieste uchopenia
+  const rs = { axis: new THREE.Vector3(), C: new THREE.Vector3(), d: new THREE.Vector3() };
+  const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), s0 = { x: 0, y: 0 }, s1 = { x: 0, y: 0 };
+  const toScreen = (v, out) => { tmpA.copy(v).project(camera); out.x = (tmpA.x + 1) / 2 * mount.clientWidth; out.y = (1 - tmpA.y) / 2 * mount.clientHeight; };
+  const beginRot = (k, point) => {
+    k.pivot.updateMatrixWorld(true);
+    rs.axis.set(0, 0, 1).transformDirection(k.pivot.matrixWorld);
+    rs.C.setFromMatrixPosition(k.pivot.matrixWorld);
+    rs.d.subVectors(point, rs.C).addScaledVector(rs.axis, -rs.d.dot(rs.axis));
+    if (rs.d.length() < k.minR) {
+      rs.d.subVectors(camera.position, rs.C).cross(rs.axis);
+      if (rs.d.lengthSq() < 1e-8) rs.d.set(0, 1, 0).cross(rs.axis);
+      rs.d.setLength(k.minR);
+    }
+  };
+  const rotStep = (dx, dy) => {
+    tmpB.copy(rs.C).add(rs.d); toScreen(tmpB, s0);
+    tmpB.crossVectors(rs.axis, rs.d).multiplyScalar(0.02).add(rs.C).add(rs.d); toScreen(tmpB, s1);
+    const sx = (s1.x - s0.x) / 0.02, sy = (s1.y - s0.y) / 0.02, s2 = sx * sx + sy * sy;
+    if (s2 < 25) return 0;
+    const a = clamp((dx * sx + dy * sy) / s2, -0.5, 0.5);
+    rs.d.applyAxisAngle(rs.axis, a);
+    return a;
+  };
+  // posúvanie dielu po osi X scény
+  const slidePlane = new THREE.Plane(), slideHit = new THREE.Vector3();
+  let slideX0 = 0;
+  const beginSlide = (k, p) => {
+    tmpB.subVectors(camera.position, p); tmpB.x = 0;
+    if (tmpB.lengthSq() < 1e-4) tmpB.set(0, 1, 0);
+    slidePlane.setFromNormalAndCoplanarPoint(tmpB.normalize(), p); slideX0 = p.x; k.start();
+  };
+  const moveSlide = (k, cx, cy) => { setRay(cx, cy); if (ray.ray.intersectPlane(slidePlane, slideHit)) k.slide(slideHit.x - slideX0); };
+  const leverStep = (k, i) => { i = clamp(i, 0, k.angles.length - 1); if (i !== k.getIdx()) k.onSet(i); };
+  const nearestDetent = (k) => k.angles.reduce((bi, a, i) => (Math.abs(a - k.angle) < Math.abs(k.angles[bi] - k.angle) ? i : bi), 0);
+
+  const trackPtr = (e) => {
+    const r = dom.getBoundingClientRect();
+    Object.assign(ptr, { x: e.clientX - r.left, y: e.clientY - r.top, cx: e.clientX, cy: e.clientY, in: true, dirty: true });
+  };
+  const mDown = (e) => {
+    ctlUsed = false;
+    if (!c.manual) return;
+    trackPtr(e);
+    const h = ctlAt(e.clientX, e.clientY);
+    if (!h) return;
+    ctlUsed = true; hover = h.k;
+    if (h.k.guard && !h.k.guard()) return;
+    try { dom.setPointerCapture(e.pointerId); } catch (err) { /* ignorované */ }
+    Object.assign(drag, { ctl: h.k, id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 });
+    if (h.k.type === 'button') { h.k.pressed = true; h.k.pressT = getT(); h.k.action(); }
+    else if (h.k.type === 'slide') beginSlide(h.k, h.point);
+    else beginRot(h.k, h.point);
+  };
+  const mMove = (e) => {
+    if (!c.manual) return;
+    trackPtr(e);
+    const k = drag.ctl;
+    if (!k || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.hypot(dx, dy);
+    if (k.type === 'slide') moveSlide(k, e.clientX, e.clientY);
+    else if (k.type === 'wheel') { const a = rotStep(dx, dy); if (a) k.turn(a); }
+    else if (k.type === 'lever') {
+      const lo = Math.min(...k.angles), hi = Math.max(...k.angles);
+      k.angle = clamp(k.angle + rotStep(dx, dy), lo - 0.08, hi + 0.08); k.pivot.rotation.z = k.angle;
+    }
+  };
+  const mUp = (e) => {
+    if (e.pointerType !== 'mouse') { ptr.in = false; if (!drag.ctl) hover = null; }
+    const k = drag.ctl;
+    if (!k || e.pointerId !== drag.id) return;
+    drag.ctl = null; k.pressed = false;
+    if (e.pointerType !== 'mouse') hover = null;
+    if (k.type === 'lever') leverStep(k, drag.moved < 4 ? (k.getIdx() + 1) % k.angles.length : nearestDetent(k));
+  };
+  const mLeave = () => { ptr.in = false; if (!drag.ctl) hover = null; };
+  const mWheel = (e) => {
+    if (!c.manual) return;
+    e.preventDefault();
+    const h = ctlAt(e.clientX, e.clientY);
+    if (!h || h.k.type === 'button') return;
+    const k = h.k, amt = clamp(-e.deltaY * (e.deltaMode === 1 ? 33 : 1) / 100, -1, 1);
+    if (k.guard && !k.guard()) return;
+    if (k.type === 'wheel') { k.turn(amt * 0.4 * k.inc); return; }
+    wheelAcc += amt;
+    if (Math.abs(wheelAcc) < 1) return;
+    const dir = Math.sign(wheelAcc); wheelAcc = 0;
+    if (k.type === 'lever') leverStep(k, k.getIdx() + dir); else k.nudge(dir);
+  };
+  dom.addEventListener('pointerdown', mDown); dom.addEventListener('pointermove', mMove);
+  dom.addEventListener('pointerup', mUp); dom.addEventListener('pointercancel', mUp);
+  dom.addEventListener('pointerleave', mLeave); dom.addEventListener('wheel', mWheel, { passive: false });
+
+  // za snímku: polohy pák a tlačidiel, zvýraznenie, popis pod kurzorom
+  const update = (dt) => {
+    const t = getT();
+    if (c.manual !== prevManual) {
+      prevManual = c.manual;
+      if (c.manual) introT = t; else { drag.ctl = null; hover = null; }
+      tipEl.style.display = 'none'; tipHtml = ''; dom.style.cursor = '';
+    }
+    if (c.manual && ptr.dirty && ptr.in && !drag.ctl) { ptr.dirty = false; const h = ctlAt(ptr.cx, ptr.cy); hover = h ? h.k : null; }
+    const intro = c.manual && t - introT < 1.8 ? 0.3 + 0.3 * Math.sin((t - introT) * 10) : 0;
+    for (const k of ctrls) {
+      if (k.type === 'lever' && k !== drag.ctl) { k.angle = approach(k.angle, k.angles[k.getIdx()], 5 * dt); k.pivot.rotation.z = k.angle; }
+      if (k.type === 'button') k.pivot.position.z = approach(k.pivot.position.z, k.z0 - (k.pressed || t - k.pressT < 0.18 ? 0.05 : 0), 0.8 * dt);
+      const g = !c.manual ? 0 : k === drag.ctl ? 0.9 : k === hover ? 0.6 : intro;
+      if (g !== k.glow) { setGlow(k, g); k.glow = g; }
+    }
+    if (!c.manual) return;
+    const k = drag.ctl || (ptr.in ? hover : null);
+    const cur = drag.ctl ? (k.type === 'button' ? 'pointer' : 'grabbing') : k ? (k.type === 'button' ? 'pointer' : 'grab') : 'default';
+    if (dom.style.cursor !== cur) dom.style.cursor = cur;
+    const html = k ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
+    if (html !== tipHtml) { tipHtml = html; tipEl.innerHTML = html; tipEl.style.display = html ? 'block' : 'none'; }
+    if (html) {
+      const fx = ptr.x > mount.clientWidth - 270, fy = ptr.y > mount.clientHeight - 90;
+      tipEl.style.transform = `translate(${ptr.x + (fx ? -16 : 16)}px, ${ptr.y + (fy ? -14 : 18)}px) translate(${fx ? '-100%' : '0'}, ${fy ? '-100%' : '0'})`;
+    }
+  };
+  const dispose = () => {
+    dom.removeEventListener('pointerdown', mDown); dom.removeEventListener('pointermove', mMove);
+    dom.removeEventListener('pointerup', mUp); dom.removeEventListener('pointercancel', mUp);
+    dom.removeEventListener('pointerleave', mLeave); dom.removeEventListener('wheel', mWheel);
+  };
+  return { reg, push, pend, update, isUsed: () => ctlUsed, invalidate: () => ctrls.forEach((k) => { k.glow = -1; }), dispose };
+}
+
+// ---------- výber a zvýraznenie dielov, popisy, predvolené pohľady ----------
+function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views, enabled, onPick, blockPick, onHL }) {
+  const tween = { active: false };
+  let now = 0;
+  const orbit = createOrbit(camera, dom, () => { tween.active = false; }, enabled);
+  const viewFactor = () => clamp(1.65 / camera.aspect, 1, 2.3);
+  const goView = (name, instant) => {
+    const [p, tg, fixed] = views[name]();
+    const tt = new THREE.Vector3(...tg);
+    const tp = new THREE.Vector3(...p).sub(tt).multiplyScalar(fixed ? 1 : viewFactor()).add(tt);
+    if (instant) { camera.position.copy(tp); orbit.target.copy(tt); orbit.sync(); orbit.apply(); return; }
+    Object.assign(tween, { active: true, t0: now, dur: 0.9, fp: camera.position.clone(), ft: orbit.target.clone(), tp, tt });
+  };
+
+  const ray = new THREE.Raycaster();
+  let downAt = null;
+  const onDown = (e) => { downAt = [e.clientX, e.clientY]; };
+  const onUp = (e) => {
+    if (!downAt) return;
+    if (blockPick()) { downAt = null; return; }                       // klik na ovládací prvok nevyberá časť
+    const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null;
+    if (moved > 5) return;
+    const rect = dom.getBoundingClientRect();
+    camera.updateMatrixWorld();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
+    let key = null;
+    for (const h of ray.intersectObjects(root.children, true)) {
+      let o = h.object; while (o && !o.userData.part) o = o.parent;
+      if (o) { key = o.userData.part; break; }
+    }
+    onPick(key);
+  };
+  dom.addEventListener('pointerdown', onDown);
+  dom.addEventListener('pointerup', onUp);
+
+  let hlKey = null, hlMeshes = [];
+  const applyHL = (key) => {
+    hlMeshes.forEach((m) => { m.material.dispose(); m.material = m.userData.om; });
+    hlMeshes = []; hlKey = key;
+    if (key && G[key]) {
+      G[key].traverse((o) => {
+        if (!o.isMesh) return;
+        let p = o; while (p && !p.userData.part) p = p.parent;
+        if (!p || p.userData.part !== key) return;
+        o.userData.om = o.material; const m2 = o.material.clone();
+        if (m2.emissive) m2.emissive.setHex(0xff8a1f);
+        o.material = m2; hlMeshes.push(o);
+      });
+    }
+    onHL();
+  };
+
+  const update = (t, c) => {
+    now = t;
+    if (c.highlight !== hlKey) applyHL(c.highlight);
+    if (hlMeshes.length) { const k = 0.3 + 0.22 * Math.sin(t * 5); hlMeshes.forEach((m) => { if (m.material.emissive) m.material.emissiveIntensity = k; }); }
+    if (tween.active) {
+      const k = Math.min(1, (t - tween.t0) / tween.dur), e = k * k * (3 - 2 * k);
+      camera.position.lerpVectors(tween.fp, tween.tp, e); orbit.target.lerpVectors(tween.ft, tween.tt, e); camera.lookAt(orbit.target);
+      if (k >= 1) { tween.active = false; orbit.sync(); }
+    }
+    if (c.labels && !c.manual) {
+      const w = mount.clientWidth, h = mount.clientHeight;
+      for (const el of labelEls) {
+        const v = anchors[el.dataset.part]().project(camera);
+        if (v.z > 1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; continue; }
+        el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -130%)`;
+        el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+      }
+    }
+  };
+  const dispose = () => {
+    orbit.dispose();
+    dom.removeEventListener('pointerdown', onDown); dom.removeEventListener('pointerup', onUp);
+    hlMeshes.forEach((m) => { m.material.dispose(); m.material = m.userData.om; }); hlMeshes = [];
+  };
+  return { goView, update, hl: () => hlMeshes, dispose };
+}
+
+// ---------- spoločné prvky rozhrania ----------
+function useMachine(init) {
+  const ctl = useRef({ ...init, highlight: null });
+  const [ui, setUi] = useState(init);
+  const [selected, setSelected] = useState(null);
+  const apiRef = useRef({});
+  const set = (k, v) => { ctl.current[k] = v; setUi((u) => ({ ...u, [k]: v })); };
+  const selectPart = (k) => {
+    const next = ctl.current.highlight === k ? null : k;
+    ctl.current.highlight = next; setSelected(next);
+  };
+  apiRef.current.onPick = (k) => { ctl.current.highlight = k; setSelected(k); };
+  // M = prepnutie kamera / ručné ovládanie, Esc = späť na kameru
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = e.target && e.target.tagName;
+      if (e.ctrlKey || e.metaKey || e.altKey || tag === 'TEXTAREA' || (tag === 'INPUT' && e.target.type !== 'range')) return;
+      if (e.key === 'm' || e.key === 'M') set('manual', !ctl.current.manual);
+      else if (e.key === 'Escape' && ctl.current.manual) set('manual', false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return { ctl, ui, setUi, set, selected, selectPart, apiRef };
+}
+
+function Slider({ id, label, value, min, max, step, unit, onChange, actual, disabled, digits = 0 }) {
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="font-semibold">{label}</span>
+        <span className="tnum muted text-xs">
+          {actual != null && <span>skut. {actual.toFixed(digits)} · </span>}
+          <span className="ink font-semibold text-sm">{Number(value).toFixed(digits)} {unit}</span>
+        </span>
+      </label>
+      <input id={id} className="range" type="range" min={min} max={max} step={step} value={value} disabled={disabled}
+        onChange={(e) => onChange(parseFloat(e.target.value))} />
+    </div>
+  );
+}
+
+function Toggle({ on, onClick, label }) {
+  return (
+    <button type="button" onClick={onClick} className="flex items-center justify-between w-full text-sm py-1 gap-3 text-left" aria-pressed={on}>
+      <span className="font-semibold">{label}</span>
+      <span className={`sw ${on ? 'on' : ''}`}><i /></span>
+    </button>
+  );
+}
+
+function Seg({ value, options, onChange, label }) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map(([v, l]) => (
+        <button key={String(v)} type="button" className={value === v ? 'on' : ''} aria-pressed={value === v} onClick={() => onChange(v)}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips }) {
+  return (
+    <div className="scene-wrap relative flex-1 overflow-hidden">
+      <div ref={mountRef} className="absolute inset-0" />
+      <div ref={layerRef} className={`absolute inset-0 pointer-events-none overflow-hidden ${ui.labels && !ui.manual ? '' : 'hidden'}`}>
+        {parts.map((p) => (
+          <button key={p.key} type="button" data-part={p.key} onClick={() => selectPart(p.key)}
+            className={`part-label ${selected === p.key ? 'is-active' : ''}`}>{p.short}</button>
+        ))}
+      </div>
+      {ui.manual && <div className="manual-frame" />}
+      <div ref={tipRef} className="ctl-tip" />
+      <div className="absolute right-3 top-3">
+        <div className="mode-seg" role="group" aria-label="Režim ovládania">
+          <button type="button" className={ui.manual ? '' : 'on'} aria-pressed={!ui.manual} onClick={() => set('manual', false)} title="Ovládanie pohľadu (M)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            Kamera
+          </button>
+          <button type="button" className={ui.manual ? 'on' : ''} aria-pressed={ui.manual} onClick={() => set('manual', true)} title="Ručné ovládanie prvkov stroja (M)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v8M14 11.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 15.5L3 12a1.5 1.5 0 0 1 2.7-1.2L8 14" /></svg>
+            <span className="hidden lg:inline">Ručné ovládanie</span><span className="lg:hidden">Ručne</span>
+          </button>
+        </div>
+      </div>
+      <div className="absolute left-3 top-3 flex flex-wrap gap-2 pointer-events-none" style={{ maxWidth: 'calc(100% - 215px)' }}>
+        {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
+      </div>
+      {ui.manual ? (
+        <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
+          <b className="ink">Ručné ovládanie:</b> ťahaj ručné kolesá a páky, klikaj na tlačidlá a vypínač, koliesko myši točí prvkom pod kurzorom. Pohľad je zamknutý – kameru vráti <b className="ink">M</b> alebo Esc.
+        </div>
+      ) : (
+        <div className="absolute left-3 bottom-3 hint hidden md:block pointer-events-none">
+          Ťahaj: otáčanie · koliesko: zoom · pravé tlačidlo: posun · klik: výber časti · M: ručné ovládanie
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelHeader({ onBack, kicker, title, sub, rows, foot, status }) {
+  return (
+    <div className="sec">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" className="btn" onClick={onBack} aria-label="Späť na výber stroja">← Menu</button>
+        <p className="sec-title text-right" style={{ letterSpacing: '.12em' }}>{kicker}</p>
+      </div>
+      <h1 className="app-title mt-3">{title}</h1>
+      <p className="text-xs muted mt-1">{sub}</p>
+      <div className="dro mt-3 tnum">
+        {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
+        <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
+      </div>
+      <div className={`msg msg-${status.kind}`} role="status"><span className="lamp" />{status.text}</div>
+    </div>
+  );
+}
+
+function ManualSection({ ui, set, children }) {
+  return (
+    <div className="sec">
+      <h3 className="sec-title mb-2">Ručné ovládanie stroja</h3>
+      <Toggle on={ui.manual} label="Zamknúť pohľad a ovládať prvky myšou (M)" onClick={() => set('manual', !ui.manual)} />
+      <ul className="ctl-list">{children}</ul>
+    </div>
+  );
+}
+
+function ViewSection({ views, apiRef, ui, set, resetLabel, onReset }) {
+  return (
+    <div className="sec">
+      <h3 className="sec-title mb-2">Pohľad</h3>
+      <div className="flex flex-wrap gap-2">
+        {views.map(([k, l]) => (
+          <button key={k} type="button" className="btn" onClick={() => apiRef.current.view && apiRef.current.view(k)}>{l}</button>
+        ))}
+      </div>
+      <div className="mt-3">
+        <Toggle on={ui.labels} label="Popisy častí v modeli" onClick={() => set('labels', !ui.labels)} />
+      </div>
+      <button type="button" className="btn mt-2 w-full" onClick={onReset}>{resetLabel}</button>
+    </div>
+  );
+}
+
+function PartsSection({ parts, selected, selectPart }) {
+  const sel = parts.find((p) => p.key === selected);
+  return (
+    <div className="sec">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="sec-title">Časti stroja</h3>
+        {selected && <button type="button" className="text-xs muted underline" onClick={() => selectPart(selected)}>Zrušiť výber</button>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {parts.map((p) => (
+          <button key={p.key} type="button" className={`part-btn ${selected === p.key ? 'active' : ''}`} onClick={() => selectPart(p.key)}>{p.short}</button>
+        ))}
+      </div>
+      <div className="desc">
+        {sel ? (<><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></>)
+          : <span className="muted">Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.</span>}
+      </div>
+    </div>
+  );
+}
+
+function HelpFooter() {
+  return (
+    <div className="sec text-xs muted" style={{ borderBottom: 0 }}>
+      Ovládanie: ťahaním myšou otáčaš pohľad, koliesko približuje, pravým tlačidlom (alebo Shift) posúvaš. Na dotykovej obrazovke sa pohľad otáča jedným prstom a približuje dvoma. Kláves M (alebo prepínač vpravo hore v scéne) zamkne pohľad a prepne na ručné ovládanie prvkov stroja.
+    </div>
+  );
+}
+
+// =====================================================================
+// HROTOVÝ SÚSTRUH
+// =====================================================================
+const AXIS_Y = 7.5;                       // výška osi vretena nad podlahou
+const JAW_X = -3.45;                      // čelo čeľustí = nula osi Z
+const W_X0 = -4.2, W_X1 = 2.6;            // obrobok (časť je v skľučovadle)
+const W_N = 340, W_DX = (W_X1 - W_X0) / W_N, W_R0 = 0.45;   // profil obrobku, Ø90 mm
+const TIP_LX = -0.36, TIP_LZ = -0.05;     // hrot noža v súradniciach suportu
+const LIM = { tipMin: -3.35, rMax: 1.3, quillMax: 1.5, tailMax: 9.0, carToTail: 2.21, quillClear: 0.42 };
+const SPEEDS = [40, 56, 80, 112, 160, 224, 315, 450, 630, 900, 1250, 1800];   // 3 × 4 stupne otáčok
+const FEED_BASE = [0.05, 0.07, 0.1, 0.14, 0.2, 0.25, 0.35, 0.5], FEED_MULT = [1, 2];
+const A_ANG = [0.75, 0, -0.75], B_ANG = [0.95, 0.32, -0.32, -0.95];      // polohy pák otáčok
+const FEED_ANG = FEED_BASE.map((_, i) => 1.4 - i * 2.8 / 7), MULT_ANG = [0.5, -0.5];
+
+const LATHE_PARTS = [
+  { key: 'lozko', short: 'Lôžko', name: 'Lôžko', desc: 'Masívny liatinový základ stroja. Kalené a brúsené vodiace plochy (prizmatická „V“ a plochá) vedú suport aj koník presne rovnobežne s osou vretena.' },
+  { key: 'vretennik', short: 'Vretenník', name: 'Vretenník', desc: 'Skriňa s hlavným vretenom v presných ložiskách a s prevodovkou otáčok. Pákami sa volia otáčky, hlavným vypínačom sa zapína pohon. Na vretene je upínač obrobku.' },
+  { key: 'sklucovadlo', short: 'Skľučovadlo', name: 'Trojčeľusťové skľučovadlo', desc: 'Samostrediace skľučovadlo. Kľúčom sa cez špirálu posúvajú všetky tri čeľuste naraz, takže valcový obrobok je upnutý súosovo s vretenom.' },
+  { key: 'obrobok', short: 'Obrobok', name: 'Obrobok', desc: 'Mosadzná tyč Ø90 mm. Keď sa vreteno točí, nôž odoberá materiál a priemer sa zmenšuje podľa polohy noža v osi X. Pri stojacom vretene nôž do obrobku nevnikne.' },
+  { key: 'suport', short: 'Suport', name: 'Suport – pozdĺžne sane a zámková skriňa', desc: 'Pozdĺžne sane jazdia po lôžku (os Z). Zámková skriňa vpredu má ručné koleso s pastorkom na ozubenom hrebeni, páku matice vodiacej skrutky a zapínanie automatického posuvu.' },
+  { key: 'priecny', short: 'Nožová hlava', name: 'Priečne sane a nožová hlava', desc: 'Priečne sane sa posúvajú skrutkou kolmo na os vretena (os X). Nesú otočné nožové sane a štvorpolohovú nožovú hlavu, v ktorej je upnutý sústružnícky nôž s vymeniteľnou doštičkou.' },
+  { key: 'konik', short: 'Koník', name: 'Koník', desc: 'Posúva sa po lôžku. Ručným kolesom sa cez skrutku vysúva pinola s otočným hrotom, ktorý podopiera dlhé obrobky. Do pinoly sa dá upnúť aj vrták alebo výstružník.' },
+  { key: 'skrutky', short: 'Skrutka a ťažná tyč', name: 'Vodiaca skrutka a ťažná tyč', desc: 'Vodiaca skrutka (so závitom) poháňa suport pri rezaní závitov cez maticu. Ťažná tyč (s drážkou) prenáša pohyb pre bežné pozdĺžne a priečne posuvy.' },
+  { key: 'prevodovka', short: 'Prevodovka posuvov', name: 'Prevodovka posuvov (Norton)', desc: 'Volí sa ňou veľkosť posuvu v mm/ot a stúpanie závitu. Pohon dostáva od vretena cez výmenné kolesá pod ľavým krytom.' },
+  { key: 'podstavec', short: 'Podstavec', name: 'Podstavce a vaňa na triesky', desc: 'Podstavce nesú lôžko, v ľavom je hlavný elektromotor a rozvádzač. Vaňa medzi nimi zachytáva triesky a chladiacu kvapalinu.' },
+];
+
+function LatheSimulator({ onBack }) {
+  const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
+  const init = { running: false, power: true, light: true, manual: false, rpm: 450, z: 395, x: 120, quill: 0, tail: 765, autoFeed: false, feed: 0.25, timeScale: 10, labels: true };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [tele, setTele] = useState({ rpm: 0, z: 395, x: 120, quill: 0, tail: 765, vc: 0, msg: null, cutting: false, engaged: false, workD: 90 });
+
+  useEffect(() => {
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
+    const c = ctl.current;
+    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const dom = renderer.domElement;
+    const spot = new THREE.SpotLight(0xfff0d0, 1.1, 16, 0.55, 0.6, 1.5);
+    spot.position.set(-4.2, 10.3, -1.35); scene.add(spot, spot.target);
+
+    // ---------- materiály a textúry ----------
+    const brassTex = mkTex(256, 4, (g) => {
+      for (let i = 0; i < 256; i++) {
+        const n = 0.93 + 0.05 * Math.sin(i * 1.7) + (Math.random() - 0.5) * 0.06;
+        const base = i < 6 ? [140, 104, 38] : [224, 186, 94];
+        g.fillStyle = `rgb(${base.map((v) => Math.min(255, Math.round(v * n))).join(',')})`; g.fillRect(i, 0, 1, 4);
+      }
+    }, 1, 1);
+    const leadTex = mkTex(64, 64, (g, w) => {
+      g.fillStyle = '#c2c7cb'; g.fillRect(0, 0, w, w); g.strokeStyle = '#5a6066'; g.lineWidth = 11;
+      for (let k = -2; k < 4; k++) { g.beginPath(); g.moveTo(0, k * 32); g.lineTo(64, k * 32 + 32); g.stroke(); }
+    }, 1, 110);
+    const feedTex = mkTex(64, 4, (g) => { g.fillStyle = '#c6cbcf'; g.fillRect(0, 0, 64, 4); g.fillStyle = '#464c51'; g.fillRect(0, 0, 7, 4); }, 1, 1);
+    const M = {
+      ...baseMats(0x8db57d, 0x6d9461, 0x4f6e47),
+      brass: std(0xffffff, 0.3, 0.85, { map: brassTex, side: THREE.DoubleSide }),
+      lead: std(0xffffff, 0.35, 0.8, { map: leadTex }), feed: std(0xffffff, 0.3, 0.85, { map: feedTex }),
+      bulb: new THREE.MeshStandardMaterial({ color: 0xfff3d6, emissive: 0xfff0c0, emissiveIntensity: 1.4 }),
+      chip: std(0xe6c068, 0.3, 0.85),
+    };
+    const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel } = makeKit(M);
+
+    const root = new THREE.Group(); scene.add(root);
+    const G = {};
+    const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
+
+    // ---------- podstavce a vaňa ----------
+    const base = grp('podstavec');
+    box(base, -10, -5.2, 0.15, 3.5, -1.9, 1.9, M.green);
+    box(base, -10.1, -5.1, 0, 0.15, -2.0, 2.0, M.greenDeep);
+    box(base, -9.5, -5.7, 0.55, 3.05, 1.9, 1.94, M.greenDark);
+    cylZ(base, 0.08, 0.08, 1.94, 2.04, -6.0, 1.8, M.black);
+    box(base, 9.6, 12, 0.15, 3.5, -1.7, 1.7, M.green);
+    box(base, 9.5, 12.1, 0, 0.15, -1.8, 1.8, M.greenDeep);
+    box(base, 10.0, 11.6, 0.55, 3.05, 1.7, 1.74, M.greenDark);
+    box(base, -5.2, 9.6, 1.4, 1.55, -2.0, 2.8, M.greenDark);
+    box(base, -5.2, 9.6, 1.55, 2.05, 2.7, 2.8, M.greenDark);
+    box(base, -5.2, 9.6, 1.55, 2.4, -2.0, -1.9, M.greenDark);
+
+    // ---------- lôžko s vodiacimi plochami ----------
+    const bed = grp('lozko');
+    box(bed, -10, 12, 3.5, 5.0, -1.5, 1.5, M.green);
+    const vway = (z) => { const m = add(bed, new THREE.BoxGeometry(17.2, 0.26, 0.26), M.ways, 3.4, 5.0, z); m.rotation.x = Math.PI / 4; };
+    vway(1.15); vway(-0.45);
+    box(bed, -5.2, 12, 5.0, 5.14, -1.45, -0.85, M.ways);
+    box(bed, -5.2, 12, 5.0, 5.14, 0.2, 0.7, M.ways);
+    box(bed, -5.2, 11.3, 4.55, 4.78, 1.5, 1.6, M.steelDark);        // ozubený hrebeň
+    box(bed, 11.3, 11.9, 3.0, 4.75, 1.5, 2.1, M.green);             // ložisko skrutiek
+
+    // ---------- vretenník ----------
+    const hs = grp('vretennik');
+    box(hs, -10, -5.0, 5.0, 9.0, -1.85, 1.85, M.green);
+    box(hs, -9.9, -5.1, 9.0, 9.25, -1.75, 1.75, M.greenDark);
+    box(hs, -10.6, -10.0, 3.6, 9.1, -1.6, 1.6, M.green);            // kryt výmenných kolies
+    cylX(hs, 1.15, 1.15, -5.05, -4.85, AXIS_Y, 0, M.green, 40);
+    box(hs, -7.7, -6.2, 7.75, 8.6, 1.85, 1.87, M.white);            // tabuľka otáčok
+    cylZ(hs, 0.22, 0.22, 1.85, 1.875, -5.55, 8.35, M.blue, 28);
+    [[-9.3, 7.0], [-8.4, 7.0], [-9.3, 6.0]].forEach(([x, y]) => cylZ(hs, 0.32, 0.28, 1.85, 2.05, x, y, M.black, 28));
+    detents(hs, -9.3, 7.0, 2.05, 0.21, A_ANG); detents(hs, -8.4, 7.0, 2.05, 0.21, B_ANG);
+    const levA = pivotLever(hs, -9.3, 7.0, 2.05, 0.5, 1.15), levB = pivotLever(hs, -8.4, 7.0, 2.05, 0.5, 1.15);
+    lever(hs, -9.3, 6.0, 2.05, 0.5, 1.15, 0.5);
+    lever(hs, -9.4, 9.25, -0.9, 0.95, -0.35, 0.15);
+    lever(hs, -8.9, 9.25, -1.1, 0.8, -0.5, -0.1);
+    box(hs, -8.9, -7.3, 9.25, 10.35, 0.5, 1.1, M.panel);            // ovládací panel
+    const pbtn = (x, m) => { const g = new THREE.Group(); g.position.set(x, 9.6, 1.1); hs.add(g); cylZ(g, 0.13, 0.13, 0, 0.08, 0, 0, m, 20); hitProxy(g, 0.19, 0, 0, 0.06); return g; };
+    const btnStop = pbtn(-8.6, M.red), btnStart = pbtn(-8.2, M.btnGreen), btnLight = pbtn(-7.8, M.blue);
+    cylZ(hs, 0.12, 0.12, 1.1, 1.16, -7.55, 10.0, M.white, 20);
+    ball(hs, 0.12, -8.6, 10.02, 1.1, M.lamp);
+    box(hs, -6.75, -5.85, 5.55, 6.45, 1.85, 1.87, M.yellow);         // hlavný vypínač
+    box(hs, -6.32, -6.28, 6.33, 6.43, 1.87, 1.88, M.black);           // značky „I“ a „0“
+    add(hs, new THREE.TorusGeometry(0.035, 0.01, 6, 16), M.black, -6.66, 6.0, 1.875);
+    const mainSwitch = new THREE.Group(); mainSwitch.position.set(-6.3, 6.0, 1.95); hs.add(mainSwitch);
+    cylZ(mainSwitch, 0.28, 0.28, -0.1, 0, 0, 0, M.black, 28);
+    box(mainSwitch, -0.34, 0.34, -0.07, 0.07, 0, 0.16, M.red);
+    cylY(hs, 0.06, 0.06, 9.25, 11.0, -5.5, -1.35, M.black, 12);       // lampa
+    cylX(hs, 0.05, 0.05, -5.5, -4.2, 11.0, -1.35, M.black, 12);
+    cylY(hs, 0.38, 0.14, 10.45, 10.95, -4.2, -1.35, M.greenDark, 24);
+    ball(hs, 0.13, -4.2, 10.42, -1.35, M.bulb);
+
+    // ---------- prevodovka posuvov ----------
+    const gb = grp('prevodovka');
+    box(gb, -9.9, -5.25, 2.5, 4.95, 1.5, 2.35, M.green);
+    box(gb, -9.7, -8.4, 3.9, 4.7, 2.35, 2.37, M.white);
+    [-7.8, -6.9, -6.0].forEach((x) => cylZ(gb, 0.22, 0.18, 2.35, 2.6, x, 3.4, M.black));
+    detents(gb, -7.8, 3.4, 2.6, 0.15, FEED_ANG, 0.02); detents(gb, -6.9, 3.4, 2.6, 0.15, MULT_ANG, 0.025);
+    const levF = pivotLever(gb, -7.8, 3.4, 2.6, 0.4, 1.3), levM = pivotLever(gb, -6.9, 3.4, 2.6, 0.4, 1.3);
+    lever(gb, -6.0, 3.4, 2.6, 0.4, 1.3, 0);
+    lever(gb, -9.3, 3.2, 2.35, 0.6, 1.2, 0.4);
+
+    // ---------- vodiaca skrutka, ťažná tyč, spínacia tyč ----------
+    const rods = grp('skrutky');
+    const leadScrew = cylX(rods, 0.13, 0.13, -5.25, 11.3, 4.25, 1.78, M.lead, 20);
+    const feedRod = cylX(rods, 0.1, 0.1, -5.25, 11.3, 3.8, 1.78, M.feed, 16);
+    cylX(rods, 0.07, 0.07, -5.25, 11.3, 3.38, 1.78, M.steel, 12);
+
+    // ---------- vreteno, skľučovadlo, obrobok ----------
+    const spindle = grp('sklucovadlo'); spindle.position.set(0, AXIS_Y, 0);
+    cylX(spindle, 1.0, 1.0, -4.85, -4.55, 0, 0, M.steelDark, 40);
+    cylX(spindle, 1.35, 1.35, -4.55, -3.75, 0, 0, M.steel, 56);
+    cylX(spindle, 1.37, 1.37, -4.5, -4.42, 0, 0, M.steelDark, 56);
+    for (let i = 0; i < 3; i++) {
+      const jg = new THREE.Group(); jg.rotation.x = i * TAU / 3; spindle.add(jg);
+      box(jg, -3.75, -3.45, W_R0, 0.85, -0.16, 0.16, M.steelDark);
+      box(jg, -3.75, -3.6, 0.85, 1.3, -0.16, 0.16, M.steelDark);
+      const kg = new THREE.Group(); kg.rotation.x = i * TAU / 3 + Math.PI / 3; spindle.add(kg);
+      add(kg, new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16), M.black, -4.15, 1.34, 0);
+    }
+    const prof = new Float32Array(W_N).fill(W_R0);
+    const work = new THREE.Mesh(new THREE.BufferGeometry(), M.brass);
+    work.castShadow = true; work.receiveShadow = true; work.position.x = W_X0; work.userData.part = 'obrobok';
+    spindle.add(work); G.obrobok = work;
+    const rebuildWork = () => {
+      // body profilu s duplikátmi na hranách → ostré osadenia
+      const pts = [new THREE.Vector2(0, 0)];
+      let s = 0, first = true;
+      for (let k = 1; k <= W_N; k++) {
+        if (k === W_N || Math.abs(prof[k] - prof[s]) > 1e-4) {
+          const r = prof[s], a = s * W_DX, b = k * W_DX;
+          if (first) { pts.push(new THREE.Vector2(r, 0)); first = false; }
+          pts.push(new THREE.Vector2(r, a), new THREE.Vector2(r, a), new THREE.Vector2(r, b), new THREE.Vector2(r, b));
+          s = k;
+        }
+      }
+      pts.push(new THREE.Vector2(0, W_N * W_DX));
+      const geo = new THREE.LatheGeometry(pts, 56);
+      geo.rotateZ(-Math.PI / 2);
+      work.geometry.dispose(); work.geometry = geo;
+    };
+    rebuildWork();
+
+    // ---------- koník ----------
+    const tail = grp('konik');
+    box(tail, 0, 2.4, 5.14, 5.75, -1.45, 1.45, M.green);
+    box(tail, 0.15, 2.25, 5.75, 7.4, -0.95, 0.95, M.green);
+    cylX(tail, 0.78, 0.78, 0, 2.35, AXIS_Y, 0, M.green, 40);
+    cylX(tail, 0.82, 0.82, -0.02, 0.12, AXIS_Y, 0, M.greenDark, 40);
+    const quill = new THREE.Group(); quill.position.set(0, AXIS_Y, 0); tail.add(quill);
+    cylX(quill, 0.36, 0.36, 0, 2.2, 0, 0, M.steel, 32);
+    cylX(quill, 0.3, 0.3, -0.25, 0, 0, 0, M.steelDark, 32);
+    cylX(quill, 0, 0.22, -0.7, -0.25, 0, 0, M.steel, 32);
+    cylX(tail, 0.2, 0.2, 2.35, 2.75, AXIS_Y, 0, M.steelDark, 20);
+    const wheelT = handwheel(tail, 0.75, 2.8, AXIS_Y, 0, 'x', 0.5);
+    lever(tail, 0.9, 8.22, 0, 0.7, 0, -0.6);
+    lever(tail, 2.2, 5.5, 1.45, 0.8, 1.2, 0);
+
+    // ---------- suport ----------
+    const car = grp('suport');
+    box(car, -1.4, 1.4, 5.14, 5.6, -1.9, 3.0, M.green);              // pozdĺžne sane
+    box(car, -1.8, 1.8, 2.6, 5.14, 1.5, 2.15, M.green);              // zámková skriňa
+    box(car, -0.75, 0.75, 5.6, 5.7, -1.9, 2.9, M.ways);              // rybinové vedenie
+    box(car, -0.3, 0.3, 5.45, 6.05, 3.0, 3.15, M.green);
+    cylZ(car, 0.08, 0.08, 3.0, 3.35, 0, 5.8, M.steel, 12);
+    cylZ(car, 0.2, 0.2, 3.15, 3.3, 0, 5.8, M.steel, 28);             // nónius
+    const wheelX = handwheel(car, 0.55, 0, 5.8, 3.4, 'z', 0.45);
+    cylZ(car, 0.2, 0.2, 2.15, 2.35, -0.9, 3.9, M.steelDark, 20);
+    const wheelZ = handwheel(car, 0.65, -0.9, 3.9, 2.4, 'z', 0.5);
+    const levFeed = pivotLever(car, 0.9, 3.3, 2.15, 0.55, 1.2);       // páka automatického posuvu
+    lever(car, 0.4, 4.4, 2.15, 0.5, 1.1, 0.5);
+    box(car, 1.05, 1.65, 4.25, 4.85, 2.15, 2.35, M.yellow);
+    const eStop = new THREE.Group(); eStop.position.set(1.35, 4.55, 2.35); car.add(eStop);   // núdzový STOP
+    cylZ(eStop, 0.09, 0.09, 0, 0.07, 0, 0, M.steelDark, 16); cylZ(eStop, 0.2, 0.19, 0.07, 0.16, 0, 0, M.red, 24); hitProxy(eStop, 0.27, 0, 0, 0.1);
+    cylY(car, 0.07, 0.07, 5.6, 9.85, 1.25, -1.75, M.steel, 12);       // rameno DRO
+    cylZ(car, 0.06, 0.06, -1.75, -0.6, 1.25, 9.8, M.steel, 12);
+    box(car, 0.55, 1.95, 9.45, 10.15, -0.6, -0.35, M.panel);
+    const droCanvas = document.createElement('canvas'); droCanvas.width = 256; droCanvas.height = 112;
+    const droTex = new THREE.CanvasTexture(droCanvas); droTex.encoding = THREE.sRGBEncoding;
+    add(car, new THREE.PlaneGeometry(1.25, 0.55), new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }), 1.25, 9.8, -0.344);
+    const drawDro = (x, z) => {
+      const g = droCanvas.getContext('2d');
+      g.fillStyle = '#071008'; g.fillRect(0, 0, 256, 112);
+      g.fillStyle = '#ff5a3c'; g.font = 'bold 40px "Share Tech Mono", Consolas, monospace';
+      g.fillText('X', 12, 48); g.fillText(x.toFixed(2).padStart(7, ' '), 64, 48);
+      g.fillText('Z', 12, 98); g.fillText(z.toFixed(2).padStart(7, ' '), 64, 98);
+      droTex.needsUpdate = true;
+    };
+
+    // ---------- priečne sane, nožová hlava, nôž ----------
+    const cross = grp('priecny', car);
+    box(cross, -0.9, 0.9, 5.7, 6.1, -0.35, 1.6, M.green);
+    cylY(cross, 0.68, 0.68, 6.1, 6.22, 0.15, 0.95, M.greenDark, 40);
+    box(cross, -0.6, 0.75, 6.22, 6.6, 0.25, 1.65, M.green);
+    cylZ(cross, 0.06, 0.06, 1.65, 1.9, 0.1, 6.42, M.steel, 12);
+    handwheel(cross, 0.3, 0.1, 6.42, 1.92, 'z', 0.25);
+    box(cross, -0.3, 0.6, 6.6, 7.75, 0.55, 1.45, M.steelDark);
+    cylY(cross, 0.075, 0.075, 7.75, 7.97, -0.2, 0.8, M.black, 12);
+    cylY(cross, 0.075, 0.075, 7.75, 7.97, -0.2, 1.25, M.black, 12);
+    cylY(cross, 0.1, 0.1, 7.75, 7.95, 0.25, 1.0, M.steel, 16);
+    lever(cross, 0.25, 7.95, 1.0, 0.75, 0, 1.25);
+    box(cross, -0.33, -0.08, 7.3, 7.47, 0.12, 1.5, M.steelDark);       // driek noža
+    box(cross, -0.34, -0.08, 7.38, 7.47, -0.03, 0.2, M.steelDark);
+    const tri = new THREE.Shape(); tri.moveTo(0, 0); tri.lineTo(0.3, 0.075); tri.lineTo(0.05, 0.3); tri.lineTo(0, 0);
+    const insGeo = new THREE.ExtrudeGeometry(tri, { depth: 0.06, bevelEnabled: false }); insGeo.rotateX(Math.PI / 2);
+    add(cross, insGeo, M.insert, TIP_LX, AXIS_Y + 0.03, TIP_LZ);       // rezná doštička, hrot v (TIP_LX, AXIS_Y, TIP_LZ)
+
+    // ---------- triesky ----------
+    const chipGeo = new THREE.BoxGeometry(0.06, 0.015, 0.1);
+    const chips = [];
+    for (let i = 0; i < 140; i++) {
+      const m = new THREE.Mesh(chipGeo, M.chip); m.visible = false; m.castShadow = true; scene.add(m);
+      chips.push({ m, v: new THREE.Vector3(), w: new THREE.Vector3(), life: 0, rest: false });
+    }
+    let chipIdx = 0, chipAcc = 0;
+
+    // ---------- stav simulácie ----------
+    const st = {
+      tipX: JAW_X + c.z / 100, r: c.x / 200, q: c.quill / 100, tail: JAW_X + c.tail / 100,
+      rpm: 0, spin: 0, rodA: 0, cutting: false, cutT: -9, workEnd: W_X1, msg: null,
+    };
+    let t = 0, last = performance.now(), teleT = 0, workDirty = false, lastBuild = 0, lastAuto = c.autoFeed;
+    const flags = {};
+    const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.4 }; };
+    const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
+
+    const penetration = (tx, rr) => {
+      let p = 0;
+      const i0 = Math.max(0, Math.floor((tx - W_X0) / W_DX)), i1 = Math.min(W_N - 1, Math.floor((tx + 0.32 - W_X0) / W_DX));
+      for (let i = i0; i <= i1; i++) {
+        const xc = W_X0 + (i + 0.5) * W_DX;
+        const d = prof[i] - (rr + Math.max(0, xc - tx) * 0.25);
+        if (d > p) p = d;
+      }
+      return p;
+    };
+    const cut = (tx, rr) => {
+      let removed = 0;
+      const i0 = Math.max(0, Math.floor((tx - W_X0) / W_DX)), i1 = Math.min(W_N - 1, Math.floor((tx + 0.32 - W_X0) / W_DX));
+      for (let i = i0; i <= i1; i++) {
+        const xc = W_X0 + (i + 0.5) * W_DX;
+        const lim = Math.max(0, rr + Math.max(0, xc - tx) * 0.25);
+        if (prof[i] > lim + 1e-4) { removed += prof[i] - lim; prof[i] = lim; }
+      }
+      return removed;
+    };
+    const tailEngaged = () => (st.tail - st.q - 0.7) <= st.workEnd + 0.035;
+    const checkPartOff = () => {
+      const iJ = Math.ceil((JAW_X - W_X0) / W_DX);
+      for (let i = iJ; i < W_N; i++) {
+        if (prof[i] < 0.012) {
+          let rest = false;
+          for (let j = i + 1; j < W_N; j++) if (prof[j] > 0.012) { rest = true; break; }
+          if (!rest || tailEngaged()) return;
+          for (let j = i; j < W_N; j++) prof[j] = 0;
+          workDirty = true; say('Obrobok bol odpichnutý – odrezaná časť odpadla.', 'info');
+          return;
+        }
+      }
+    };
+    const spawnChip = () => {
+      const ch = chips[chipIdx++ % chips.length];
+      ch.m.position.set(st.tipX + 0.03, AXIS_Y + 0.04, st.r + 0.02);
+      ch.v.set((Math.random() - 0.3) * 1.2, 1.2 + Math.random() * 2.2, 0.8 + Math.random() * 1.8);
+      ch.w.set(Math.random() * 20, Math.random() * 20, Math.random() * 20);
+      ch.life = 5 + Math.random() * 3; ch.rest = false; ch.m.visible = true;
+    };
+
+    // ---------- pohľady, popisy a výber dielov ----------
+    const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    const anchors = {
+      lozko: () => v3(9.0, 5.3, 1.2),
+      vretennik: () => v3(-7.2, 9.5, 0.6),
+      sklucovadlo: () => v3(-4.15, AXIS_Y + 1.55, 0),
+      obrobok: () => v3(Math.min(JAW_X + 1.0, st.workEnd - 0.2), AXIS_Y + 0.55, 0),
+      suport: () => v3(st.tipX - TIP_LX - 1.3, 5.2, 2.2),
+      priecny: () => v3(st.tipX - TIP_LX + 0.15, 8.1, st.r - TIP_LZ + 1.0),
+      konik: () => v3(st.tail + 1.2, 8.5, 0),
+      skrutky: () => v3(8.6, 4.3, 1.9),
+      prevodovka: () => v3(-7.5, 5.0, 2.35),
+      podstavec: () => v3(-7.6, 3.4, 1.95),
+    };
+    const views = {
+      celok: () => [[3.5, 12.5, 20], [1, 6, 0]],
+      rez: () => [[st.tipX + 1.7, 12, st.r + 2.8], [st.tipX + 0.3, AXIS_Y, st.r * 0.5], true],
+      spredu: () => [[1, 7.2, 21], [1, 6, 0]],
+      zhora: () => [[1, 25, 0.6], [1, 6, 0]],
+      konik: () => [[st.tail + 4.8, 10.2, 6.5], [st.tail + 0.2, 7, 0], true],
+    };
+    const insp = createInspector({
+      dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
+      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+    });
+    const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
+    const { push, pend } = ctrl;
+    apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.resetWork = () => {
+      prof.fill(W_R0); workDirty = true;
+      if (penetration(st.tipX, st.r) > 0.001) { st.r = W_R0 + 0.15; c.x = st.r * 200; return c.x; }
+      return null;
+    };
+
+    // ---------- ručné ovládanie prvkov ----------
+    const spdIdx = () => logNear(SPEEDS, c.rpm);
+    const feedSel = () => {
+      let best = [0, 0], bd = Infinity;
+      FEED_BASE.forEach((b, i) => FEED_MULT.forEach((m, j) => { const d = Math.abs(Math.log(b * m / c.feed)) + j * 1e-6; if (d < bd) { bd = d; best = [i, j]; } }));
+      return best;
+    };
+    const gearGuard = () => {
+      if (!c.running && st.rpm < 1) return true;
+      say('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'warn'); return false;
+    };
+    const setSpeed = (a, b) => { push('rpm', SPEEDS[a * 4 + b]); say(`Zaradené otáčky ${c.rpm} ot/min.`, 'info'); };
+    const setFeed = (i, j) => { push('feed', Math.round(FEED_BASE[i] * FEED_MULT[j] * 100) / 100); say(`Posuv nastavený na ${c.feed.toFixed(2)} mm/ot.`, 'info'); };
+    const zAct = () => (st.tipX - JAW_X) * 100;
+
+    // ručné kolesá: turn(d) dostane pootočenie v radiánoch okolo osi kolesa
+    ctrl.reg({ type: 'wheel', minR: 0.45, inc: -1, label: 'Ručné koleso suportu (Z)', hint: 'Ťahaj za veniec alebo kľučku, alebo toč kolieskom myši. 1 otáčka = 30 mm.',
+      guard: () => { if (!c.autoFeed) return true; say('Pri zaradenom automatickom posuve sa ručné koleso suportu netočí – vypni páku posuvu.', 'warn'); return false; },
+      turn: (d) => { const a = zAct(); push('z', clamp(clamp(c.z - d * 30 / TAU, a - 20, a + 20), 10, 1150)); },
+      read: () => `Z ${zAct().toFixed(1)} mm` }, wheelZ);
+    ctrl.reg({ type: 'wheel', minR: 0.38, inc: 1, label: 'Ručné koleso priečnych saní (X)', hint: 'V smere hodinových ručičiek ide nôž k osi. 1 otáčka = 10 mm na priemere.',
+      turn: (d) => { const a = st.r * 200; push('x', clamp(clamp(c.x + d * 10 / TAU, a - 5, a + 5), 0, 260)); },
+      read: () => `X Ø${(st.r * 200).toFixed(2)} mm` }, wheelX);
+    ctrl.reg({ type: 'wheel', minR: 0.5, inc: -1, label: 'Ručné koleso koníka – pinola', hint: 'V smere hodinových ručičiek sa pinola vysúva. 1 otáčka = 6 mm.',
+      turn: (d) => { const a = st.q * 100; push('quill', clamp(clamp(c.quill - d * 6 / TAU, a - 5, a + 5), 0, 150)); },
+      read: () => `pinola ${(st.q * 100).toFixed(1)} mm` }, wheelT);
+
+    // páky s aretovanými polohami
+    ctrl.reg({ type: 'lever', angles: A_ANG, minR: 0.25, guard: gearGuard, label: 'Páka otáčok I (rozsah)', hint: 'Ťahaj do polohy alebo klikni. Preraďuje sa len pri stojacom vretene.',
+      getIdx: () => Math.floor(spdIdx() / 4), onSet: (i) => setSpeed(i, spdIdx() % 4), read: () => `${c.rpm} ot/min` }, levA);
+    ctrl.reg({ type: 'lever', angles: B_ANG, minR: 0.25, guard: gearGuard, label: 'Páka otáčok II (stupeň)', hint: 'Ťahaj do polohy alebo klikni. Preraďuje sa len pri stojacom vretene.',
+      getIdx: () => spdIdx() % 4, onSet: (i) => setSpeed(Math.floor(spdIdx() / 4), i), read: () => `${c.rpm} ot/min` }, levB);
+    ctrl.reg({ type: 'lever', angles: FEED_ANG, minR: 0.2, label: 'Páka posuvov (Norton)', hint: '8 základných posuvov 0,05 – 0,5 mm/ot.',
+      getIdx: () => feedSel()[0], onSet: (i) => setFeed(i, feedSel()[1]), read: () => `${c.feed.toFixed(2)} mm/ot` }, levF);
+    ctrl.reg({ type: 'lever', angles: MULT_ANG, minR: 0.2, label: 'Páka násobiča posuvu', hint: 'Prepína násobok posuvu ×1 / ×2.',
+      getIdx: () => feedSel()[1], onSet: (j) => setFeed(feedSel()[0], j), read: () => `×${FEED_MULT[feedSel()[1]]} · ${c.feed.toFixed(2)} mm/ot` }, levM);
+    ctrl.reg({ type: 'lever', angles: [0.35, -0.45], minR: 0.22, label: 'Páka automatického posuvu', hint: 'Dole = posuv zaradený, suport ide k skľučovadlu, keď sa točí vreteno.',
+      getIdx: () => (c.autoFeed ? 1 : 0),
+      onSet: (i) => { push('autoFeed', i === 1); if (i === 1 && !(c.running && c.power)) say('Posuv zaradený – suport sa pohne, keď sa roztočí vreteno.', 'info'); },
+      read: () => (c.autoFeed ? 'zaradený' : 'vypnutý') }, levFeed);
+    ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.25, label: 'Hlavný vypínač', hint: 'Otoč alebo klikni: 0 = vypnuté, I = zapnuté.',
+      getIdx: () => (c.power ? 1 : 0),
+      onSet: (i) => {
+        push('power', i === 1);
+        if (i === 0) { push('running', false); say('Hlavný vypínač vypnutý – stroj je bez napätia.', 'warn'); }
+        else say('Hlavný vypínač zapnutý. Vreteno spustíš zeleným tlačidlom.', 'info');
+      },
+      read: () => (c.power ? 'I – zapnuté' : '0 – vypnuté') }, mainSwitch);
+
+    // tlačidlá
+    ctrl.reg({ type: 'button', label: 'Tlačidlo ŠTART', hint: 'Spustí vreteno, ak je zapnutý hlavný vypínač.',
+      action: () => { if (!c.power) say('Najprv zapni hlavný vypínač na vretenníku.', 'warn'); else push('running', true); } }, btnStart);
+    ctrl.reg({ type: 'button', label: 'Tlačidlo STOP', hint: 'Zastaví vreteno.', action: () => push('running', false) }, btnStop);
+    ctrl.reg({ type: 'button', label: 'Pracovné osvetlenie', hint: 'Zapne alebo vypne lampu.',
+      action: () => { push('light', !c.light); say(c.light ? 'Pracovné osvetlenie zapnuté.' : 'Pracovné osvetlenie vypnuté.', 'info'); } }, btnLight);
+    ctrl.reg({ type: 'button', label: 'Núdzový STOP', hint: 'Okamžite zastaví vreteno aj automatický posuv.',
+      action: () => { push('running', false); push('autoFeed', false); say('Núdzové zastavenie – vreteno aj posuv sú vypnuté.', 'danger'); } }, eStop);
+
+    // koník sa posúva ťahaním za teleso (zvyšok skupiny koníka, okrem kolesa)
+    let tail0 = 0;
+    ctrl.reg({ type: 'slide', label: 'Koník', hint: 'Ťahaj teleso koníka po lôžku.', read: () => `${((st.tail - JAW_X) * 100).toFixed(0)} mm od čeľustí`,
+      start: () => { tail0 = st.tail; },
+      slide: (dx) => { const a = (st.tail - JAW_X) * 100; push('tail', clamp(clamp((tail0 + dx - JAW_X) * 100, a - 40, a + 40), 350, 1245)); },
+      nudge: (dir) => push('tail', clamp((st.tail - JAW_X) * 100 + dir * 10, 350, 1245)) }, tail);
+
+    insp.goView('celok', true);
+
+    // ---------- hlavná slučka ----------
+    let raf;
+    const loop = (nowMs) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+
+      // hlavný chod
+      st.rpm = approach(st.rpm, c.running && c.power ? c.rpm : 0, 1400 * dt);
+      const running = st.rpm > 15;
+      const revs = st.rpm > 0 ? 4.5 * st.rpm / (st.rpm + 500) : 0;     // vizuálne spomalené otáčanie
+      st.spin += revs * TAU * dt; spindle.rotation.x = st.spin;
+      st.rodA += revs * 0.35 * TAU * dt; leadScrew.rotation.x = st.rodA; feedRod.rotation.x = st.rodA * 1.6;
+
+      let iEnd = W_N - 1; while (iEnd >= 0 && prof[iEnd] < 0.012) iEnd--;
+      st.workEnd = iEnd >= 0 ? W_X0 + (iEnd + 1) * W_DX : JAW_X;
+
+      // automatický pozdĺžny posuv (smerom k skľučovadlu)
+      if (c.autoFeed && running) {
+        const zAct2 = (st.tipX - JAW_X) * 100, zMin = (LIM.tipMin - JAW_X) * 100;
+        c.z = Math.max(c.z - c.feed * st.rpm / 60 * c.timeScale * dt, zAct2 - 3, zMin);
+        if (c.z <= zMin + 0.01 && zAct2 <= zMin + 0.05) { c.autoFeed = false; say('Automatický posuv vypnutý – suport dosiahol koncovú polohu pri skľučovadle.', 'info'); }
+      } else if (c.autoFeed) c.z = (st.tipX - JAW_X) * 100;           // posuv stojí s vretenom, suport nedobieha
+
+      // pinola koníka
+      const qT = clamp(c.quill / 100, 0, LIM.quillMax);
+      let qMax = st.tail - 0.7 - (st.workEnd - 0.03), qWhy = 'work';
+      if (st.r < LIM.quillClear) { const m2 = st.tail - 0.7 - (st.tipX + 0.05); if (m2 < qMax) { qMax = m2; qWhy = 'tool'; } }
+      let nq = approach(st.q, qT, 0.8 * dt);
+      if (nq > st.q && nq > qMax) nq = Math.max(st.q, qMax);
+      sayOnce('quill', qT > qMax + 0.004 && nq >= qMax - 0.004, qWhy === 'tool' ? 'Pinola by narazila do noža.' : 'Hrot koníka dosadol do strediaceho otvoru – obrobok je podopretý.', qWhy === 'tool' ? 'warn' : 'info');
+      wheelT.rotation.z -= (nq - st.q) / 0.06 * TAU; st.q = nq;
+
+      // poloha koníka na lôžku
+      const tT = clamp(JAW_X + c.tail / 100, -2, LIM.tailMax);
+      let tMin = st.tipX + LIM.carToTail, tWhy = 'car';
+      const m3 = st.workEnd - 0.03 + st.q + 0.7; if (m3 > tMin) { tMin = m3; tWhy = 'work'; }
+      if (st.r < LIM.quillClear) { const m4 = st.tipX + 0.05 + st.q + 0.7; if (m4 > tMin) { tMin = m4; tWhy = 'tool'; } }
+      let nt = approach(st.tail, tT, 2.2 * dt);
+      if (nt < st.tail && nt < tMin) nt = Math.min(st.tail, tMin);
+      sayOnce('tail', tT < tMin - 0.004 && nt <= tMin + 0.004, tWhy === 'car' ? 'Koník narazil na suport.' : tWhy === 'work' ? 'Hrot koníka dosadol na obrobok.' : 'Hrot koníka by narazil do noža.', tWhy === 'work' ? 'info' : 'warn');
+      st.tail = nt;
+
+      // suport (Z) a priečne sane (X)
+      const zWant = JAW_X + c.z / 100, tipMax = st.tail - LIM.carToTail;
+      const zT = clamp(zWant, LIM.tipMin, Math.max(LIM.tipMin, tipMax)), xT = clamp(c.x / 200, 0, LIM.rMax);
+      const vz = st.cutting ? 0.35 : 2.6, vx = st.cutting ? 0.22 : 0.75;
+      let nx = approach(st.tipX, zT, vz * dt), nr = approach(st.r, xT, vx * dt);
+      sayOnce('cartail', zWant > tipMax + 0.004 && st.tipX >= tipMax - 0.003, 'Suport narazil na koník – koncový doraz.', 'warn');
+      let blocked = null;
+      if (nx !== st.tipX || nr !== st.r) {
+        const qTip = st.tail - st.q - 0.7;
+        const pen0 = running ? 0 : penetration(st.tipX, st.r);
+        let why = null;
+        const ok = (tx, rr) => {
+          if (rr < LIM.quillClear && tx > qTip - 0.05) { why = 'quill'; return false; }
+          if (!running && penetration(tx, rr) > Math.max(0.002, pen0 + 1e-5)) { why = 'work'; return false; }
+          return true;
+        };
+        if (!ok(nx, nr)) {
+          blocked = why;
+          if (ok(st.tipX, nr)) nx = st.tipX; else if (ok(nx, st.r)) nr = st.r; else { nx = st.tipX; nr = st.r; }
+        }
+      }
+      sayOnce('toolwork', blocked === 'work', 'Nôž narazil na obrobok. Pri stojacom vretene nemôže rezať – spusti hlavný chod.', 'danger');
+      sayOnce('toolquill', blocked === 'quill', 'Nôž by narazil do hrotu koníka.', 'warn');
+      wheelZ.rotation.z -= (nx - st.tipX) / 0.3 * TAU;
+      wheelX.rotation.z += (nr - st.r) / 0.05 * TAU;
+      st.tipX = nx; st.r = nr;
+
+      // rezanie
+      if (running) {
+        const removed = cut(st.tipX, st.r);
+        if (removed > 0) {
+          st.cutT = t; workDirty = true; checkPartOff();
+          chipAcc += dt * 45; while (chipAcc >= 1) { spawnChip(); chipAcc -= 1; }
+        }
+      }
+      st.cutting = t - st.cutT < 0.25;
+      if (workDirty && t - lastBuild > 0.06) { rebuildWork(); workDirty = false; lastBuild = t; }
+
+      // pohyb skupín
+      car.position.x = st.tipX - TIP_LX;
+      cross.position.z = st.r - TIP_LZ;
+      tail.position.x = st.tail;
+      quill.position.x = -st.q;
+      M.lamp.emissive.setHex(c.running && c.power ? 0x22dd55 : c.power ? 0x8a5a00 : 0x000000);
+      spot.intensity = c.light ? 1.1 : 0; M.bulb.emissiveIntensity = c.light ? 1.4 : 0.03;
+      spot.target.position.set(st.tipX, AXIS_Y, 0);
+
+      for (const ch of chips) {
+        if (ch.life <= 0) continue;
+        ch.life -= dt;
+        if (ch.life <= 0) { ch.m.visible = false; continue; }
+        if (ch.rest) continue;
+        ch.v.y -= 14 * dt; ch.m.position.addScaledVector(ch.v, dt);
+        ch.m.rotation.x += ch.w.x * dt; ch.m.rotation.y += ch.w.y * dt; ch.m.rotation.z += ch.w.z * dt;
+        const p = ch.m.position;
+        let fy = 0.02;
+        if (p.x > -5.2 && p.x < 9.6 && p.z > -2 && p.z < 2.7) fy = 1.57;
+        if (p.x > -5.2 && p.x < 12 && Math.abs(p.z) < 1.5) fy = 5.16;
+        if (p.y <= fy) { p.y = fy; ch.rest = true; }
+      }
+
+      ctrl.update(dt);
+      insp.update(t, c);
+
+      if (t - teleT > 0.1) {
+        teleT = t;
+        const zmm = (st.tipX - JAW_X) * 100, dmm = st.r * 200;
+        const iTool = clamp(Math.floor((st.tipX - W_X0) / W_DX), 0, W_N - 1);
+        setTele({
+          rpm: st.rpm, z: zmm, x: dmm, quill: st.q * 100, tail: (st.tail - JAW_X) * 100,
+          vc: Math.PI * dmm * st.rpm / 1000, cutting: st.cutting && running, engaged: tailEngaged(),
+          msg: st.msg && st.msg.until > t ? st.msg : null, workD: prof[iTool] * 200,
+        });
+        if (c.autoFeed) pend.z = Math.round(c.z * 10) / 10;
+        if (lastAuto !== c.autoFeed) pend.autoFeed = c.autoFeed;
+        lastAuto = c.autoFeed;
+        if (Object.keys(pend).length) {
+          const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]);
+          setUi((u) => ({ ...u, ...p }));
+        }
+        drawDro(dmm, zmm);
+      }
+
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); disposeStage(); };
+  }, []);
+
+  const statusMsg = tele.msg
+    ? tele.msg
+    : tele.cutting ? { kind: 'run', text: `Nôž v reze – Ø${tele.workD.toFixed(1)} mm, vc ${tele.vc.toFixed(0)} m/min` }
+    : tele.rpm > 15 ? { kind: 'run', text: 'Vreteno beží. Prisuň nôž k obrobku posuvom X.' }
+    : !ui.power ? { kind: 'warn', text: 'Hlavný vypínač je vypnutý – stroj je bez napätia.' }
+    : { kind: 'idle', text: 'Stroj stojí. Spusti hlavný chod, potom nastav nôž.' };
+  const running = ui.running;
+  const chips = [{ color: tele.rpm > 15 ? '#3ee06c' : '#8b8f89', text: tele.rpm > 15 ? `${Math.round(tele.rpm)} ot/min` : 'Vreteno stojí' }];
+  if (tele.cutting) chips.push({ color: '#ffb340', text: 'Rez' });
+  if (tele.engaged) chips.push({ color: '#7fb6ff', text: 'Podopreté hrotom' });
+
+  return (
+    <div className="machine-app w-full flex flex-col md:flex-row">
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={LATHE_PARTS} selected={selected} selectPart={selectPart} chips={chips} />
+      <aside className="panel">
+        <PanelHeader onBack={onBack} kicker="Simulátor · sústruh" title="Konvenčný hrotový sústruh"
+          sub="Model v štýle strojov TOS SN a VDF. Mierka 1 : 100 mm, obrobok mosadz Ø90 mm."
+          rows={[['X Ø', tele.x.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
+          foot={[`n ${Math.round(tele.rpm)} ot/min`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
+
+        <ManualSection ui={ui} set={set}>
+          <li><b>Ručné kolesá</b> suportu (Z), priečnych saní (X) a koníka (pinola) – ťahaj za veniec alebo toč kolieskom myši.</li>
+          <li><b>Páky otáčok</b> na vretenníku – 3 × 4 = 12 stupňov, preraďovať len pri stojacom vretene.</li>
+          <li><b>Páky prevodovky posuvov</b> – 0,05 až 1,0 mm/ot, a <b>páka automatického posuvu</b> na suporte.</li>
+          <li><b>Hlavný vypínač</b> a tlačidlá <b>Štart</b> (zelené), <b>Stop</b> (červené), <b>osvetlenie</b> (modré).</li>
+          <li><b>Núdzový STOP</b> na suporte a <b>koník</b>, ktorý posunieš ťahaním za teleso.</li>
+        </ManualSection>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Hlavný chod</h3>
+          <button type="button" className={`btn-run ${running ? 'stop' : 'start'}`}
+            onClick={() => { if (!running && !ui.power) set('power', true); set('running', !running); }}>
+            {running ? '■ Stop vretena' : '▶ Štart vretena'}
+          </button>
+          <div className="mt-2">
+            <Toggle on={ui.power} label="Hlavný vypínač" onClick={() => { const v = !ui.power; set('power', v); if (!v) set('running', false); }} />
+            <Toggle on={ui.light} label="Pracovné osvetlenie" onClick={() => set('light', !ui.light)} />
+          </div>
+          <div className="mt-3">
+            <Slider id="rpm" label="Otáčky vretena" unit="ot/min" min={40} max={2000} step={10} value={ui.rpm} onChange={(v) => set('rpm', v)} />
+          </div>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Posuvy suportu</h3>
+          <Slider id="z" label="Pozdĺžny posuv Z (od čeľustí)" unit="mm" min={10} max={1150} step={1} value={ui.z} actual={tele.z} onChange={(v) => set('z', v)} />
+          <Slider id="x" label="Priečny posuv X (priemer)" unit="mm" min={0} max={260} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
+          <Toggle on={ui.autoFeed} label="Automatický pozdĺžny posuv k skľučovadlu" onClick={() => set('autoFeed', !ui.autoFeed)} />
+          <div className="mt-2">
+            <Slider id="feed" label="Posuv na otáčku" unit="mm/ot" min={0.05} max={1} step={0.01} value={ui.feed} digits={2} onChange={(v) => set('feed', v)} />
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold">Zrýchlenie posuvu</span>
+              <Seg label="Zrýchlenie posuvu" value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
+            </div>
+            <p className="text-xs muted mt-2">Automatický posuv beží len pri otáčajúcom sa vretene, rýchlosťou posuv × otáčky.</p>
+          </div>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Koník</h3>
+          <Slider id="quill" label="Výsuv pinoly" unit="mm" min={0} max={150} step={1} value={ui.quill} actual={tele.quill} onChange={(v) => set('quill', v)} />
+          <Slider id="tail" label="Poloha koníka na lôžku" unit="mm" min={350} max={1245} step={1} value={ui.tail} actual={tele.tail} onChange={(v) => set('tail', v)} />
+        </div>
+
+        <ViewSection apiRef={apiRef} ui={ui} set={set} resetLabel="Vložiť nový obrobok Ø90 mm"
+          views={[['celok', 'Celok'], ['rez', 'Detail rezu'], ['spredu', 'Spredu'], ['zhora', 'Zhora'], ['konik', 'Koník']]}
+          onReset={() => { const r = apiRef.current.resetWork && apiRef.current.resetWork(); if (r != null) set('x', r); }} />
+        <PartsSection parts={LATHE_PARTS} selected={selected} selectPart={selectPart} />
+        <HelpFooter />
+      </aside>
+    </div>
+  );
+}
+
+// =====================================================================
+// UNIVERZÁLNA FRÉZA TOS FA 3 B
+// =====================================================================
+const MILL = {
+  SPX: 0, SPZ: 1.2, NOSE: 10.4,           // os vretena a čelo vretena
+  X0: -4, Y0: 0, H0: 4.2,                  // nulové polohy: posun stola, stred saní, výška stola
+  WX: 1.8, WZ: 1.0, WH: 0.6, WB: 0.45,     // obrobok 180 × 100 × 60 mm na podložkách 45 mm nad stolom
+  NX: 108, NZ: 60,                         // sieť výškovej mapy obrobku
+};
+const MILL_SPEEDS = [40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000];   // 3 × 6
+const MILL_FEEDS = [19, 24, 30, 37.5, 47.5, 60, 75, 95, 118, 150, 190, 235, 300, 375, 475, 600, 750, 950];        // 3 × 6, mm/min
+const MILL_TOOLS = {
+  end: { name: 'stopková fréza Ø20', r: 0.1, len: 1.5 },
+  face: { name: 'čelná fréza Ø63', r: 0.315, len: 1.15 },
+};
+const S3_ANG = [0.75, 0, -0.75], S6_ANG = fanAngles(6, 1.15), DIR_ANG = [0.55, 0, -0.55];
+// prekážky voči hornej ploche stola (stred stola = 0): zverák, podložky, skrutka zveráka, stôl
+const MILL_OBST = [
+  { x0: -1.25, x1: 1.25, z0: -0.95, z1: 0.95, top: 0.35, name: 'zveráka' },
+  { x0: -1.25, x1: 1.25, z0: -0.95, z1: -0.5, top: 0.85, name: 'pevnej čeľuste zveráka' },
+  { x0: -1.1, x1: 1.1, z0: 0.5, z1: 0.95, top: 0.85, name: 'posuvnej čeľuste zveráka' },
+  { x0: -0.95, x1: 0.95, z0: -0.5, z1: 0.5, top: MILL.WB, name: 'podložiek' },
+  { x0: -0.5, x1: 0.5, z0: 0.95, z1: 1.75, top: 0.72, name: 'skrutky zveráka' },
+  { x0: -6.5, x1: 6.5, z0: -1.5, z1: 1.5, top: 0, name: 'stola' },
+];
+
+const MILL_PARTS = [
+  { key: 'podstavec', short: 'Podstavec', name: 'Podstavec', desc: 'Liatinový podstavec nesie stojan a konzolu. V jeho dutine je nádrž chladiacej kvapaliny s čerpadlom a pod konzolou zdvíhacia skrutka.' },
+  { key: 'stojan', short: 'Stojan', name: 'Stojan', desc: 'Skriňový stojan s prevodovkou otáčok vretena. Na prednej strane má rybinové vedenie, po ktorom sa zvisle posúva konzola. Páky otáčok sú na pravom boku.' },
+  { key: 'hlava', short: 'Vertikálna hlava', name: 'Sklopná vertikálna hlava', desc: 'Frézovacia hlava s vretenom, ktorá sa dá natočiť okolo vodorovnej osi o ±45°. V modeli je nastavená zvisle. Ručné koliesko na boku vysúva pinolu.' },
+  { key: 'vreteno', short: 'Vreteno a fréza', name: 'Vreteno a nástroj', desc: 'Vreteno s kužeľom ISO 40 nesie frézu: stopkovú Ø20 mm na drážky a osadenia alebo čelnú Ø63 mm s vymeniteľnými doštičkami na rovinné plochy.' },
+  { key: 'konzola', short: 'Konzola', name: 'Konzola', desc: 'Posúva sa po stojane zvisle (os Z) kľukou cez skrutku a kužeľové kolesá. Vpredu má ručné koleso priečneho posuvu, kľuku zdvihu a páky prevodovky posuvov.' },
+  { key: 'sane', short: 'Priečne sane', name: 'Priečne sane', desc: 'Sane jazdia po konzole k stojanu a od neho (os Y). Nesú pracovný stôl a páku automatického posuvu stola.' },
+  { key: 'stol', short: 'Pracovný stôl', name: 'Pracovný stôl', desc: 'Stôl 1300 × 300 mm s tromi T-drážkami sa posúva pozdĺžne (os X) ručnými kolesami na koncoch alebo automatickým posuvom. Červené narážky vpredu obmedzujú posuv.' },
+  { key: 'zverak', short: 'Zverák', name: 'Strojný zverák', desc: 'Zverák upnutý v T-drážkach drží obrobok medzi pevnou a posuvnou čeľusťou na rovnobežných podložkách. Fréza nesmie zasiahnuť čeľuste ani podložky.' },
+  { key: 'obrobok', short: 'Obrobok', name: 'Obrobok', desc: 'Oceľový hranol 180 × 100 × 60 mm s tmavou okujenou povrchou. Pri bežiacom vretene fréza odoberá materiál a obrobená plocha je lesklá. Pri stojacom vretene do neho fréza nevnikne.' },
+  { key: 'rozvadzac', short: 'Rozvádzač', name: 'Elektrický rozvádzač', desc: 'Na pravom boku stojana: ampérmeter, hlavný vypínač, tlačidlá Štart, Stop a chladenie a núdzový STOP. Pod ním sú páky otáčok vretena.' },
+];
+
+function MillSimulator({ onBack }) {
+  const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
+  const init = { running: false, power: true, coolant: false, manual: false, rpm: 400, x: 400, y: 120, z: 150, feedDir: 0, feed: 118, timeScale: 10, tool: 'end', labels: true };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [tele, setTele] = useState({ rpm: 0, x: 400, y: 120, z: 150, vc: 0, vf: 0, msg: null, cutting: false, depth: 0 });
+
+  useEffect(() => {
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
+    const c = ctl.current;
+    const { SPX, SPZ, NOSE, X0, Y0, H0, WX, WZ, WH, WB, NX, NZ } = MILL;
+    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const dom = renderer.domElement;
+
+    const M = {
+      ...baseMats(0x8cc6a6, 0x70a98b, 0x507f69),
+      vise: std(0x5b646d, 0.5, 0.55), cutter: std(0x34383c, 0.32, 0.8), gauge: std(0xf3f1e8, 0.5, 0),
+      chip: std(0x9aa3ad, 0.3, 0.85),
+      coolant: new THREE.MeshStandardMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0, emissive: 0x1a4a6a, emissiveIntensity: 0.5 }),
+      work: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.78, flatShading: true, side: THREE.DoubleSide }),
+    };
+    const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel, crank, face } = makeKit(M);
+    const root = new THREE.Group(); scene.add(root);
+    const G = {};
+    const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
+    const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+    // ---------- podstavec ----------
+    const base = grp('podstavec');
+    box(base, -1.9, 1.9, 0.1, 0.45, -4.6, 3.8, M.green);
+    box(base, -2.0, 2.0, 0, 0.1, -4.7, 3.9, M.greenDeep);
+    box(base, -1.3, 1.3, 0.16, 0.4, 3.8, 3.82, M.greenDark);         // kryt nádrže chladiva
+    cylZ(base, 0.09, 0.09, 3.82, 3.92, 1.0, 0.28, M.black, 12);
+    cylY(base, 0.3, 0.3, 0.45, 0.6, 0, 1.0, M.greenDark, 24);         // pätka zdvíhacej skrutky
+    const ramGeo = new THREE.CylinderGeometry(0.16, 0.16, 1, 20); ramGeo.translate(0, 0.5, 0);
+    const ram = add(base, ramGeo, M.steel, 0, 0.6, 1.0);
+
+    // ---------- stojan ----------
+    const col = grp('stojan');
+    box(col, -1.5, 1.5, 0.45, 13.4, -4.4, -1.6, M.green);
+    box(col, -1.6, 1.6, 13.4, 13.6, -4.5, -1.5, M.greenDark);
+    box(col, -1.15, -0.75, 0.45, 13.4, -1.6, -1.52, M.ways);          // rybinové vedenie konzoly
+    box(col, 0.75, 1.15, 0.45, 13.4, -1.6, -1.52, M.ways);
+    box(col, -1.52, -1.5, 1.4, 6.0, -4.0, -2.0, M.greenDark);         // bočné dvierka
+    cylX(col, 0.05, 0.05, -1.56, -1.52, 3.7, -2.3, M.black, 10);
+    cylX(col, 0.75, 0.75, -0.95, 0.95, 2.3, -5.2, M.greenDark, 32);   // hlavný motor vzadu
+    cylX(col, 0.6, 0.6, 0.95, 1.2, 2.3, -5.2, M.black, 24);
+    box(col, -0.8, 0.8, 1.4, 1.6, -5.8, -4.4, M.greenDeep);
+    const sp = face(col, 1.5, 0, -3.0, Math.PI / 2);                  // panel pák otáčok na pravom boku
+    box(sp, -0.95, 0.95, 6.15, 7.95, 0, 0.02, M.greenDark);
+    box(sp, -0.7, 0.7, 6.3, 6.68, 0.02, 0.035, M.white);               // tabuľka otáčok
+    [[-0.45, 7.3], [0.4, 7.3]].forEach(([x, y]) => cylZ(sp, 0.32, 0.28, 0.02, 0.2, x, y, M.black, 28));
+    detents(sp, -0.45, 7.3, 0.2, 0.21, S3_ANG); detents(sp, 0.4, 7.3, 0.2, 0.21, S6_ANG, 0.028);
+    const levSA = pivotLever(sp, -0.45, 7.3, 0.2, 0.5, 1.15), levSB = pivotLever(sp, 0.4, 7.3, 0.2, 0.5, 1.15);
+
+    // ---------- elektrický rozvádzač ----------
+    const cab = grp('rozvadzac');
+    box(cab, 1.5, 2.2, 8.2, 11.2, -3.9, -2.1, M.green);
+    const cf = face(cab, 2.2, 0, -3.0, Math.PI / 2);
+    box(cf, -0.85, 0.85, 8.3, 11.1, 0, 0.015, M.greenDark);
+    cylZ(cf, 0.25, 0.25, 0.015, 0.06, -0.45, 10.6, M.black, 28);        // ampérmeter
+    cylZ(cf, 0.21, 0.21, 0.06, 0.066, -0.45, 10.6, M.gauge, 28);
+    const needle = box(cf, -0.012, 0.012, 0, 0.17, 0.067, 0.072, M.red); needle.position.set(-0.45, 10.6, 0.07); needle.geometry.translate(0, 0.085, 0);
+    ball(cf, 0.08, 0.2, 10.75, 0.03, M.lamp);
+    box(cf, 0.15, 0.8, 9.95, 10.5, 0.015, 0.03, M.yellow);             // hlavný vypínač
+    box(cf, 0.455, 0.495, 10.38, 10.47, 0.03, 0.035, M.black);
+    add(cf, new THREE.TorusGeometry(0.03, 0.009, 6, 16), M.black, 0.21, 10.22, 0.033);
+    const mainSwitch = new THREE.Group(); mainSwitch.position.set(0.475, 10.22, 0.03); cf.add(mainSwitch);
+    cylZ(mainSwitch, 0.19, 0.19, 0, 0.07, 0, 0, M.black, 24);
+    box(mainSwitch, -0.24, 0.24, -0.05, 0.05, 0.07, 0.19, M.red);
+    const pbtn = (x, y, m) => { const g = new THREE.Group(); g.position.set(x, y, 0.015); cf.add(g); cylZ(g, 0.11, 0.11, 0, 0.08, 0, 0, m, 20); hitProxy(g, 0.16, 0, 0, 0.06); return g; };
+    const btnStart = pbtn(-0.55, 9.45, M.btnGreen), btnStop = pbtn(-0.2, 9.45, M.red), btnCool = pbtn(0.15, 9.45, M.blue);
+    box(cf, -0.75, 0.35, 9.15, 9.25, 0.015, 0.025, M.white);
+    box(cf, 0.25, 0.75, 8.5, 9.0, 0.015, 0.025, M.yellow);
+    const eStop = new THREE.Group(); eStop.position.set(0.5, 8.75, 0.025); cf.add(eStop);
+    cylZ(eStop, 0.08, 0.08, 0, 0.07, 0, 0, M.steelDark, 16); cylZ(eStop, 0.19, 0.18, 0.07, 0.16, 0, 0, M.red, 24); hitProxy(eStop, 0.25, 0, 0, 0.1);
+    cylY(cab, 0.06, 0.06, 6.0, 8.2, 2.0, -2.35, M.black, 12);           // káblová trubka
+    cylY(cab, 0.06, 0.06, 11.2, 12.6, 1.8, -3.6, M.black, 12);
+
+    // ---------- sklopná vertikálna hlava ----------
+    const head = grp('hlava');
+    cylZ(head, 1.25, 1.25, -1.6, -1.38, 0, 12.25, M.greenDark, 48);    // príruba na stojane
+    cylZ(head, 1.1, 1.1, -1.38, -1.05, 0, 12.25, M.green, 48);         // otočný bubon
+    add(head, new THREE.TorusGeometry(1.1, 0.02, 6, 48), M.white, 0, 12.25, -1.2);
+    box(head, -0.95, 0.95, 11.2, 13.3, -1.05, SPZ, M.green);
+    cylY(head, 0.95, 0.95, 11.2, 13.3, SPX, SPZ, M.green, 40);
+    box(head, -0.98, 0.98, 13.3, 13.45, -1.05, SPZ, M.greenDark);
+    cylY(head, 0.98, 0.98, 13.3, 13.45, SPX, SPZ, M.greenDark, 40);
+    cylY(head, 0.55, 0.55, 10.7, 11.2, SPX, SPZ, M.greenDark, 32);      // puzdro pinoly
+    cylX(head, 0.08, 0.08, 0.95, 1.15, 11.9, 0.3, M.steel, 12);
+    handwheel(head, 0.32, 1.2, 11.9, 0.3, 'x', 0.22);                   // koliesko pinoly
+    lever(head, -0.62, 11.0, SPZ + 0.25, 0.35, 0.9, 0.6);               // aretácia pinoly
+    const hose = new THREE.CatmullRomCurve3([v3(0.85, 12.1, SPZ + 0.75), v3(1.2, 11.3, SPZ + 0.95), v3(0.95, 10.5, SPZ + 0.85), v3(0.45, NOSE - 0.5, SPZ + 0.42)]);
+    add(head, new THREE.TubeGeometry(hose, 40, 0.05, 8, false), M.black);
+    const nozzle = v3(0.45, NOSE - 0.5, SPZ + 0.42);
+    ball(head, 0.07, nozzle.x, nozzle.y, nozzle.z, M.steel);
+
+    // ---------- vreteno a nástroj ----------
+    const spindle = grp('vreteno'); spindle.position.set(SPX, NOSE, SPZ);
+    cylY(spindle, 0.42, 0.42, 0, 0.3, 0, 0, M.steel, 40);
+    box(spindle, -0.42, -0.3, -0.06, 0.02, -0.08, 0.08, M.steelDark);
+    box(spindle, 0.3, 0.42, -0.06, 0.02, -0.08, 0.08, M.steelDark);
+    const toolG = new THREE.Group(); spindle.add(toolG);
+    const buildTool = (type) => {
+      while (toolG.children.length) { const o = toolG.children[0]; toolG.remove(o); o.geometry.dispose(); }
+      cylY(toolG, 0.38, 0.38, -0.15, 0, 0, 0, M.steelDark, 32);
+      if (type === 'end') {
+        cylY(toolG, 0.22, 0.26, -0.75, -0.15, 0, 0, M.steelDark, 28);
+        cylY(toolG, 0.24, 0.24, -0.86, -0.75, 0, 0, M.steel, 6);
+        cylY(toolG, 0.1, 0.1, -1.0, -0.86, 0, 0, M.steel, 20);
+        cylY(toolG, 0.1, 0.1, -1.5, -1.0, 0, 0, M.cutter, 20);
+        for (let k = 0; k < 4; k++) {                                  // naznačené skrutkovité drážky
+          const f = add(toolG, new THREE.BoxGeometry(0.03, 0.46, 0.012), M.steel, Math.cos(k * TAU / 4) * 0.095, -1.25, Math.sin(k * TAU / 4) * 0.095);
+          f.rotation.set(0, -k * TAU / 4, 0.3);
+        }
+      } else {
+        cylY(toolG, 0.2, 0.2, -0.6, -0.15, 0, 0, M.steelDark, 24);
+        cylY(toolG, 0.3, 0.315, -1.15, -0.6, 0, 0, M.cutter, 40);
+        for (let k = 0; k < 6; k++) {
+          const a = k * TAU / 6;
+          const ins = add(toolG, new THREE.BoxGeometry(0.11, 0.12, 0.05), M.insert, Math.cos(a) * 0.29, -1.09, Math.sin(a) * 0.29);
+          ins.rotation.y = -a;
+        }
+      }
+    };
+
+    // ---------- konzola ----------
+    const knee = grp('konzola');
+    box(knee, -1.5, 1.5, -2.4, 0, -1.6, 3.4, M.green);
+    box(knee, -1.3, -0.9, 0, 0.05, -1.5, 3.3, M.ways);
+    box(knee, 0.9, 1.3, 0, 0.05, -1.5, 3.3, M.ways);
+    box(knee, -1.55, 1.55, -0.14, 0, 3.4, 3.44, M.greenDark);
+    box(knee, -1.3, -0.1, -0.24, -0.16, 3.4, 3.42, M.white);           // tabuľka posuvov
+    [[-1.0, -0.6], [-0.4, -0.6]].forEach(([x, y]) => cylZ(knee, 0.24, 0.2, 3.4, 3.55, x, y, M.black, 24));
+    detents(knee, -1.0, -0.6, 3.55, 0.15, S3_ANG, 0.025); detents(knee, -0.4, -0.6, 3.55, 0.15, S6_ANG, 0.02);
+    const levFA = pivotLever(knee, -1.0, -0.6, 3.55, 0.38, 1.2), levFB = pivotLever(knee, -0.4, -0.6, 3.55, 0.38, 1.2);
+    cylZ(knee, 0.2, 0.2, 3.4, 3.5, 0.75, -1.35, M.steelDark, 24);
+    cylZ(knee, 0.08, 0.08, 3.5, 3.62, 0.75, -1.35, M.steel, 12);
+    const wheelY = handwheel(knee, 0.5, 0.75, -1.35, 3.68, 'z', 0.35);
+    cylZ(knee, 0.16, 0.16, 3.4, 3.52, -0.8, -1.55, M.steelDark, 20);
+    const crankZ = crank(knee, 0.45, -0.8, -1.55, 3.56);
+    lever(knee, 1.0, -0.5, 3.4, 0.38, 1.2, -0.4);                       // aretácia konzoly
+
+    // ---------- priečne sane ----------
+    const sad = grp('sane', knee);
+    box(sad, -1.45, 1.45, 0.05, 0.6, -0.95, 0.95, M.green);
+    cylZ(sad, 0.2, 0.17, 0.95, 1.07, 0.75, 0.3, M.black, 20);
+    detents(sad, 0.75, 0.3, 1.07, 0.12, DIR_ANG, 0.022);
+    const levDir = pivotLever(sad, 0.75, 0.3, 1.07, 0.32, 1.25);
+    lever(sad, -0.9, 0.3, 0.95, 0.3, 1.2, 0.5);
+
+    // ---------- pracovný stôl ----------
+    const tbl = grp('stol', sad); tbl.position.y = 0.6;
+    box(tbl, -6.5, 6.5, 0, 0.6, -1.5, 1.5, M.green);
+    box(tbl, -6.5, 6.5, 0.6, 0.75, -1.5, 1.5, M.ways);
+    [-0.9, 0, 0.9].forEach((z) => box(tbl, -6.5, 6.5, 0.7, 0.752, z - 0.09, z + 0.09, M.steelDark));
+    box(tbl, -6.5, 6.5, 0.12, 0.5, 1.5, 1.58, M.greenDark);
+    [-3.6, 3.6].forEach((x) => box(tbl, x - 0.12, x + 0.12, 0.08, 0.55, 1.58, 1.72, M.red));
+    box(tbl, -6.85, -6.5, 0.05, 0.6, -0.35, 0.35, M.green);
+    box(tbl, 6.5, 6.85, 0.05, 0.6, -0.35, 0.35, M.green);
+    cylX(tbl, 0.07, 0.07, -7.0, -6.85, 0.32, 0, M.steel, 12);
+    cylX(tbl, 0.07, 0.07, 6.85, 7.0, 0.32, 0, M.steel, 12);
+    const wheelXL = handwheel(tbl, 0.45, -7.05, 0.32, 0, '-x', 0.32), wheelXR = handwheel(tbl, 0.45, 7.05, 0.32, 0, 'x', 0.32);
+
+    // ---------- zverák ----------
+    const vise = grp('zverak', tbl); vise.position.y = 0.75;
+    box(vise, -1.25, 1.25, 0, 0.35, -0.95, 0.95, M.vise);
+    box(vise, -1.25, 1.25, 0.35, 0.85, -0.95, -0.5, M.vise);
+    box(vise, -1.1, 1.1, 0.4, 0.82, -0.52, -0.5, M.steel);
+    box(vise, -1.1, 1.1, 0.35, 0.85, 0.5, 0.95, M.vise);
+    box(vise, -1.1, 1.1, 0.4, 0.82, 0.5, 0.52, M.steel);
+    box(vise, -0.95, 0.95, 0.35, WB, -0.45, -0.33, M.steel);
+    box(vise, -0.95, 0.95, 0.35, WB, 0.33, 0.45, M.steel);
+    cylZ(vise, 0.08, 0.08, 0.95, 1.55, 0, 0.55, M.steel, 16);
+    cylZ(vise, 0.13, 0.13, 1.55, 1.68, 0, 0.55, M.steelDark, 16);
+    box(vise, -0.45, 0.45, 0.51, 0.59, 1.6, 1.66, M.steel);
+    ball(vise, 0.06, -0.47, 0.55, 1.63, M.black); ball(vise, 0.06, 0.47, 0.55, 1.63, M.black);
+
+    // ---------- obrobok: výšková mapa ----------
+    const VN = (NX + 1) * (NZ + 1), dX = WX / NX, dZ = WZ / NZ;
+    const hgt = new Float32Array(VN).fill(WH), cutMask = new Uint8Array(VN);
+    const GX = NX + 3, GZ = NZ + 3;
+    const wPos = new Float32Array(GX * GZ * 3), wCol = new Float32Array(GX * GZ * 3), wIdx = [];
+    for (let j = 0; j < GZ - 1; j++) for (let i = 0; i < GX - 1; i++) {
+      const a = j * GX + i, b = a + 1, d = a + GX, e = d + 1;
+      wIdx.push(a, d, b, b, d, e);
+    }
+    const workGeo = new THREE.BufferGeometry();
+    workGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+    workGeo.setAttribute('color', new THREE.BufferAttribute(wCol, 3));
+    workGeo.setIndex(wIdx);
+    const RAW = new THREE.Color(0x474b50).convertSRGBToLinear(), CUT = new THREE.Color(0xdfe3e7).convertSRGBToLinear();
+    const rebuildWork = () => {
+      for (let jj = 0; jj < GZ; jj++) for (let ii = 0; ii < GX; ii++) {
+        const i = clamp(ii - 1, 0, NX), j = clamp(jj - 1, 0, NZ), ring = ii === 0 || jj === 0 || ii === GX - 1 || jj === GZ - 1;
+        const k = jj * GX + ii, vi = j * (NX + 1) + i, col3 = !ring && cutMask[vi] ? CUT : RAW;
+        wPos[k * 3] = -WX / 2 + i * dX; wPos[k * 3 + 1] = ring ? 0 : hgt[vi]; wPos[k * 3 + 2] = -WZ / 2 + j * dZ;
+        wCol[k * 3] = col3.r; wCol[k * 3 + 1] = col3.g; wCol[k * 3 + 2] = col3.b;
+      }
+      workGeo.attributes.position.needsUpdate = true; workGeo.attributes.color.needsUpdate = true;
+      workGeo.computeVertexNormals(); workGeo.computeBoundingSphere(); workGeo.computeBoundingBox();
+    };
+    rebuildWork();
+    const work = new THREE.Mesh(workGeo, M.work);
+    work.castShadow = true; work.receiveShadow = true; work.position.y = 0.75 + WB; work.userData.part = 'obrobok';
+    tbl.add(work); G.obrobok = work;
+    // výškovú mapu prechádza v kruhu s polomerom r okolo (rx, rz); fn(index) pre každý uzol vo vnútri
+    const eachIn = (rx, rz, r, fn) => {
+      const i0 = Math.max(0, Math.ceil((rx - r + WX / 2) / dX)), i1 = Math.min(NX, Math.floor((rx + r + WX / 2) / dX));
+      const j0 = Math.max(0, Math.ceil((rz - r + WZ / 2) / dZ)), j1 = Math.min(NZ, Math.floor((rz + r + WZ / 2) / dZ));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const x = -WX / 2 + i * dX - rx, z = -WZ / 2 + j * dZ - rz;
+        if (x * x + z * z <= r * r) fn(j * (NX + 1) + i);
+      }
+    };
+    const penetration = (rx, rz, wy, r) => { let p = 0; eachIn(rx, rz, r, (k) => { if (hgt[k] - wy > p) p = hgt[k] - wy; }); return p; };
+    const cut = (rx, rz, wy, r) => {
+      const lim = Math.max(0, wy); let removed = 0;
+      eachIn(rx, rz, r, (k) => { if (hgt[k] > lim + 1e-4) { removed += hgt[k] - lim; hgt[k] = lim; cutMask[k] = 1; } });
+      return removed;
+    };
+    const hitObst = (rx, rz, ry, r) => {
+      for (const o of MILL_OBST) {
+        if (ry >= o.top - 1e-4) continue;
+        const dx = Math.max(o.x0 - rx, 0, rx - o.x1), dz = Math.max(o.z0 - rz, 0, rz - o.z1);
+        if (dx * dx + dz * dz < r * r) return o.name;
+      }
+      return null;
+    };
+
+    // ---------- chladiaca kvapalina a triesky ----------
+    const stream = add(head, new THREE.CylinderGeometry(0.025, 0.045, 1, 10, 1, true), M.coolant);
+    stream.castShadow = false; stream.visible = false;
+    const placeStream = () => {
+      const tool = MILL_TOOLS[st.tool], to = v3(SPX + tool.r * 0.6, NOSE - tool.len + 0.18, SPZ + tool.r * 0.6), dir = to.clone().sub(nozzle);
+      stream.position.copy(nozzle).addScaledVector(dir, 0.5);
+      stream.scale.set(1, dir.length(), 1);
+      stream.quaternion.setFromUnitVectors(v3(0, 1, 0), dir.normalize());
+    };
+    const chipGeo = new THREE.BoxGeometry(0.05, 0.012, 0.08);
+    const chips = [];
+    for (let i = 0; i < 160; i++) {
+      const m = new THREE.Mesh(chipGeo, M.chip); m.visible = false; m.castShadow = true; scene.add(m);
+      chips.push({ m, v: new THREE.Vector3(), w: new THREE.Vector3(), life: 0, rest: false });
+    }
+    let chipIdx = 0, chipAcc = 0;
+
+    // ---------- stav simulácie ----------
+    const st = { tx: X0 + c.x / 100, sz: Y0 + c.y / 100, h: H0 + c.z / 100, rpm: 0, spin: 0, cutT: -9, cutting: false, tool: c.tool, msg: null };
+    let t = 0, last = performance.now(), teleT = 0, workDirty = false, lastBuild = 0, lastDir = c.feedDir;
+    const flags = {};
+    const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.4 }; };
+    const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
+    const yT = (tool = st.tool) => NOSE - MILL_TOOLS[tool].len;
+    // poloha spodku nástroja voči stredu a hornej ploche stola
+    const rel = (tx, sz, h, tool) => [SPX - tx, SPZ - sz, yT(tool) - h];
+    buildTool(st.tool); placeStream();
+    const spawnChip = () => {
+      const ch = chips[chipIdx++ % chips.length], tool = MILL_TOOLS[st.tool], a = Math.random() * TAU;
+      ch.m.position.set(SPX + Math.cos(a) * tool.r, yT() + 0.04 + Math.random() * 0.08, SPZ + Math.sin(a) * tool.r);
+      const s = 1.5 + Math.random() * 2;
+      ch.v.set(Math.cos(a) * s + Math.sin(a) * 2, 0.8 + Math.random() * 1.8, Math.sin(a) * s - Math.cos(a) * 2);
+      ch.w.set(Math.random() * 25, Math.random() * 25, Math.random() * 25);
+      ch.life = 2.5 + Math.random() * 1.5; ch.rest = false; ch.m.visible = true;
+    };
+
+    // ---------- pohľady, popisy a výber dielov ----------
+    const anchors = {
+      podstavec: () => v3(-1.4, 0.55, 3.7),
+      stojan: () => v3(-1.5, 8.6, -2.6),
+      hlava: () => v3(0, 13.55, SPZ),
+      vreteno: () => v3(SPX + 0.5, NOSE - 0.25, SPZ + 0.45),
+      konzola: () => v3(-1.5, st.h - 1.35 - 0.5, 3.4),
+      sane: () => v3(1.45, st.h - 1.35 + 0.35, st.sz + 0.95),
+      stol: () => v3(st.tx + 5, st.h + 0.05, st.sz + 1.5),
+      zverak: () => v3(st.tx + 1.25, st.h + 0.55, st.sz + 0.95),
+      obrobok: () => v3(st.tx - 0.6, st.h + WB + WH + 0.05, st.sz),
+      rozvadzac: () => v3(2.2, 11.3, -3.0),
+    };
+    const views = {
+      celok: () => [[10, 12.5, 17], [0, 7.2, 0]],
+      rez: () => [[SPX + 1.9, yT() + 3.1, SPZ + 3.4], [SPX, yT() - 0.45, SPZ - 0.1], true],
+      spredu: () => [[0, 8.5, 20], [0, 7.2, 0]],
+      zhora: () => [[0.5, 24, 9], [0, 6.8, 0.8]],
+      bok: () => [[11, 9.5, 2.5], [1.6, 8.6, -2.6], true],
+    };
+    const insp = createInspector({
+      dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
+      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+    });
+    const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
+    const { push, pend } = ctrl;
+    apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.resetWork = () => {
+      hgt.fill(WH); cutMask.fill(0); workDirty = true;
+      const [rx, rz, ry] = rel(st.tx, st.sz, st.h);
+      if (penetration(rx, rz, ry - WB, MILL_TOOLS[st.tool].r) > 0.001) {
+        st.h = clamp(yT() - WB - WH - 0.2, H0, H0 + 4.2); c.z = (st.h - H0) * 100; return c.z;
+      }
+      return null;
+    };
+
+    // ---------- ručné ovládanie prvkov ----------
+    const gearGuard = () => {
+      if (!c.running && st.rpm < 1) return true;
+      say('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'warn'); return false;
+    };
+    const spdIdx = () => logNear(MILL_SPEEDS, c.rpm), feedIdx = () => logNear(MILL_FEEDS, c.feed);
+    const setSpeed = (a, b) => { push('rpm', MILL_SPEEDS[a * 6 + b]); say(`Zaradené otáčky ${c.rpm} ot/min.`, 'info'); };
+    const setFeed = (a, b) => { push('feed', MILL_FEEDS[a * 6 + b]); say(`Posuv nastavený na ${c.feed} mm/min.`, 'info'); };
+    const xGuard = () => { if (!c.feedDir) return true; say('Pri zaradenom posuve stola sa ručné koleso netočí – vráť páku posuvu do stredu.', 'warn'); return false; };
+    const xAct = () => (st.tx - X0) * 100, yAct = () => (st.sz - Y0) * 100, zAct = () => (st.h - H0) * 100;
+    const turnX = (d) => { const a = xAct(); push('x', clamp(clamp(c.x + d * 10 / TAU, a - 20, a + 20), 0, 800)); };
+
+    ctrl.reg({ type: 'wheel', minR: 0.32, inc: 1, guard: xGuard, label: 'Ručné koleso stola (X) – pravé', hint: 'Ťahaj za veniec alebo kľučku, alebo toč kolieskom myši. 1 otáčka = 10 mm.',
+      turn: turnX, read: () => `X ${xAct().toFixed(1)} mm` }, wheelXR);
+    ctrl.reg({ type: 'wheel', minR: 0.32, inc: -1, guard: xGuard, label: 'Ručné koleso stola (X) – ľavé', hint: 'Ťahaj za veniec alebo kľučku, alebo toč kolieskom myši. 1 otáčka = 10 mm.',
+      turn: (d) => turnX(-d), read: () => `X ${xAct().toFixed(1)} mm` }, wheelXL);
+    ctrl.reg({ type: 'wheel', minR: 0.36, inc: -1, label: 'Ručné koleso priečnych saní (Y)', hint: 'V smere hodinových ručičiek ide stôl od stojana. 1 otáčka = 10 mm.',
+      turn: (d) => { const a = yAct(); push('y', clamp(clamp(c.y - d * 10 / TAU, a - 10, a + 10), 0, 300)); },
+      read: () => `Y ${yAct().toFixed(1)} mm` }, wheelY);
+    ctrl.reg({ type: 'wheel', minR: 0.32, inc: -1, label: 'Kľuka zdvihu konzoly (Z)', hint: 'V smere hodinových ručičiek konzola stúpa. 1 otáčka = 4 mm.',
+      turn: (d) => { const a = zAct(); push('z', clamp(clamp(c.z - d * 4 / TAU, a - 5, a + 5), 0, 420)); },
+      read: () => `Z ${zAct().toFixed(1)} mm` }, crankZ);
+
+    ctrl.reg({ type: 'lever', angles: S3_ANG, minR: 0.25, guard: gearGuard, label: 'Páka otáčok I (rozsah)', hint: 'Ťahaj do polohy alebo klikni. Preraďuje sa len pri stojacom vretene.',
+      getIdx: () => Math.floor(spdIdx() / 6), onSet: (i) => setSpeed(i, spdIdx() % 6), read: () => `${c.rpm} ot/min` }, levSA);
+    ctrl.reg({ type: 'lever', angles: S6_ANG, minR: 0.25, guard: gearGuard, label: 'Páka otáčok II (stupeň)', hint: 'Ťahaj do polohy alebo klikni. Preraďuje sa len pri stojacom vretene.',
+      getIdx: () => spdIdx() % 6, onSet: (i) => setSpeed(Math.floor(spdIdx() / 6), i), read: () => `${c.rpm} ot/min` }, levSB);
+    ctrl.reg({ type: 'lever', angles: S3_ANG, minR: 0.2, label: 'Páka posuvov I (rozsah)', hint: '18 posuvov 19 – 950 mm/min (3 × 6).',
+      getIdx: () => Math.floor(feedIdx() / 6), onSet: (i) => setFeed(i, feedIdx() % 6), read: () => `${c.feed} mm/min` }, levFA);
+    ctrl.reg({ type: 'lever', angles: S6_ANG, minR: 0.2, label: 'Páka posuvov II (stupeň)', hint: '18 posuvov 19 – 950 mm/min (3 × 6).',
+      getIdx: () => feedIdx() % 6, onSet: (i) => setFeed(Math.floor(feedIdx() / 6), i), read: () => `${c.feed} mm/min` }, levFB);
+    ctrl.reg({ type: 'lever', angles: DIR_ANG, minR: 0.2, label: 'Páka posuvu stola (X)', hint: 'Vľavo / stred = stop / vpravo. Stôl sa pohne, keď sa točí vreteno.',
+      getIdx: () => c.feedDir + 1,
+      onSet: (i) => {
+        push('feedDir', i - 1);
+        if (i !== 1 && !(c.running && c.power)) say('Posuv stola zaradený – stôl sa pohne, keď sa roztočí vreteno.', 'info');
+      },
+      read: () => (c.feedDir < 0 ? 'vľavo' : c.feedDir > 0 ? 'vpravo' : 'stop') }, levDir);
+    ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.22, label: 'Hlavný vypínač', hint: 'Otoč alebo klikni: 0 = vypnuté, I = zapnuté.',
+      getIdx: () => (c.power ? 1 : 0),
+      onSet: (i) => {
+        push('power', i === 1);
+        if (i === 0) { push('running', false); say('Hlavný vypínač vypnutý – stroj je bez napätia.', 'warn'); }
+        else say('Hlavný vypínač zapnutý. Vreteno spustíš zeleným tlačidlom.', 'info');
+      },
+      read: () => (c.power ? 'I – zapnuté' : '0 – vypnuté') }, mainSwitch);
+    ctrl.reg({ type: 'button', label: 'Tlačidlo ŠTART', hint: 'Spustí vreteno, ak je zapnutý hlavný vypínač.',
+      action: () => { if (!c.power) say('Najprv zapni hlavný vypínač na rozvádzači.', 'warn'); else push('running', true); } }, btnStart);
+    ctrl.reg({ type: 'button', label: 'Tlačidlo STOP', hint: 'Zastaví vreteno.', action: () => push('running', false) }, btnStop);
+    ctrl.reg({ type: 'button', label: 'Chladenie', hint: 'Zapne alebo vypne čerpadlo chladiacej kvapaliny.',
+      action: () => { push('coolant', !c.coolant); say(c.coolant ? 'Chladenie zapnuté.' : 'Chladenie vypnuté.', 'info'); } }, btnCool);
+    ctrl.reg({ type: 'button', label: 'Núdzový STOP', hint: 'Okamžite zastaví vreteno, posuv aj chladenie.',
+      action: () => { push('running', false); push('feedDir', 0); push('coolant', false); say('Núdzové zastavenie – vreteno, posuv aj chladenie sú vypnuté.', 'danger'); } }, eStop);
+
+    insp.goView('celok', true);
+
+    // ---------- hlavná slučka ----------
+    let raf;
+    const loop = (nowMs) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+
+      // hlavný chod (vreteno sa točí v smere hodín pri pohľade zhora)
+      st.rpm = approach(st.rpm, c.running && c.power ? c.rpm : 0, 1400 * dt);
+      const running = st.rpm > 15;
+      const revs = st.rpm > 0 ? 4.5 * st.rpm / (st.rpm + 500) : 0;
+      st.spin += revs * TAU * dt; spindle.rotation.y = -st.spin;
+
+      // výmena nástroja
+      if (c.tool !== st.tool) {
+        const nt = MILL_TOOLS[c.tool], [rx, rz, ry] = rel(st.tx, st.sz, st.h, c.tool);
+        if (c.running || running) { say('Nástroj sa mení len pri stojacom vretene.', 'warn'); push('tool', st.tool); }
+        else if (penetration(rx, rz, ry - WB, nt.r) > 0.002 || hitObst(rx, rz, ry, nt.r)) { say('Nový nástroj by zasiahol obrobok – najprv spusti konzolu nižšie (os Z).', 'warn'); push('tool', st.tool); }
+        else { st.tool = c.tool; st.lastRel = null; buildTool(st.tool); placeStream(); say(`Upnutá ${nt.name}.`, 'info'); }
+      }
+
+      // automatický posuv stola
+      if (c.feedDir && running) {
+        const a = xAct();
+        c.x = clamp(clamp(c.x + c.feedDir * c.feed / 60 * c.timeScale * dt, a - 3, a + 3), 0, 800);
+        if ((c.feedDir < 0 && a <= 0.05) || (c.feedDir > 0 && a >= 799.95)) { push('feedDir', 0); say('Posuv stola vypnutý – stôl dosiahol koncovú polohu.', 'info'); }
+      } else if (c.feedDir) c.x = xAct();                              // posuv stojí s vretenom, stôl nedobieha
+
+
+      // pohyb stola (X), saní (Y) a konzoly (Z) s kontrolou kolízií
+      const txT = X0 + clamp(c.x, 0, 800) / 100, szT = Y0 + clamp(c.y, 0, 300) / 100, hT = H0 + clamp(c.z, 0, 420) / 100;
+      const vx = st.cutting ? Math.max(0.25, c.feed / 6000 * c.timeScale * 1.2) : 2.4, vy = st.cutting ? 0.2 : 1.6, vh = st.cutting ? 0.06 : 0.7;
+      let nx = approach(st.tx, txT, vx * dt), ny = approach(st.sz, szT, vy * dt), nh = approach(st.h, hT, vh * dt);
+      let blocked = null;
+      if (nx !== st.tx || ny !== st.sz || nh !== st.h) {
+        const r = MILL_TOOLS[st.tool].r, [rx0, rz0, ry0] = rel(st.tx, st.sz, st.h);
+        const pen0 = running ? 0 : penetration(rx0, rz0, ry0 - WB, r), obst0 = hitObst(rx0, rz0, ry0, r);
+        let why = null;
+        const ok = (a, b, h2) => {
+          const [rx, rz, ry] = rel(a, b, h2);
+          const o = hitObst(rx, rz, ry, r);
+          if (o && !obst0) { why = o; return false; }
+          if (!running && penetration(rx, rz, ry - WB, r) > Math.max(0.002, pen0 + 1e-5)) { why = 'work'; return false; }
+          return true;
+        };
+        if (!ok(nx, ny, nh)) {
+          blocked = why;
+          let ax = st.tx, ay = st.sz, ah = st.h;
+          if (ok(nx, ay, ah)) ax = nx;
+          if (ok(ax, ny, ah)) ay = ny;
+          if (ok(ax, ay, nh)) ah = nh;
+          nx = ax; ny = ay; nh = ah;
+        }
+      }
+      sayOnce('work', blocked === 'work', 'Fréza narazila do obrobku. Pri stojacom vretene nemôže rezať – spusti vreteno.', 'danger');
+      sayOnce('obst', !!blocked && blocked !== 'work', `Fréza by narazila do ${blocked} – pohyb je zastavený.`, 'warn');
+      wheelXR.rotation.z += (nx - st.tx) / 0.1 * TAU; wheelXL.rotation.z -= (nx - st.tx) / 0.1 * TAU;
+      wheelY.rotation.z -= (ny - st.sz) / 0.1 * TAU;
+      crankZ.rotation.z -= (nh - st.h) / 0.04 * TAU;
+      st.tx = nx; st.sz = ny; st.h = nh;
+
+      // frézovanie po celej dráhe od minulej snímky, aby pri rýchlom posuve nezostali hrebene
+      const cur = rel(st.tx, st.sz, st.h), prev = st.lastRel || cur;
+      st.lastRel = cur;
+      if (running) {
+        const r = MILL_TOOLS[st.tool].r;
+        const n = Math.min(60, Math.max(1, Math.ceil(Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]) / (r * 0.3))));
+        let removed = 0;
+        for (let s = 1; s <= n; s++) {
+          const f = s / n;
+          removed += cut(prev[0] + (cur[0] - prev[0]) * f, prev[1] + (cur[1] - prev[1]) * f, prev[2] + (cur[2] - prev[2]) * f - WB, r);
+        }
+        if (removed > 0) {
+          st.cutT = t; workDirty = true;
+          chipAcc += dt * (30 + Math.min(70, removed * 20)); while (chipAcc >= 1) { spawnChip(); chipAcc -= 1; }
+        }
+      }
+      st.cutting = t - st.cutT < 0.25;
+      if (workDirty && t - lastBuild > 0.06) { rebuildWork(); workDirty = false; lastBuild = t; }
+
+      // pohyb skupín
+      knee.position.y = st.h - 1.35; sad.position.z = st.sz; tbl.position.x = st.tx;
+      ram.scale.y = Math.max(0.01, st.h - 1.35 - 2.4 - 0.6);
+      stream.visible = c.coolant && c.power;
+      if (stream.visible) M.coolant.opacity = 0.45 + 0.12 * Math.sin(t * 40);
+      M.lamp.emissive.setHex(c.running && c.power ? 0x22dd55 : c.power ? 0x8a5a00 : 0x000000);
+      needle.rotation.z = c.power ? -0.25 - (st.rpm / 2000) * 0.6 - (st.cutting ? 0.35 : 0) : 0.9;
+
+      for (const ch of chips) {
+        if (ch.life <= 0) continue;
+        ch.life -= dt;
+        if (ch.life <= 0) { ch.m.visible = false; continue; }
+        if (ch.rest) continue;
+        ch.v.y -= 14 * dt; ch.m.position.addScaledVector(ch.v, dt);
+        ch.m.rotation.x += ch.w.x * dt; ch.m.rotation.y += ch.w.y * dt; ch.m.rotation.z += ch.w.z * dt;
+        const p = ch.m.position;
+        let fy = 0.02;
+        if (Math.abs(p.x - st.tx) < 6.5 && Math.abs(p.z - st.sz) < 1.5) fy = st.h;
+        if (p.y <= fy && ch.v.y < 0) { p.y = fy; ch.rest = true; }
+      }
+
+      ctrl.update(dt);
+      insp.update(t, c);
+
+      if (t - teleT > 0.1) {
+        teleT = t;
+        const tool = MILL_TOOLS[st.tool], [rx, rz, ry] = rel(st.tx, st.sz, st.h);
+        const over = Math.abs(rx) < WX / 2 + tool.r && Math.abs(rz) < WZ / 2 + tool.r;
+        setTele({
+          rpm: st.rpm, x: xAct(), y: yAct(), z: zAct(), vc: Math.PI * tool.r * 200 * st.rpm / 1000,
+          vf: c.feedDir && running ? c.feed : 0, cutting: st.cutting && running,
+          depth: over ? Math.max(0, (WB + WH - ry) * 100) : 0, msg: st.msg && st.msg.until > t ? st.msg : null,
+        });
+        if (c.feedDir) pend.x = Math.round(c.x * 10) / 10;
+        if (lastDir !== c.feedDir) pend.feedDir = c.feedDir;
+        lastDir = c.feedDir;
+        if (Object.keys(pend).length) {
+          const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]);
+          setUi((u) => ({ ...u, ...p }));
+        }
+      }
+
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); disposeStage(); };
+  }, []);
+
+  const statusMsg = tele.msg
+    ? tele.msg
+    : tele.cutting ? { kind: 'run', text: `Frézovanie – hĺbka ${tele.depth.toFixed(1)} mm pod pôvodnou plochou, vc ${tele.vc.toFixed(0)} m/min` }
+    : tele.rpm > 15 ? { kind: 'run', text: 'Vreteno beží. Zdvihni konzolu (Z) k fréze a posúvaj stôl.' }
+    : !ui.power ? { kind: 'warn', text: 'Hlavný vypínač je vypnutý – stroj je bez napätia.' }
+    : { kind: 'idle', text: 'Stroj stojí. Spusti vreteno a priveď obrobok k fréze.' };
+  const running = ui.running;
+  const chips = [{ color: tele.rpm > 15 ? '#3ee06c' : '#8b8f89', text: tele.rpm > 15 ? `${Math.round(tele.rpm)} ot/min` : 'Vreteno stojí' }];
+  if (tele.cutting) chips.push({ color: '#ffb340', text: 'Rez' });
+  if (tele.vf) chips.push({ color: '#7fb6ff', text: `Posuv ${tele.vf} mm/min` });
+  if (ui.coolant && ui.power) chips.push({ color: '#8fd0ff', text: 'Chladenie' });
+
+  return (
+    <div className="machine-app w-full flex flex-col md:flex-row">
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={MILL_PARTS} selected={selected} selectPart={selectPart} chips={chips} />
+      <aside className="panel">
+        <PanelHeader onBack={onBack} kicker="Simulátor · fréza" title="Univerzálna fréza TOS FA 3 B"
+          sub="Konzolová fréza so sklopnou vertikálnou hlavou. Mierka 1 : 100 mm, obrobok oceľ 180 × 100 × 60 mm."
+          rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
+          foot={[`n ${Math.round(tele.rpm)} ot/min`, `vf ${tele.vf} mm/min`]} status={statusMsg} />
+
+        <ManualSection ui={ui} set={set}>
+          <li><b>Ručné kolesá stola</b> (X) na oboch koncoch stola, <b>koleso priečnych saní</b> (Y) a <b>kľuka konzoly</b> (Z) vpredu na konzole.</li>
+          <li><b>Páky otáčok</b> na pravom boku stojana – 3 × 6 = 18 stupňov 40 – 2000 ot/min, len pri stojacom vretene.</li>
+          <li><b>Páky posuvov</b> na konzole – 18 posuvov 19 – 950 mm/min, a <b>páka posuvu stola</b> na saniach (vľavo / stop / vpravo).</li>
+          <li><b>Hlavný vypínač</b>, tlačidlá <b>Štart</b>, <b>Stop</b>, <b>chladenie</b> a <b>núdzový STOP</b> na rozvádzači.</li>
+        </ManualSection>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Hlavný chod</h3>
+          <button type="button" className={`btn-run ${running ? 'stop' : 'start'}`}
+            onClick={() => { if (!running && !ui.power) set('power', true); set('running', !running); }}>
+            {running ? '■ Stop vretena' : '▶ Štart vretena'}
+          </button>
+          <div className="mt-2">
+            <Toggle on={ui.power} label="Hlavný vypínač" onClick={() => { const v = !ui.power; set('power', v); if (!v) set('running', false); }} />
+            <Toggle on={ui.coolant} label="Chladenie" onClick={() => set('coolant', !ui.coolant)} />
+          </div>
+          <div className="mt-3">
+            <Slider id="mrpm" label="Otáčky vretena" unit="ot/min" min={40} max={2000} step={5} value={ui.rpm} onChange={(v) => set('rpm', v)} />
+          </div>
+          <div className="flex items-center justify-between text-sm gap-2">
+            <span className="font-semibold">Nástroj</span>
+            <Seg label="Nástroj" value={ui.tool} options={[['end', 'Stopková Ø20'], ['face', 'Čelná Ø63']]} onChange={(v) => set('tool', v)} />
+          </div>
+          <p className="text-xs muted mt-2">Nástroj sa mení len pri stojacom vretene a mimo obrobku.</p>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Posuvy</h3>
+          <Slider id="mx" label="Stôl pozdĺžne X" unit="mm" min={0} max={800} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
+          <Slider id="my" label="Sane priečne Y" unit="mm" min={0} max={300} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
+          <Slider id="mz" label="Konzola zvisle Z" unit="mm" min={0} max={420} step={0.5} value={ui.z} actual={tele.z} digits={1} onChange={(v) => set('z', v)} />
+          <div className="flex items-center justify-between text-sm gap-2 mb-3">
+            <span className="font-semibold">Posuv stola</span>
+            <Seg label="Automatický posuv stola" value={ui.feedDir} options={[[-1, '← Vľavo'], [0, 'Stop'], [1, 'Vpravo →']]} onChange={(v) => set('feedDir', v)} />
+          </div>
+          <Slider id="mfeed" label="Rýchlosť posuvu" unit="mm/min" min={19} max={950} step={1} value={ui.feed} onChange={(v) => set('feed', v)} />
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold">Zrýchlenie posuvu</span>
+            <Seg label="Zrýchlenie posuvu" value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
+          </div>
+          <p className="text-xs muted mt-2">Automatický posuv stola beží len pri otáčajúcom sa vretene. Pri X = 400 a Y = 120 je os frézy nad stredom obrobku.</p>
+        </div>
+
+        <ViewSection apiRef={apiRef} ui={ui} set={set} resetLabel="Upnúť nový obrobok 180 × 100 × 60 mm"
+          views={[['celok', 'Celok'], ['rez', 'Detail frézy'], ['spredu', 'Spredu'], ['zhora', 'Zhora'], ['bok', 'Rozvádzač']]}
+          onReset={() => { const r = apiRef.current.resetWork && apiRef.current.resetWork(); if (r != null) set('z', r); }} />
+        <PartsSection parts={MILL_PARTS} selected={selected} selectPart={selectPart} />
+        <HelpFooter />
+      </aside>
+    </div>
+  );
+}
+
+// =====================================================================
+// STĹPOVÁ VŔTAČKA TOS SV16
+// =====================================================================
+const DRILL = {
+  SX: -0.4, SZ: 0.4, NOSE: 11.8,            // os vretena a spodok puzdra pinoly
+  T0: 4.0,                                   // najnižšia poloha stola
+  PAR: 0.2, PT: 0.25, PW: 1.8, PD: 1.2,      // podložky 20 mm, oceľová doska 180 × 120 × 25 mm
+  CH: 0.95, BL: 1.3,                         // dĺžka skľučovadla a vrtáka
+};
+const DRILL_SPEEDS = [125, 180, 250, 355, 500, 710, 1000, 1400];   // 2 × 4
+const DRILL_BITS = { 6: 0.03, 10: 0.05, 16: 0.08 };
+const D2_ANG = [0.5, -0.5], D4_ANG = [0.95, 0.32, -0.32, -0.95];
+const DRILL_PARTS = [
+  { key: 'podstavec', short: 'Základová doska', name: 'Základová doska', desc: 'Liatinová doska s T-drážkami nesie stĺp. Pri vysokých obrobkoch sa stôl odklopí a obrobok sa upne priamo na ňu.' },
+  { key: 'stlp', short: 'Stĺp', name: 'Stĺp', desc: 'Brúsený oceľový stĺp s ozubeným hrebeňom. Po ňom sa kľukou posúva rameno stola nahor a nadol.' },
+  { key: 'hlava', short: 'Vŕtacia hlava', name: 'Vŕtacia hlava', desc: 'Skriňa s prevodovkou otáčok, ovládacím panelom a priečnou kľukou posuvu pinoly. Pákami na boku sa volí 8 otáčok 125 – 1400 ot/min.' },
+  { key: 'motor', short: 'Motor', name: 'Elektromotor', desc: 'Prírubový trojfázový motor s rebrovaním poháňa vreteno cez prevodovku v hlave.' },
+  { key: 'vreteno', short: 'Pinola a vrták', name: 'Pinola, skľučovadlo a vrták', desc: 'Pinola sa vysúva priečnou kľukou až o 100 mm. V skľučovadle je špirálový vrták Ø6, Ø10 alebo Ø16 mm (najväčší priemer pre SV16).' },
+  { key: 'stol', short: 'Stôl', name: 'Stôl s ramenom', desc: 'Stôl s T-drážkami na ramene okolo stĺpa. Kľukou vpravo sa zdvíha cez hrebeň, páka vľavo ho aretuje.' },
+  { key: 'obrobok', short: 'Obrobok', name: 'Obrobok na podložkách', desc: 'Oceľová doska 180 × 120 × 25 mm na dvoch podložkách. Medzi podložkami sa dá vŕtať naskrz; vrták nesmie zasiahnuť podložku ani stôl.' },
+];
+
+function DrillSimulator({ onBack }) {
+  const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
+  const init = { running: false, power: true, manual: false, rpm: 710, quill: 0, table: 450, u: 0, v: 0, bit: 10, timeScale: 1, labels: true };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [tele, setTele] = useState({ rpm: 0, quill: 0, table: 450, depth: 0, vc: 0, msg: null, drilling: false, holes: 0 });
+
+  useEffect(() => {
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
+    const c = ctl.current;
+    const { SX, SZ, NOSE, T0, PAR, PT, PW, PD, CH, BL } = DRILL;
+    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const dom = renderer.domElement;
+    const M = {
+      ...baseMats(0x52c2a5, 0x3da98c, 0x2c7d68),
+      col: std(0x5e5953, 0.42, 0.6), motor: std(0x7d8389, 0.5, 0.55), plate: std(0x737980, 0.42, 0.62),
+      hole: std(0x0b0c0d, 0.9, 0.1), bit: std(0x2f3236, 0.32, 0.8), chip: std(0xa6adb4, 0.3, 0.85),
+    };
+    const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, crank, face } = makeKit(M);
+    const root = new THREE.Group(); scene.add(root);
+    const G = {};
+    const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
+    const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+    // ---------- základová doska ----------
+    const base = grp('podstavec');
+    box(base, -2.25, 2.25, 0, 0.12, -3.55, 2.55, M.greenDark);
+    box(base, -2.1, 2.1, 0.12, 0.42, -3.4, 2.4, M.green);
+    box(base, -1.75, 1.75, 0.42, 0.5, -1.7, 2.0, M.col);
+    [-1.25, -0.55, 0.15, 0.85, 1.55].forEach((z) => box(base, -1.75, 1.75, 0.49, 0.505, z - 0.06, z + 0.06, M.black));
+    box(base, -2.1, 2.1, 0.42, 0.62, -3.4, -1.7, M.green);
+    cylY(base, 0.72, 0.6, 0.62, 0.95, 0, -2.4, M.green, 28);
+    [[-1.95, -3.25], [1.95, -3.25], [-1.95, 2.25], [1.95, 2.25]].forEach(([x, z]) => cylY(base, 0.12, 0.12, 0.12, 0.2, x, z, M.steelDark, 12));
+
+    // ---------- stĺp ----------
+    const colG = grp('stlp');
+    cylY(colG, 0.42, 0.42, 0.95, 12.0, 0, -2.4, M.col, 32);
+    box(colG, 0.34, 0.5, 1.4, 11.4, -2.48, -2.32, M.steelDark);        // hrebeň
+    cylY(colG, 0.56, 0.56, 11.5, 12.0, 0, -2.4, M.green, 28);
+
+    // ---------- vŕtacia hlava ----------
+    const head = grp('hlava');
+    box(head, -1.5, 1.3, 12.0, 15.2, -3.3, 1.2, M.green);
+    box(head, -1.62, 1.42, 15.2, 15.6, -3.45, 1.35, M.green);
+    cylY(head, 0.45, 0.45, 11.4, 12.0, SX, SZ, M.green, 28);            // puzdro pinoly
+    box(head, -1.2, -0.45, 14.0, 14.55, 1.2, 1.22, M.panel);            // výrobný štítok
+    box(head, 0.2, 1.0, 12.7, 14.7, 1.2, 1.24, M.panel);                // ovládací panel
+    ball(head, 0.07, 0.38, 14.45, 1.26, M.lamp);
+    const pbtn = (x, y, m) => { const g = new THREE.Group(); g.position.set(x, y, 1.24); head.add(g); cylZ(g, 0.1, 0.1, 0, 0.07, 0, 0, m, 20); hitProxy(g, 0.15, 0, 0, 0.05); return g; };
+    const btnStart = pbtn(0.42, 14.0, M.btnGreen), btnStop = pbtn(0.78, 14.0, M.red);
+    box(head, 0.3, 0.9, 12.85, 13.5, 1.24, 1.25, M.yellow);
+    const mainSwitch = new THREE.Group(); mainSwitch.position.set(0.6, 13.17, 1.25); head.add(mainSwitch);
+    cylZ(mainSwitch, 0.17, 0.17, 0, 0.06, 0, 0, M.black, 24);
+    box(mainSwitch, -0.22, 0.22, -0.045, 0.045, 0.06, 0.17, M.red);
+    // priečna kľuka posuvu pinoly na ľavom boku
+    const cfc = face(head, -1.5, 13.1, SZ, -Math.PI / 2);
+    const capstan = new THREE.Group(); cfc.add(capstan);
+    cylZ(capstan, 0.25, 0.25, 0, 0.28, 0, 0, M.steelDark, 24);
+    cylZ(capstan, 0.1, 0.1, 0.28, 0.42, 0, 0, M.steel, 16);
+    for (let k = 0; k < 3; k++) {
+      const arm = new THREE.Group(); arm.rotation.z = k * TAU / 3 + Math.PI / 2; capstan.add(arm);
+      cylX(arm, 0.05, 0.04, 0.2, 1.25, 0, 0.18, M.steel, 10); ball(arm, 0.13, 1.3, 0, 0.18, M.black);
+    }
+    // páky otáčok na pravom boku
+    const sf = face(head, 1.3, 0, 0.5, Math.PI / 2);
+    cylZ(sf, 0.26, 0.22, 0, 0.15, -0.5, 14.55, M.black, 24); cylZ(sf, 0.26, 0.22, 0, 0.15, 0.25, 14.55, M.black, 24);
+    detents(sf, -0.5, 14.55, 0.15, 0.17, D2_ANG, 0.025); detents(sf, 0.25, 14.55, 0.15, 0.17, D4_ANG, 0.022);
+    const levR = pivotLever(sf, -0.5, 14.55, 0.15, 0.42, 1.15), levS = pivotLever(sf, 0.25, 14.55, 0.15, 0.42, 1.15);
+
+    // ---------- motor ----------
+    const mot = grp('motor');
+    cylX(mot, 0.62, 0.62, 1.3, 2.5, 13.55, -0.9, M.motor, 32);
+    for (let k = 0; k < 12; k++) {
+      const a = k * TAU / 12;
+      const f = add(mot, new THREE.BoxGeometry(1.1, 0.12, 0.06), M.motor, 1.9, 13.55 + Math.sin(a) * 0.66, -0.9 + Math.cos(a) * 0.66);
+      f.rotation.x = -a;
+    }
+    cylX(mot, 0.56, 0.5, 2.5, 2.72, 13.55, -0.9, M.motor, 28);
+    box(mot, 1.55, 2.15, 14.15, 14.5, -1.25, -0.55, M.motor);
+
+    // ---------- pinola, skľučovadlo, vrták ----------
+    const spG = grp('vreteno'); spG.position.set(SX, NOSE, SZ);
+    cylY(spG, 0.3, 0.3, 0, 0.9, 0, 0, M.steel, 28);
+    const rot = new THREE.Group(); spG.add(rot);
+    cylY(rot, 0.22, 0.22, -0.25, 0, 0, 0, M.steelDark, 24);
+    cylY(rot, 0.3, 0.26, -0.85, -0.25, 0, 0, M.steel, 28);
+    cylY(rot, 0.31, 0.31, -0.62, -0.5, 0, 0, M.steelDark, 28);
+    cylY(rot, 0.16, 0.12, -CH, -0.85, 0, 0, M.steelDark, 20);
+    const bitG = new THREE.Group(); rot.add(bitG);
+    const buildBit = (d) => {
+      while (bitG.children.length) { const o = bitG.children[0]; bitG.remove(o); o.geometry.dispose(); }
+      const r = DRILL_BITS[d];
+      cylY(bitG, r, r, -CH - BL, -CH, 0, 0, M.bit, 16);
+      const cone = add(bitG, new THREE.ConeGeometry(r, r * 1.2, 16), M.bit, 0, -CH - BL - r * 0.6, 0); cone.rotation.x = Math.PI;
+      for (let k = 0; k < 2; k++) {
+        const f = add(bitG, new THREE.BoxGeometry(r * 2.04, BL * 0.85, r * 0.28), M.steel, 0, -CH - BL * 0.55, 0);
+        f.rotation.y = k * Math.PI / 2 + 0.4;
+      }
+    };
+
+    // ---------- stôl s ramenom ----------
+    const tbl = grp('stol');
+    cylY(tbl, 0.62, 0.62, -1.3, -0.2, 0, -2.4, M.green, 28);
+    box(tbl, -0.45, 0.45, -1.0, -0.35, -1.9, SZ - 1.2, M.green);
+    box(tbl, SX - 1.65, SX + 1.65, -0.48, -0.3, SZ - 1.35, SZ + 1.35, M.green);
+    box(tbl, SX - 1.6, SX + 1.6, -0.3, 0, SZ - 1.3, SZ + 1.3, M.col);
+    [SZ - 0.65, SZ, SZ + 0.65].forEach((z) => box(tbl, SX - 1.6, SX + 1.6, -0.03, 0.002, z - 0.07, z + 0.07, M.black));
+    box(tbl, 0.55, 0.95, -1.15, -0.45, -2.65, -2.15, M.green);
+    const tf = face(tbl, 0.95, -0.8, -2.4, Math.PI / 2);
+    cylZ(tf, 0.08, 0.08, 0, 0.12, 0, 0, M.steel, 12);
+    const crankT = crank(tf, 0.5, 0, 0, 0.12);
+    lever(tbl, -0.62, -0.75, -2.4, 0.45, 0, 1.4);
+
+    // ---------- obrobok na podložkách ----------
+    const plateG = grp('obrobok', tbl);
+    box(plateG, -0.8, -0.6, 0, PAR, -PD / 2, PD / 2, M.steel);
+    box(plateG, 0.6, 0.8, 0, PAR, -PD / 2, PD / 2, M.steel);
+    box(plateG, -PW / 2, PW / 2, PAR, PAR + PT, -PD / 2, PD / 2, M.plate);
+    const holeGeo = new THREE.CylinderGeometry(1, 1, 1, 24); holeGeo.translate(0, -0.5, 0);
+    let holes = [];
+    const showHole = (h) => { h.m.scale.set(h.r, Math.min(h.depth, PT) + 0.004, h.r); };
+    const addHole = (x, z, r) => {
+      const m = new THREE.Mesh(holeGeo, M.hole); m.position.set(x, PAR + PT + 0.002, z); plateG.add(m);
+      const h = { x, z, r, depth: 0, m, through: false }; holes.push(h); return h;
+    };
+    const findHole = (x, z, r) => holes.find((h) => Math.hypot(h.x - x, h.z - z) < Math.max(0.012, r * 0.35));
+
+    const chipsP = createParticles(scene, new THREE.BoxGeometry(0.05, 0.012, 0.09), M.chip, 120);
+
+    // ---------- stav simulácie ----------
+    const st = { q: c.quill / 100, T: T0 + c.table / 100, u: c.u / 100, v: c.v / 100, bit: c.bit, rpm: 0, spin: 0, drillT: -9, msg: null };
+    let t = 0, last = performance.now(), teleT = 0, chipAcc = 0;
+    const flags = {};
+    const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.4 }; };
+    const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
+    const bitR = (d = st.bit) => DRILL_BITS[d];
+    const tipK = (d = st.bit) => NOSE - CH - BL - bitR(d) * 1.2;      // hrot vrtáka pri zasunutej pinole
+    buildBit(st.bit);
+    // spodné hranice hrotu voči hornej ploche stola pre aktuálnu polohu obrobku
+    const floorInfo = (d = st.bit) => {
+      const r = bitR(d), px = -st.u, pz = -st.v;
+      const onPlate = Math.abs(px) < PW / 2 + r * 0.5 && Math.abs(pz) < PD / 2 + r * 0.5;
+      let hard = 0, why = 'table';
+      if (Math.abs(Math.abs(px) - 0.7) < 0.1 + r && Math.abs(pz) < PD / 2 + r) { hard = PAR; why = 'par'; }
+      const h = onPlate ? findHole(px, pz, r) : null;
+      const holeD = h && h.r >= r - 1e-6 ? (h.through ? Infinity : h.depth) : 0;
+      return { onPlate, hard, why, free: onPlate ? PAR + PT - holeD : -Infinity, px, pz, h, r };
+    };
+    const limitRel = (rel, old, fi, running, rate) => {
+      let r2 = rel, why = null;
+      if (fi.onPlate && r2 < fi.free) {
+        const lim = running ? Math.min(old, fi.free) - rate : Math.min(old, fi.free);
+        if (r2 < lim) { r2 = lim; if (!running) why = 'work'; }
+      }
+      if (r2 < fi.hard) { r2 = fi.hard; why = fi.why; }
+      return [r2, why];
+    };
+
+    // ---------- pohľady, popisy a výber dielov ----------
+    const anchors = {
+      podstavec: () => v3(1.6, 0.6, 2.3),
+      stlp: () => v3(0.45, 3.0, -2.2),
+      hlava: () => v3(-0.3, 15.75, 0.6),
+      motor: () => v3(2.4, 14.3, -0.9),
+      vreteno: () => v3(SX + 0.35, NOSE - st.q - 0.5, SZ + 0.3),
+      stol: () => v3(SX + 1.6, st.T + 0.05, SZ + 1.3),
+      obrobok: () => v3(SX + st.u - 0.6, st.T + PAR + PT + 0.05, SZ + st.v),
+    };
+    const views = {
+      celok: () => [[10.5, 12, 19], [0, 7.8, -0.6]],
+      rez: () => [[SX + 2.9, st.T + 3.4, SZ + 4.3], [SX, st.T + 0.6, SZ], true],
+      spredu: () => [[0, 8.5, 17], [0, 7.8, -0.5]],
+      zhora: () => [[0.3, 22, 6], [0, 6.5, 0]],
+      bok: () => [[-11, 12, 5], [-0.6, 12, -0.5], true],
+    };
+    const insp = createInspector({
+      dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
+      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+    });
+    const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
+    const { push, pend } = ctrl;
+    apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.resetWork = () => {
+      holes.forEach((h) => plateG.remove(h.m)); holes = [];
+      say('Upnutá nová doska bez dier.', 'info');
+    };
+
+    // ---------- ručné ovládanie prvkov ----------
+    const spdIdx = () => logNear(DRILL_SPEEDS, c.rpm);
+    const gearGuard = () => {
+      if (!c.running && st.rpm < 1) return true;
+      say('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'warn'); return false;
+    };
+    const setSpeed = (a, b) => { push('rpm', DRILL_SPEEDS[a * 4 + b]); say(`Zaradené otáčky ${c.rpm} ot/min.`, 'info'); };
+    ctrl.reg({ type: 'wheel', minR: 0.9, inc: 1, label: 'Priečna kľuka posuvu pinoly', hint: 'Ťahaj za rukoväte k sebe – pinola s vrtákom ide dole. 1 otáčka = 90 mm.',
+      turn: (d) => { const a = st.q * 100; push('quill', clamp(clamp(c.quill - d * 90 / TAU, a - 6, a + 6), 0, 100)); },
+      read: () => `pinola ${(st.q * 100).toFixed(1)} mm` }, capstan);
+    ctrl.reg({ type: 'wheel', minR: 0.35, inc: 1, label: 'Kľuka zdvihu stola', hint: 'Toč v smere hodinových ručičiek – stôl stúpa. 1 otáčka = 12 mm.',
+      turn: (d) => { const a = (st.T - T0) * 100; push('table', clamp(clamp(c.table + d * 12 / TAU, a - 10, a + 10), 0, 500)); },
+      read: () => `stôl ${((st.T - T0) * 100).toFixed(1)} mm` }, crankT);
+    ctrl.reg({ type: 'lever', angles: D2_ANG, minR: 0.22, guard: gearGuard, label: 'Páka otáčok I (rozsah)', hint: 'Pomalý / rýchly rozsah. Len pri stojacom vretene.',
+      getIdx: () => Math.floor(spdIdx() / 4), onSet: (i) => setSpeed(i, spdIdx() % 4), read: () => `${c.rpm} ot/min` }, levR);
+    ctrl.reg({ type: 'lever', angles: D4_ANG, minR: 0.22, guard: gearGuard, label: 'Páka otáčok II (stupeň)', hint: '4 stupne v každom rozsahu. Len pri stojacom vretene.',
+      getIdx: () => spdIdx() % 4, onSet: (i) => setSpeed(Math.floor(spdIdx() / 4), i), read: () => `${c.rpm} ot/min` }, levS);
+    ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.2, label: 'Hlavný vypínač', hint: 'Otoč alebo klikni: 0 = vypnuté, I = zapnuté.',
+      getIdx: () => (c.power ? 1 : 0),
+      onSet: (i) => { push('power', i === 1); if (i === 0) { push('running', false); say('Hlavný vypínač vypnutý.', 'warn'); } else say('Hlavný vypínač zapnutý. Vreteno spustíš zeleným tlačidlom.', 'info'); },
+      read: () => (c.power ? 'I – zapnuté' : '0 – vypnuté') }, mainSwitch);
+    ctrl.reg({ type: 'button', label: 'Tlačidlo ŠTART', hint: 'Spustí vreteno.',
+      action: () => { if (!c.power) say('Najprv zapni hlavný vypínač.', 'warn'); else push('running', true); } }, btnStart);
+    ctrl.reg({ type: 'button', label: 'Tlačidlo STOP', hint: 'Zastaví vreteno.', action: () => push('running', false) }, btnStop);
+    let plate0 = 0;
+    ctrl.reg({ type: 'slide', label: 'Obrobok', hint: 'Ťahaj dosku po stole doľava alebo doprava (poloha diery v osi X).',
+      read: () => `X ${(st.u * 100).toFixed(1)} mm`,
+      start: () => { plate0 = st.u; },
+      slide: (dx) => push('u', clamp((plate0 + dx) * 100, -60, 60)),
+      nudge: (dir) => push('u', clamp(st.u * 100 + dir * 5, -60, 60)) }, plateG);
+
+    insp.goView('celok', true);
+
+    // ---------- hlavná slučka ----------
+    let raf;
+    const loop = (nowMs) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      st.rpm = approach(st.rpm, c.running && c.power ? c.rpm : 0, 1600 * dt);
+      const running = st.rpm > 15;
+      const revs = st.rpm > 0 ? 5 * st.rpm / (st.rpm + 400) : 0;
+      st.spin += revs * TAU * dt; rot.rotation.y = -st.spin;
+
+      // výmena vrtáka
+      if (c.bit !== st.bit) {
+        const tipRel = tipK(c.bit) - st.q - st.T;
+        if (c.running || running) { say('Vrták sa mení len pri stojacom vretene.', 'warn'); push('bit', st.bit); }
+        else if (tipRel < PAR + PT + 0.02 && floorInfo(c.bit).onPlate) { say('Najprv vytiahni vrták z obrobku (pinola hore).', 'warn'); push('bit', st.bit); }
+        else { st.bit = c.bit; buildBit(st.bit); say(`Upnutý vrták Ø${st.bit} mm.`, 'info'); }
+      }
+
+      // posun obrobku po stole – nie keď je vrták v diere
+      const uT = clamp(c.u, -60, 60) / 100, vT = clamp(c.v, -50, 50) / 100;
+      if (uT !== st.u || vT !== st.v) {
+        if (tipK() - st.q - st.T < PAR + PT + 0.005 && floorInfo().onPlate) { sayOnce('platemove', true, 'Vrták je v obrobku – najprv vytiahni pinolu hore.', 'warn'); push('u', st.u * 100); push('v', st.v * 100); }
+        else { flags.platemove = false; st.u = approach(st.u, uT, 1.2 * dt); st.v = approach(st.v, vT, 1.2 * dt); }
+      }
+
+      const fi = floorInfo();
+      const rate = running ? 0.12 * st.rpm / 60 * c.timeScale / 100 * dt : 0;   // posuv 0,12 mm/ot pri vŕtaní
+      // stôl
+      let nT = approach(st.T, T0 + clamp(c.table, 0, 500) / 100, 0.8 * dt);
+      let rel = tipK() - st.q - nT;
+      const [r1, why1] = limitRel(rel, tipK() - st.q - st.T, fi, running, rate);
+      if (r1 > rel) nT = tipK() - st.q - r1;
+      // pinola
+      let nq = approach(st.q, clamp(c.quill, 0, 100) / 100, 1.5 * dt);
+      rel = tipK() - nq - nT;
+      const [r2, why2] = limitRel(rel, tipK() - st.q - nT, fi, running, rate);
+      if (r2 > rel) nq = tipK() - r2 - nT;
+      const why = why1 || why2;
+      sayOnce('work', why === 'work', 'Vrták narazil do obrobku. Pri stojacom vretene nevŕta – spusti vreteno.', 'danger');
+      sayOnce('par', why === 'par', 'Vrták by navŕtal podložku – posuň obrobok tak, aby bol vrták medzi podložkami.', 'warn');
+      sayOnce('table', why === 'table', 'Vrták by navŕtal stôl – zastav posuv pinoly.', 'warn');
+      capstan.rotation.z -= (nq - st.q) / 0.9 * TAU;
+      crankT.rotation.z += (nT - st.T) / 0.12 * TAU;
+      st.T = nT; st.q = nq;
+
+      // vŕtanie
+      const depthNow = PAR + PT - (tipK() - st.q - st.T);
+      if (running && fi.onPlate && depthNow > 0.001) {
+        let h = fi.h;
+        if (!h) h = addHole(fi.px, fi.pz, fi.r);
+        else if (h.r < fi.r - 1e-6) { h.r = fi.r; h.depth = 0; h.through = false; }
+        if (depthNow > h.depth + 1e-5 && !h.through) {
+          h.depth = Math.min(depthNow, PT + 0.01);
+          if (h.depth >= PT) { h.through = true; say(`Diera Ø${st.bit} mm je prevŕtaná naskrz.`, 'info'); }
+          showHole(h); st.drillT = t;
+          chipAcc += dt * 40;
+          while (chipAcc >= 1) {
+            chipAcc -= 1; const a = Math.random() * TAU, s = 1 + Math.random() * 1.5;
+            chipsP.spawn(v3(SX + Math.cos(a) * fi.r, st.T + PAR + PT + 0.03, SZ + Math.sin(a) * fi.r), v3(Math.cos(a) * s, 1 + Math.random() * 1.6, Math.sin(a) * s), 3 + Math.random() * 2);
+          }
+        }
+      }
+      const drilling = t - st.drillT < 0.25;
+
+      // pohyb skupín
+      spG.position.y = NOSE - st.q; tbl.position.y = st.T;
+      plateG.position.set(SX + st.u, 0, SZ + st.v);
+      M.lamp.emissive.setHex(c.running && c.power ? 0x22dd55 : c.power ? 0x8a5a00 : 0x000000);
+      chipsP.update(dt, (p) => (Math.abs(p.x - SX) < 1.6 && Math.abs(p.z - SZ) < 1.3 ? st.T : Math.abs(p.x) < 1.75 && p.z > -1.7 && p.z < 2.0 ? 0.5 : 0.02));
+
+      ctrl.update(dt);
+      insp.update(t, c);
+
+      if (t - teleT > 0.1) {
+        teleT = t;
+        const h = floorInfo().h;
+        setTele({
+          rpm: st.rpm, quill: st.q * 100, table: (st.T - T0) * 100, depth: h ? Math.min(h.depth, PT) * 100 : 0,
+          vc: Math.PI * st.bit * st.rpm / 1000, drilling: drilling && running, holes: holes.length,
+          msg: st.msg && st.msg.until > t ? st.msg : null,
+        });
+        if (Object.keys(pend).length) {
+          const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]);
+          setUi((u) => ({ ...u, ...p }));
+        }
+      }
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); holeGeo.dispose(); disposeStage(); };
+  }, []);
+
+  const statusMsg = tele.msg
+    ? tele.msg
+    : tele.drilling ? { kind: 'run', text: `Vŕtanie Ø${ui.bit} mm – hĺbka ${tele.depth.toFixed(1)} mm, vc ${tele.vc.toFixed(0)} m/min` }
+    : tele.rpm > 15 ? { kind: 'run', text: 'Vreteno beží. Spusti vrták kľukou alebo posuvníkom pinoly.' }
+    : !ui.power ? { kind: 'warn', text: 'Hlavný vypínač je vypnutý.' }
+    : { kind: 'idle', text: 'Stroj stojí. Zdvihni stôl k vrtáku a spusti vreteno.' };
+  const chips = [{ color: tele.rpm > 15 ? '#3ee06c' : '#8b8f89', text: tele.rpm > 15 ? `${Math.round(tele.rpm)} ot/min` : 'Vreteno stojí' }];
+  if (tele.drilling) chips.push({ color: '#ffb340', text: 'Vŕtanie' });
+  if (tele.holes) chips.push({ color: '#7fb6ff', text: `Diery: ${tele.holes}` });
+
+  return (
+    <div className="machine-app w-full flex flex-col md:flex-row">
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={DRILL_PARTS} selected={selected} selectPart={selectPart} chips={chips} />
+      <aside className="panel">
+        <PanelHeader onBack={onBack} kicker="Simulátor · vŕtačka" title="Stĺpová vŕtačka TOS SV16"
+          sub="Stĺpová vŕtačka do Ø16 mm v oceli. Mierka 1 : 100 mm, obrobok oceľová doska 180 × 120 × 25 mm."
+          rows={[['Hĺbka', tele.depth.toFixed(2)], ['Pinola', tele.quill.toFixed(2)], ['Stôl', tele.table.toFixed(2)]]}
+          foot={[`n ${Math.round(tele.rpm)} ot/min`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
+
+        <ManualSection ui={ui} set={set}>
+          <li><b>Priečna kľuka</b> na ľavom boku hlavy spúšťa pinolu s vrtákom, <b>kľuka</b> na ramene zdvíha stôl.</li>
+          <li><b>Páky otáčok</b> na pravom boku hlavy – 2 × 4 = 8 stupňov 125 – 1400 ot/min, len pri stojacom vretene.</li>
+          <li><b>Hlavný vypínač</b> a tlačidlá <b>Štart</b> a <b>Stop</b> na prednom paneli.</li>
+          <li><b>Obrobok</b> posunieš po stole ťahaním za dosku.</li>
+        </ManualSection>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Hlavný chod</h3>
+          <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
+            onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); }}>
+            {ui.running ? '■ Stop vretena' : '▶ Štart vretena'}
+          </button>
+          <div className="mt-2"><Toggle on={ui.power} label="Hlavný vypínač" onClick={() => { const v = !ui.power; set('power', v); if (!v) set('running', false); }} /></div>
+          <div className="mt-3"><Slider id="drpm" label="Otáčky vretena" unit="ot/min" min={125} max={1400} step={5} value={ui.rpm} onChange={(v) => set('rpm', v)} /></div>
+          <div className="flex items-center justify-between text-sm gap-2">
+            <span className="font-semibold">Vrták</span>
+            <Seg label="Priemer vrtáka" value={ui.bit} options={[[6, 'Ø6'], [10, 'Ø10'], [16, 'Ø16']]} onChange={(v) => set('bit', v)} />
+          </div>
+          <p className="text-xs muted mt-2">Pre oceľ je vhodná rezná rýchlosť 20 – 30 m/min: Ø6 ≈ 1400, Ø10 ≈ 710, Ø16 ≈ 500 ot/min.</p>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Posuvy</h3>
+          <Slider id="dq" label="Výsuv pinoly" unit="mm" min={0} max={100} step={0.5} value={ui.quill} actual={tele.quill} digits={1} onChange={(v) => set('quill', v)} />
+          <Slider id="dt" label="Výška stola" unit="mm" min={0} max={500} step={1} value={ui.table} actual={tele.table} onChange={(v) => set('table', v)} />
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold">Zrýchlenie vŕtania</span>
+            <Seg label="Zrýchlenie vŕtania" value={ui.timeScale} options={[[1, '1×'], [5, '5×'], [20, '20×']]} onChange={(v) => set('timeScale', v)} />
+          </div>
+          <p className="text-xs muted mt-2">Pri vŕtaní je posuv obmedzený na 0,12 mm/ot – rýchlejšie ako vrták reže, pinola nepôjde.</p>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Poloha obrobku</h3>
+          <Slider id="du" label="Posun dosky X" unit="mm" min={-60} max={60} step={1} value={ui.u} onChange={(v) => set('u', v)} />
+          <Slider id="dv" label="Posun dosky Y" unit="mm" min={-50} max={50} step={1} value={ui.v} onChange={(v) => set('v', v)} />
+          <p className="text-xs muted">Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.</p>
+        </div>
+
+        <ViewSection apiRef={apiRef} ui={ui} set={set} resetLabel="Upnúť novú dosku bez dier"
+          views={[['celok', 'Celok'], ['rez', 'Detail vŕtania'], ['spredu', 'Spredu'], ['zhora', 'Zhora'], ['bok', 'Kľuka pinoly']]}
+          onReset={() => apiRef.current.resetWork && apiRef.current.resetWork()} />
+        <PartsSection parts={DRILL_PARTS} selected={selected} selectPart={selectPart} />
+        <HelpFooter />
+      </aside>
+    </div>
+  );
+}
+
+// =====================================================================
+// VÝKYVNÁ OHÝBAČKA FASTI 204-10-2
+// =====================================================================
+const FOLD = { TT: 8.0, L: 5.2, SW: 4.0, SD: 3.0, MAXA: 130 };   // výška stola, polovica dĺžky líšt, polovica šírky plechu, hĺbka plechu 300 mm
+const FOLD_PARTS = [
+  { key: 'ramy', short: 'Bočné stojany', name: 'Bočné stojany', desc: 'Dva liatinové stojany s nohami a priečnymi tyčami nesú celý stroj. Na pravom je ručné koleso upínania so stupnicou.' },
+  { key: 'stol', short: 'Stôl', name: 'Stôl (spodná lišta)', desc: 'Pevná spodná lišta s kalenou hranou – os ohybu leží presne na jej prednej hrane.' },
+  { key: 'upinacia', short: 'Upínacia lišta', name: 'Upínacia lišta', desc: 'Horná lišta so skoseným nosom pritlačí plech k stolu. Spúšťa sa kolesom cez dve zdvíhacie skrutky; nos je skosený, aby ohyb mohol ísť až do 130°.' },
+  { key: 'ohybacia', short: 'Ohýbacia lišta', name: 'Ohýbacia (výkyvná) lišta', desc: 'Otáča sa okolo osi na prednej hrane stola. Za rukoväť pod lištou ju obsluha vykýva nahor a ohne vyčnievajúci okraj plechu.' },
+  { key: 'skrutky', short: 'Skrutky upínania', name: 'Zdvíhacie skrutky', desc: 'Dve závitové skrutky na koncoch upínacej lišty, spojené cez koleso a ozubené prevody – lišta klesá rovnobežne. 1 otáčka kolesa = 5 mm.' },
+  { key: 'plech', short: 'Plech', name: 'Plech', desc: 'Oceľový plech 800 × 300 mm hrúbky 0,5 – 2 mm (FASTI 204-10-2: dĺžka ohybu 1 040 mm, max. 2 mm). Po ohnutí sa časť ohybu vráti – odpruží.' },
+];
+
+function FolderSimulator({ onBack }) {
+  const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
+  const init = { manual: false, gap: 30, beam: 0, flange: 50, thick: 1, labels: true };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [tele, setTele] = useState({ beam: 0, sheet: 0, perm: 0, gap: 30, clamped: false, msg: null, bending: false });
+
+  useEffect(() => {
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
+    const c = ctl.current;
+    const { TT, L, SW, SD, MAXA } = FOLD;
+    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const dom = renderer.domElement;
+    const M = { ...baseMats(0x9dc58b, 0x82ab70, 0x5f8253), sheet: std(0xb4bcc4, 0.35, 0.75, { side: THREE.DoubleSide }), screw: std(0x3b3d40, 0.45, 0.7) };
+    const { add, box, cylX, cylY, cylZ, ball, handwheel, face, rod } = makeKit(M);
+    const root = new THREE.Group(); scene.add(root);
+    const G = {};
+    const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
+    const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    const D2R = Math.PI / 180;
+    // profil v rovine (z, y) vytiahnutý pozdĺž osi X na dĺžku 2·len
+    const prism = (p, pts, len, m, x = 0, y = 0, z = 0) => {
+      const s = new THREE.Shape(); pts.forEach(([a, b], i) => (i ? s.lineTo(a, b) : s.moveTo(a, b)));
+      const g = new THREE.ExtrudeGeometry(s, { depth: 2 * len, bevelEnabled: false }); g.rotateY(-Math.PI / 2); g.translate(len, 0, 0);
+      return add(p, g, m, x, y, z);
+    };
+
+    // ---------- bočné stojany ----------
+    const fr = grp('ramy');
+    [-1, 1].forEach((sx) => {
+      const x0 = sx * 5.7;
+      box(fr, x0 - 0.3, x0 + 0.3, 0, 10.6, -1.7, -1.0, M.green);                // stĺpik
+      box(fr, x0 - 0.35, x0 + 0.35, 10.4, 10.7, -1.8, -0.9, M.green);
+      const leg = box(fr, x0 - 0.22, x0 + 0.22, 0, 7.4, -0.25, 0.25, M.green);  // šikmá predná noha
+      leg.position.set(x0, 3.4, 0.9); leg.rotation.x = -0.32;
+      box(fr, x0 - 0.35, x0 + 0.35, 0, 0.12, -2.0, -0.7, M.greenDark);
+      box(fr, x0 - 0.3, x0 + 0.3, 0, 0.12, 1.8, 2.4, M.greenDark);
+    });
+    cylX(fr, 0.07, 0.07, -5.5, 5.5, 1.0, 1.3, M.green, 12);                     // priečne tyče
+    cylX(fr, 0.07, 0.07, -5.5, 5.5, 2.4, -1.35, M.green, 12);
+    box(fr, 6.0, 6.5, TT - 1.2, TT + 0.2, -1.0, -0.2, M.green);                  // ložisko kolesa
+    cylX(fr, 0.36, 0.36, 6.35, 6.5, TT - 0.6, -0.6, M.black, 40);                // stupnica
+    cylX(fr, 0.06, 0.06, 6.5, 6.75, TT - 0.6, -0.6, M.steel, 12);
+    const wheelC = handwheel(fr, 0.65, 6.8, TT - 0.6, -0.6, 'x', 0.45);
+
+    // ---------- stôl (spodná lišta) ----------
+    const tbl = grp('stol');
+    prism(tbl, [[0, 0], [-1.3, 0], [-1.3, -1.2], [-0.4, -1.6], [0, -1.6]], L + 0.2, M.green, 0, TT, 0);
+    box(tbl, -L, L, TT - 0.35, TT, -0.18, 0, M.steel);                             // kalená hrana
+    box(tbl, -L - 0.2, L + 0.2, TT - 0.02, TT, -1.3, -0.18, M.greenDark);
+    [-2.6, 0, 2.6].forEach((x) => cylZ(tbl, 0.32, 0.32, -0.01, 0.002, x, TT - 0.9, M.greenDark, 24));
+
+    // ---------- upínacia lišta ----------
+    const clampG = grp('upinacia');
+    prism(clampG, [[-0.03, 0], [-1.05, 0], [-1.05, 1.5], [-0.62, 1.5], [-0.62, 0.55]], L, M.green);
+    box(clampG, -L, L, 0, 0.12, -0.62, -0.03, M.steel);
+    const arch = new THREE.Shape(); arch.moveTo(-L, 1.45); arch.lineTo(L, 1.45); arch.lineTo(L, 2.1); arch.quadraticCurveTo(0, 3.2, -L, 2.1); arch.lineTo(-L, 1.45);
+    const archG = new THREE.ExtrudeGeometry(arch, { depth: 0.45, bevelEnabled: false });
+    add(clampG, archG, M.green, 0, 0, -1.0);
+    [-1, 1].forEach((sx) => { box(clampG, sx * L - 0.25, sx * L + 0.25, 0.4, 1.9, -1.15, -0.35, M.green); cylY(clampG, 0.26, 0.26, 1.9, 2.15, sx * 5.45, -0.75, M.insert, 6); });
+
+    // ---------- zdvíhacie skrutky ----------
+    const scr = grp('skrutky');
+    const screws = [-1, 1].map((sx) => cylY(scr, 0.13, 0.13, TT - 0.5, TT + 4.2, sx * 5.45, -0.75, M.screw, 16));
+
+    // ---------- ohýbacia lišta (os = predná hrana stola) ----------
+    const swAxis = grp('ohybacia'); swAxis.position.set(0, TT, 0); swAxis.rotation.y = -Math.PI / 2;   // lokálna x = dopredu, z = -X
+    const swing = new THREE.Group(); swAxis.add(swing);
+    box(swing, 0, 0.42, -0.3, 0, -L, L, M.steel);
+    const swProf = new THREE.Shape(); [[0, -0.3], [0.62, -0.3], [0.62, -0.95], [0.1, -1.25], [0, -1.25]].forEach(([a, b], i) => (i ? swProf.lineTo(a, b) : swProf.moveTo(a, b)));
+    const swGeo = new THREE.ExtrudeGeometry(swProf, { depth: 2 * L, bevelEnabled: false }); swGeo.translate(0, 0, -L);
+    add(swing, swGeo, M.green);
+    [-1, 1].forEach((sz) => {
+      cylZ(swing, 0.32, 0.32, sz > 0 ? L : -L - 0.38, sz > 0 ? L + 0.38 : -L, 0, 0, M.green, 24);
+      rod(swing, v3(0.35, -1.1, sz * 2.4), v3(1.25, -3.1, sz * 2.4), 0.06, M.steel);
+    });
+    cylZ(swing, 0.065, 0.065, -2.5, 2.5, 1.25, -3.1, M.steel, 14);                // rukoväť
+
+    // ---------- plech ----------
+    const sheetG = grp('plech'); sheetG.position.set(0, TT, 0);
+    const flat = add(sheetG, new THREE.BoxGeometry(1, 1, 1), M.sheet);
+    const fAxis = new THREE.Group(); fAxis.rotation.y = -Math.PI / 2; sheetG.add(fAxis);
+    const fRot = new THREE.Group(); fAxis.add(fRot);
+    const flange = add(fRot, new THREE.BoxGeometry(1, 1, 1), M.sheet);
+    const shapeSheet = (Lmm, tmm) => {
+      const fl = Lmm / 100, th = tmm / 100;
+      flat.scale.set(2 * SW, th, SD - fl); flat.position.set(0, th / 2, -(SD - fl) / 2);
+      flange.scale.set(fl, th, 2 * SW); flange.position.set(fl / 2, th / 2, 0);
+    };
+
+    // ---------- stav simulácie ----------
+    const st = { gap: c.gap, B: 0, P: 0, L: c.flange, th: c.thick, msg: null, bendT: -9 };
+    let t = 0, last = performance.now(), teleT = 0;
+    const flags = {};
+    const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.4 }; };
+    const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
+    const spring = () => 1.5 + 1.2 * st.th;                                   // odpruženie v stupňoch
+    const clamped = () => st.gap <= st.th + 0.05;
+    shapeSheet(st.L, st.th);
+
+    // ---------- pohľady, popisy a výber dielov ----------
+    const anchors = {
+      ramy: () => v3(-5.7, 10.85, -1.35),
+      stol: () => v3(-4.6, TT - 1.0, 0.1),
+      upinacia: () => v3(0, TT + st.gap / 100 + 2.95, -0.8),
+      ohybacia: () => v3(3.6, TT - 1.0 + Math.sin(st.B * D2R) * 0.8, 0.7),
+      skrutky: () => v3(5.45, TT + 4.35, -0.75),
+      plech: () => v3(-3.0, TT + 0.1, -0.9),
+    };
+    const views = {
+      celok: () => [[8, 13, 17], [0, 6.5, 0]],
+      rez: () => [[-1.6, TT + 4.6, 6.4], [-3.4, TT + 0.4, -0.2], true],
+      spredu: () => [[0, 8.5, 19], [0, 6.5, 0]],
+      bok: () => [[17, TT + 2.0, 0.5], [0, TT, -0.3], true],
+      zadu: () => [[-6, 12, -15], [0, 7, -0.5]],
+    };
+    const insp = createInspector({
+      dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
+      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+    });
+    const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
+    const { push, pend } = ctrl;
+    apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.resetWork = () => {
+      if (st.B > 0.5) { say('Najprv sklop ohýbaciu lištu dole.', 'warn'); return; }
+      st.P = 0; shapeSheet(st.L, st.th); say('Vložený nový rovný plech.', 'info');
+    };
+
+    ctrl.reg({ type: 'wheel', minR: 0.5, inc: -1, label: 'Koleso upínania', hint: 'V smere hodinových ručičiek lišta klesá a upne plech. 1 otáčka = 5 mm.',
+      turn: (d) => push('gap', clamp(clamp(c.gap + d * 5 / TAU, st.gap - 4, st.gap + 4), 0, 40)),
+      read: () => `medzera ${st.gap.toFixed(2)} mm` }, wheelC);
+    ctrl.reg({ type: 'wheel', minR: 1.2, inc: 1, label: 'Ohýbacia lišta', hint: 'Ťahaj za rukoväť alebo lištu nahor – ohne vyčnievajúci okraj plechu.',
+      turn: (d) => push('beam', clamp(clamp(c.beam + d / D2R, st.B - 12, st.B + 12), 0, MAXA)),
+      read: () => `${st.B.toFixed(1)}°` }, swing);
+
+    insp.goView('celok', true);
+
+    // ---------- hlavná slučka ----------
+    let raf;
+    const loop = (nowMs) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+
+      // plech: hrúbka a vyloženie sa dajú meniť len pri voľnom rovnom plechu
+      if (c.thick !== st.th || c.flange !== st.L) {
+        if (clamped() || st.B > 0.5 || st.P > 0.01) {
+          say(st.P > 0.01 ? 'Ohnutý plech sa už nedá posúvať – vlož nový plech.' : 'Najprv uvoľni upínaciu lištu a sklop ohýbaciu lištu.', 'warn');
+          push('thick', st.th); push('flange', st.L);
+        } else { st.th = c.thick; st.L = clamp(c.flange, 10, 150); shapeSheet(st.L, st.th); }
+      }
+
+      // upínacia lišta – dosadne na plech
+      const gT = clamp(c.gap, 0, 40);
+      let ng = approach(st.gap, gT, 18 * dt);
+      if (ng < st.th) ng = st.th;
+      sayOnce('clamp', gT < st.th + 0.05 && ng <= st.th + 0.05, 'Upínacia lišta dosadla – plech je upnutý.', 'info');
+      wheelC.rotation.z += (ng - st.gap) / 5 * TAU;
+      screws.forEach((s) => { s.rotation.y -= (ng - st.gap) / 5 * TAU; });
+      st.gap = ng;
+
+      // ohýbacia lišta
+      const bT = clamp(c.beam, 0, MAXA);
+      let nb = approach(st.B, bT, 75 * dt);
+      if (nb > st.B && !clamped() && nb > 2) { nb = Math.max(st.B, 2); push('beam', nb); }
+      sayOnce('loose', bT > 2 && !clamped(), 'Plech nie je upnutý – pri ohybe by vyskočil. Najprv dotiahni upínaciu lištu kolesom vpravo.', 'danger');
+      sayOnce('maxa', bT >= MAXA && nb >= MAXA - 0.1, `Ohýbacia lišta je na doraze ${MAXA}° – ďalej by narazila do nosa upínacej lišty.`, 'warn');
+      if (nb > st.B + 1e-6 && clamped() && nb > st.P) st.bendT = t;
+      st.B = nb;
+      // trvalý ohyb a odpruženie
+      if (clamped() && st.B - spring() > st.P) st.P = st.B - spring();
+      const shown = clamped() ? Math.max(st.P, st.B) : st.P;
+      swing.rotation.z = st.B * D2R;
+      fRot.rotation.z = shown * D2R;
+      clampG.position.y = TT + st.gap / 100;
+
+      ctrl.update(dt);
+      insp.update(t, c);
+
+      if (t - teleT > 0.1) {
+        teleT = t;
+        setTele({ beam: st.B, sheet: shown, perm: st.P, gap: st.gap, clamped: clamped(), bending: t - st.bendT < 0.2, msg: st.msg && st.msg.until > t ? st.msg : null });
+        if (Object.keys(pend).length) {
+          const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]);
+          setUi((u) => ({ ...u, ...p }));
+        }
+      }
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); disposeStage(); };
+  }, []);
+
+  const sb = 1.5 + 1.2 * ui.thick;
+  const statusMsg = tele.msg
+    ? tele.msg
+    : tele.bending ? { kind: 'run', text: `Ohýbanie – plech ${tele.sheet.toFixed(1)}°, po uvoľnení odpruží na ${tele.perm.toFixed(1)}°` }
+    : !tele.clamped ? { kind: 'idle', text: 'Plech je voľný. Nastav vyloženie a dotiahni upínaciu lištu kolesom.' }
+    : tele.perm > 0.05 ? { kind: 'info', text: `Plech je ohnutý na ${tele.perm.toFixed(1)}° (odpruženie ${sb.toFixed(1)}°).` }
+    : { kind: 'run', text: 'Plech je upnutý. Vykývni ohýbaciu lištu nahor.' };
+  const chips = [{ color: tele.clamped ? '#3ee06c' : '#8b8f89', text: tele.clamped ? 'Plech upnutý' : 'Plech voľný' }];
+  if (tele.perm > 0.05) chips.push({ color: '#7fb6ff', text: `Ohyb ${tele.perm.toFixed(1)}°` });
+
+  return (
+    <div className="machine-app w-full flex flex-col md:flex-row">
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={FOLD_PARTS} selected={selected} selectPart={selectPart} chips={chips} />
+      <aside className="panel">
+        <PanelHeader onBack={onBack} kicker="Simulátor · ohýbačka" title="Výkyvná ohýbačka FASTI 204-10-2"
+          sub="Ručná ohýbačka plechu s výkyvnou lištou, dĺžka ohybu 1 040 mm, plech do 2 mm. Mierka 1 : 100 mm."
+          rows={[['Lišta', `${tele.beam.toFixed(1)}°`], ['Plech', `${tele.sheet.toFixed(1)}°`], ['Medzera', tele.gap.toFixed(2)]]}
+          foot={[`plech ${ui.thick} mm`, `odpruženie ${sb.toFixed(1)}°`]} status={statusMsg} />
+
+        <ManualSection ui={ui} set={set}>
+          <li><b>Koleso upínania</b> na pravom stojane spúšťa upínaciu lištu na plech.</li>
+          <li><b>Ohýbaciu lištu</b> vykývneš ťahaním za rukoväť alebo za lištu – plech sa ohne až po upnutí.</li>
+        </ManualSection>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Plech a upínanie</h3>
+          <div className="flex items-center justify-between text-sm gap-2 mb-3">
+            <span className="font-semibold">Hrúbka plechu</span>
+            <Seg label="Hrúbka plechu" value={ui.thick} options={[[0.5, '0,5 mm'], [1, '1 mm'], [2, '2 mm']]} onChange={(v) => set('thick', v)} />
+          </div>
+          <Slider id="ffl" label="Vyloženie (dĺžka ohnutého okraja)" unit="mm" min={10} max={150} step={1} value={ui.flange} onChange={(v) => set('flange', v)} />
+          <Slider id="fgap" label="Upínacia lišta – medzera nad stolom" unit="mm" min={0} max={40} step={0.1} value={ui.gap} actual={tele.gap} digits={1} onChange={(v) => set('gap', v)} />
+          <div className="flex gap-2">
+            <button type="button" className="btn flex-1" onClick={() => set('gap', 0)}>Upnúť</button>
+            <button type="button" className="btn flex-1" onClick={() => set('gap', 30)}>Uvoľniť</button>
+          </div>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Ohýbanie</h3>
+          <Slider id="fbeam" label="Uhol ohýbacej lišty" unit="°" min={0} max={130} step={0.5} value={ui.beam} actual={tele.beam} digits={1} onChange={(v) => set('beam', v)} />
+          <div className="flex flex-wrap gap-2">
+            {[45, 90, 120].map((a) => <button key={a} type="button" className="btn" onClick={() => set('beam', a + sb)}>{a}° (+{sb.toFixed(1)}°)</button>)}
+            <button type="button" className="btn" onClick={() => set('beam', 0)}>Sklopiť</button>
+          </div>
+          <p className="text-xs muted mt-2">Plech po uvoľnení odpruží o {sb.toFixed(1)}°, preto treba lištu vykývnuť o kúsok ďalej, ako je cieľový uhol.</p>
+        </div>
+
+        <ViewSection apiRef={apiRef} ui={ui} set={set} resetLabel="Vložiť nový rovný plech"
+          views={[['celok', 'Celok'], ['rez', 'Detail ohybu'], ['bok', 'Z boku'], ['spredu', 'Spredu'], ['zadu', 'Zozadu']]}
+          onReset={() => apiRef.current.resetWork && apiRef.current.resetWork()} />
+        <PartsSection parts={FOLD_PARTS} selected={selected} selectPart={selectPart} />
+        <HelpFooter />
+      </aside>
+    </div>
+  );
+}
+
+// =====================================================================
+// ROVINNÁ BRÚSKA BPH 300
+// =====================================================================
+const GRIND = { R: 1.5, HW: 0.2, WZc: 0.25, CT: 8.0, H: 0.4, WX: 2.0, WZ: 1.0, Y0: -0.8 };   // kotúč Ø300 × 40, magnetická doska, obrobok 200 × 100 × 40
+const GRIND_PARTS = [
+  { key: 'lozko', short: 'Lôžko', name: 'Lôžko', desc: 'Skriňové lôžko s hydraulickým agregátom a nádržou chladiva. Vpredu sú ručné kolesá stola a priečneho posuvu a elektrický panel.' },
+  { key: 'stojan', short: 'Stojan', name: 'Stojan', desc: 'Stojan vzadu nesie brúsny vreteník. Veľké koleso hore zvisle prisúva kotúč – 1 otáčka = 1 mm, dielik stupnice 0,01 mm.' },
+  { key: 'vretennik', short: 'Brúsny kotúč', name: 'Brúsny vreteník a kotúč', desc: 'Kotúč Ø300 × 40 mm sa točí 2 800 ot/min (obvodová rýchlosť ~44 m/s). Kryt zachytáva úlomky. Brúsi sa obvodom kotúča po tenkých vrstvách.' },
+  { key: 'sane', short: 'Sane', name: 'Priečne sane', desc: 'Nesú stôl a posúvajú ho k stojanu a od neho (os Y) – ručne kolesom alebo automaticky o krok na konci každého zdvihu stola.' },
+  { key: 'stol', short: 'Stôl', name: 'Stôl s hydraulickým pohonom', desc: 'Stôl sa hydraulicky pohybuje tam a späť (os X). Červené narážky vpredu prestavujú smer na konci zdvihu. Konce sú kryté žltými zásterkami.' },
+  { key: 'magnet', short: 'Magnetická doska', name: 'Elektromagnetická upínacia doska', desc: 'Doska 500 × 150 mm drží oceľový obrobok magneticky. Bez zapnutého magnetu sa nesmie brúsiť – kotúč by obrobok vymrštil.' },
+  { key: 'obrobok', short: 'Obrobok', name: 'Obrobok', desc: 'Oceľový hranol 200 × 100 × 40 mm. Pri brúsení sa odoberajú stotiny milimetra – obrúsená plocha je lesklá, DRO ukazuje úbytok.' },
+  { key: 'panel', short: 'Elektrický panel', name: 'Elektrický panel', desc: 'Hlavný vypínač, hydraulika, kotúč, magnet a chladenie (štart / stop) a núdzový STOP.' },
+];
+
+function GrinderSimulator({ onBack }) {
+  const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
+  const init = { power: true, hydro: false, wheel: false, magnet: true, coolant: false, manual: false, x: 300, y: 105, z: 60, autoX: false, autoY: false, speed: 8, xL: 150, xR: 450, step: 2, yA: 75, yB: 135, labels: true };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [tele, setTele] = useState({ x: 300, y: 105, z: 60, wrpm: 0, removed: 0, msg: null, grinding: false });
+
+  useEffect(() => {
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
+    const c = ctl.current;
+    const { R, HW, WZc, CT, H, WX, WZ, Y0 } = GRIND;
+    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const dom = renderer.domElement;
+    const M = {
+      ...baseMats(0x8fbf78, 0x76a662, 0x557a47),
+      guard: std(0x8fbf78, 0.6, 0.05, { side: THREE.DoubleSide }), wheelM: std(0xd8d1c0, 0.95, 0), chuck: std(0x4a4f55, 0.5, 0.6), chuckLine: std(0xa0a8b0, 0.3, 0.85),
+      work: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0.8, flatShading: true, side: THREE.DoubleSide }),
+      spark: new THREE.MeshBasicMaterial({ color: 0xffb347, toneMapped: false }),
+      coolant: new THREE.MeshStandardMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0, emissive: 0x1a4a6a, emissiveIntensity: 0.5 }),
+      bulb: new THREE.MeshStandardMaterial({ color: 0xfff3d6, emissive: 0xfff0c0, emissiveIntensity: 1.2 }),
+    };
+    const { add, box, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel, orient, rod } = makeKit(M);
+    const root = new THREE.Group(); scene.add(root);
+    const G = {};
+    const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
+    const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+    // ---------- lôžko s ručnými kolesami ----------
+    const bed = grp('lozko');
+    box(bed, -3.3, 3.3, 0, 0.12, -1.9, 2.0, M.greenDark);
+    box(bed, -3.2, 3.2, 0.12, 6.2, -1.8, 1.9, M.green);
+    box(bed, -2.7, -0.6, 0.7, 4.2, 1.9, 1.94, M.greenDark);
+    box(bed, -2.6, -2.2, 6.2, 6.25, -1.6, 1.6, M.ways); box(bed, 2.2, 2.6, 6.2, 6.25, -1.6, 1.6, M.ways);
+    box(bed, -3.0, -0.1, 4.7, 6.1, 1.9, 2.55, M.green);                        // konzola kolies
+    cylZ(bed, 0.14, 0.14, 2.55, 2.7, -2.3, 5.4, M.steel, 14); cylZ(bed, 0.12, 0.12, 2.55, 2.7, -1.05, 5.4, M.steel, 14);
+    const wX = handwheel(bed, 0.55, -2.3, 5.4, 2.75, 'z', 0.4), wY = handwheel(bed, 0.47, -1.05, 5.4, 2.75, 'z', 0.35);
+    cylZ(bed, 0.18, 0.15, 2.55, 2.66, -0.35, 5.4, M.black, 20); detents(bed, -0.35, 5.4, 2.66, 0.13, [0.45, -0.45], 0.02);
+    cylZ(bed, 0.16, 0.13, 2.55, 2.65, -1.65, 5.95, M.black, 20); detents(bed, -1.65, 5.95, 2.65, 0.11, [0.45, -0.45], 0.018);
+    const levAX = pivotLever(bed, -0.35, 5.4, 2.66, 0.38, 1.2), levAY = pivotLever(bed, -1.65, 5.95, 2.65, 0.32, 1.2);
+    // elektrický panel
+    const pan = grp('panel', bed);
+    box(pan, 0.9, 2.3, 2.0, 4.8, 1.9, 1.98, M.panel);
+    const pbtn = (x, y, m) => { const g = new THREE.Group(); g.position.set(x, y, 1.98); pan.add(g); cylZ(g, 0.1, 0.1, 0, 0.07, 0, 0, m, 20); hitProxy(g, 0.14, 0, 0, 0.05); return g; };
+    const bHyOn = pbtn(1.15, 4.45, M.btnGreen), bHyOff = pbtn(1.45, 4.45, M.red), bMag = pbtn(1.85, 4.45, M.yellow);
+    const bWOn = pbtn(1.15, 4.0, M.btnGreen), bWOff = pbtn(1.45, 4.0, M.red), bCool = pbtn(1.85, 4.0, M.blue);
+    const lampW = std(0x1f5f33, 0.4, 0.1), lampM = std(0x5f4a10, 0.4, 0.1);
+    ball(pan, 0.06, 2.12, 4.45, 1.99, lampM); ball(pan, 0.06, 2.12, 4.0, 1.99, lampW);
+    box(pan, 1.3, 1.9, 2.95, 3.45, 1.98, 1.99, M.yellow);
+    const eStop = new THREE.Group(); eStop.position.set(1.6, 3.2, 1.99); pan.add(eStop);
+    cylZ(eStop, 0.08, 0.08, 0, 0.07, 0, 0, M.steelDark, 16); cylZ(eStop, 0.19, 0.18, 0.07, 0.16, 0, 0, M.red, 24); hitProxy(eStop, 0.25, 0, 0, 0.1);
+    box(pan, 1.3, 1.9, 2.2, 2.7, 1.98, 1.99, M.yellow);
+    const mainSwitch = new THREE.Group(); mainSwitch.position.set(1.6, 2.45, 1.99); pan.add(mainSwitch);
+    cylZ(mainSwitch, 0.17, 0.17, 0, 0.06, 0, 0, M.black, 24); box(mainSwitch, -0.22, 0.22, -0.045, 0.045, 0.06, 0.17, M.red);
+
+    // ---------- stojan s kolesom zvislého prísuvu ----------
+    const col = grp('stojan');
+    box(col, -1.1, 1.1, 6.2, 14.8, -3.8, -1.9, M.green);
+    box(col, -1.2, 1.2, 14.8, 15.0, -3.9, -1.8, M.greenDark);
+    box(col, -0.95, -0.7, 6.6, 13.0, -1.9, -1.86, M.ways); box(col, 0.7, 0.95, 6.6, 13.0, -1.9, -1.86, M.ways);
+    cylZ(col, 0.4, 0.4, -1.9, -1.78, 0, 13.6, M.black, 40);
+    const wZ = handwheel(col, 0.72, 0, 13.6, -1.7, 'z', 0.45);
+
+    // ---------- brúsny vreteník a kotúč ----------
+    const head = grp('vretennik');
+    box(head, -0.95, 0.95, -0.9, 1.1, -1.85, -0.3, M.green);
+    box(head, -0.7, 0.7, 1.1, 1.65, -1.8, -0.6, M.greenDark);
+    cylZ(head, 0.42, 0.42, -0.3, WZc - 0.26, 0, 0, M.green, 28);
+    const spin = new THREE.Group(); spin.position.set(0, 0, WZc); head.add(spin);
+    cylZ(spin, R, R, -HW, HW, 0, 0, M.wheelM, 56);
+    cylZ(spin, 0.55, 0.55, -HW - 0.04, -HW, 0, 0, M.steel, 28); cylZ(spin, 0.55, 0.55, HW, HW + 0.04, 0, 0, M.steel, 28);
+    box(spin, 0.3, 0.5, -0.05, 0.05, HW + 0.04, HW + 0.06, M.black);
+    const gCyl = new THREE.CylinderGeometry(R + 0.12, R + 0.12, 0.56, 40, 1, true, Math.PI / 2 - 0.35, Math.PI + 0.7); gCyl.rotateX(Math.PI / 2);
+    add(head, gCyl, M.guard, 0, 0, WZc);
+    [WZc + 0.28, WZc - 0.28].forEach((z) => add(head, new THREE.CircleGeometry(R + 0.12, 40, -0.35, Math.PI + 0.7), M.guard, 0, 0, z));
+    const nozzleA = v3(R * 0.95, 0.1, WZc + 0.32), nozzleB = v3(0.45, -R + 0.15, WZc + 0.05);
+    rod(head, v3(0.9, 0.6, -0.4), nozzleA, 0.04, M.black);
+    const stream = add(head, new THREE.CylinderGeometry(0.03, 0.05, 1, 10, 1, true), M.coolant); stream.castShadow = false; orient(stream, nozzleA, nozzleB);
+    rod(head, v3(0.95, 0.9, -1.0), v3(1.9, 1.9, -0.5), 0.04, M.black);           // lampa
+    const shade = add(head, new THREE.ConeGeometry(0.28, 0.45, 20, 1, true), M.white, 2.05, 1.95, -0.4); shade.rotation.z = 0.9;
+    ball(head, 0.1, 1.95, 1.85, -0.4, M.bulb);
+
+    // ---------- sane, stôl, magnetická doska, obrobok ----------
+    const sad = grp('sane'); sad.position.y = 6.2;
+    box(sad, -2.6, 2.6, 0, 0.6, -1.0, 1.0, M.green);
+    lever(sad, 0, 0.3, 1.0, 0.35, 1.1, 0);
+    const tbl = grp('stol', sad); tbl.position.y = 0.6;
+    box(tbl, -4.6, 4.6, 0, 0.6, -1.05, 1.05, M.green);
+    box(tbl, -4.6, 4.6, 0.6, 0.8, -1.0, 1.0, M.greenDark);
+    box(tbl, -4.6, 4.6, 0.6, 0.95, 1.0, 1.1, M.green); box(tbl, -4.6, 4.6, 0.6, 0.95, -1.1, -1.0, M.green);
+    box(tbl, 4.35, 4.6, 0.8, 2.0, -1.05, 1.05, M.green); box(tbl, 4.35, 4.6, 2.0, 2.2, -1.05, 1.05, M.yellow);
+    box(tbl, -4.6, -4.35, 0.8, 1.6, -1.05, 1.05, M.green); box(tbl, -4.6, -4.35, 1.6, 1.8, -1.05, 1.05, M.yellow);
+    box(tbl, -4.5, 4.5, 0.15, 0.45, 1.05, 1.13, M.greenDark);
+    const dogL = box(tbl, -0.1, 0.1, 0.1, 0.5, 1.13, 1.28, M.red), dogR = box(tbl, -0.1, 0.1, 0.1, 0.5, 1.13, 1.28, M.red);
+    const mag = grp('magnet', tbl);
+    box(mag, -2.5, 2.5, 0.8, 1.2, -0.75, 0.75, M.chuck);
+    for (let x = -2.4; x <= 2.41; x += 0.2) box(mag, x - 0.02, x + 0.02, 1.2, 1.203, -0.72, 0.72, M.chuckLine);
+    const hf = createHeightField({ NX: 100, NZ: 50, W: WX, D: WZ, H, raw: 0x5a5f65, cut: 0xe9edf0, mat: M.work });
+    hf.mesh.position.y = 1.2; hf.mesh.userData.part = 'obrobok'; tbl.add(hf.mesh); G.obrobok = hf.mesh;
+    const sparks = createParticles(scene, new THREE.BoxGeometry(0.014, 0.014, 0.07), M.spark, 160, false);
+
+    // ---------- stav simulácie ----------
+    const st = { tx: (c.x - 300) / 100, sz: Y0 + c.y / 100, zb: c.z / 100, wr: 0, spin: 0, xdir: 1, ydir: 1, grindT: -9, msg: null, last: null };
+    let t = 0, last = performance.now(), teleT = 0, dirty = false, lastBuild = 0, sparkAcc = 0;
+    const flags = {};
+    const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.4 }; };
+    const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
+    const rel = (tx, sz, zb) => [-tx, WZc - sz, zb];                       // spodok kotúča voči stredu obrobku a ploche dosky
+    const pen = (rx, rz, wb) => { let m = 0; hf.eachRect(rx - 0.35, rx + 0.35, rz - HW, rz + HW, (k, x) => { const p = hf.hgt[k] - (wb + (x - rx) * (x - rx) / (2 * R)); if (p > m) m = p; }); return m; };
+    const grind = (rx, rz, wb) => {
+      let rem = 0;
+      hf.eachRect(rx - 0.35, rx + 0.35, rz - HW, rz + HW, (k, x) => {
+        const lim = Math.max(0, wb + (x - rx) * (x - rx) / (2 * R));
+        if (hf.hgt[k] > lim + 1e-7) { rem += hf.hgt[k] - lim; hf.hgt[k] = lim; hf.mask[k] = 1; }
+      });
+      return rem;
+    };
+    const onChuck = (rx, rz, wb) => wb < 0 && Math.abs(rx) < 2.5 && Math.abs(rz) < 0.75 + HW;
+    const wheelOn = () => st.wr > 500;
+
+    // ---------- pohľady, popisy a výber dielov ----------
+    const anchors = {
+      lozko: () => v3(-2.9, 4.4, 1.95),
+      stojan: () => v3(-1.1, 11.0, -2.0),
+      vretennik: () => v3(-1.3, CT + st.zb + R + 1.0, WZc),
+      sane: () => v3(2.6, 6.55, st.sz + 1.0),
+      stol: () => v3(st.tx + 3.6, 7.65, st.sz + 1.1),
+      magnet: () => v3(st.tx - 2.1, CT + 0.05, st.sz + 0.75),
+      obrobok: () => v3(st.tx + 0.6, CT + H + 0.05, st.sz),
+      panel: () => v3(1.6, 4.95, 1.98),
+    };
+    const views = {
+      celok: () => [[9.5, 13, 15.5], [0, 7.5, 0]],
+      rez: () => [[3.4, CT + 2.4, st.sz + 4.2], [0, CT + 0.4, WZc], true],
+      spredu: () => [[0, 8.5, 19], [0, 7.5, 0]],
+      zhora: () => [[0.5, 23, 8], [0, 7, 0.4]],
+      panel: () => [[2.5, 5.5, 7.5], [0.6, 4.6, 1.9], true],
+    };
+    const insp = createInspector({
+      dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
+      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+    });
+    const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
+    const { push, pend } = ctrl;
+    apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.resetWork = () => {
+      hf.hgt.fill(H); hf.mask.fill(0); dirty = true; st.last = null;
+      const [rx, rz, wb] = rel(st.tx, st.sz, st.zb);
+      if (pen(rx, rz, wb) > 0) { st.zb = H + 0.2; c.z = st.zb * 100; return c.z; }
+      return null;
+    };
+
+    const xAct = () => st.tx * 100 + 300, yAct = () => (st.sz - Y0) * 100, zAct = () => st.zb * 100;
+    ctrl.reg({ type: 'wheel', minR: 0.4, inc: 1, label: 'Koleso stola (X)', hint: 'Ručný pohyb stola, keď je hydraulický posuv vypnutý. 1 otáčka = 10 mm.',
+      guard: () => { if (!c.autoX) return true; say('Pri zapnutom hydraulickom posuve sa koleso stola netočí – vypni páku posuvu.', 'warn'); return false; },
+      turn: (d) => { const a = xAct(); push('x', clamp(clamp(c.x + d * 10 / TAU, a - 20, a + 20), 0, 600)); }, read: () => `X ${xAct().toFixed(1)} mm` }, wX);
+    ctrl.reg({ type: 'wheel', minR: 0.35, inc: 1, label: 'Koleso priečneho posuvu (Y)', hint: '1 otáčka = 5 mm.',
+      turn: (d) => { const a = yAct(); push('y', clamp(clamp(c.y + d * 5 / TAU, a - 10, a + 10), 0, 240)); }, read: () => `Y ${yAct().toFixed(2)} mm` }, wY);
+    ctrl.reg({ type: 'wheel', minR: 0.5, inc: 1, label: 'Koleso zvislého prísuvu (Z)', hint: 'V smere hodinových ručičiek kotúč klesá. 1 otáčka = 1 mm, dielik 0,01 mm.',
+      turn: (d) => { const a = zAct(); push('z', clamp(clamp(c.z + d * 1 / TAU, a - 0.5, a + 0.5), 0, 200)); }, read: () => `Z ${zAct().toFixed(3)} mm` }, wZ);
+    ctrl.reg({ type: 'lever', angles: [0.45, -0.45], minR: 0.2, label: 'Páka hydraulického posuvu stola', hint: 'Zapne pohyb stola tam a späť medzi narážkami (potrebuje bežiacu hydrauliku).',
+      getIdx: () => (c.autoX ? 1 : 0), onSet: (i) => { push('autoX', i === 1); if (i && !c.hydro) say('Posuv zaradený – stôl sa pohne po zapnutí hydrauliky.', 'info'); }, read: () => (c.autoX ? 'zapnutý' : 'vypnutý') }, levAX);
+    ctrl.reg({ type: 'lever', angles: [0.45, -0.45], minR: 0.18, label: 'Páka priečneho posuvu', hint: 'Automatický priečny posuv o krok na konci každého zdvihu stola.',
+      getIdx: () => (c.autoY ? 1 : 0), onSet: (i) => push('autoY', i === 1), read: () => (c.autoY ? `krok ${c.step} mm` : 'vypnutý') }, levAY);
+    ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.2, label: 'Hlavný vypínač', hint: 'Otoč alebo klikni: 0 = vypnuté, I = zapnuté.',
+      getIdx: () => (c.power ? 1 : 0),
+      onSet: (i) => { push('power', i === 1); if (!i) { push('wheel', false); push('hydro', false); say('Hlavný vypínač vypnutý.', 'warn'); } else say('Hlavný vypínač zapnutý.', 'info'); },
+      read: () => (c.power ? 'I – zapnuté' : '0 – vypnuté') }, mainSwitch);
+    const needPower = (fn) => () => { if (!c.power) say('Najprv zapni hlavný vypínač.', 'warn'); else fn(); };
+    ctrl.reg({ type: 'button', label: 'Hydraulika ŠTART', hint: 'Spustí hydraulický agregát pohonu stola.', action: needPower(() => push('hydro', true)) }, bHyOn);
+    ctrl.reg({ type: 'button', label: 'Hydraulika STOP', hint: 'Zastaví hydrauliku.', action: () => push('hydro', false) }, bHyOff);
+    ctrl.reg({ type: 'button', label: 'Kotúč ŠTART', hint: 'Roztočí brúsny kotúč na 2 800 ot/min.', action: needPower(() => push('wheel', true)) }, bWOn);
+    ctrl.reg({ type: 'button', label: 'Kotúč STOP', hint: 'Zastaví brúsny kotúč.', action: () => push('wheel', false) }, bWOff);
+    ctrl.reg({ type: 'button', label: 'Magnetická doska', hint: 'Zapne / vypne magnet. Pri vypnutom sa nesmie brúsiť.',
+      action: () => { push('magnet', !c.magnet); say(c.magnet ? 'Magnet zapnutý – obrobok je upnutý.' : 'Magnet vypnutý – obrobok je voľný.', c.magnet ? 'info' : 'warn'); } }, bMag);
+    ctrl.reg({ type: 'button', label: 'Chladenie', hint: 'Zapne / vypne chladiacu kvapalinu.', action: () => { push('coolant', !c.coolant); } }, bCool);
+    ctrl.reg({ type: 'button', label: 'Núdzový STOP', hint: 'Zastaví kotúč, hydrauliku aj posuvy.',
+      action: () => { push('wheel', false); push('hydro', false); push('autoX', false); push('coolant', false); say('Núdzové zastavenie – kotúč, hydraulika aj posuvy sú vypnuté.', 'danger'); } }, eStop);
+
+    insp.goView('celok', true);
+
+    // ---------- hlavná slučka ----------
+    let raf;
+    const loop = (nowMs) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      st.wr = approach(st.wr, c.wheel && c.power ? 2800 : 0, 1100 * dt);
+      st.spin += (st.wr > 0 ? 6 * st.wr / (st.wr + 600) : 0) * TAU * dt; spin.rotation.z = -st.spin;
+
+      // hydraulický pohyb stola a priečny posuv na konci zdvihu
+      const xl = Math.min(c.xL, c.xR), xr = Math.max(c.xL, c.xR);
+      if (c.autoX && c.hydro && c.power) {
+        const a = xAct();
+        c.x = clamp(clamp(c.x + st.xdir * c.speed / 6 * 100 * dt, a - 15, a + 15), xl, xr);
+        if ((st.xdir > 0 && a >= xr - 0.5) || (st.xdir < 0 && a <= xl + 0.5)) {
+          st.xdir = -st.xdir;
+          if (c.autoY) {
+            const ya = Math.min(c.yA, c.yB), yb = Math.max(c.yA, c.yB);
+            let ny = c.y + st.ydir * c.step;
+            if (ny > yb || ny < ya) { st.ydir = -st.ydir; ny = clamp(ny, ya, yb); }
+            push('y', ny);
+          }
+        }
+      }
+
+      // pohyb s kontrolou dotyku kotúča
+      const vx = c.autoX && c.hydro ? c.speed / 6 * 1.3 : 2.0;
+      let nx = approach(st.tx, (clamp(c.x, 0, 600) - 300) / 100, vx * dt), ny = approach(st.sz, Y0 + clamp(c.y, 0, 240) / 100, 1.0 * dt), nz = approach(st.zb, clamp(c.z, 0, 200) / 100, 0.5 * dt);
+      let blocked = null;
+      if (nx !== st.tx || ny !== st.sz || nz !== st.zb) {
+        const [rx0, rz0, wb0] = rel(st.tx, st.sz, st.zb), p0 = pen(rx0, rz0, wb0);
+        let why = null;
+        const ok = (a, b, z) => {
+          const [rx, rz, wb] = rel(a, b, z);
+          if (onChuck(rx, rz, wb)) { why = 'chuck'; return false; }
+          const p = pen(rx, rz, wb);
+          if (p <= p0 + 1e-7 || p < 2e-6) return true;
+          if (!wheelOn()) { why = 'stopped'; return false; }
+          if (!c.magnet) { why = 'magnet'; return false; }
+          if (p > 0.0012) { why = 'deep'; return false; }
+          return true;
+        };
+        if (!ok(nx, ny, nz)) {
+          blocked = why;
+          let ax = st.tx, ay = st.sz, az = st.zb;
+          if (ok(nx, ay, az)) ax = nx;
+          if (ok(ax, ny, az)) ay = ny;
+          if (ok(ax, ay, nz)) az = nz;
+          nx = ax; ny = ay; nz = az;
+        }
+      }
+      sayOnce('stopped', blocked === 'stopped', 'Kotúč stojí – pri dotyku by poškodil obrobok. Spusti brúsny kotúč.', 'danger');
+      sayOnce('magnet', blocked === 'magnet', 'Magnetická doska je vypnutá – obrobok nie je upnutý a kotúč by ho vymrštil!', 'danger');
+      sayOnce('deep', blocked === 'deep', 'Príliš veľký prísuv – brúsi sa po 0,01 – 0,05 mm, najviac 0,1 mm na prechod.', 'warn');
+      sayOnce('chuck', blocked === 'chuck', 'Kotúč by zabrúsil do magnetickej dosky.', 'warn');
+      wX.rotation.z += (nx - st.tx) / 0.1 * TAU; wY.rotation.z += (ny - st.sz) / 0.05 * TAU; wZ.rotation.z += (nz - st.zb) / 0.01 * TAU;
+      st.tx = nx; st.sz = ny; st.zb = nz;
+
+      // brúsenie po dráhe od minulej snímky
+      const cur = rel(st.tx, st.sz, st.zb), prev = st.last || cur; st.last = cur;
+      if (wheelOn() && c.magnet) {
+        const n = Math.min(80, Math.max(1, Math.ceil(Math.hypot(cur[0] - prev[0], cur[1] - prev[1]) / 0.03)));
+        let rem = 0;
+        for (let s = 1; s <= n; s++) { const f = s / n; rem += grind(prev[0] + (cur[0] - prev[0]) * f, prev[1] + (cur[1] - prev[1]) * f, prev[2] + (cur[2] - prev[2]) * f); }
+        if (rem > 0) {
+          st.grindT = t; dirty = true;
+          sparkAcc += dt * 160;
+          while (sparkAcc >= 1) {
+            sparkAcc -= 1;
+            sparks.spawn(v3(0.05, CT + st.zb + 0.01, WZc + (Math.random() - 0.5) * 0.4), v3(-(3 + Math.random() * 4) * (st.xdir > 0 || !c.autoX ? 1 : 0.8), 0.4 + Math.random() * 2, (Math.random() - 0.5) * 1.2), 0.3 + Math.random() * 0.35, 6, 0);
+          }
+        }
+      }
+      const grinding = t - st.grindT < 0.25;
+      if (dirty && t - lastBuild > 0.08) { hf.rebuild(); dirty = false; lastBuild = t; }
+
+      // pohyb skupín
+      head.position.y = CT + st.zb + R; sad.position.z = st.sz; tbl.position.x = st.tx;
+      dogL.position.x = -(xl - 300) / 100; dogR.position.x = -(xr - 300) / 100;
+      stream.visible = c.coolant && c.power;
+      lampW.emissive.setHex(st.wr > 15 ? 0x22dd55 : 0); lampM.emissive.setHex(c.magnet ? 0xffb020 : 0);
+      sparks.update(dt, () => -1);
+
+      ctrl.update(dt);
+      insp.update(t, c);
+
+      if (t - teleT > 0.1) {
+        teleT = t;
+        let mn = H; for (let k = 0; k < hf.hgt.length; k++) if (hf.hgt[k] < mn) mn = hf.hgt[k];
+        setTele({ x: xAct(), y: yAct(), z: zAct(), wrpm: st.wr, removed: (H - mn) * 100, grinding: grinding && wheelOn(), msg: st.msg && st.msg.until > t ? st.msg : null });
+        if (c.autoX && c.hydro) pend.x = Math.round(c.x * 10) / 10;
+        if (Object.keys(pend).length) {
+          const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]);
+          setUi((u) => ({ ...u, ...p }));
+        }
+      }
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); disposeStage(); };
+  }, []);
+
+  const statusMsg = tele.msg
+    ? tele.msg
+    : tele.grinding ? { kind: 'run', text: `Brúsenie – odbrúsené ${tele.removed.toFixed(3)} mm, kotúč ${Math.round(tele.wrpm)} ot/min` }
+    : !ui.power ? { kind: 'warn', text: 'Hlavný vypínač je vypnutý.' }
+    : tele.wrpm > 15 ? { kind: 'run', text: 'Kotúč beží. Prisúvaj ho kolesom Z po stotinách a zapni hydraulický posuv stola.' }
+    : { kind: 'idle', text: 'Stroj stojí. Zapni magnet, roztoč kotúč a spusti hydrauliku.' };
+  const chips = [{ color: tele.wrpm > 15 ? '#3ee06c' : '#8b8f89', text: tele.wrpm > 15 ? `Kotúč ${Math.round(tele.wrpm)} ot/min` : 'Kotúč stojí' }];
+  if (tele.grinding) chips.push({ color: '#ffb340', text: 'Brúsenie' });
+  chips.push({ color: ui.magnet ? '#ffcf4a' : '#8b8f89', text: ui.magnet ? 'Magnet zap.' : 'Magnet vyp.' });
+  if (ui.hydro && ui.autoX) chips.push({ color: '#7fb6ff', text: `Stôl ${ui.speed} m/min` });
+
+  return (
+    <div className="machine-app w-full flex flex-col md:flex-row">
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={GRIND_PARTS} selected={selected} selectPart={selectPart} chips={chips} />
+      <aside className="panel">
+        <PanelHeader onBack={onBack} kicker="Simulátor · brúska" title="Rovinná brúska BPH 300"
+          sub="Rovinná brúska s vodorovným vretenom a magnetickou doskou. Kotúč Ø300 × 40 mm, obrobok oceľ 200 × 100 × 40 mm."
+          rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(3)]]}
+          foot={[`kotúč ${Math.round(tele.wrpm)} ot/min`, `úbytok ${tele.removed.toFixed(3)} mm`]} status={statusMsg} />
+
+        <ManualSection ui={ui} set={set}>
+          <li><b>Kolesá stola</b> (X) a <b>priečneho posuvu</b> (Y) vpredu na lôžku, <b>koleso zvislého prísuvu</b> (Z) hore na stojane.</li>
+          <li><b>Páky</b> hydraulického posuvu stola a automatického priečneho posuvu vedľa kolies.</li>
+          <li>Na paneli: <b>hlavný vypínač</b>, <b>hydraulika</b>, <b>kotúč</b>, <b>magnet</b> (žlté), <b>chladenie</b> (modré) a <b>núdzový STOP</b>.</li>
+        </ManualSection>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Hlavný chod</h3>
+          <button type="button" className={`btn-run ${ui.wheel ? 'stop' : 'start'}`}
+            onClick={() => { if (!ui.wheel && !ui.power) set('power', true); set('wheel', !ui.wheel); }}>
+            {ui.wheel ? '■ Stop kotúča' : '▶ Štart kotúča'}
+          </button>
+          <div className="mt-2">
+            <Toggle on={ui.power} label="Hlavný vypínač" onClick={() => { const v = !ui.power; set('power', v); if (!v) { set('wheel', false); set('hydro', false); } }} />
+            <Toggle on={ui.hydro} label="Hydraulika" onClick={() => { if (!ui.hydro && !ui.power) set('power', true); set('hydro', !ui.hydro); }} />
+            <Toggle on={ui.magnet} label="Magnetická doska" onClick={() => set('magnet', !ui.magnet)} />
+            <Toggle on={ui.coolant} label="Chladenie" onClick={() => set('coolant', !ui.coolant)} />
+          </div>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Polohy</h3>
+          <Slider id="gx" label="Stôl X" unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
+          <Slider id="gy" label="Sane Y" unit="mm" min={0} max={240} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
+          <Slider id="gz" label="Kotúč nad doskou Z" unit="mm" min={0} max={200} step={0.005} value={ui.z} actual={tele.z} digits={3} onChange={(v) => set('z', v)} />
+          <div className="flex flex-wrap gap-2">
+            {[-0.1, -0.02, -0.01, 0.01, 0.1, 1].map((d) => <button key={d} type="button" className="btn" onClick={() => set('z', Math.round((ui.z + d) * 1000) / 1000)}>{d > 0 ? '+' : ''}{String(d).replace('.', ',')}</button>)}
+          </div>
+          <p className="text-xs muted mt-2">Obrobok je vysoký 40 mm. Prisúvaj po 0,01 – 0,05 mm; viac ako 0,1 mm na prechod stroj nedovolí.</p>
+        </div>
+
+        <div className="sec">
+          <h3 className="sec-title mb-2">Hydraulický posuv</h3>
+          <Toggle on={ui.autoX} label="Pohyb stola tam a späť" onClick={() => set('autoX', !ui.autoX)} />
+          <Slider id="gsp" label="Rýchlosť stola" unit="m/min" min={1} max={25} step={0.5} value={ui.speed} digits={1} onChange={(v) => set('speed', v)} />
+          <Slider id="gxl" label="Ľavá narážka" unit="mm" min={0} max={600} step={1} value={ui.xL} onChange={(v) => set('xL', v)} />
+          <Slider id="gxr" label="Pravá narážka" unit="mm" min={0} max={600} step={1} value={ui.xR} onChange={(v) => set('xR', v)} />
+          <Toggle on={ui.autoY} label="Priečny posuv na konci zdvihu" onClick={() => set('autoY', !ui.autoY)} />
+          <Slider id="gst" label="Krok priečneho posuvu" unit="mm" min={0.5} max={10} step={0.5} value={ui.step} digits={1} onChange={(v) => set('step', v)} />
+          <Slider id="gya" label="Priečny rozsah od" unit="mm" min={0} max={240} step={1} value={ui.yA} onChange={(v) => set('yA', v)} />
+          <Slider id="gyb" label="Priečny rozsah do" unit="mm" min={0} max={240} step={1} value={ui.yB} onChange={(v) => set('yB', v)} />
+        </div>
+
+        <ViewSection apiRef={apiRef} ui={ui} set={set} resetLabel="Upnúť nový obrobok"
+          views={[['celok', 'Celok'], ['rez', 'Detail kotúča'], ['spredu', 'Spredu'], ['zhora', 'Zhora'], ['panel', 'Panel']]}
+          onReset={() => { const r = apiRef.current.resetWork && apiRef.current.resetWork(); if (r != null) set('z', r); }} />
+        <PartsSection parts={GRIND_PARTS} selected={selected} selectPart={selectPart} />
+        <HelpFooter />
+      </aside>
+    </div>
+  );
+}
+
+// =====================================================================
+// HLAVNÉ MENU
+// =====================================================================
+function LatheArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="112" width="44" height="48" /><rect x="236" y="112" width="40" height="48" />
+        <rect x="30" y="96" width="262" height="16" />
+        <rect x="30" y="38" width="76" height="58" />
+        <rect x="216" y="56" width="42" height="40" />
+        <rect x="140" y="80" width="44" height="16" />
+        <rect x="152" y="66" width="20" height="14" />
+      </g>
+      <rect x="106" y="50" width="12" height="38" rx="2" fillOpacity=".35" />
+      <rect x="118" y="63" width="86" height="12" fillOpacity=".55" />
+      <rect x="200" y="63" width="16" height="12" fillOpacity=".3" />
+      <circle cx="266" cy="69" r="10" fill="none" /><circle cx="160" cy="104" r="7" fill="none" />
+      <path d="M58 38V22h22" fill="none" /><path d="M76 22l10 8H70z" fillOpacity=".3" />
+      <circle cx="52" cy="60" r="5" fillOpacity=".4" /><circle cx="70" cy="60" r="5" fillOpacity=".4" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function MillArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="112" y="148" width="116" height="12" />
+        <rect x="112" y="28" width="48" height="120" />
+        <rect x="160" y="22" width="44" height="34" rx="6" />
+        <rect x="160" y="110" width="58" height="38" />
+        <rect x="160" y="102" width="56" height="8" />
+        <rect x="164" y="122" width="18" height="16" />
+      </g>
+      <rect x="60" y="92" width="238" height="10" fillOpacity=".3" />
+      <rect x="168" y="80" width="40" height="12" fillOpacity=".35" />
+      <rect x="176" y="72" width="24" height="10" fillOpacity=".6" />
+      <rect x="186" y="56" width="10" height="10" fillOpacity=".4" /><rect x="188" y="66" width="6" height="8" fillOpacity=".7" />
+      <circle cx="54" cy="97" r="8" fill="none" /><circle cx="304" cy="97" r="8" fill="none" />
+      <circle cx="206" cy="128" r="8" fill="none" /><path d="M175 135l10 8" fill="none" />
+      <rect x="160" y="60" width="16" height="22" fillOpacity=".25" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function DrillArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="104" y="146" width="112" height="14" rx="3" />
+        <rect x="116" y="18" width="92" height="40" rx="5" />
+        <rect x="208" y="26" width="34" height="24" rx="4" />
+        <rect x="112" y="100" width="70" height="8" />
+      </g>
+      <rect x="168" y="36" width="10" height="112" fillOpacity=".3" />
+      <rect x="130" y="58" width="12" height="16" fillOpacity=".35" />
+      <rect x="133" y="74" width="6" height="14" fillOpacity=".6" />
+      <path d="M135 88l1 8 1-8" fill="none" />
+      <rect x="128" y="94" width="26" height="6" fillOpacity=".5" />
+      <path d="M116 40l-22-14M116 40l-18 18M116 40l6 26" fill="none" /><circle cx="116" cy="40" r="5" fillOpacity=".4" />
+      <circle cx="92" cy="25" r="4" fillOpacity=".6" /><circle cx="96" cy="60" r="4" fillOpacity=".6" /><circle cx="123" cy="69" r="4" fillOpacity=".6" />
+      <path d="M182 104l14 14" fill="none" /><circle cx="198" cy="120" r="4" fillOpacity=".6" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function FolderArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="26" width="16" height="134" /><rect x="264" y="26" width="16" height="134" />
+        <path d="M60 70h200v22H60z" />
+        <path d="M66 70V54q94-30 188 0v16z" />
+        <path d="M60 96h200v14H60z" />
+      </g>
+      <path d="M62 92h196" fill="none" strokeWidth="3" />
+      <path d="M150 110l20 34h-40z" fillOpacity=".12" />
+      <path d="M150 110v34M170 144h-40" fill="none" />
+      <rect x="70" y="20" width="6" height="40" fillOpacity=".4" /><rect x="244" y="20" width="6" height="40" fillOpacity=".4" />
+      <circle cx="296" cy="100" r="13" fill="none" /><path d="M296 100h10" fill="none" />
+      <path d="M44 160l-10-50M276 160l10-50M50 130h220" fill="none" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function GrinderArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="70" y="100" width="180" height="60" rx="3" />
+        <rect x="190" y="24" width="40" height="76" />
+        <rect x="150" y="40" width="44" height="24" rx="3" />
+        <rect x="40" y="88" width="240" height="12" />
+      </g>
+      <circle cx="160" cy="70" r="20" fillOpacity=".28" /><path d="M136 70a24 24 0 0 1 48 0" fill="none" />
+      <rect x="110" y="80" width="70" height="8" fillOpacity=".55" />
+      <rect x="128" y="74" width="34" height="6" fillOpacity=".75" />
+      <rect x="40" y="84" width="10" height="16" fill="#e8b923" fillOpacity=".8" /><rect x="270" y="80" width="10" height="20" fill="#e8b923" fillOpacity=".8" />
+      <circle cx="210" cy="36" r="10" fill="none" />
+      <circle cx="96" cy="120" r="10" fill="none" /><circle cx="124" cy="120" r="9" fill="none" />
+      <rect x="196" y="112" width="26" height="34" rx="2" fillOpacity=".3" />
+      <path d="M150 88l-26-8M152 88l-30 2M154 88l-22 10" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+const MACHINES = [
+  {
+    id: 'sustruh', meta: 'Sústruh · štýl TOS SN / VDF', name: 'Konvenčný hrotový sústruh', Art: LatheArt, Comp: LatheSimulator,
+    desc: 'Sústruženie mosadznej tyče Ø90 mm: priečny a pozdĺžny posuv, automatický posuv, koník s pinolou, odpichovanie.',
+    specs: ['12 otáčok 40 – 1800 ot/min', 'Posuv 0,05 – 1 mm/ot', 'DRO na ramene'],
+  },
+  {
+    id: 'freza', meta: 'Fréza · TOS Kuřim', name: 'Univerzálna fréza TOS FA 3 B', Art: MillArt, Comp: MillSimulator,
+    desc: 'Konzolová fréza so sklopnou vertikálnou hlavou: frézovanie oceľového hranola upnutého vo zveráku stopkovou alebo čelnou frézou.',
+    specs: ['18 otáčok 40 – 2000 ot/min', 'Posuv 19 – 950 mm/min', 'Zdvihy X 800 · Y 300 · Z 420 mm'],
+  },
+  {
+    id: 'vrtacka', meta: 'Vŕtačka · TOS', name: 'Stĺpová vŕtačka TOS SV16', Art: DrillArt, Comp: DrillSimulator,
+    desc: 'Vŕtanie dier Ø6 – Ø16 mm do oceľovej dosky na podložkách: priečna kľuka pinoly, zdvíhací stôl, otvory naslepo aj naskrz.',
+    specs: ['8 otáčok 125 – 1400 ot/min', 'Zdvih pinoly 100 mm', 'Vŕtanie do Ø16 mm'],
+  },
+  {
+    id: 'ohybacka', meta: 'Ohýbačka · FASTI', name: 'Výkyvná ohýbačka FASTI 204-10-2', Art: FolderArt, Comp: FolderSimulator,
+    desc: 'Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.',
+    specs: ['Dĺžka ohybu 1 040 mm', 'Plech do 2 mm', 'Uhol ohybu do 130°'],
+  },
+  {
+    id: 'bruska', meta: 'Brúska · rovinná', name: 'Rovinná brúska BPH 300', Art: GrinderArt, Comp: GrinderSimulator,
+    desc: 'Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm.',
+    specs: ['Kotúč Ø300 × 40 mm', 'Stôl 1 – 25 m/min', 'Prísuv 0,005 mm'],
+  },
+];
+
+function Menu({ onOpen }) {
+  return (
+    <main className="menu">
+      <div className="menu-inner">
+        <p className="menu-kicker">Real machine tools</p>
+        <h1 className="menu-title">Simulátory konvenčných obrábacích strojov</h1>
+        <p className="menu-lead">Vyber stroj. Každý model je zostavený v 3D, dá sa otáčať, rezať v ňom a v režime ručného ovládania sa obsluhuje kolesami, pákami a tlačidlami ako skutočný stroj.</p>
+        <div className="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-3">
+          {MACHINES.map((m) => (
+            <button key={m.id} type="button" className="card" onClick={() => onOpen(m.id)}>
+              <div className="card-art"><m.Art /></div>
+              <div className="card-body">
+                <span className="card-meta">{m.meta}</span>
+                <span className="card-name">{m.name}</span>
+                <span className="text-sm muted" style={{ lineHeight: 1.45 }}>{m.desc}</span>
+                <span className="spec">{m.specs.map((s) => <span key={s}>{s}</span>)}</span>
+                <span className="card-cta">Spustiť simulátor →</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs muted mt-8">Mierka modelov 1 : 100 mm · ovládanie myšou alebo dotykom · kláves M prepína na ručné ovládanie prvkov stroja.</p>
+      </div>
+    </main>
+  );
+}
+
+function App() {
+  const readRoute = () => { try { return (window.location.hash || '').replace('#', ''); } catch (err) { return ''; } };
+  const [route, setRoute] = useState(readRoute);
+  useEffect(() => {
+    const sync = () => setRoute(readRoute());
+    window.addEventListener('hashchange', sync); window.addEventListener('popstate', sync);
+    return () => { window.removeEventListener('hashchange', sync); window.removeEventListener('popstate', sync); };
+  }, []);
+  const go = (id) => {
+    setRoute(id);
+    try {
+      if (id) window.location.hash = id;
+      else window.history.pushState('', document.title, window.location.pathname + window.location.search);
+    } catch (err) { /* ignorované */ }
+    window.scrollTo(0, 0);
+  };
+  const m = MACHINES.find((x) => x.id === route);
+  return (
+    <>
+      <style>{CSS}</style>
+      {m ? <m.Comp key={m.id} onBack={() => go('')} /> : <Menu onOpen={go} />}
+    </>
+  );
+}
+
+export { LatheSimulator, MillSimulator, DrillSimulator, FolderSimulator, GrinderSimulator };
+export default App;
