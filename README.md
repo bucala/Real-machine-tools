@@ -15,7 +15,8 @@ Simulátor konvenčného hrotového sústruhu v štýle strojov TOS SN / VDF (Re
 
 | Cesta | Obsah |
 | --- | --- |
-| `public/index.html` | Samostatná stránka (knižnice z CDN), nasadzuje sa na Cloudflare Pages |
+| `public/index.html` | Samostatná stránka (knižnice z CDN), nasadzuje sa na Cloudflare |
+| `wrangler.jsonc` | Konfigurácia Cloudflare Workers so statickými súbormi z `public/` |
 | `src/LatheSimulator.jsx` | Ten istý komponent ako React modul (`export default`), vyžaduje `three@0.128` |
 
 ### Lokálne spustenie
@@ -26,6 +27,8 @@ npx serve public
 
 ### Nasadenie
 
+Živá verzia: https://real-machine-tools.marcel-bucala.workers.dev
+
 ```bash
-npx wrangler pages deploy public --project-name real-machine-tools
+npx wrangler deploy
 ```
