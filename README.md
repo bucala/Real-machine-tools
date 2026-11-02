@@ -166,6 +166,7 @@ flowchart LR
 | [`src/machines.jsx`](src/machines.jsx) | ten istý kód ako ES modul – `export default App` a jednotlivé simulátory, vyžaduje `three@0.128` |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
 | [`docs/img`](docs/img) | snímky obrazovky pre toto README |
+| [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, návrhy opráv a vylepšení |
 
 ## Spustenie
 
