@@ -4413,6 +4413,14 @@ function WeldingSimulator({ onBack }) {
     const arcLight = new THREE.PointLight(0xdbe8ff, 0, 9, 2); scene.add(arcLight);
     const aimMark = new THREE.Mesh(new THREE.TorusGeometry(4, 0.5, 8, 32), new THREE.MeshBasicMaterial({ color: 0x46c8ff, toneMapped: false, transparent: true, opacity: 0.85, depthTest: false }));
     aimMark.rotation.x = -Math.PI / 2; aimMark.renderOrder = 8; aimMark.visible = false; pivot.add(aimMark);
+    const jointGeo = new THREE.BufferGeometry();
+    const jointLine = new THREE.Line(jointGeo, new THREE.LineDashedMaterial({ color: 0x46c8ff, dashSize: 4, gapSize: 3, transparent: true, opacity: 0.9, depthTest: false }));
+    jointLine.renderOrder = 7; pivot.add(jointLine);
+    const jointZ = () => (F.type === 'K' ? F.t / 2 + 1.5 : F.type === 'L' ? 0.5 : 0);
+    const placeJoint = () => {
+      const z = jointZ(), y = (F.type === 'L' ? F.t : F.type === 'E' ? 3 * F.t : F.t) + 0.3;
+      jointGeo.setFromPoints([v3(-F.L / 2, y, z), v3(F.L / 2, y, z)]); jointLine.computeLineDistances();
+    };
     const spatter = createParticles(scene, new THREE.BoxGeometry(0.012, 0.012, 0.03), M.spatter, 220, false);
     const smoke = createParticles(scene, new THREE.SphereGeometry(0.035, 10, 8), M.smoke, 160, false);
 
@@ -4451,7 +4459,7 @@ function WeldingSimulator({ onBack }) {
     const newParts = () => {
       F.type = c.wType; F.t = c.wT; F.L = c.wL; F.prep = weldPrep(F.type, F.t);
       buildField(); placeWeld();
-      st.tx = -F.L / 2 + 10; st.tz = F.type === 'K' ? F.t / 2 + 3 : F.type === 'L' ? 3 : 0; st.aim.x = st.tx; st.aim.z = st.tz; st.cold = 0; st.longArc = 0; st.fast = 0; st.spat = 0; st.sag = 0; st.wrongDir = 0; stats = null;
+      st.tx = -F.L / 2 + 10; st.tz = jointZ(); st.aim.x = st.tx; st.aim.z = st.tz; placeJoint(); st.cold = 0; st.longArc = 0; st.fast = 0; st.spat = 0; st.sag = 0; st.wrongDir = 0; stats = null;
       c.slag = true;
     };
     newParts();
@@ -4506,8 +4514,16 @@ function WeldingSimulator({ onBack }) {
     const aimAt = (cx, cy) => {
       const r = dom.getBoundingClientRect(); ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
       camera.updateMatrixWorld(); ray.setFromCamera(ndc, camera);
-      plane.setFromNormalAndCoplanarPoint(nrm(), wc());
-      if (ray.ray.intersectPlane(plane, hit)) { const lp = pivot.worldToLocal(hit.clone()); st.aim.x = clamp(lp.x, -F.L / 2 - 160, F.L / 2 + 160); st.aim.z = clamp(lp.z, -W2 - 160, W2 + 160); }
+      // najprv priamo povrch dielu (lemy, rebro, úkos), mimo dielu rovina vo výške spoja
+      const hits = ray.intersectObject(F.mesh, false);
+      let lp = null;
+      if (hits.length) lp = pivot.worldToLocal(hits[0].point.clone());
+      else {
+        const jh = surfAt(0, jointZ()), p0 = pivot.localToWorld(v3(0, jh == null ? F.t : jh, 0));
+        plane.setFromNormalAndCoplanarPoint(nrm(), p0);
+        if (ray.ray.intersectPlane(plane, hit)) lp = pivot.worldToLocal(hit.clone());
+      }
+      if (lp) { st.aim.x = clamp(lp.x, -F.L / 2 - 160, F.L / 2 + 160); st.aim.z = clamp(lp.z, -W2 - 160, W2 + 160); }
     };
     const active = () => c.manual && !c.unclamped;                 // zvára sa len v režime „Zváranie“
     const setBtns = (e) => { io.right = !!(e.buttons & 2); io.left = !!(e.buttons & 1); };
@@ -4545,6 +4561,7 @@ function WeldingSimulator({ onBack }) {
       const ox = st.tx, oz = st.tz;
       if (moving) { const mx = st.aim.x - st.tx, mz = st.aim.z - st.tz, d = Math.hypot(mx, mz), lim = (st.arc ? c.handV : 250) * dt; if (d > lim) { st.tx += mx / d * lim; st.tz += mz / d * lim; } else { st.tx = st.aim.x; st.tz = st.aim.z; } }
       aimMark.visible = c.manual && moving && !c.unclamped;
+      jointLine.visible = c.manual && !c.unclamped && F.type !== 'N' && c.slag;
       if (aimMark.visible) { const sa = surfAt(st.aim.x, st.aim.z); aimMark.position.set(st.aim.x, (sa == null ? F.t : sa) + 0.6, st.aim.z); }
       const vNow = Math.hypot(st.tx - ox, st.tz - oz) / Math.max(dt, 1e-3);
       st.v += (vNow - st.v) * Math.min(1, dt * 6);
@@ -4680,8 +4697,9 @@ function WeldingSimulator({ onBack }) {
     const evalWeld = () => {
       const { NX, t: th } = F; const prof = weldProfile(F.type, th, F.prep);
       let wTop = 6; for (let z = 0; z <= W2; z += 0.5) { if (prof(z) >= th - 0.01 && prof(-z) >= th - 0.01) { wTop = z + 4; break; } }
-      if (F.type === 'K') wTop = th / 2 + 10; if (F.type === 'L') wTop = 10;
-      let covered = 0, grooveSum = 0, fillSum = 0, reinf = 0, widthSum = 0, depAll = 0;
+      if (F.type === 'K') wTop = th / 2 + 10; if (F.type === 'L') wTop = 10; if (F.type === 'E') wTop = th + 5; if (F.type === 'N') wTop = W2;
+      let covered = 0, grooveSum = 0, fillSum = 0, reinf = 0, widthSum = 0, depAll = 0, depTotal = 0;
+      for (let k = 0; k < F.dep.length; k++) depTotal += F.dep[k] * RES;
       for (let i = 0; i <= NX; i++) {
         let dsum = 0, w = 0, top = 0;
         for (let j = Math.max(0, Math.round((W2 - wTop) / RES)); j <= Math.min(NZ, Math.round((W2 + wTop) / RES)); j++) {
@@ -4693,12 +4711,13 @@ function WeldingSimulator({ onBack }) {
         depAll += dsum;
         if (dsum > 2) { covered++; widthSum += w; reinf += Math.max(0, top); }
       }
-      if (depAll < 1) return null;
-      const cov = covered / (NX + 1);
-      return { cov, fill: grooveSum > 0 ? fillSum / grooveSum : null, width: covered ? widthSum / covered : 0, reinf: covered ? reinf / covered : 0, spat: st.spat, cold: st.cold, longArc: st.longArc, fast: st.fast, sag: st.sag, wrongDir: st.wrongDir,
+      if (depTotal < 1) return null;
+      const cov = covered / (NX + 1), off = F.type === 'N' ? 0 : Math.max(0, 1 - depAll / depTotal);
+      return { cov, off, fill: grooveSum > 0 ? fillSum / grooveSum : null, width: covered ? widthSum / covered : 0, reinf: covered ? reinf / covered : 0, spat: st.spat, cold: st.cold, longArc: st.longArc, fast: st.fast, sag: st.sag, wrongDir: st.wrongDir,
         rootRisk: F.type === 'I' && th > 4, thinPrep: (F.type === 'V' || F.type === 'HV' || F.type === 'Y') && th < 4 };
     };
 
+    try { if (/[?&]debug/.test(window.location.search)) window.__weld = { F, st, evalWeld, W2, RES, jointZ, aimAt: (cx, cy) => { aimAt(cx, cy); return { ...st.aim }; }, proj: (x, z) => { const r = dom.getBoundingClientRect(), v = pivot.localToWorld(v3(x, surfAt(x, z) == null ? F.t : surfAt(x, z), z)).project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; } }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose();
@@ -4728,6 +4747,7 @@ function WeldingSimulator({ onBack }) {
     if (s.cold > 0.8) defects.push(L('studený spoj (nízky prúd)', 'cold lap (low current)'));
     if (s.longArc > 1.2) defects.push(L('póry a rozstrek (dlhý oblúk)', 'porosity and spatter (long arc)'));
     if (s.fast > 1.2) defects.push(L('úzka húsenica, neprevarenie (rýchly posuv)', 'narrow bead, lack of fusion (fast travel)'));
+    if (s.off > 0.4) defects.push(L(`${Math.round(s.off * 100)} % kovu je mimo spoja – veď elektródu po modrej čiare`, `${Math.round(s.off * 100)} % of the metal is off the joint – guide the electrode along the blue line`));
     if (s.wrongDir > 0.8) defects.push(L('zlý smer zvárania pre túto polohu', 'wrong travel direction for this position'));
     if (s.sag > 0.8) defects.push(L('stekanie kúpeľa (vysoký prúd v polohe)', 'sagging pool (current too high for the position)'));
     if (s.fill != null && s.cov > 0.6 && s.fill < 0.9) defects.push(L('neúplne vyplnený úkos – pridaj ďalšie vrstvy', 'groove not completely filled – add more passes'));
