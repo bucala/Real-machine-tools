@@ -105,7 +105,9 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
         <li>polohy PA – PG (1G – 4G/F), kontrola smeru pri PF a PG</li>
         <li>prúd 55 – 155 A, prepínač 380 / 220 V (istič pri 220 V nad 75 A), rutilové a bázické elektródy Ø2 – Ø4</li>
         <li>húsenica podľa prúdu, rýchlosti a dĺžky oblúka; troska, popúšťacie farby, hodnotenie zvaru</li>
-        <li>kukla (H) proti oslňujúcim zábleskom; pravé tlačidlo vedie elektródu, pravé + ľavé zvára, na dotyk dva prsty</li>
+        <li>kukla (H): moderná samostmievacia (DIN 9 – 13, oneskorenie) alebo stará s pevným tmavým sklom</li>
+        <li>režim <b>Zváranie</b> (M): pravé tlačidlo vedie elektródu, pravé + ľavé zvára, na dotyk dva prsty; v režime kamery pravé tlačidlo posúva pohľad</li>
+        <li>navárať sa dá kdekoľvek na diel, ďalšie vrstvy sa ukladajú na predchádzajúce</li>
       </ul>
     </td>
   </tr>
@@ -152,7 +154,7 @@ flowchart LR
 | ![Vŕtačka](docs/img/drill.png) | ![Ohýbačka](docs/img/folder.png) |
 | ![Brúska](docs/img/grinder.png) | ![Brúska – brúsenie](docs/img/grinder-run.png) |
 | ![Pásová píla](docs/img/saw.png) | ![Fréza – ručné ovládanie](docs/img/mill-manual.png) |
-| ![Zváranie – celok](docs/img/weld.png) | ![Pásová píla – rez](docs/img/saw-cut.png) |
+| ![Zváranie – celok](docs/img/weld.png) | ![Zváranie – húsenica po otlčení trosky](docs/img/weld-bead.png) |
 
 </details>
 
