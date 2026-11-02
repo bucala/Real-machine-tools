@@ -30,16 +30,17 @@ const CSS = `
   --accent:#7fb565; --accent-soft:#25331f; --on-accent:#0f170c; --run:#2f8a45; --stop:#bf3a2c;
   --danger:#f07767; --danger-soft:#3a1d19; --warn:#efb453; --warn-soft:#382b14; --info:#76acec; --info-soft:#162a40;
   --scene-bg:#1a1f19; --floor:#272d25; --grid-1:#485244; --grid-2:#343b31; color-scheme:dark;
-  --dro-bg:#0b100c; --dro-ink:#69f28f; --hl:#ff8a1f;
+  --dro-bg:#0b100c; --dro-ink:#69f28f; --dro-glow:rgba(105,242,143,.45); --hl:#ff8a1f; --chrome:rgba(18,24,17,.84); --on-run:#ffffff;
   --f-ui:"Barlow",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
   --f-head:"Barlow Condensed","Barlow",ui-sans-serif,system-ui,sans-serif;
   --f-mono:"Share Tech Mono",ui-monospace,Consolas,monospace;
 }
 [data-skin="dark"]{
-  --bg:#0d0f12; --panel:#15181c; --panel-2:#1d2126; --border:#2b3138; --text:#e6e9ed; --muted:#9aa2ac;
-  --accent:#6ea8f0; --accent-soft:#1a2a40; --on-accent:#0a1422;
-  --danger:#f07767; --danger-soft:#3a1d19; --warn:#efb453; --warn-soft:#382b14; --info:#76acec; --info-soft:#162a40;
-  --scene-bg:#15181c; --floor:#22262b; --grid-1:#3e454f; --grid-2:#2d3238; color-scheme:dark;
+  --bg:#0c0c0c; --panel:#141414; --panel-2:#1d1d1d; --border:#2e2e2e; --text:#ececec; --muted:#9a9a9a;
+  --accent:#e6e6e6; --accent-soft:#2a2a2a; --on-accent:#111111; --run:#e6e6e6; --stop:#3c3c3c; --on-run:#111111;
+  --danger:#ffffff; --danger-soft:#333333; --warn:#d6d6d6; --warn-soft:#262626; --info:#c8c8c8; --info-soft:#202020;
+  --scene-bg:#151515; --floor:#222222; --grid-1:#444444; --grid-2:#2f2f2f; color-scheme:dark;
+  --dro-ink:#ececec; --dro-glow:rgba(255,255,255,.35); --chrome:rgba(14,14,14,.86); --hl:#bdbdbd;
 }
 [data-skin="light"]{
   --bg:#eef0eb; --panel:#fbfcf9; --panel-2:#f0f2ec; --border:#d9ddd3; --text:#1c2419; --muted:#5d6858;
@@ -49,6 +50,8 @@ const CSS = `
 }
 body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .machine-app{background:var(--bg);color:var(--text);font-family:var(--f-ui);min-height:100%}
+.machine-app,.menu,.card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.machine-app input,.machine-app select{-webkit-user-select:auto;user-select:auto}
 .scene-wrap{height:58vh;min-height:320px;background:var(--scene-bg);touch-action:none}
 .panel{background:var(--panel);border-top:1px solid var(--border)}
 @media (min-width:768px){
@@ -66,11 +69,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .btn:hover{border-color:var(--accent)}
 .btn.active{background:var(--accent-soft);border-color:var(--accent)}
 .btn-run{width:100%;border-radius:9px;padding:12px;font-weight:700;font-size:16px;letter-spacing:.04em;text-transform:uppercase;color:#fff;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--f-head)}
-.btn-run.start{background:var(--run)} .btn-run.stop{background:var(--stop)}
+.btn-run.start{background:var(--run);color:var(--on-run)} .btn-run.stop{background:var(--stop)}
 .btn:focus-visible,.btn-run:focus-visible,.range:focus-visible,.part-label:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dro{background:var(--dro-bg);border-radius:8px;padding:10px 14px;font-family:var(--f-mono);color:var(--dro-ink);box-shadow:inset 0 0 0 1px #000,inset 0 2px 12px rgba(0,0,0,.65)}
 .dro-row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
-.dro-row b{font-size:28px;font-weight:400;letter-spacing:.06em;text-shadow:0 0 8px rgba(105,242,143,.45)}
+.dro-row b{font-size:28px;font-weight:400;letter-spacing:.06em;text-shadow:0 0 8px var(--dro-glow)}
 .dro-sub{display:flex;justify-content:space-between;gap:8px;font-size:13px;opacity:.78;margin-top:4px;border-top:1px solid rgba(105,242,143,.2);padding-top:6px}
 .msg{font-size:13px;border-radius:7px;padding:8px 10px;margin-top:10px;min-height:40px;display:flex;align-items:center;gap:8px;line-height:1.3}
 .msg-idle{background:var(--panel-2);color:var(--muted)}
@@ -82,8 +85,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .sw{width:36px;height:20px;border-radius:999px;background:var(--border);position:relative;transition:background .15s;flex:none}
 .sw i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.35)}
 .sw.on{background:var(--accent)} .sw.on i{left:18px}
-.part-label{position:absolute;left:0;top:0;visibility:hidden;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(18,24,17,.86);color:#fff;border:1px solid rgba(255,255,255,.2);white-space:nowrap;cursor:pointer;font-family:var(--f-ui);backface-visibility:hidden}
-.scene-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(18,24,17,.82);color:#e9eee6;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--f-ui);pointer-events:auto}
+.part-label{position:absolute;left:0;top:0;visibility:hidden;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--chrome);color:#fff;border:1px solid rgba(255,255,255,.2);white-space:nowrap;cursor:pointer;font-family:var(--f-ui);backface-visibility:hidden}
+.scene-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:var(--chrome);color:#e9eee6;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--f-ui);pointer-events:auto}
 .scene-btn:hover{border-color:var(--accent)} .scene-btn.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .scene-btn:focus-visible{outline:2px solid #fff;outline-offset:1px}
 .swatch{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0}
@@ -95,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .card.soon{cursor:default;opacity:.78} .card.soon:hover{transform:none;box-shadow:none;border-color:var(--border)}
 .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
 .part-label.is-active{background:var(--hl);color:#1b1204;border-color:#ffc58f}
-.chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(18,24,17,.78);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--chrome);color:#fff;display:inline-flex;align-items:center;gap:6px}
 .hint{font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:4px 8px;border-radius:6px}
 .part-btn{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:var(--f-ui)}
 .part-btn:hover{border-color:var(--hl)}
@@ -104,12 +107,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
 .seg button{padding:3px 9px;font-size:12px;font-weight:600;background:var(--panel-2);color:var(--muted);border:0;cursor:pointer;font-family:var(--f-ui)}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
-.mode-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:rgba(18,24,17,.82);border:1px solid rgba(255,255,255,.18)}
+.mode-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chrome);border:1px solid rgba(255,255,255,.18)}
 .mode-seg button{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:7px;border:0;background:transparent;color:#d9e0d5;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f-ui)}
 .mode-seg button.on{background:var(--accent);color:var(--on-accent)}
 .mode-seg button:focus-visible{outline:2px solid #fff;outline-offset:1px}
 .manual-frame{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px var(--accent)}
-.ctl-tip{position:absolute;left:0;top:0;display:none;max-width:250px;pointer-events:none;z-index:5;background:rgba(14,19,14,.92);color:#fff;border:1px solid rgba(120,170,255,.45);border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.35}
+.ctl-tip{position:absolute;left:0;top:0;display:none;max-width:250px;pointer-events:none;z-index:5;background:var(--chrome);color:#fff;border:1px solid rgba(120,170,255,.45);border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.35}
 .ctl-tip b{font-weight:700} .ctl-tip span{display:block;opacity:.72;font-size:11.5px;margin-top:2px}
 .ctl-list{font-size:12.5px;line-height:1.45;margin-top:8px;padding-left:16px;list-style:disc;color:var(--muted)}
 .ctl-list li{margin-top:3px} .ctl-list b{color:var(--text);font-weight:600}
@@ -512,6 +515,7 @@ function createHeightField({ NX, NZ, W, D, H, raw, cut, mat, init }) {
   fill0();
   const GX = NX + 3, GZ = NZ + 3, pos = new Float32Array(GX * GZ * 3), col = new Float32Array(GX * GZ * 3), idx = [];
   for (let j = 0; j < GZ - 1; j++) for (let i = 0; i < GX - 1; i++) { const a = j * GX + i, d = a + GX; idx.push(a, d, a + 1, a + 1, d, d + 1); }
+  { const c0 = 0, c1 = GX - 1, c2 = (GZ - 1) * GX, c3 = GZ * GX - 1; idx.push(c0, c1, c2, c1, c3, c2); }   // spodná plocha – plný kváder
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx);
   const RAW = new THREE.Color(raw).convertSRGBToLinear(), CUT = new THREE.Color(cut).convertSRGBToLinear();
@@ -734,7 +738,7 @@ function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views
   const onDown = (e) => { downAt = [e.clientX, e.clientY]; };
   const onUp = (e) => {
     if (!downAt) return;
-    if (blockPick()) { downAt = null; return; }                       // klik na ovládací prvok nevyberá časť
+    if (blockPick() || !enabled()) { downAt = null; return; }          // klik na ovládací prvok ani ručné ovládanie nevyberá časť
     const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null;
     if (moved > 5) return;
     const rect = dom.getBoundingClientRect();
@@ -769,7 +773,9 @@ function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views
 
   const update = (t, c) => {
     now = t;
-    if (c.highlight !== hlKey) applyHL(c.highlight);
+    // v ručnom ovládaní sa vybraná časť nezvýrazňuje – svietia len ovládacie prvky
+    const want = c.manual || c.unclamped ? null : c.highlight;
+    if (want !== hlKey) applyHL(want);
     if (hlMeshes.length) { const k = 0.3 + 0.22 * Math.sin(t * 5); hlMeshes.forEach((m) => { if (m.material.emissive) m.material.emissiveIntensity = k; }); }
     if (tween.active) {
       const k = Math.min(1, (t - tween.t0) / tween.dur), e = k * k * (3 - 2 * k);
@@ -1050,14 +1056,14 @@ const LATHE_TOOLS = {
   finish: { sk: 'Hladiaci nôž', en: 'Finishing tool', sh: [-0.125, 0.125],
     pts: [[-0.035, 0], [0.035, 0], [0.125, 0.08], [0.125, 0.36], [-0.125, 0.36], [-0.125, 0.08]], prof: (d) => (Math.abs(d) <= 0.035 ? 0 : Math.abs(d) <= 0.15 ? (Math.abs(d) - 0.035) * 0.7 : Infinity) },
   plunge: { sk: 'Nabierací nôž', en: 'Broad plunge tool', sh: [-0.075, 0.175],
-    pts: [[0, 0], [0.1, 0], [0.1, 0.14], [0.175, 0.3], [0.175, 0.42], [-0.075, 0.42], [-0.075, 0.3], [0, 0.14]], prof: (d) => (d >= -0.005 && d <= 0.105 ? 0 : Infinity) },
+    pts: [[0, 0], [0.1, 0], [0.1, 0.3], [0.175, 0.42], [0.175, 0.5], [-0.075, 0.5], [-0.075, 0.42], [0, 0.3]], prof: (d) => (d >= -0.005 && d <= 0.105 ? 0 : Infinity) },
   radius: { sk: 'Rádiusový nôž', en: 'Radius tool', sh: [-0.125, 0.125],
     pts: [...Array.from({ length: 13 }, (_, i) => { const a = Math.PI + i * Math.PI / 12; return [LT_R * Math.cos(a), LT_R + LT_R * Math.sin(a)]; }), [0.05, 0.2], [0.125, 0.3], [0.125, 0.36], [-0.125, 0.36], [-0.125, 0.3], [-0.05, 0.2]],
     prof: (d) => (Math.abs(d) <= LT_R ? LT_R - Math.sqrt(LT_R * LT_R - d * d) : Infinity) },
   side: { sk: 'Ubierací nôž stranový', en: 'Side (facing) tool', sh: [0.01, 0.26],
     pts: [[0, 0], [0.26, 0.015], [0.26, 0.36], [0.04, 0.36], [0, 0.1]], prof: (d) => (d >= -0.005 && d <= 0.3 ? Math.max(0, d) * 0.05 : Infinity) },
   parting: { sk: 'Zapichovací nôž', en: 'Grooving / parting tool', sh: [-0.05, 0.2],
-    pts: [[0, 0], [0.03, 0], [0.03, 0.3], [0.2, 0.4], [0.2, 0.5], [-0.05, 0.5], [-0.05, 0.4], [0, 0.3]], prof: (d) => (d >= -0.005 && d <= 0.035 ? 0 : Infinity) },
+    pts: [[0, 0], [0.03, 0], [0.03, 0.56], [0.2, 0.64], [0.2, 0.72], [-0.05, 0.72], [-0.05, 0.64], [0, 0.56]], prof: (d) => (d >= -0.005 && d <= 0.035 ? 0 : Infinity) },
 };
 const toolName = (s) => `${L(LATHE_TOOLS[s.type].sk, LATHE_TOOLS[s.type].en)} ${s.hand === 'L' ? L('ľavý', 'left') : L('pravý', 'right')}`;
 const LATHE_MATS = { brass: [0xe0ba5e, 0.3, 0.85], steel: [0xb7bec5, 0.34, 0.85], alu: [0xd9dde0, 0.3, 0.7] };
@@ -1343,18 +1349,27 @@ function LatheSimulator({ onBack }) {
 
     // tvar aktívneho noža a rozsah jeho tela v osi Z
     const profOf = (s) => { const tl = LATHE_TOOLS[s.type], m = s.hand === 'L' ? -1 : 1; return (d) => tl.prof(d * m); };
-    const bodyOf = (s) => { const tl = LATHE_TOOLS[s.type], xs = tl.pts.map((p) => p[0] * (s.hand === 'L' ? -1 : 1)); return [Math.min(...xs), Math.max(...xs)]; };
+    // vzdialenosť tela noža od hrotu v smere k osi pri bočnej polohe d (mimo ostria) – podľa obrysu noža
+    const bodyZ = (s, d) => {
+      const m = s.hand === 'L' ? -1 : 1, pts = LATHE_TOOLS[s.type].pts; let zm = Infinity;
+      for (let k = 0; k < pts.length; k++) {
+        const [x1, z1] = pts[k], [x2, z2] = pts[(k + 1) % pts.length], a = x1 * m, b = x2 * m;
+        if (a !== b && (d - a) * (d - b) <= 0) { const z = z1 + (z2 - z1) * (d - a) / (b - a); if (z < zm) zm = z; }
+      }
+      return zm;
+    };
     const span = (tx, fn) => {
       const i0 = Math.max(0, Math.floor((tx - 0.36 - W_X0) / wk.dx)), i1 = Math.min(W_N - 1, Math.floor((tx + 0.36 - W_X0) / wk.dx));
       for (let i = i0; i <= i1; i++) fn(i, W_X0 + (i + 0.5) * wk.dx - tx);
     };
     // prienik reznej časti (pen) a tela noža mimo ostria (side) do materiálu
     const penetration = (tx, rr, s = slots[st.slot]) => {
-      const pf = profOf(s), [b0, b1] = bodyOf(s); let pen = 0, side = 0;
+      const pf = profOf(s); let pen = 0, side = 0;
       span(tx, (i, d) => {
         const o = pf(d);
-        if (o !== Infinity) { const v = prof[i] - (rr + o); if (v > pen) pen = v; }
-        else if (d > b0 && d < b1) { const v = prof[i] - (rr + 0.03); if (v > side) side = v; }
+        if (o !== Infinity) { const v = prof[i] - (rr + o); if (v > pen) pen = v; return; }
+        const bz = bodyZ(s, d);
+        if (bz !== Infinity) { const v = prof[i] - (rr + Math.max(0.02, bz)); if (v > side) side = v; }
       });
       return { pen, side };
     };
@@ -1507,7 +1522,7 @@ function LatheSimulator({ onBack }) {
       turn: (d) => { const a = zCar(); push('z', clamp(clamp(c.z - d * 30 / TAU, a - 20, a + 20), 10, 1150)); },
       read: () => `Z ${zCar().toFixed(1)} mm` }, wheelZ);
     ctrl.reg({ type: 'wheel', minR: 0.38, inc: 1, label: LL('Ručné koleso priečnych saní (X)', 'Cross slide handwheel (X)'), hint: LL('V smere hodinových ručičiek ide nôž k osi. 1 otáčka = 10 mm na priemere.', 'Clockwise moves the tool towards the axis. 1 turn = 10 mm on diameter.'),
-      turn: (d) => { const a = st.r * 200; push('x', clamp(clamp(c.x + d * 10 / TAU, a - 5, a + 5), 0, 260)); },
+      turn: (d) => { const a = st.r * 200; push('x', clamp(clamp(c.x + d * 10 / TAU, a - 5, a + 5), -10, 260)); },
       read: () => `X Ø${(st.r * 200).toFixed(2)} mm` }, wheelX);
     ctrl.reg({ type: 'wheel', minR: 0.22, inc: 1, label: LL('Mikroposuv – horné sane (Z)', 'Fine feed – top slide (Z)'), hint: LL('Jemný pozdĺžny posun noža. 1 otáčka = 2 mm, rozsah ±50 mm.', 'Fine longitudinal tool movement. 1 turn = 2 mm, range ±50 mm.'),
       turn: (d) => { const a = st.top * 100; push('top', clamp(clamp(c.top + d * 2 / TAU, a - 2, a + 2), -50, 50)); },
@@ -1645,7 +1660,7 @@ function LatheSimulator({ onBack }) {
 
       // suport (Z), horné sane (mikroposuv) a priečne sane (X) s kontrolou kolízií
       const carWant = JAW_X + c.z / 100 - TIP0, carMax = st.tail - LIM.carToTail;
-      const carT = clamp(carWant, -3.4, Math.max(-3.4, carMax)), topT = clamp(c.top / 100, LIM.topMin, LIM.topMax), xT = clamp(c.x / 200, 0, LIM.rMax);
+      const carT = clamp(carWant, -3.4, Math.max(-3.4, carMax)), topT = clamp(c.top / 100, LIM.topMin, LIM.topMax), xT = clamp(c.x / 200, -0.05, LIM.rMax);
       const vz = st.cutting ? 0.35 : 2.6, vx = st.cutting ? 0.22 : 0.75, vt = st.cutting ? 0.12 : 0.4;
       let nc = approach(st.car, carT, vz * dt), ntp = approach(st.top, topT, vt * dt), nr = approach(st.r, xT, vx * dt);
       sayOnce('cartail', carWant > carMax + 0.004 && st.car >= carMax - 0.003, L('Suport narazil na koník – koncový doraz.', 'The carriage hit the tailstock – end stop.'), 'warn');
@@ -1715,7 +1730,7 @@ function LatheSimulator({ onBack }) {
         const iTool = clamp(Math.floor((st.tipX - W_X0) / wk.dx), 0, W_N - 1);
         setTele({
           rpm: st.rpm, z: zmm, x: dmm, quill: st.q * 100, tail: (st.tail - JAW_X) * 100, carZ: zCar(), top: st.top * 100,
-          vc: Math.PI * dmm * st.rpm / 1000, cutting: st.cutting && running, engaged: tailEngaged() && !c.unclamped,
+          vc: Math.PI * Math.max(0, dmm) * st.rpm / 1000, cutting: st.cutting && running, engaged: tailEngaged() && !c.unclamped,
           msg: st.msg && st.msg.until > t ? st.msg : null, workD: prof[iTool] * 200, slot: st.slot, busy: !!st.job || st.jobs.length > 0, postLocked: st.postLocked,
         });
         if (c.autoFeed) pend.z = Math.round(c.z * 10) / 10;
@@ -1780,12 +1795,12 @@ function LatheSimulator({ onBack }) {
           <h3 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h3>
           <Slider id="z" label={L('Suport pozdĺžne Z (od čeľustí)', 'Carriage Z (from the jaws)')} unit="mm" min={10} max={1150} step={1} value={ui.z} actual={tele.carZ} onChange={(v) => set('z', v)} />
           <Slider id="top" label={L('Mikroposuv – horné sane Z', 'Fine feed – top slide Z')} unit="mm" min={-50} max={50} step={0.05} value={ui.top} actual={tele.top} digits={2} onChange={(v) => set('top', v)} />
-          <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={0} max={260} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
+          <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={-10} max={260} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
           <Toggle on={ui.autoFeed} label={L('Automatický pozdĺžny posuv k skľučovadlu', 'Automatic longitudinal feed towards the chuck')} onClick={() => set('autoFeed', !ui.autoFeed)} />
           <div className="mt-2">
             <Slider id="feed" label={L('Posuv na otáčku', 'Feed per revolution')} unit={L('mm/ot', 'mm/rev')} min={0.05} max={1} step={0.01} value={ui.feed} digits={2} onChange={(v) => set('feed', v)} />
             <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
-            <p className="text-xs muted">{L('Údaj Z na displeji je poloha hrotu noža = suport + horné sane + vyloženie zvoleného noža.', 'The Z readout is the tool tip position = carriage + top slide + offset of the selected tool.')}</p>
+            <p className="text-xs muted">{L('Údaj Z na displeji je poloha hrotu noža = suport + horné sane + vyloženie zvoleného noža. X = 0 je os vretena, nôž prejde až 5 mm za os.', 'The Z readout is the tool tip position = carriage + top slide + offset of the selected tool. X = 0 is the spindle axis; the tool can go 5 mm past it.')}</p>
           </div>
         </div>
 
@@ -1870,10 +1885,10 @@ const millParts = () => mkParts([
 
 function MillSimulator({ onBack }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
-  const init = { running: false, power: true, coolant: false, light: true, manual: false, rpm: 400, x: 400, y: 120, z: 150, feedDir: 0, feed: 118, timeScale: 10, tool: 'end20',
+  const init = { running: false, power: true, coolant: false, light: true, manual: false, rpm: 400, x: 400, y: 120, z: 150, feedDir: 0, feed: 118, timeScale: 10, tool: 'end20', quill: 0, quillLock: false, kneeLock: false, sadLock: false,
     bShape: 'block', bL: 180, bW: 100, bH: 60, bD: 60 };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
-  const [tele, setTele] = useState({ rpm: 0, x: 400, y: 120, z: 150, vc: 0, vf: 0, msg: null, cutting: false, depth: 0, tool: 'end20', changing: false });
+  const [tele, setTele] = useState({ rpm: 0, x: 400, y: 120, z: 150, q: 0, vc: 0, vf: 0, msg: null, cutting: false, depth: 0, tool: 'end20', changing: false });
 
   useEffect(() => {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
@@ -1883,9 +1898,10 @@ function MillSimulator({ onBack }) {
     const dom = renderer.domElement;
 
     const M = {
-      ...baseMats(0x8cc6a6, 0x70a98b, 0x507f69),
+      ...baseMats(0x5aa99e, 0x47928a, 0x35736c),
+      cream: std(0xdedbcb, 0.6, 0.05), creamDark: std(0xc2bead, 0.62, 0.05), motor: std(0xd4d6d2, 0.5, 0.3),
       vise: std(0x5b646d, 0.5, 0.55), cutter: std(0x3a3f44, 0.28, 0.85, { side: THREE.DoubleSide }), gauge: std(0xf3f1e8, 0.5, 0),
-      chip: std(0x9aa3ad, 0.3, 0.85), lampShade: std(0x70a98b, 0.5, 0.2),
+      chip: std(0x9aa3ad, 0.3, 0.85), lampShade: std(0xdedbcb, 0.5, 0.2),
       coolant: new THREE.MeshStandardMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0, emissive: 0x1a4a6a, emissiveIntensity: 0.5 }),
       work: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.78, flatShading: true, side: THREE.DoubleSide }),
     };
@@ -1914,9 +1930,29 @@ function MillSimulator({ onBack }) {
     box(col, 0.75, 1.15, 0.45, 13.4, -1.6, -1.52, M.ways);
     box(col, -1.52, -1.5, 1.4, 6.0, -4.0, -2.0, M.greenDark);         // bočné dvierka
     cylX(col, 0.05, 0.05, -1.56, -1.52, 3.7, -2.3, M.black, 10);
-    cylX(col, 0.75, 0.75, -0.95, 0.95, 2.3, -5.2, M.greenDark, 32);   // hlavný motor vzadu
-    cylX(col, 0.6, 0.6, 0.95, 1.2, 2.3, -5.2, M.black, 24);
-    box(col, -0.8, 0.8, 1.4, 1.6, -5.8, -4.4, M.greenDeep);
+    box(col, -0.75, 0.75, 6.4, 9.6, -4.75, -4.4, M.greenDark);         // kryt remeňa vzadu
+    box(col, -0.65, 0.65, 7.3, 7.45, -5.9, -4.75, M.greenDeep);       // konzola motora
+    cylX(col, 0.62, 0.62, -0.85, 0.95, 8.1, -5.3, M.motor, 32);       // hlavný motor vzadu
+    for (let k = 0; k < 10; k++) { const a = k * TAU / 10; const f = add(col, new THREE.BoxGeometry(1.5, 0.08, 0.05), M.motor, 0.05, 8.1 + Math.sin(a) * 0.64, -5.3 + Math.cos(a) * 0.64); f.rotation.x = -a; }
+    cylX(col, 0.5, 0.45, 0.95, 1.15, 8.1, -5.3, M.motor, 24);
+    box(col, -0.35, 0.35, 8.75, 9.15, -5.55, -5.05, M.motor);          // svorkovnica
+    // horné rameno (pre vodorovné frézovanie) siaha dozadu nad motor
+    box(col, -0.78, 0.78, 13.6, 14.35, -6.1, -1.55, M.green);
+    cylX(col, 0.375, 0.375, -0.78, 0.78, 13.975, -6.1, M.green, 24);
+    box(col, -0.82, 0.82, 13.55, 13.62, -4.4, -1.55, M.greenDark);
+    // digitálny odmeriavač na ramene
+    cylY(col, 0.05, 0.05, 14.35, 15.2, 1.0, -2.2, M.steel, 10);
+    box(col, 0.15, 1.95, 15.15, 16.05, -2.42, -2.12, M.panel);
+    const droCanvas = document.createElement('canvas'); droCanvas.width = 256; droCanvas.height = 128;
+    const droTex = new THREE.CanvasTexture(droCanvas); droTex.encoding = THREE.sRGBEncoding;
+    add(col, new THREE.PlaneGeometry(1.6, 0.8), new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }), 1.05, 15.6, -2.115);
+    const drawDro = (x, y, z) => {
+      const g = droCanvas.getContext('2d');
+      g.fillStyle = '#071008'; g.fillRect(0, 0, 256, 128);
+      g.fillStyle = '#ff5a3c'; g.font = 'bold 34px "Share Tech Mono", Consolas, monospace';
+      [['X', x], ['Y', y], ['Z', z]].forEach(([l, v], i) => { g.fillText(l, 12, 36 + i * 40); g.fillText(v.toFixed(2).padStart(7, ' '), 64, 36 + i * 40); });
+      droTex.needsUpdate = true;
+    };
     const sp = face(col, 1.5, 0, -3.0, Math.PI / 2);                  // panel pák otáčok na pravom boku
     box(sp, -0.95, 0.95, 6.15, 7.95, 0, 0.02, M.greenDark);
     box(sp, -0.7, 0.7, 6.3, 6.68, 0.02, 0.035, M.white);               // tabuľka otáčok
@@ -1925,7 +1961,7 @@ function MillSimulator({ onBack }) {
     const levSA = pivotLever(sp, -0.45, 7.3, 0.2, 0.5, 1.15), levSB = pivotLever(sp, 0.4, 7.3, 0.2, 0.5, 1.15);
     // pracovná lampa na ľavom boku stojana
     box(col, -1.75, -1.5, 9.0, 9.35, -2.0, -1.7, M.greenDark);
-    const lamp = createLamp(scene, col, kit, M, { base: v3(-1.62, 9.45, -1.85), elbow: v3(-2.5, 11.0, -0.7), head: v3(-1.85, 10.25, 1.95), aim: v3(0.0, 6.9, 1.2), angle: 0.45, power: 3.2 });
+    const lamp = createLamp(scene, col, kit, M, { base: v3(-1.62, 9.45, -1.85), elbow: v3(-2.6, 11.3, -0.6), head: v3(-1.95, 10.95, 1.75), aim: v3(0.0, 7.0, 1.2), angle: 0.45, power: 3.2 });
 
     // ---------- elektrický rozvádzač ----------
     const cab = grp('rozvadzac');
@@ -1962,8 +1998,9 @@ function MillSimulator({ onBack }) {
     cylY(head, 0.98, 0.98, 13.3, 13.45, SPX, SPZ, M.greenDark, 40);
     cylY(head, 0.55, 0.55, 10.7, 11.2, SPX, SPZ, M.greenDark, 32);      // puzdro pinoly
     cylX(head, 0.08, 0.08, 0.95, 1.15, 11.9, 0.3, M.steel, 12);
-    handwheel(head, 0.32, 1.2, 11.9, 0.3, 'x', 0.22);                   // koliesko pinoly
-    lever(head, -0.62, 11.0, SPZ + 0.25, 0.35, 0.9, 0.6);               // aretácia pinoly
+    const wheelQ = handwheel(head, 0.32, 1.2, 11.9, 0.3, 'x', 0.22);    // koliesko pinoly
+    cylZ(head, 0.09, 0.09, SPZ + 0.15, SPZ + 0.28, -0.62, 11.0, M.steelDark, 12);
+    const levQ = pivotLever(head, -0.62, 11.0, SPZ + 0.28, 0.35, 0.9);      // aretácia pinoly
     // kĺbová hadica chladiva z boku hlavy, dýza mieri na rezné miesto
     const hose = new THREE.CatmullRomCurve3([v3(0.95, 12.2, 0.2), v3(1.35, 11.8, 0.9), v3(1.25, 11.0, 1.75), v3(0.95, 10.35, 1.95), v3(0.62, NOSE - 0.45, SPZ + 0.62)]);
     add(head, new THREE.TubeGeometry(hose, 40, 0.05, 8, false), M.black);
@@ -1974,6 +2011,7 @@ function MillSimulator({ onBack }) {
     // ---------- vreteno a nástroj ----------
     const spindle = grp('vreteno'); spindle.position.set(SPX, NOSE, SPZ);
     cylY(spindle, 0.42, 0.42, 0, 0.3, 0, 0, M.steel, 40);
+    cylY(spindle, 0.4, 0.4, 0.3, 1.15, 0, 0, M.steel, 32);             // pinola (pri vysunutí viditeľná)
     box(spindle, -0.42, -0.3, -0.06, 0.02, -0.08, 0.08, M.steelDark);
     box(spindle, 0.3, 0.42, -0.06, 0.02, -0.08, 0.08, M.steelDark);
     const toolG = new THREE.Group(); spindle.add(toolG);
@@ -2033,7 +2071,7 @@ function MillSimulator({ onBack }) {
     const wheelY = handwheel(knee, 0.5, 0.75, -1.35, 3.68, 'z', 0.35);
     cylZ(knee, 0.16, 0.16, 3.4, 3.52, -0.8, -1.55, M.steelDark, 20);
     const crankZ = crank(knee, 0.45, -0.8, -1.55, 3.56);
-    lever(knee, 1.0, -0.5, 3.4, 0.38, 1.2, -0.4);                       // aretácia konzoly
+    const levKnee = pivotLever(knee, 1.15, -0.45, 3.42, 0.36, 1.2);       // aretácia konzoly
 
     // ---------- priečne sane ----------
     const sad = grp('sane', knee);
@@ -2041,7 +2079,7 @@ function MillSimulator({ onBack }) {
     cylZ(sad, 0.2, 0.17, 0.95, 1.07, 0.75, 0.3, M.black, 20);
     detents(sad, 0.75, 0.3, 1.07, 0.12, DIR_ANG, 0.022);
     const levDir = pivotLever(sad, 0.75, 0.3, 1.07, 0.32, 1.25);
-    lever(sad, -0.9, 0.3, 0.95, 0.3, 1.2, 0.5);
+    const levSad = pivotLever(sad, -0.9, 0.3, 0.97, 0.3, 1.2);           // aretácia saní
 
     // ---------- pracovný stôl ----------
     const tbl = grp('stol', sad); tbl.position.y = 0.6;
@@ -2055,6 +2093,9 @@ function MillSimulator({ onBack }) {
     cylX(tbl, 0.07, 0.07, -7.0, -6.85, 0.32, 0, M.steel, 12);
     cylX(tbl, 0.07, 0.07, 6.85, 7.0, 0.32, 0, M.steel, 12);
     const wheelXL = handwheel(tbl, 0.45, -7.05, 0.32, 0, '-x', 0.32), wheelXR = handwheel(tbl, 0.45, 7.05, 0.32, 0, 'x', 0.32);
+
+    const recolor = (g) => g.traverse((o) => { if (!o.isMesh) return; if (o.material === M.green) o.material = M.cream; else if (o.material === M.greenDark || o.material === M.greenDeep) o.material = M.creamDark; });
+    [head, knee].forEach(recolor);
 
     // ---------- zverák: pevná čeľusť vzadu (z = -0,5), posuvná sa prispôsobí šírke obrobku ----------
     const wk = { shape: 'block', WX: 1.8, WZ: 1.0, WH: 0.6, WB: 0.45 };
@@ -2119,7 +2160,7 @@ function MillSimulator({ onBack }) {
     // ---------- chladiaca kvapalina a triesky ----------
     const stream = add(head, new THREE.CylinderGeometry(0.02, 0.04, 1, 10, 1, true), M.coolant);
     stream.castShadow = false; stream.visible = false;
-    const streamEnd = () => { const tl = MILL_TOOLS[st.tool]; return v3(SPX + tl.r * 0.7, NOSE - tl.len + 0.15, SPZ + tl.r * 0.7); };
+    const streamEnd = () => { const tl = MILL_TOOLS[st.tool]; return v3(SPX + tl.r * 0.7, NOSE - st.q - tl.len + 0.15, SPZ + tl.r * 0.7); };
     const placeStream = () => {
       const to = streamEnd(), dir = to.clone().sub(nozzle);
       stream.position.copy(nozzle).addScaledVector(dir, 0.5);
@@ -2131,14 +2172,14 @@ function MillSimulator({ onBack }) {
     let chipAcc = 0, dropAcc = 0;
 
     // ---------- stav simulácie ----------
-    const st = { tx: X0 + c.x / 100, sz: Y0 + c.y / 100, h: H0 + c.z / 100, rpm: 0, spin: 0, cutT: -9, cutting: false, tool: c.tool, msg: null, change: null };
+    const st = { tx: X0 + c.x / 100, sz: Y0 + c.y / 100, h: H0 + c.z / 100, q: c.quill / 100, rpm: 0, spin: 0, cutT: -9, cutting: false, tool: c.tool, msg: null, change: null };
     let t = 0, last = performance.now(), teleT = 0, workDirty = false, lastBuild = 0, lastDir = c.feedDir;
     const flags = {};
     const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.6 }; };
     const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
-    const yT = (tool = st.tool) => NOSE - MILL_TOOLS[tool].len;
-    // poloha spodku nástroja voči stredu a hornej ploche stola
-    const rel = (tx, sz, h, tool) => [SPX - tx, SPZ - sz, yT(tool) - h];
+    const yT = (tool = st.tool, q = st.q) => NOSE - q - MILL_TOOLS[tool].len;
+    // poloha spodku nástroja voči stredu a hornej ploche stola (vrátane výsuvu pinoly)
+    const rel = (tx, sz, h, tool = st.tool, q = st.q) => [SPX - tx, SPZ - sz, yT(tool, q) - h];
     buildTool(st.tool); placeStream();
     const spawnChip = () => {
       const tl = MILL_TOOLS[st.tool], a = Math.random() * TAU, s = 1.5 + Math.random() * 2;
@@ -2252,6 +2293,15 @@ function MillSimulator({ onBack }) {
       action: () => { push('coolant', !c.coolant); say(c.coolant ? L('Chladenie zapnuté.', 'Coolant on.') : L('Chladenie vypnuté.', 'Coolant off.'), 'info'); } }, btnCool);
     ctrl.reg({ type: 'button', label: LL('Núdzový STOP', 'Emergency STOP'), hint: LL('Okamžite zastaví vreteno, posuv aj chladenie.', 'Immediately stops the spindle, the feed and the coolant.'),
       action: () => { push('running', false); push('feedDir', 0); push('coolant', false); say(L('Núdzové zastavenie – vreteno, posuv aj chladenie sú vypnuté.', 'Emergency stop – spindle, feed and coolant are off.'), 'danger'); } }, eStop);
+    ctrl.reg({ type: 'wheel', minR: 0.22, inc: 1, label: LL('Koliesko pinoly', 'Quill handwheel'), hint: LL('Jemný zvislý posuv frézy pinolou. 1 otáčka = 4 mm, výsuv 0 – 80 mm.', 'Fine vertical feed of the cutter by the quill. 1 turn = 4 mm, stroke 0 – 80 mm.'),
+      guard: () => { if (!c.quillLock) return true; say(L('Pinola je zaistená – uvoľni páku aretácie.', 'The quill is locked – release the lock lever.')); return false; },
+      turn: (d) => { const a = st.q * 100; push('quill', clamp(clamp(c.quill + d * 4 / TAU, a - 4, a + 4), 0, 80)); }, read: () => `${L('pinola', 'quill')} ${(st.q * 100).toFixed(2)} mm` }, wheelQ);
+    const lockLever = (key, title, hintSk, hintEn) => ({ type: 'lever', angles: [-0.45, 0.5], minR: 0.18, label: title, hint: LL(hintSk, hintEn),
+      getIdx: () => (c[key] ? 1 : 0), onSet: (i) => { push(key, i === 1); say(i ? L('Zaistené.', 'Locked.') : L('Uvoľnené.', 'Released.'), 'info'); },
+      read: () => (c[key] ? L('zaistené', 'locked') : L('uvoľnené', 'released')) });
+    ctrl.reg(lockLever('quillLock', LL('Aretácia pinoly', 'Quill lock'), 'Zaistená pinola sa nedá vysúvať.', 'A locked quill cannot be moved.'), levQ);
+    ctrl.reg(lockLever('kneeLock', LL('Aretácia konzoly', 'Knee clamp'), 'Zaistená konzola sa nepohne zvisle – používa sa pri frézovaní v osi X a Y.', 'A clamped knee cannot move vertically – used when milling along X and Y.'), levKnee);
+    ctrl.reg(lockLever('sadLock', LL('Aretácia saní', 'Saddle clamp'), 'Zaistené sane sa nepohnú v osi Y.', 'A clamped saddle cannot move in Y.'), levSad);
     ctrl.reg({ type: 'button', still: true, label: LL('Pracovná lampa', 'Work lamp'), hint: LL('Klik zapne alebo vypne lampu.', 'Click to switch the lamp on or off.'), action: () => push('light', !c.light) }, lamp.shade);
 
     insp.goView('celok', true);
@@ -2294,28 +2344,34 @@ function MillSimulator({ onBack }) {
 
       // pohyb stola (X), saní (Y) a konzoly (Z) s kontrolou kolízií
       const tl = MILL_TOOLS[st.tool];
-      const txT = X0 + clamp(c.x, 0, 800) / 100, szT = Y0 + clamp(c.y, 0, 300) / 100, hT = H0 + clamp(c.z, 0, 420) / 100;
+      // zaistené osi sa nehýbu
+      const lockAxis = (key, on, val, act, text) => { if (on && Math.abs(c[val] - act) > 0.05) { sayOnce(key, true, text, 'warn'); c[val] = act; pend[val] = Math.round(act * 10) / 10; } else flags[key] = false; };
+      lockAxis('lk', c.kneeLock, 'z', zAct(), L('Konzola je zaistená – uvoľni páku aretácie na konzole.', 'The knee is locked – release the knee clamp lever.'));
+      lockAxis('ls', c.sadLock, 'y', yAct(), L('Sane sú zaistené – uvoľni páku aretácie na saniach.', 'The saddle is locked – release the saddle clamp lever.'));
+      lockAxis('lq', c.quillLock, 'quill', st.q * 100, L('Pinola je zaistená – uvoľni páku aretácie na hlave.', 'The quill is locked – release the quill lock lever on the head.'));
+      const txT = X0 + clamp(c.x, 0, 800) / 100, szT = Y0 + clamp(c.y, 0, 300) / 100, hT = H0 + clamp(c.z, 0, 420) / 100, qT = clamp(c.quill, 0, 80) / 100;
       const vx = st.cutting ? Math.max(0.25, c.feed / 6000 * c.timeScale * 1.2) : 2.4, vy = st.cutting ? 0.2 : 1.6, vh = st.cutting ? 0.06 : 0.7;
-      let nx = approach(st.tx, txT, vx * dt), ny = approach(st.sz, szT, vy * dt), nh = approach(st.h, hT, vh * dt);
+      let nx = approach(st.tx, txT, vx * dt), ny = approach(st.sz, szT, vy * dt), nh = approach(st.h, hT, vh * dt), nq = approach(st.q, qT, (st.cutting ? 0.05 : 0.5) * dt);
       let blocked = null;
-      if (nx !== st.tx || ny !== st.sz || nh !== st.h) {
+      if (nx !== st.tx || ny !== st.sz || nh !== st.h || nq !== st.q) {
         const r = st.change ? 0.24 : tl.r, [rx0, rz0, ry0] = rel(st.tx, st.sz, st.h);
         const pen0 = running || c.unclamped ? 0 : penetration(rx0, rz0, ry0 - wk.WB, tl), obst0 = hitObst(rx0, rz0, ry0, r);
         let why = null;
-        const ok = (a, b, h2) => {
-          const [rx, rz, ry] = rel(a, b, h2);
+        const ok = (a, b, h2, q2 = st.q) => {
+          const [rx, rz, ry] = rel(a, b, h2, st.tool, q2);
           const o = hitObst(rx, rz, ry, r);
           if (o && !obst0) { why = o; return false; }
           if (!running && !c.unclamped && penetration(rx, rz, ry - wk.WB, tl) > Math.max(0.002, pen0 + 1e-5)) { why = 'work'; return false; }
           return true;
         };
-        if (!ok(nx, ny, nh)) {
+        if (!ok(nx, ny, nh, nq)) {
           blocked = why;
-          let ax = st.tx, ay = st.sz, ah = st.h;
-          if (ok(nx, ay, ah)) ax = nx;
-          if (ok(ax, ny, ah)) ay = ny;
-          if (ok(ax, ay, nh)) ah = nh;
-          nx = ax; ny = ay; nh = ah;
+          let ax = st.tx, ay = st.sz, ah = st.h, aq = st.q;
+          if (ok(nx, ay, ah, aq)) ax = nx;
+          if (ok(ax, ny, ah, aq)) ay = ny;
+          if (ok(ax, ay, nh, aq)) ah = nh;
+          if (ok(ax, ay, ah, nq)) aq = nq;
+          nx = ax; ny = ay; nh = ah; nq = aq;
         }
       }
       sayOnce('work', blocked === 'work', L('Fréza narazila do obrobku. Pri stojacom vretene nemôže rezať – spusti vreteno.', 'The cutter hit the workpiece. It cannot cut with the spindle stopped – start the spindle.'), 'danger');
@@ -2323,7 +2379,11 @@ function MillSimulator({ onBack }) {
       wheelXR.rotation.z += (nx - st.tx) / 0.1 * TAU; wheelXL.rotation.z -= (nx - st.tx) / 0.1 * TAU;
       wheelY.rotation.z -= (ny - st.sz) / 0.1 * TAU;
       crankZ.rotation.z -= (nh - st.h) / 0.04 * TAU;
-      st.tx = nx; st.sz = ny; st.h = nh;
+      wheelQ.rotation.z += (nq - st.q) / 0.04 * TAU;
+      const qMoved = nq !== st.q;
+      st.tx = nx; st.sz = ny; st.h = nh; st.q = nq;
+      spindle.position.y = NOSE - st.q;
+      if (qMoved) placeStream();
 
       // frézovanie po celej dráhe od minulej snímky, aby pri rýchlom posuve nezostali hrebene
       const cur = rel(st.tx, st.sz, st.h), prev = st.lastRel || cur;
@@ -2369,10 +2429,11 @@ function MillSimulator({ onBack }) {
         const [rx, rz, ry] = rel(st.tx, st.sz, st.h);
         const over = Math.abs(rx) < wk.WX / 2 + tl.r && Math.abs(rz - wzc()) < wk.WZ / 2 + tl.r;
         setTele({
-          rpm: st.rpm, x: xAct(), y: yAct(), z: zAct(), vc: Math.PI * tl.d * st.rpm / 1000,
+          rpm: st.rpm, x: xAct(), y: yAct(), z: zAct(), q: st.q * 100, vc: Math.PI * tl.d * st.rpm / 1000,
           vf: c.feedDir && running ? c.feed : 0, cutting: st.cutting && running, tool: st.tool, changing: !!st.change,
           depth: over ? Math.max(0, (wk.WB + wk.WH - ry) * 100) : 0, msg: st.msg && st.msg.until > t ? st.msg : null,
         });
+        drawDro(xAct(), yAct(), zAct() + st.q * 100);
         if (c.feedDir) pend.x = Math.round(c.x * 10) / 10;
         if (lastDir !== c.feedDir) pend.feedDir = c.feedDir;
         lastDir = c.feedDir;
@@ -2412,7 +2473,7 @@ function MillSimulator({ onBack }) {
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · fréza', 'Simulator · milling machine')} title={L('Univerzálna konzolová fréza', 'Universal knee-type milling machine')}
           sub={L('Predloha: TOS FA 3 B so sklopnou vertikálnou hlavou. Mierka 1 : 100 mm.', 'Modelled after the TOS FA 3 B with a swivelling vertical head. Scale 1 : 100 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
-          foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vf ${tele.vf} mm/min`]} status={statusMsg} />
+          foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vf ${tele.vf} mm/min`, `${L('pinola', 'quill')} ${tele.q.toFixed(1)}`]} status={statusMsg} />
 
         <div className="sec">
           <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
@@ -2447,6 +2508,11 @@ function MillSimulator({ onBack }) {
           <Slider id="mx" label={L('Stôl pozdĺžne X', 'Table X')} unit="mm" min={0} max={800} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
           <Slider id="my" label={L('Sane priečne Y', 'Saddle Y')} unit="mm" min={0} max={300} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
           <Slider id="mz" label={L('Konzola zvisle Z', 'Knee Z')} unit="mm" min={0} max={420} step={0.5} value={ui.z} actual={tele.z} digits={1} onChange={(v) => set('z', v)} />
+          <Slider id="mq" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={80} step={0.1} value={ui.quill} actual={tele.q} digits={1} onChange={(v) => set('quill', v)} />
+          <Toggle on={ui.kneeLock} label={L('Konzola zaistená', 'Knee clamped')} onClick={() => set('kneeLock', !ui.kneeLock)} />
+          <Toggle on={ui.sadLock} label={L('Sane zaistené', 'Saddle clamped')} onClick={() => set('sadLock', !ui.sadLock)} />
+          <Toggle on={ui.quillLock} label={L('Pinola zaistená', 'Quill locked')} onClick={() => set('quillLock', !ui.quillLock)} />
+          <div className="mb-3" />
           <SegRow label={L('Posuv stola', 'Table feed')} value={ui.feedDir} options={[[-1, L('← Vľavo', '← Left')], [0, 'Stop'], [1, L('Vpravo →', 'Right →')]]} onChange={(v) => set('feedDir', v)} />
           <Slider id="mfeed" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/min" min={19} max={950} step={1} value={ui.feed} onChange={(v) => set('feed', v)} />
           <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
