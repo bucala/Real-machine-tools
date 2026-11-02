@@ -117,6 +117,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .helmet{position:absolute;inset:0;pointer-events:none;z-index:3}
 .helmet-glass{position:absolute;left:50%;top:50%;width:82%;height:76%;transform:translate(-50%,-50%);border-radius:18px;border:12px solid #191a19;box-shadow:0 0 0 200vmax #0d0e0d,inset 0 0 50px rgba(0,0,0,.85);background:rgba(18,70,30,.22);-webkit-backdrop-filter:brightness(.16) saturate(.4) sepia(.5) hue-rotate(55deg);backdrop-filter:brightness(.16) saturate(.4) sepia(.5) hue-rotate(55deg)}
 .helmet-glass.arc{-webkit-backdrop-filter:brightness(.55) contrast(1.4) saturate(.6) sepia(.5) hue-rotate(55deg);backdrop-filter:brightness(.55) contrast(1.4) saturate(.6) sepia(.5) hue-rotate(55deg)}
+.helmet.auto .helmet-glass{width:86%;height:80%;border:8px solid #1c1c1e;border-radius:10px;background:rgba(80,60,160,.05);box-shadow:0 0 0 200vmax #141414,inset 0 0 24px rgba(0,0,0,.6);-webkit-backdrop-filter:brightness(.9) saturate(.92);backdrop-filter:brightness(.9) saturate(.92)}
+.helmet.old .helmet-glass{border-width:18px;border-color:#141210;border-radius:6px}
 .helmet-tag{position:absolute;left:50%;bottom:calc(12% - 30px);transform:translateX(-50%);color:#8a8f88;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-family:var(--f-head)}
 .weld-type{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:8px;padding:6px 4px;font-size:11.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-ui);line-height:1.15;text-align:center}
 .weld-type.on{border-color:var(--accent);background:var(--accent-soft)} .weld-type svg{width:30px;height:24px}
@@ -897,7 +899,7 @@ function PrefBar() {
   );
 }
 
-function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint }) {
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint }) {
   const inspect = ui.unclamped;
   return (
     <div className="scene-wrap relative flex-1 overflow-hidden">
@@ -924,7 +926,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
             </button>
             <button type="button" className={ui.manual ? 'on' : ''} aria-pressed={ui.manual} disabled={inspect} onClick={() => set('manual', true)} title={L('Ručné ovládanie prvkov stroja (M)', 'Manual control of machine elements (M)')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v8M14 11.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 15.5L3 12a1.5 1.5 0 0 1 2.7-1.2L8 14" /></svg>
-              <span className="hidden lg:inline">{L('Ručné ovládanie', 'Manual control')}</span><span className="lg:hidden">{L('Ručne', 'Manual')}</span>
+              <span className="hidden lg:inline">{manualLabel || L('Ručné ovládanie', 'Manual control')}</span><span className="lg:hidden">{manualLabel || L('Ručne', 'Manual')}</span>
             </button>
           </div>
           {canUnclamp && (
@@ -942,7 +944,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
         </div>
       ) : ui.manual ? (
         <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
-          <b className="ink">{L('Ručné ovládanie:', 'Manual control:')}</b> {L('ťahaj ručné kolesá a páky, klikaj na tlačidlá a vypínač, koliesko myši točí prvkom pod kurzorom. Pohľad je zamknutý – kameru vráti M alebo Esc.', 'drag handwheels and levers, click buttons and switches, the mouse wheel turns the element under the cursor. The view is locked – M or Esc returns to the camera.')}
+          {manualHint || <><b className="ink">{L('Ručné ovládanie:', 'Manual control:')}</b> {L('ťahaj ručné kolesá a páky, klikaj na tlačidlá a vypínač, koliesko myši točí prvkom pod kurzorom. Pohľad je zamknutý – kameru vráti M alebo Esc.', 'drag handwheels and levers, click buttons and switches, the mouse wheel turns the element under the cursor. The view is locked – M or Esc returns to the camera.')}</>}
         </div>
       ) : (
         <div className="absolute left-3 bottom-3 hint hidden md:block pointer-events-none">
@@ -4113,7 +4115,7 @@ const WELD_TYPES = [
   { id: 'K', sk: 'Kútový', en: 'Fillet (T)', t: [2, 25], sym: 'M8 20h14L8 6z' },
   { id: 'L', sk: 'Presahový', en: 'Lap', t: [2, 10], sym: 'M6 14h18M6 18h18' },
   { id: 'E', sk: 'Lemový', en: 'Edge', t: [1, 3], sym: 'M8 6q0 10 6 12M22 6q0 10-6 12' },
-  { id: 'N', sk: 'Návar', en: 'Surfacing', t: [4, 30], sym: 'M5 10a5 5 0 0 0 10 0a5 5 0 0 0 10 0' },
+  { id: 'N', sk: 'Návar', en: 'Build-up', t: [4, 30], sym: 'M5 10a5 5 0 0 0 10 0a5 5 0 0 0 10 0' },
 ];
 // polohy zvárania podľa EN ISO 6947 (v zátvorke ASME): plechy PA – PG, rúry PH, PJ, H-L045
 const WELD_POS = [
@@ -4161,7 +4163,7 @@ const weldParts = () => mkParts([
 
 function WeldingSimulator({ onBack }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), flashRef = useRef(null), glassRef = useRef(null);
-  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, autoArc: true, arcLen: 3, wType: 'V', wPos: 'PA', wT: 8, wL: 150, tripped: false, slag: true };
+  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, tripped: false, slag: true };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useState({ arc: false, I: 0, la: 3, v: 0, le: 350, msg: null, stats: null });
 
@@ -4272,7 +4274,7 @@ function WeldingSimulator({ onBack }) {
     const F = { NX: 0, L: 0, t: 0, h: null, h0: null, dep: null, temp: null, heat: null, rip: null, mesh: null, geo: null, pos: null, col: null, glow: null, type: 'V', prep: null, dirty: true, hot: 0 };
     const C = {
       raw: new THREE.Color(0x63686d).convertSRGBToLinear(), bevel: new THREE.Color(0x9fa4a9).convertSRGBToLinear(),
-      slag: new THREE.Color(0x4b4036).convertSRGBToLinear(), weld: new THREE.Color(0xb7bcc1).convertSRGBToLinear(),
+      slag: new THREE.Color(0x2e2620).convertSRGBToLinear(), weld: new THREE.Color(0xc9ced3).convertSRGBToLinear(),
       straw: new THREE.Color(0x9a7a45).convertSRGBToLinear(), blue: new THREE.Color(0x4d5a86).convertSRGBToLinear(), tmp: new THREE.Color(),
     };
     const glowCol = (T, out) => { const k = Math.max(0, (T - 0.3) / 0.7); out[0] = 3.2 * Math.pow(k, 0.8); out[1] = 1.3 * k * k; out[2] = 0.5 * k * k * k * k; };
@@ -4327,7 +4329,7 @@ function WeldingSimulator({ onBack }) {
           cells.push([idxOf(i, j), r2]);
         }
       if (!cells.length) return 0;
-      const crown = 0.35 * rp;
+      const crown = 0.5 * rp;
       let lo = Infinity; cells.forEach(([k]) => { if (F.h[k] < lo) lo = F.h[k]; });
       let hi = lo + 40;
       for (let it = 0; it < 24; it++) {
@@ -4365,6 +4367,8 @@ function WeldingSimulator({ onBack }) {
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(haloCv), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, transparent: true }));
     halo.scale.set(0.9, 0.9, 1); scene.add(halo);
     const arcLight = new THREE.PointLight(0xdbe8ff, 0, 9, 2); scene.add(arcLight);
+    const aimMark = new THREE.Mesh(new THREE.TorusGeometry(4, 0.5, 8, 32), new THREE.MeshBasicMaterial({ color: 0x46c8ff, toneMapped: false, transparent: true, opacity: 0.85, depthTest: false }));
+    aimMark.rotation.x = -Math.PI / 2; aimMark.renderOrder = 8; aimMark.visible = false; pivot.add(aimMark);
     const spatter = createParticles(scene, new THREE.BoxGeometry(0.012, 0.012, 0.03), M.spatter, 220, false);
     const smoke = createParticles(scene, new THREE.SphereGeometry(0.035, 10, 8), M.smoke, 160, false);
 
@@ -4461,7 +4465,7 @@ function WeldingSimulator({ onBack }) {
       plane.setFromNormalAndCoplanarPoint(nrm(), wc());
       if (ray.ray.intersectPlane(plane, hit)) { const lp = pivot.worldToLocal(hit.clone()); st.aim.x = clamp(lp.x, -F.L / 2 - 6, F.L / 2 + 6); st.aim.z = clamp(lp.z, -W2 + 2, W2 - 2); }
     };
-    const active = () => !c.manual && !c.unclamped;
+    const active = () => c.manual && !c.unclamped;                 // zvára sa len v režime „Zváranie“
     const setBtns = (e) => { io.right = !!(e.buttons & 2); io.left = !!(e.buttons & 1); };
     const centroid = () => { let x = 0, y = 0; io.touches.forEach((p) => { x += p.x; y += p.y; }); const n = io.touches.size || 1; return [x / n, y / n]; };
     const pd = (e) => {
@@ -4495,7 +4499,9 @@ function WeldingSimulator({ onBack }) {
 
       // vedenie ruky (obmedzená rýchlosť)
       const ox = st.tx, oz = st.tz;
-      if (moving) { const mx = st.aim.x - st.tx, mz = st.aim.z - st.tz, d = Math.hypot(mx, mz), lim = 260 * dt; if (d > lim) { st.tx += mx / d * lim; st.tz += mz / d * lim; } else { st.tx = st.aim.x; st.tz = st.aim.z; } }
+      if (moving) { const mx = st.aim.x - st.tx, mz = st.aim.z - st.tz, d = Math.hypot(mx, mz), lim = (st.arc ? c.handV : 250) * dt; if (d > lim) { st.tx += mx / d * lim; st.tz += mz / d * lim; } else { st.tx = st.aim.x; st.tz = st.aim.z; } }
+      aimMark.visible = c.manual && moving && !c.unclamped;
+      if (aimMark.visible) aimMark.position.set(st.aim.x, surfAt(st.aim.x, st.aim.z) + 0.6, st.aim.z);
       const vNow = Math.hypot(st.tx - ox, st.tz - oz) / Math.max(dt, 1e-3);
       st.v += (vNow - st.v) * Math.min(1, dt * 6);
 
@@ -4511,7 +4517,7 @@ function WeldingSimulator({ onBack }) {
 
       // zapálenie a udržanie oblúka
       if (c.mode === 'w220' && I > 75 && trigger && !c.tripped) { push('tripped', true); say(L('Istič vypadol – pri 220 V je najvyšší zvárací prúd 75 A.', 'The breaker tripped – on 220 V the welding current is limited to 75 A.'), 'danger'); }
-      if (!trigger) { if (st.arc) say(L('Oblúk zhasol.', 'Arc extinguished.'), 'info'); st.arc = false; st.stuck = false; }
+      if (!trigger) { if (st.arc) { say(L('Oblúk zhasol.', 'Arc extinguished.'), 'info'); st.arcOff = t; } st.arc = false; st.stuck = false; }
       else if (!st.arc && !st.stuck) {
         if (c.mode === 'off') sayOnce('noP', true, L('Zváračka je vypnutá – otoč prepínač na 380 V alebo 220 V.', 'The welder is off – turn the switch to 380 V or 220 V.'));
         else if (c.mode === 'charge') sayOnce('noP', true, L('Prepínač je na nabíjaní – na zváranie ho otoč na 380 V alebo 220 V.', 'The switch is on charging – turn it to 380 V or 220 V for welding.'));
@@ -4595,7 +4601,18 @@ function WeldingSimulator({ onBack }) {
         fe.style.opacity = op.toFixed(3);
         if (st.arc) { const v = arcPos.clone().project(camera); fe.style.setProperty('--fx', `${((v.x + 1) / 2 * 100).toFixed(1)}%`); fe.style.setProperty('--fy', `${((1 - v.y) / 2 * 100).toFixed(1)}%`); }
       }
-      if (ge) { const want = st.arc; if (ge.classList.contains('arc') !== want) ge.classList.toggle('arc', want); }
+      if (ge) {
+        if (c.helmetType === 'old') { const want = st.arc; if (ge.classList.contains('arc') !== want) ge.classList.toggle('arc', want); ge.style.backdropFilter = ''; ge.style.webkitBackdropFilter = ''; }
+        else {
+          // samostmievací filter: svetlý bez oblúka, pri oblúku okamžite stmavne na zvolený stupeň, po zhasnutí sa po oneskorení zosvetlí
+          const dark = st.arc || t - (st.arcOff || -9) < c.adfDelay;
+          const b = { 9: 0.62, 10: 0.54, 11: 0.46, 12: 0.38, 13: 0.3 }[c.shade] || 0.46;
+          const f = dark ? `brightness(${b}) contrast(1.35) saturate(.75)` : 'brightness(.9) saturate(.92)';
+          if (ge.style.backdropFilter !== f) { ge.style.backdropFilter = f; ge.style.webkitBackdropFilter = f; }
+        }
+      }
+      const needShade = I < 60 ? 9 : I <= 100 ? 10 : I <= 150 ? 11 : 12;
+      sayOnce('shade', st.arc && c.helmet && c.helmetType === 'auto' && c.shade < needShade, L(`Filter je príliš svetlý – pre ${I} A nastav aspoň DIN ${needShade}.`, `The filter is too light – for ${I} A set at least DIN ${needShade}.`), 'warn');
       sayOnce('flash', st.arc && !c.helmet, L('Oslňujúci záblesk! Pri zváraní spusti kuklu (H).', 'Blinding flash! Lower the helmet when welding (H).'), 'danger');
 
       ctrl.update(dt);
@@ -4654,7 +4671,7 @@ function WeldingSimulator({ onBack }) {
     : ui.wType === 'K' ? `${L('Kútový zvar s výškou', 'Fillet weld, throat')} a ≈ ${fmt(0.7 * ui.wT)} mm (${L('rameno', 'leg')} ≈ ${fmt(ui.wT)} mm).`
     : ui.wType === 'L' ? L('Presah dielov – kútový zvar na hrane horného plechu.', 'Overlapping parts – fillet on the edge of the upper plate.')
     : ui.wType === 'E' ? L('Okraje plechov ohnuté nahor – zvar sa robí bez prídavného materiálu natavením lemov.', 'Sheet edges flanged up – welded by melting the flanges.')
-    : L('Plech bez prípravy – húsenice vedľa seba s prekrytím asi tretiny.', 'Plain plate – beads side by side overlapping about a third.');
+    : L('Navárať sa dá kdekoľvek na plech – húsenice vedľa seba s prekrytím asi tretiny, ďalšie vrstvy sa ukladajú na predchádzajúce.', 'You can build up material anywhere on the plate – beads side by side overlapping about a third, further layers go on top of the previous ones.');
   const groove = ['V', 'HV', 'Y', 'U', 'J'].includes(ui.wType) ? Math.max(1, Math.round((ui.wT * ui.wT * 0.45) / (0.42 * ui.current / 3))) : 1;
   const thWarn = ui.wT < wt.t[0] || ui.wT > wt.t[1];
   const s = tele.stats;
@@ -4673,13 +4690,21 @@ function WeldingSimulator({ onBack }) {
     : ui.unclamped ? { kind: 'info', text: L('Prezeráš si zvarenec – ťahaním ho otáčaš.', 'Inspecting the weldment – drag to rotate it.') }
     : tele.arc ? { kind: 'run', text: `${L('Oblúk horí', 'Arc burning')} – ${tele.I} A, ${L('oblúk', 'arc')} ${fmt(tele.la)} mm, ${L('posuv', 'travel')} ${fmt(tele.v)} mm/s` }
     : tele.stuck ? { kind: 'danger', text: L('Elektróda je prilepená – pusti tlačidlá.', 'The electrode is stuck – release the buttons.') }
+    : !ui.manual ? { kind: 'idle', text: L('Prepni na režim Zváranie (M) – potom drž pravé tlačidlo a veď elektródu, ľavým zapáliš oblúk. Kukla: H.', 'Switch to welding mode (M) – then hold the right button to guide the electrode, press the left one to strike the arc. Helmet: H.') }
     : { kind: 'idle', text: L('Drž pravé tlačidlo a veď elektródu k spoju, ľavým tlačidlom zapáliš oblúk. Kukla: H.', 'Hold the right button to guide the electrode to the joint, press the left button to strike the arc. Helmet: H.') };
   const chips = [{ color: tele.arc ? '#ffffff' : '#8b8f89', text: tele.arc ? L('Oblúk', 'Arc') : L('Oblúk zhasnutý', 'No arc') }];
   if (ui.helmet) chips.push({ color: '#3ee06c', text: L('Kukla dole', 'Helmet down') });
   if (tele.hot > 0.15) chips.push({ color: '#ff7a2a', text: L('Horúci zvar', 'Hot weld') });
   if (ui.tripped) chips.push({ color: '#ff5a3c', text: L('Istič vypadol', 'Breaker tripped') });
   const overlay = (<>
-    {ui.helmet && <div className="helmet"><div ref={glassRef} className="helmet-glass" /><div className="helmet-tag">{L('Kukla DIN 11 · H zdvihne', 'Helmet DIN 11 · H lifts')}</div></div>}
+    {ui.helmet && (
+      <div className={`helmet ${ui.helmetType}`}>
+        <div ref={glassRef} className="helmet-glass" />
+        <div className="helmet-tag">{ui.helmetType === 'auto'
+          ? `${L('Samostmievacia kukla', 'Auto-darkening helmet')} · DIN ${ui.shade} · ${fmt(ui.adfDelay)} s · ${L('H zdvihne', 'H lifts')}`
+          : L('Stará kukla · pevné sklo DIN 11 · H zdvihne', 'Old helmet · fixed DIN 11 glass · H lifts')}</div>
+      </div>
+    )}
     <div ref={flashRef} className="flash" />
   </>);
 
@@ -4687,7 +4712,9 @@ function WeldingSimulator({ onBack }) {
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
         workLabels={[L('Prezrieť si zvarenec', 'Inspect the weldment'), L('Vrátiť na stôl', 'Back to the table')]} overlay={overlay}
-        hint={L('Pravé tlačidlo: vedenie elektródy · pravé + ľavé: zváranie · koliesko s pravým: dĺžka oblúka · ľavé ťahanie: kamera · H: kukla · dotyk: 1 prst vedie, 2 prsty zvárajú', 'Right button: guide the electrode · right + left: weld · wheel with right: arc length · left drag: camera · H: helmet · touch: 1 finger guides, 2 fingers weld')} />
+        manualLabel={L('Zváranie', 'Welding')}
+        hint={L('Ťahaj: otáčanie · pravé tlačidlo: posun · koliesko: zoom · M: režim Zváranie · H: kukla', 'Drag: orbit · right button: pan · wheel: zoom · M: welding mode · H: helmet')}
+        manualHint={<><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď elektródu, ľavým pri držanom pravom zapáliš oblúk, koliesko s pravým mení dĺžku oblúka. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the electrode, press the left one as well to strike the arc, the wheel with the right button sets the arc length. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</>} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zváranie', 'Simulator · welding')} title={L('Oblúková zváračka', 'Arc welder')}
           sub={L('Predloha: transformátorová zváračka Elektrokov JS 90FN, ručné zváranie obalenou elektródou (MMA).', 'Modelled after the Elektrokov JS 90FN transformer welder, manual metal arc welding (MMA).')}
@@ -4713,7 +4740,9 @@ function WeldingSimulator({ onBack }) {
           <SegRow label={L('Priemer', 'Diameter')} value={ui.de} options={Object.keys(ELECTRODES[ui.etype].r).map(Number).sort((a, b) => a - b).map((d) => [d, `Ø${L(String(d).replace('.', ','), String(d))}`])} onChange={(v) => set('de', v)} />
           <p className="text-xs muted mb-2">{L(`Odporúčaný prúd pre Ø${ui.de}: ${lo} – ${hi} A. Dĺžka oblúka ≈ priemer elektródy.`, `Recommended current for Ø${ui.de}: ${lo} – ${hi} A. Arc length ≈ electrode diameter.`)}</p>
           <Slider id="wla" label={L('Dĺžka oblúka (výška elektródy)', 'Arc length (electrode height)')} unit="mm" min={0} max={12} step={0.5} value={ui.arcLen} digits={1} onChange={(v) => set('arcLen', v)} />
+          <Slider id="whv" label={L('Najvyššia rýchlosť ruky pri zváraní', 'Max hand speed while welding')} unit="mm/s" min={1} max={20} step={0.5} value={ui.handV} digits={1} onChange={(v) => set('handV', v)} />
           <Toggle on={ui.autoArc} label={L('Ruka dorovnáva opaľovanie elektródy', 'Hand compensates electrode burn-off')} onClick={() => set('autoArc', !ui.autoArc)} />
+          <p className="text-xs muted mt-1">{L('Elektróda ide za kurzorom (modrý krúžok) najviac touto rýchlosťou – bežne 2 – 6 mm/s. Pomalší posuv dá širšiu a vyššiu húsenicu.', 'The electrode follows the cursor (blue ring) at most at this speed – typically 2 – 6 mm/s. Slower travel gives a wider, higher bead.')}</p>
           <button type="button" className="btn w-full mt-2" onClick={() => apiRef.current.newElectrode && apiRef.current.newElectrode()}>{L('Vložiť novú elektródu', 'Fit a new electrode')}</button>
         </div>
 
@@ -4752,7 +4781,13 @@ function WeldingSimulator({ onBack }) {
 
         <div className="sec">
           <h3 className="sec-title mb-2">{L('Ochrana', 'Protection')}</h3>
+          <SegRow label={L('Kukla', 'Helmet')} value={ui.helmetType} options={[['auto', L('Moderná (senzor)', 'Modern (sensor)')], ['old', L('Stará (pevné sklo)', 'Old (fixed glass)')]]} onChange={(v) => set('helmetType', v)} />
           <Toggle on={ui.helmet} label={L('Zváračská kukla spustená (H)', 'Welding helmet down (H)')} onClick={() => set('helmet', !ui.helmet)} />
+          {ui.helmetType === 'auto' ? (<div className="mt-2">
+            <Slider id="wsh" label={L('Stupeň stmavenia', 'Shade')} unit="DIN" min={9} max={13} step={1} value={ui.shade} onChange={(v) => set('shade', v)} />
+            <Slider id="wdl" label={L('Oneskorenie zosvetlenia', 'Light-state delay')} unit="s" min={0.1} max={1} step={0.1} value={ui.adfDelay} digits={1} onChange={(v) => set('adfDelay', v)} />
+            <p className="text-xs muted">{L('Senzory zachytia oblúk a sklo okamžite stmavne; bez oblúka je priehľadné, takže vidíš, kam priložíš elektródu.', 'The sensors detect the arc and the glass darkens instantly; without the arc it is clear, so you see where to place the electrode.')}</p>
+          </div>) : <p className="text-xs muted mt-2">{L('Pevné tmavé sklo DIN 11 – bez oblúka cez neho takmer nič nevidno, elektródu treba priložiť naslepo.', 'Fixed dark DIN 11 glass – without the arc you can hardly see anything, the electrode has to be placed blind.')}</p>}
           <p className="text-xs muted mt-2">{L(`Bez kukly oblúk oslňuje celú obrazovku. Záblesky bez kukly: ${tele.flashes || 0}.`, `Without the helmet the arc blinds the whole screen. Flashes without helmet: ${tele.flashes || 0}.`)}</p>
         </div>
 
