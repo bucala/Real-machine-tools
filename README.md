@@ -92,7 +92,26 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   </tr>
 </table>
 
-**Pripravujeme:** oblúková zváračka.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zvaranie"><img src="docs/img/weld-helmet.png" alt="Zváranie – pohľad cez kuklu"></a>
+    </td>
+    <td width="50%" valign="top">
+      <h3>⚡ Oblúková zváračka</h3>
+      <sub>predloha Elektrokov JS 90FN · ručné zváranie obalenou elektródou (MMA)</sub>
+      <ul>
+        <li>10 druhov zvarov (I, V, ½V, Y, U, J, kútový, presahový, lemový, návar) so zvarovou prípravou podľa hrúbky</li>
+        <li>polohy PA – PG (1G – 4G/F), kontrola smeru pri PF a PG</li>
+        <li>prúd 55 – 155 A, prepínač 380 / 220 V (istič pri 220 V nad 75 A), rutilové a bázické elektródy Ø2 – Ø4</li>
+        <li>húsenica podľa prúdu, rýchlosti a dĺžky oblúka; troska, popúšťacie farby, hodnotenie zvaru</li>
+        <li>kukla (H) proti oslňujúcim zábleskom; pravé tlačidlo vedie elektródu, pravé + ľavé zvára, na dotyk dva prsty</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+**Pripravujeme:** rúrové polohy PH, PJ a H-L045 (5G, 6G).
 
 ### ✋ Ručné ovládanie
 
@@ -102,7 +121,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #bruska · #pila"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #bruska · #pila · #zvaranie"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -133,6 +152,7 @@ flowchart LR
 | ![Vŕtačka](docs/img/drill.png) | ![Ohýbačka](docs/img/folder.png) |
 | ![Brúska](docs/img/grinder.png) | ![Brúska – brúsenie](docs/img/grinder-run.png) |
 | ![Pásová píla](docs/img/saw.png) | ![Fréza – ručné ovládanie](docs/img/mill-manual.png) |
+| ![Zváranie – celok](docs/img/weld.png) | ![Pásová píla – rez](docs/img/saw-cut.png) |
 
 </details>
 
