@@ -7,6 +7,9 @@ import { baseMats, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { exportStl } from '../core/export';
+import { ExportSection, TaskSection } from '../ui/tools';
+import { folderChecks } from './shopMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -22,7 +25,31 @@ const foldParts = () => mkParts([
   ['plech', 'Plech', 'Sheet', 'Plech', 'Sheet', 'Oceľový plech zvoleného rozmeru hrúbky 0,5 – 2 mm (predloha FASTI 204-10-2: dĺžka ohybu 1 040 mm, max. 2 mm). Po ohnutí sa časť ohybu vráti – odpruží.', 'Steel sheet of the selected size, 0.5 – 2 mm thick (model FASTI 204-10-2: 1,040 mm bending length, max. 2 mm). After bending part of the bend springs back.'],
 ]);
 
-function FolderSimulator({ onBack }) {
+// bočný pohľad na ohnutý plech s uhlom a prírubou
+const BendSketch = ({ angle, flange, th }) => {
+  const a = (180 - angle) * Math.PI / 180, x0 = 150, y0 = 90, L = 110, F = Math.min(70, flange * 1.2);
+  return (
+    <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={`${angle}°`} style={{ display: 'block' }}>
+      <path d={`M${x0 - L} ${y0}H${x0}L${x0 + Math.cos(a) * F} ${y0 - Math.sin(a) * F}`} fill="none" stroke="currentColor" strokeWidth={Math.max(1.4, th * 1.6)} />
+      <path d={`M${x0 - 30} ${y0}A30 30 0 0 1 ${x0 + Math.cos(a) * 30} ${y0 - Math.sin(a) * 30}`} fill="none" stroke="currentColor" strokeDasharray="3 2" strokeWidth="0.8" />
+      <text x={x0 - 14} y={y0 - 34} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{angle}° ±1°</text>
+      <text x={x0 + Math.cos(a) * F / 2 + 8} y={y0 - Math.sin(a) * F / 2 + 4} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{flange}</text>
+      <text x="20" y="112" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">t = {th} mm</text>
+    </svg>
+  );
+};
+const FOLD_TASKS = [
+  { id: 'ohyb90', title: () => L('Ohyb 90° s prírubou 50 mm', 'Bend 90° with a 50 mm flange'),
+    desc: () => L('Plech hrúbky 1 mm, príruba 50 mm. Ohni plech na trvalý uhol 90 ±1°. Pamätaj na odpruženie – lištu treba vykývnuť o kúsok ďalej.', 'Sheet 1 mm thick, 50 mm flange. Bend it to a permanent 90 ±1°. Mind the springback – swing the beam a little further.'),
+    setup: { thick: 1, flange: 50 }, drawing: () => <BendSketch angle={90} flange={50} th={1} />,
+    labels: { angle: () => L('Trvalý uhol 90 ±1°', 'Permanent angle 90 ±1°'), flange: () => L('Príruba 50 mm', 'Flange 50 mm'), th: () => L('Plech 1 mm', 'Sheet 1 mm') } },
+  { id: 'ohyb45', title: () => L('Ohyb 45° hrubšieho plechu', 'Bend 45° of a thicker sheet'),
+    desc: () => L('Plech hrúbky 2 mm odpruží viac. Ohni prírubu 30 mm na trvalý uhol 45 ±1°.', 'A 2 mm sheet springs back more. Bend a 30 mm flange to a permanent 45 ±1°.'),
+    setup: { thick: 2, flange: 30 }, drawing: () => <BendSketch angle={45} flange={30} th={2} />,
+    labels: { angle: () => L('Trvalý uhol 45 ±1°', 'Permanent angle 45 ±1°'), flange: () => L('Príruba 30 mm', 'Flange 30 mm'), th: () => L('Plech 2 mm', 'Sheet 2 mm') } },
+].map((t) => ({ ...t, checks: (m) => folderChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+
+function FolderSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { manual: false, gap: 30, beam: 0, flange: 50, thick: 1, bLen: 800, bDep: 300 };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
@@ -33,7 +60,7 @@ function FolderSimulator({ onBack }) {
     const c = ctl.current;
     const { TT, L: BL, MAXA } = FOLD;
     const wk = { SW: 4.0, SD: 3.0 };                                         // polovica šírky plechu, hĺbka plechu
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
     const dom = renderer.domElement;
     const M = { ...baseMats(0x9dc58b, 0x82ab70, 0x5f8253), sheet: std(0xb4bcc4, 0.35, 0.75, { side: THREE.DoubleSide }), screw: std(0x3b3d40, 0.45, 0.7) };
     const { add, box, cylX, cylY, cylZ, handwheel, rod } = makeKit(M);
@@ -161,7 +188,11 @@ function FolderSimulator({ onBack }) {
       if (clamped()) { say(L('Najprv uvoľni upínaciu lištu.', 'Release the clamping beam first.'), 'warn'); return; }
       wk.SW = c.bLen / 200; wk.SD = c.bDep / 100; st.P = 0; st.th = c.thick; st.L = clamp(c.flange, 10, Math.min(150, c.bDep - 50));
       shapeSheet(st.L, st.th); say(L('Vložený nový rovný plech.', 'A new flat sheet is inserted.'), 'info');
+      return true;
     };
+    apiRef.current.measure = () => ({ perm: st.P, flange: st.L, th: st.th });
+    apiRef.current.exportStl = () => exportStl(sheetG);
+    apiRef.current.snapshot = snapshot;
 
     ctrl.reg({ type: 'wheel', minR: 0.5, inc: -1, label: LL('Koleso upínania', 'Clamping handwheel'), hint: LL('V smere hodinových ručičiek lišta klesá a upne plech. 1 otáčka = 5 mm.', 'Clockwise lowers the beam and clamps the sheet. 1 turn = 5 mm.'),
       turn: (d) => push('gap', clamp(clamp(c.gap + d * 5 / TAU, st.gap - 4, st.gap + 4), 0, 40)),
@@ -232,6 +263,10 @@ function FolderSimulator({ onBack }) {
   const parts = foldParts();
   const sb = 1.5 + 1.2 * ui.thick;
   const fmt = (v) => L(v.toFixed(1).replace('.', ','), v.toFixed(1));
+  const setupTask = (task) => {
+    set('thick', task.setup.thick); set('flange', task.setup.flange);
+    if (apiRef.current.newBlank) apiRef.current.newBlank();
+  };
   const statusMsg = tele.msg
     ? tele.msg
     : ui.unclamped ? { kind: 'info', text: L('Plech je vybratý zo stroja.', 'The sheet is out of the machine.') }
@@ -250,6 +285,8 @@ function FolderSimulator({ onBack }) {
           sub={L('Predloha: FASTI 204-10-2, dĺžka ohybu 1 040 mm, plech do 2 mm. Mierka 1 : 100 mm.', 'Modelled after the FASTI 204-10-2, 1,040 mm bending length, sheet up to 2 mm. Scale 1 : 100 mm.')}
           rows={[[L('Lišta', 'Beam'), `${tele.beam.toFixed(1)}°`], [L('Plech', 'Sheet'), `${tele.sheet.toFixed(1)}°`], [L('Medzera', 'Gap'), tele.gap.toFixed(2)]]}
           foot={[`${L('plech', 'sheet')} ${ui.thick} mm`, `${L('odpruženie', 'springback')} ${fmt(sb)}°`]} status={statusMsg} />
+
+        <TaskSection machine="ohybacka" tasks={FOLD_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask} />
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Plech a upínanie', 'Sheet and clamping')}</h2>
@@ -277,6 +314,7 @@ function FolderSimulator({ onBack }) {
           <Slider id="fbd" label={L('Hĺbka plechu', 'Sheet depth')} unit="mm" min={200} max={400} step={10} value={ui.bDep} onChange={(v) => set('bDep', v)} />
         </BlankSection>
 
+        <ExportSection machine="ohybacka" apiRef={apiRef} canSave={false} />
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail ohybu', 'Bend detail')], ['bok', L('Z boku', 'Side')], ['spredu', L('Spredu', 'Front')], ['zadu', L('Zozadu', 'Rear')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />

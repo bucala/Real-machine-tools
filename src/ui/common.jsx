@@ -103,7 +103,7 @@ function PrefBar() {
   const { prefs, setPref } = React.useContext(PrefsCtx);
   const skins = [['green', '#4f7f3b', L('Zelený', 'Green')], ['dark', '#2b3138', L('Tmavý', 'Dark')], ['light', '#e9ece5', L('Svetlý', 'Light')]];
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5" role="group" aria-label={L('Vzhľad', 'Skin')}>
         {skins.map(([k, col, name]) => (
           <button key={k} type="button" className={`swatch ${prefs.skin === k ? 'on' : ''}`} style={{ background: col }}
@@ -111,6 +111,13 @@ function PrefBar() {
         ))}
       </div>
       <Seg label={L('Jazyk', 'Language')} value={prefs.lang} options={[['sk', 'SK'], ['en', 'EN']]} onChange={(v) => setPref('lang', v)} />
+      <button type="button" className={`btn ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
+        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
+        onClick={() => setPref('sound', !prefs.sound)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
+          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+        </svg>
+      </button>
     </div>
   );
 }
@@ -175,7 +182,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
 function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
   return (
     <div className="sec">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
         <PrefBar />
       </div>
@@ -260,4 +267,4 @@ function HelpFooter() {
   );
 }
 
-export { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
+export { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };

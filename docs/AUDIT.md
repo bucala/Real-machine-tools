@@ -55,6 +55,22 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | S7 ďalšie stroje | ✅ opravené | brúska: posuvník stola X je pri zapnutom pohybe tam a späť zamknutý ako ručné koleso; píla: pri pokuse zmeniť rýchlosť pásu za chodu sa zobrazí dôvod; fréza, vŕtačka a sústruh vynucujú zaistenia v hlavnej slučke, výmena nástroja je strážená |
 | S3 zastarané závislosti | ⏳ fáza 5 | three.js r128 a React 18 zostávajú; build už umožňuje prechod bez CDN obmedzení |
 
+### Stav – fázy 4 a 5 (3. 11. 2026)
+
+| Oblasť | Stav | Čo pribudlo |
+|---|---|---|
+| Fáza 5: three.js a React | ✅ | three r128 → r186.1, React 18 → 19.3.1; vzhľad overený porovnaním snímok všetkých strojov (priemerný rozdiel 1,2 – 2,6 z 255), bez varovaní |
+| Úlohy s kontrolou | ✅ | 13 úloh na 7 strojoch (`ui/tools.jsx` – `TaskSection`), kontroly ako čisté funkcie (`latheMath.js`, `core/hfMath.js`, `shopMath.js`) pokryté testami; percentá, známka, čas, počet varovaní |
+| Režim učiteľa | ✅ | odkaz `#stroj/uloha=…` otvorí stroj s úlohou a zapnutou kontrolou BOZP |
+| Závity | ✅ | závitový nôž 60°, páka a prepínač matice vodiacej skrutky (vylučuje sa s posuvom), posuv P na otáčku, skrutkovicová geometria, kontrola zmiešaného stúpania |
+| Meradlá | ✅ | sústruh (posuvné meradlo 0,02 / mikrometer 0,01, tabuľka osadení, závit), fréza (hĺbkomer), vŕtačka (diery a rozostup), brúska (úbytok, rovinnosť) |
+| Kalkulačka rezných podmienok | ✅ | sústruh, fréza, vŕtačka; HSS / SK, nastavenie najbližšieho stupňa |
+| Kontrola BOZP | ✅ | kontrolné zoznamy pre 6 strojov (pri zváraní pred prepnutím do režimu Zváranie) |
+| Zvuk | ✅ | Web Audio syntéza bez súborov, predvolene vypnutý, predvoľba sa pamätá |
+| Uloženie a export | ✅ | uloženie obrobku (sústruh, fréza, vŕtačka, brúska), STL v mm (okrem vŕtačky, kde sú diery len vizuálne), PNG |
+| Adaptívna kvalita | ✅ | pri < ~22 snímkach/s pri práci najprv rozlíšenie 1×, potom bez tieňov lámp; `?hq` vypne |
+| Ďalšie jazyky (CZ, DE, HU) | ⏳ | vyžaduje presunúť ~2 000 textov z `L('sk', 'en')` do slovníkov – samostatný krok |
+
 ## 2. Rozsah a metodika
 
 - **Prehliadka kódu** – celé jadro (riadky 1 – 1 100), celý simulátor sústruhu, kľúčové časti frézy a zvárania, životný cyklus (`useEffect`, `requestAnimationFrame`, `dispose`, poslucháči udalostí) vo všetkých siedmich simulátoroch.
@@ -325,13 +341,13 @@ Rovnako pre frézu (`MILL_SPEEDS`), vŕtačku (`DRILL_SPEEDS`) a posuvy frézy (
 
 ## 7. Odporúčaný postup
 
-| Fáza | Obsah | Odhad |
-|---|---|---|
-| 1 · Rýchle opravy | V1 Error Boundary + kontrola WebGL, V4 záblesk, S7 otáčky v paneli, indikátor načítania, SRI, N4 | 1 – 2 dni |
-| 2 · Build a štruktúra | Vite, rozdelenie `src/`, Tailwind cez PostCSS, `_headers` s CSP, ESLint, GitHub Actions, prvé testy čistej logiky | 3 – 5 dní |
-| 3 · Výkon | render pri zmene, čiastočné prestavanie výškových máp, InstancedMesh, panel bez zbytočných prekreslení, adaptívne rozlíšenie máp | 3 – 4 dni |
-| 4 · Funkcie | úlohy s kontrolou, meradlá, závity, zvuk, PWA, uloženie stavu | podľa priorít |
-| 5 · Modernizácia | prechod na aktuálne three.js a React 19 | 2 – 3 dni |
+| Fáza | Obsah | Odhad | Stav |
+|---|---|---|---|
+| 1 · Rýchle opravy | V1 Error Boundary + kontrola WebGL, V4 záblesk, S7 otáčky v paneli, indikátor načítania, SRI, N4 | 1 – 2 dni | ✅ |
+| 2 · Build a štruktúra | Vite, rozdelenie `src/`, Tailwind cez PostCSS, `_headers` s CSP, ESLint, GitHub Actions, prvé testy čistej logiky | 3 – 5 dní | ✅ |
+| 3 · Výkon | render pri zmene, čiastočné prestavanie výškových máp, InstancedMesh, panel bez zbytočných prekreslení, adaptívne rozlíšenie máp | 3 – 4 dni | ✅ |
+| 4 · Funkcie | úlohy s kontrolou, meradlá, závity, zvuk, PWA, uloženie stavu | podľa priorít | ✅ |
+| 5 · Modernizácia | prechod na aktuálne three.js a React 19 | 2 – 3 dni | ✅ |
 
 ## Príloha – namerané hodnoty
 

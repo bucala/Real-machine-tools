@@ -9,6 +9,10 @@ import { createDrops, createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp, fanAngles, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { exportStl } from '../core/export';
+import { hfInfo, millChecks } from '../core/hfMath';
+import { createSound } from '../core/sound';
+import { CutCalc, ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -44,10 +48,41 @@ const millParts = () => mkParts([
   ['rozvadzac', 'Rozvádzač', 'Control cabinet', 'Elektrický rozvádzač', 'Electrical cabinet', 'Na pravom boku stojana: ampérmeter, hlavný vypínač, tlačidlá Štart, Stop a chladenie a núdzový STOP. Pod ním sú páky otáčok vretena.', 'On the right side of the column: ammeter, main switch, Start, Stop and coolant buttons and the emergency stop. The spindle speed levers are below it.'],
 ]);
 
-function MillSimulator({ onBack }) {
+// pôdorys obrobku s drážkou alebo zarovnanou plochou (rozmery v mm)
+const TopSketch = ({ L: len, W, band, label, dims }) => {
+  const k = Math.min(260 / len, 80 / W), x0 = 20, y0 = 14;
+  return (
+    <svg viewBox="0 0 300 118" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
+      <rect x={x0} y={y0} width={len * k} height={W * k} fill="none" stroke="currentColor" strokeWidth="1.4" />
+      {band && <rect x={x0} y={y0 + (W - band) / 2 * k} width={len * k} height={band * k} fill="currentColor" opacity="0.25" stroke="currentColor" strokeDasharray="4 2" />}
+      {!band && <rect x={x0 + 2} y={y0 + 2} width={len * k - 4} height={W * k - 4} fill="currentColor" opacity="0.18" />}
+      {dims.map(([t, x, y], i) => <text key={i} x={x} y={y} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{t}</text>)}
+    </svg>
+  );
+};
+const MILL_TASKS = [
+  { id: 'drazka', title: () => L('Drážka 20 × 5 mm cez celú dĺžku', 'Slot 20 × 5 mm along the whole length'),
+    desc: () => L('Hranol 180 × 100 × 60 mm. Stopkovou frézou Ø20 vyfrézuj v strede šírky pozdĺžnu drážku hĺbky 5 ±0,15 mm cez celú dĺžku. Hĺbku nastav konzolou (Z) od dotyku, drážku veď posuvom stola X. Šírka sa meria s presnosťou siete (~1,2 mm).', 'Block 180 × 100 × 60 mm. With a Ø20 end mill cut a longitudinal slot 5 ±0.15 mm deep along the whole length, centred in the width. Set the depth with the knee (Z) from the touch-off, feed the table along X. The width is measured to the grid resolution (~1.2 mm).'),
+    setup: { bShape: 'block', bL: 180, bW: 100, bH: 60, tool: 'end20', rpm: 315 },
+    drawing: () => <TopSketch L={180} W={100} band={20} label="drážka 20 × 5" dims={[['180', 140, 112], ['20', 268, 66], ['hĺbka 5 ±0,15', 24, 10]]} />,
+    labels: { depth: () => L('Hĺbka drážky 5 ±0,15 mm', 'Slot depth 5 ±0.15 mm'), width: () => L('Šírka drážky 20 mm', 'Slot width 20 mm'), len: () => L('Drážka cez celú dĺžku (≥ 95 %)', 'Slot along the whole length (≥ 95 %)'), center: () => L('Drážka v strede šírky', 'Slot centred in the width') } },
+  { id: 'rovina', title: () => L('Zarovnanie hornej plochy o 2 mm', 'Facing the top by 2 mm'),
+    desc: () => L('Hranol 180 × 100 × 60 mm. Čelnou frézou Ø100 zarovnaj celú hornú plochu o 2 ±0,1 mm. Najprv sa dotkni plochy, potom zdvihni konzolu o 2 mm a prejdi stolom cez celú dĺžku.', 'Block 180 × 100 × 60 mm. With the Ø100 face mill take 2 ±0.1 mm off the whole top surface. Touch off first, then raise the knee by 2 mm and traverse the table along the whole length.'),
+    setup: { bShape: 'block', bL: 180, bW: 100, bH: 60, tool: 'face100', rpm: 80 },
+    drawing: () => <TopSketch L={180} W={100} label="rovina" dims={[['180', 140, 112], ['−2 ±0,1', 120, 66]]} />,
+    labels: { share: () => L('Plocha znížená o 2 ±0,1 mm (≥ 95 %)', 'Surface lowered by 2 ±0.1 mm (≥ 95 %)'), max: () => L('Nikde hlbšie ako 2,1 mm', 'Nowhere deeper than 2.1 mm') } },
+].map((t) => ({ ...t, checks: (m) => millChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+const MILL_SAFETY = () => [
+  L('Obrobok je pevne upnutý vo zveráku, kľúč od zveráka je odložený.', 'The workpiece is clamped firmly in the vise, the vise handle is put away.'),
+  L('Fréza je upnutá v klieštine a dotiahnutá.', 'The cutter is clamped in the collet and tightened.'),
+  L('Mám ochranné okuliare, bez rukavíc; triesky neodstraňujem rukou.', 'I wear safety glasses, no gloves; I do not remove chips by hand.'),
+  L('Aretácie osí, ktoré sa nemajú hýbať, sú zaistené.', 'The axes that must not move are clamped.'),
+];
+
+function MillSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { running: false, power: true, coolant: false, light: true, manual: false, rpm: 400, x: 400, y: 120, z: 150, feedDir: 0, feed: 118, timeScale: 10, tool: 'end20', quill: 0, quillLock: false, kneeLock: false, sadLock: false,
-    bShape: 'block', bL: 180, bW: 100, bH: 60, bD: 60 };
+    bShape: 'block', bL: 180, bW: 100, bH: 60, bD: 60, probe: false, px: 90, pz: 50 };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useTele({ rpm: 0, x: 400, y: 120, z: 150, q: 0, vc: 0, vf: 0, msg: null, cutting: false, depth: 0, tool: 'end20', changing: false });
 
@@ -55,7 +90,8 @@ function MillSimulator({ onBack }) {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
     const { SPX, SPZ, NOSE, X0, Y0, H0 } = MILL;
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const snd = createSound('mill');
     const dom = renderer.domElement;
 
     const M = {
@@ -398,6 +434,24 @@ function MillSimulator({ onBack }) {
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
     apiRef.current.view = (n) => insp.goView(n, false);
+    // meranie, uloženie a export obrobku
+    apiRef.current.measure = () => ({ info: hfInfo(hf) });
+    apiRef.current.save = () => {
+      if (c.unclamped) { say(L('Najprv upni polotovar späť.', 'Clamp the workpiece back first.')); return null; }
+      return { v: 1, wk: { ...wk }, NX: hf.NX, NZ: hf.NZ, hgt: toB64(hf.hgt), mask: toB64(hf.mask) };
+    };
+    apiRef.current.load = (r) => {
+      if (!r || r.v !== 1 || !r.wk) return false;
+      push('bShape', r.wk.shape); push('bL', Math.round(r.wk.WX * 100));
+      if (r.wk.shape === 'round') push('bD', Math.round(r.wk.WZ * 100)); else { push('bW', Math.round(r.wk.WZ * 100)); push('bH', Math.round(r.wk.WH * 100)); }
+      const out = apiRef.current.newBlank(); if (!out) return false;
+      Object.entries(out).forEach(([k, v]) => push(k, v));
+      if (hf.NX !== r.NX || hf.NZ !== r.NZ) return false;
+      hf.hgt.set(fromB64(r.hgt, Float32Array)); hf.mask.set(fromB64(r.mask, Uint8Array)); hf.rebuild(true);
+      return true;
+    };
+    apiRef.current.exportStl = () => exportStl(hf.mesh);
+    apiRef.current.snapshot = snapshot;
 
     // ---------- polotovar ----------
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(3.2, 8.4, 4.6), onState: (v) => push('unclamped', v) });
@@ -628,11 +682,12 @@ function MillSimulator({ onBack }) {
         }
       }
 
+      snd.update({ motor: st.rpm / 2000, cut: st.cutting && running ? 1 : 0 });
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
 
-    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
   }, []);
 
   const parts = millParts();
@@ -650,6 +705,14 @@ function MillSimulator({ onBack }) {
   if (ui.coolant && ui.power) chips.push({ color: '#8fd0ff', text: L('Chladenie', 'Coolant') });
   const kinds = [['end', L('Stopková', 'End mill')], ['ball', L('Guľová', 'Ball-nose')], ['face', L('Čelná', 'Face mill')]];
   const curKind = MILL_TOOLS[ui.tool].kind;
+  const stopped = !ui.running && tele.rpm <= 1;
+  const setupTask = (task) => {
+    const su = task.setup; if (!stopped) return;
+    ['bShape', 'bL', 'bW', 'bH'].forEach((k) => set(k, su[k]));
+    const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v));
+    set('z', Math.min(ui.z, 150)); set('tool', su.tool); set('rpm', su.rpm);
+  };
+  const pinfo = ui.probe && apiRef.current.measure ? apiRef.current.measure().info : null;
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
@@ -659,6 +722,9 @@ function MillSimulator({ onBack }) {
           sub={L('Predloha: TOS FA 3 B so sklopnou vertikálnou hlavou. Mierka 1 : 100 mm.', 'Modelled after the TOS FA 3 B with a swivelling vertical head. Scale 1 : 100 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vf ${tele.vf} mm/min`, `${L('pinola', 'quill')} ${tele.q.toFixed(1)}`]} status={statusMsg} />
+
+        <TaskSection machine="freza" tasks={MILL_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'running', items: MILL_SAFETY() }} />
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
@@ -674,6 +740,7 @@ function MillSimulator({ onBack }) {
           <div className="mt-3">
             <StepSelect id="mrpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={MILL_SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
               locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} />
+            <CutCalc D={MILL_TOOLS[ui.tool].d} mat="steel" speeds={MILL_SPEEDS} rpm={ui.rpm} locked={!stopped} onApply={(n) => set('rpm', n)} what={L('Priemer frézy', 'Cutter diameter')} />
           </div>
         </div>
 
@@ -706,6 +773,20 @@ function MillSimulator({ onBack }) {
           <p className="text-xs muted">{L('Automatický posuv stola beží len pri otáčajúcom sa vretene. Pri X = 400 a Y = 120 je os frézy nad stredom 100 mm širokého obrobku.', 'The table power feed only runs while the spindle turns. At X = 400 and Y = 120 the cutter axis is above the centre of a 100 mm wide workpiece.')}</p>
         </div>
 
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Meranie', 'Measuring')}</h2>
+          <Toggle on={ui.probe} label={L('Hĺbkomer na obrobku', 'Depth gauge on the workpiece')} onClick={() => set('probe', !ui.probe)} />
+          {pinfo && (<div className="mt-2">
+            <Slider id="mpx" label={L('Poloha pozdĺž (od ľavej hrany)', 'Position along (from the left edge)')} unit="mm" min={0} max={Math.round(pinfo.L)} step={0.5} value={Math.min(ui.px, pinfo.L)} digits={1} onChange={(v) => set('px', v)} />
+            <Slider id="mpz" label={L('Poloha naprieč (od zadnej hrany)', 'Position across (from the back edge)')} unit="mm" min={0} max={Math.round(pinfo.Wd)} step={0.5} value={Math.min(ui.pz, pinfo.Wd)} digits={1} onChange={(v) => set('pz', v)} />
+            <div className="dro tnum" style={{ padding: '8px 12px' }}>
+              <div className="dro-row"><span>{L('hĺbka', 'depth')}</span><b style={{ fontSize: 22 }}>{pinfo.depthAt(Math.min(ui.px, pinfo.L), Math.min(ui.pz, pinfo.Wd)).toFixed(2)}</b></div>
+              <div className="dro-sub"><span>{L('najväčšia', 'max')} {pinfo.maxDep.toFixed(2)} mm</span><span>{L('obrobené', 'machined')} {Math.round(pinfo.cover * 100)} %</span></div>
+            </div>
+            <p className="text-xs muted mt-2">{L(`Hĺbka pod pôvodnou hornou plochou. Sieť merania ${pinfo.dX.toFixed(1).replace('.', ',')} × ${pinfo.dZ.toFixed(1).replace('.', ',')} mm.`, `Depth below the original top surface. Measuring grid ${pinfo.dX.toFixed(1)} × ${pinfo.dZ.toFixed(1)} mm.`)}</p>
+          </div>)}
+        </div>
+
         <BlankSection onApply={() => { const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v)); }}
           note={L('Obrobok leží vo zveráku na podložkách pri pevnej čeľusti; posuvná čeľusť dosadne podľa šírky. Nízky kus sa podloží vyššie, aby vyčnieval nad čeľuste.', 'The workpiece sits on parallels against the fixed jaw; the moving jaw closes to its width. A low part is raised on higher parallels so it sticks out above the jaws.')}>
           <SegRow label={L('Tvar', 'Shape')} value={ui.bShape} options={[['block', L('Hranol', 'Block')], ['round', L('Kruhová tyč', 'Round bar')]]} onChange={(v) => set('bShape', v)} />
@@ -718,6 +799,7 @@ function MillSimulator({ onBack }) {
           )}
         </BlankSection>
 
+        <ExportSection machine="freza" apiRef={apiRef} />
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail frézy', 'Cutter detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Rozvádzač', 'Cabinet')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />

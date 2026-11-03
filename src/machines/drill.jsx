@@ -8,6 +8,9 @@ import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { createSound } from '../core/sound';
+import { CutCalc, ExportSection, TaskSection } from '../ui/tools';
+import { drillChecks } from './shopMath';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -32,7 +35,33 @@ const drillParts = () => mkParts([
   ['obrobok', 'Obrobok', 'Workpiece', 'Obrobok na podložkách', 'Workpiece on parallels', 'Oceľová doska zvoleného rozmeru na dvoch podložkách. Medzi podložkami sa dá vŕtať naskrz; vrták nesmie zasiahnuť podložku ani stôl.', 'Steel plate of the selected size on two parallels. You can drill through between the parallels; the drill must not hit a parallel or the table.'],
 ]);
 
-function DrillSimulator({ onBack }) {
+// pôdorys dosky s dierami (rozmery v mm)
+const PlateSketch = ({ holes, label, dims }) => (
+  <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
+    <rect x="60" y="10" width="180" height="100" fill="none" stroke="currentColor" strokeWidth="1.4" />
+    {holes.map(([x, y, r], i) => <g key={i}><circle cx={150 + x} cy={60 + y} r={r} fill="none" stroke="currentColor" strokeWidth="1.4" /><path d={`M${144 + x} ${60 + y}h12M${150 + x} ${54 + y}v12`} stroke="currentColor" strokeWidth="0.6" /></g>)}
+    {dims.map(([t, x, y], i) => <text key={i} x={x} y={y} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{t}</text>)}
+  </svg>
+);
+const DRILL_TASKS = [
+  { id: 'dve', title: () => L('Dve diery Ø10 naskrz, rozostup 50 mm', 'Two Ø10 through holes, 50 mm apart'),
+    desc: () => L('Oceľová doska 180 × 120 × 25 mm. Vyvŕtaj vrtákom Ø10 dve diery naskrz vo vzdialenosti 50 ±1 mm. Medzi dierami posúvaj stôl (u, v). Pri vŕtaní naskrz sleduj podložky – vrták musí vyjsť medzi ne.', 'Steel plate 180 × 120 × 25 mm. Drill two Ø10 through holes 50 ±1 mm apart. Move the table (u, v) between the holes. When drilling through, watch the parallels – the drill must exit between them.'),
+    setup: { bL: 180, bW: 120, bT: 25, bit: 10, rpm: 710 },
+    drawing: () => <PlateSketch holes={[[-25, 0, 6], [25, 0, 6]]} label="2 × Ø10" dims={[['2 × Ø10 naskrz', 96, 34], ['50 ±1', 136, 84]]} />,
+    labels: { count: () => L('Práve dve diery', 'Exactly two holes'), d: () => L('Priemer Ø10', 'Diameter Ø10'), through: () => L('Obe naskrz', 'Both through'), dist: () => L('Rozostup 50 ±1 mm', 'Spacing 50 ±1 mm') } },
+  { id: 'slepa', title: () => L('Slepá diera Ø8 hĺbky 15 mm', 'Blind hole Ø8, 15 mm deep'),
+    desc: () => L('Oceľová doska 180 × 120 × 25 mm. Vyvŕtaj jednu slepú dieru Ø8 hĺbky 15 ±0,5 mm (nie naskrz). Hĺbku sleduj na displeji, pinolu posúvaj pomaly.', 'Steel plate 180 × 120 × 25 mm. Drill one blind Ø8 hole 15 ±0.5 mm deep (not through). Watch the depth on the display, feed the quill slowly.'),
+    setup: { bL: 180, bW: 120, bT: 25, bit: 8, rpm: 1000 },
+    drawing: () => <PlateSketch holes={[[0, 0, 5]]} label="Ø8 × 15" dims={[['Ø8 hĺbka 15 ±0,5', 104, 34]]} />,
+    labels: { count: () => L('Práve jedna diera', 'Exactly one hole'), d: () => L('Priemer Ø8', 'Diameter Ø8'), depth: () => L('Hĺbka 15 ±0,5 mm, nie naskrz', 'Depth 15 ±0.5 mm, not through') } },
+].map((t) => ({ ...t, checks: (m) => drillChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+const DRILL_SAFETY = () => [
+  L('Doska je upnutá alebo zaistená proti pretočeniu, nedržím ju rukou.', 'The plate is clamped or secured against spinning, I do not hold it by hand.'),
+  L('Kľúč od skľučovadla vrtáka je vybratý.', 'The drill chuck key is removed.'),
+  L('Mám ochranné okuliare, bez rukavíc, vlasy zopnuté.', 'I wear safety glasses, no gloves, hair tied back.'),
+];
+
+function DrillSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { running: false, power: true, manual: false, rpm: 710, quill: 0, table: 450, u: 0, v: 0, bit: 10, timeScale: 1, bL: 180, bW: 120, bT: 25 };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
@@ -43,7 +72,8 @@ function DrillSimulator({ onBack }) {
     const c = ctl.current;
     const { SX, SZ, NOSE, T0, PAR, CH, BL } = DRILL;
     const wk = { PT: 0.25, PW: 1.8, PD: 1.2 };
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const snd = createSound('drill');
     const dom = renderer.domElement;
     const M = {
       ...baseMats(0x52c2a5, 0x3da98c, 0x2c7d68),
@@ -237,7 +267,20 @@ function DrillSimulator({ onBack }) {
       if (inPlate()) { say(L('Najprv vytiahni vrták z obrobku (pinola hore).', 'Pull the drill out of the workpiece first (quill up).')); return; }
       wk.PW = c.bL / 100; wk.PD = c.bW / 100; wk.PT = c.bT / 100; makePlate();
       say(L('Na podložkách je nová doska bez dier.', 'A new plate without holes is on the parallels.'), 'info');
+      return true;
     };
+    // meranie a uloženie dosky s dierami
+    const holeData = () => holes.map((h) => ({ x: h.x * 100, z: h.z * 100, d: Math.round(h.r * 200 * 10) / 10, depth: Math.min(h.depth, wk.PT) * 100, through: h.through }));
+    apiRef.current.measure = () => ({ holes: holeData(), PT: wk.PT * 100 });
+    apiRef.current.save = () => ({ v: 1, wk: { ...wk }, holes: holes.map((h) => ({ x: h.x, z: h.z, r: h.r, depth: h.depth, through: h.through })) });
+    apiRef.current.load = (r) => {
+      if (!r || r.v !== 1) return false;
+      push('bL', Math.round(r.wk.PW * 100)); push('bW', Math.round(r.wk.PD * 100)); push('bT', Math.round(r.wk.PT * 100));
+      if (!apiRef.current.newBlank()) return false;
+      r.holes.forEach((s) => { const h = addHole(s.x, s.z, s.r); h.depth = s.depth; h.through = s.through; showHole(h); });
+      return true;
+    };
+    apiRef.current.snapshot = snapshot;
 
     // ---------- ručné ovládanie prvkov ----------
     const spdIdx = () => logNear(DRILL_SPEEDS, c.rpm);
@@ -359,10 +402,11 @@ function DrillSimulator({ onBack }) {
           setUi((u) => ({ ...u, ...p }));
         }
       }
+      snd.update({ motor: st.rpm / 1400, cut: drilling && running ? 1 : 0 });
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose(); holeGeo.dispose(); disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose(); holeGeo.dispose(); disposeStage(); };
   }, []);
 
   const parts = drillParts();
@@ -377,6 +421,14 @@ function DrillSimulator({ onBack }) {
   if (tele.drilling) chips.push({ color: '#ffb340', text: L('Vŕtanie', 'Drilling') });
   if (tele.holes) chips.push({ color: '#7fb6ff', text: `${L('Diery', 'Holes')}: ${tele.holes}` });
   const rec = Math.round(25000 / (Math.PI * ui.bit));
+  const stopped = !ui.running && tele.rpm <= 1;
+  const setupTask = (task) => {
+    const su = task.setup; if (!stopped) return;
+    ['bL', 'bW', 'bT'].forEach((k) => set(k, su[k]));
+    if (apiRef.current.newBlank) apiRef.current.newBlank();
+    set('bit', su.bit); set('rpm', su.rpm); set('u', 0); set('v', 0);
+  };
+  const mholes = apiRef.current.measure ? apiRef.current.measure().holes : [];
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
@@ -387,6 +439,9 @@ function DrillSimulator({ onBack }) {
           rows={[[L('Hĺbka', 'Depth'), tele.depth.toFixed(2)], [L('Pinola', 'Quill'), tele.quill.toFixed(2)], [L('Stôl', 'Table'), tele.table.toFixed(2)]]}
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
 
+        <TaskSection machine="vrtacka" tasks={DRILL_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'running', items: DRILL_SAFETY() }} />
+
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
@@ -396,6 +451,7 @@ function DrillSimulator({ onBack }) {
           <div className="mt-2"><Toggle on={ui.power} label={L('Hlavný vypínač', 'Main switch')} onClick={() => { const v = !ui.power; set('power', v); if (!v) set('running', false); }} /></div>
           <div className="mt-3"><StepSelect id="drpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={DRILL_SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
             locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} /></div>
+          <CutCalc D={ui.bit} mat="steel" speeds={DRILL_SPEEDS} rpm={ui.rpm} locked={!stopped} onApply={(n) => set('rpm', n)} what={L('Priemer vrtáka', 'Drill diameter')} />
         </div>
 
         <div className="sec">
@@ -421,12 +477,24 @@ function DrillSimulator({ onBack }) {
           <p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p>
         </div>
 
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Meranie dier', 'Hole measurement')}</h2>
+          {mholes.length ? (
+            <table className="text-xs tnum w-full" style={{ borderCollapse: 'collapse' }}>
+              <thead><tr className="muted"><th className="text-left font-semibold">Ø</th><th className="text-right font-semibold">{L('hĺbka', 'depth')}</th><th className="text-right font-semibold">X / Y {L('od stredu', 'from centre')}</th></tr></thead>
+              <tbody>{mholes.map((h, i) => <tr key={i}><td>{h.d}</td><td className="text-right">{h.through ? L('naskrz', 'through') : `${h.depth.toFixed(1)} mm`}</td><td className="text-right">{h.x.toFixed(1)} / {(-h.z).toFixed(1)}</td></tr>)}</tbody>
+            </table>
+          ) : <p className="text-xs muted">{L('Na doske zatiaľ nie sú diery.', 'There are no holes in the plate yet.')}</p>}
+          {mholes.length >= 2 && <p className="text-xs mt-2">{L('Rozostup posledných dvoch dier', 'Spacing of the last two holes')}: <b>{Math.hypot(mholes[mholes.length - 1].x - mholes[mholes.length - 2].x, mholes[mholes.length - 1].z - mholes[mholes.length - 2].z).toFixed(1)} mm</b></p>}
+        </div>
+
         <BlankSection onApply={() => apiRef.current.newBlank && apiRef.current.newBlank()} applyLabel={L('Položiť novú dosku bez dier', 'Put down a new plate without holes')}>
           <Slider id="dbl" label={L('Dĺžka', 'Length')} unit="mm" min={160} max={240} step={10} value={ui.bL} onChange={(v) => set('bL', v)} />
           <Slider id="dbw" label={L('Šírka', 'Width')} unit="mm" min={80} max={150} step={10} value={ui.bW} onChange={(v) => set('bW', v)} />
           <Slider id="dbt" label={L('Hrúbka', 'Thickness')} unit="mm" min={10} max={40} step={5} value={ui.bT} onChange={(v) => set('bT', v)} />
         </BlankSection>
 
+        <ExportSection machine="vrtacka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Kľuka pinoly', 'Capstan')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />

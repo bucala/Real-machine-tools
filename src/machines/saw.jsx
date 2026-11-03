@@ -8,6 +8,10 @@ import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { exportStl } from '../core/export';
+import { createSound } from '../core/sound';
+import { ExportSection, TaskSection } from '../ui/tools';
+import { sawChecks } from './shopMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -32,7 +36,20 @@ const sawParts = () => mkParts([
   ['rozvadzac', 'Vypínač', 'Switch box', 'Vypínač a tlačidlá', 'Switch and buttons', 'Hlavný vypínač a tlačidlá Štart a Stop na ramene stroja.', 'Main switch and the Start and Stop buttons on the machine frame.'],
 ]);
 
-function BandSawSimulator({ onBack }) {
+const SAW_TASKS = [
+  { id: 'pas', title: () => L('Pás 40 mm z drevenej dosky', 'A 40 mm strip from a wooden board'),
+    desc: () => L('Drevená doska 400 × 160 × 40 mm, rez 40 mm od ľavej hrany. Nastav rýchlosť pásu vhodnú pre drevo, napni pás aspoň na 70 %, horné vodidlo spusti najviac 20 mm nad dosku a dosku prerež rovnomerným posuvom.', 'Wooden board 400 × 160 × 40 mm, cut 40 mm from the left edge. Set the blade speed suitable for wood, tension the blade to at least 70 %, lower the upper guide to at most 20 mm above the board and cut through with a steady feed.'),
+    setup: { bMat: 'wood', bL: 400, bW: 160, bT: 40, cutX: 40 },
+    labels: { offcut: () => L('Šírka pásu 40 mm', 'Strip width 40 mm'), speed: () => L('Rýchlosť pásu pre drevo (25 m/s)', 'Blade speed for wood (25 m/s)'), tension: () => L('Napnutie pásu ≥ 70 %', 'Blade tension ≥ 70 %'), guide: () => L('Vodidlo pri reze najviac 20 mm nad doskou', 'Guide at most 20 mm above the board while cutting'), split: () => L('Doska prerezaná', 'Board cut through') } },
+].map((t) => ({ ...t, checks: (m) => sawChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+const SAW_SAFETY = () => [
+  L('Pás je napnutý a horné vodidlo je spustené tesne nad obrobok.', 'The blade is tensioned and the upper guide is lowered just above the workpiece.'),
+  L('Úzke kusy posúvam posúvadlom, prsty držím mimo línie rezu.', 'I feed narrow pieces with a push stick and keep my fingers out of the cutting line.'),
+  L('Mám ochranné okuliare a chrániče sluchu, bez rukavíc.', 'I wear safety glasses and ear protection, no gloves.'),
+];
+const SAW_REC = { wood: 25, alu: 10, steel: 3 };
+
+function BandSawSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { running: false, power: true, manual: false, speed: 2, tension: 80, guide: 80, feed: 0, autoFeed: false, feedRate: 20,
     bMat: 'wood', bL: 400, bW: 160, bT: 40, cutX: 50 };
@@ -43,7 +60,8 @@ function BandSawSimulator({ onBack }) {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
     const { TT, R, WX, UY, LY, KERF } = SAW;
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const snd = createSound('saw');
     const dom = renderer.domElement;
     const bladeTex = mkTex(16, 128, (g, w, h) => {
       g.fillStyle = '#c9cfd4'; g.fillRect(0, 0, w, h);
@@ -200,6 +218,9 @@ function BandSawSimulator({ onBack }) {
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
     apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.measure = () => ({ split: st.split, speed: SAW_SPEEDS[c.speed], recommended: SAW_REC[wk.mat], tension: st.tension, gapMax: st.gapMax || 0, offcut: wk.cx * 100 });
+    apiRef.current.exportStl = () => exportStl(pieceG);
+    apiRef.current.snapshot = snapshot;
 
     // ---------- polotovar ----------
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => pieceG, getSpot: () => v3(3.4, TT + 1.6, 5.0), onState: (v) => push('unclamped', v) });
@@ -212,7 +233,7 @@ function BandSawSimulator({ onBack }) {
       wk.mat = c.bMat; wk.Lp = c.bL / 100; wk.W = c.bW / 100; wk.T = c.bT / 100; wk.cx = clamp(c.cutX, 5, c.bW - 5) / 100;
       M.work.color.setHex(SAW_MATS[wk.mat].col).convertSRGBToLinear(); M.work.roughness = wk.mat === 'wood' ? 0.75 : 0.35; M.work.metalness = wk.mat === 'wood' ? 0 : 0.8;
       M.chip.color.setHex(SAW_MATS[wk.mat].chip).convertSRGBToLinear();
-      st.s = 0; st.cutMax = 0; st.split = false; st.sepX = 0; c.feed = 0; c.autoFeed = false; layout();
+      st.s = 0; st.cutMax = 0; st.split = false; st.sepX = 0; st.gapMax = 0; c.feed = 0; c.autoFeed = false; layout();
       say(L('Na stole je nový obrobok.', 'A new workpiece is on the table.'), 'info');
       return { feed: 0, autoFeed: false };
     };
@@ -285,6 +306,7 @@ function BandSawSimulator({ onBack }) {
             const lim = st.cutMax + vmax;
             if (want > lim) ns = st.s + (lim - cutAt(st.s));
             st.cutMax = Math.max(st.cutMax, cutAt(ns)); st.cutT = t;
+            st.gapMax = Math.max(st.gapMax || 0, (st.g - wk.T) * 100);   // najvyššie vodidlo nad obrobkom počas rezu
             dustAcc += dt * (wk.mat === 'wood' ? 120 : 50);
             while (dustAcc >= 1) {
               dustAcc -= 1; const below = Math.random() < 0.6;
@@ -324,13 +346,19 @@ function BandSawSimulator({ onBack }) {
           setUi((u) => ({ ...u, ...p }));
         }
       }
+      snd.update({ motor: st.v / 25, cut: t - st.cutT < 0.25 && st.v > 0.5 ? 1 : 0 });
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
   }, []);
 
   const parts = sawParts();
+  const setupTask = (task) => {
+    if (ui.running || tele.v > 0.05) return;
+    Object.entries(task.setup).forEach(([k, v]) => set(k, v));
+    const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v));
+  };
   const statusMsg = tele.msg
     ? tele.msg
     : ui.unclamped ? { kind: 'info', text: L('Obrobok je zdvihnutý zo stola.', 'The workpiece is lifted off the table.') }
@@ -352,6 +380,9 @@ function BandSawSimulator({ onBack }) {
           sub={L('Predloha: TOS PPN s kolesami Ø720 mm. Mierka 1 : 100 mm.', 'Modelled after the TOS PPN with Ø720 mm wheels. Scale 1 : 100 mm.')}
           rows={[[L('Posuv', 'Feed'), tele.feed.toFixed(1)], [L('Rez', 'Cut'), tele.cut.toFixed(1)], [L('Vodidlo', 'Guide'), (tele.guide || ui.guide).toFixed(1)]]}
           foot={[`${L('pás', 'blade')} ${tele.v.toFixed(1)} m/s`, `${L('napnutie', 'tension')} ${Math.round(tele.tension)} %`]} status={statusMsg} />
+
+        <TaskSection machine="pila" tasks={SAW_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'running', items: SAW_SAFETY() }} />
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
@@ -386,6 +417,7 @@ function BandSawSimulator({ onBack }) {
           <Slider id="scx" label={L('Rez od ľavej hrany', 'Cut from the left edge')} unit="mm" min={5} max={ui.bW - 5} step={5} value={Math.min(ui.cutX, ui.bW - 5)} onChange={(v) => set('cutX', v)} />
         </BlankSection>
 
+        <ExportSection machine="pila" apiRef={apiRef} canSave={false} />
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Z boku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />

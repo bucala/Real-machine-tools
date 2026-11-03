@@ -41,7 +41,7 @@ export default defineConfig({
         // three.js a 3D jadro v jednom spoločnom súbore: menu ho nepotrebuje, stroje ho zdieľajú
         manualChunks(id) {
           if (id.includes('/node_modules/three/')) return 'core3d';
-          if (/\/src\/core\/(stage|kit|workInspect|particles|heightField|controls|inspector)\.js$/.test(id)) return 'core3d';
+          if (/\/src\/core\/(stage|kit|workInspect|particles|heightField|controls|inspector|export)\.js$/.test(id)) return 'core3d';
           return undefined;
         },
       },

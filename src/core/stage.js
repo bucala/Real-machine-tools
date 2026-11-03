@@ -172,12 +172,34 @@ function createStage(mount) {
     const sceneChanged = forceNext || ss !== lastScene;
     if (!sceneChanged && cs === lastCam && now > wakeUntil && now - lastDraw < IDLE_MS) return;
     if (sceneChanged) renderer.shadowMap.needsUpdate = true;
+    const gap = now - lastDraw, active = sceneChanged || cs !== lastCam || now <= wakeUntil;
     lastScene = ss; lastCam = cs; lastDraw = now; forceNext = false;
     rawRender(s, c);
     drawCount++;
+    adapt(active && prevActive ? gap : -1); prevActive = active;
   };
+  // ---------- automatické zníženie kvality na slabom hardvéri ----------
+  // ak scéna pri práci (súvislé kreslenie) dlhšie ako 3 s beží pod ~22 snímok/s, zníži sa najprv rozlíšenie
+  // (pri displejoch s hustotou nad 1) a potom sa vypnú tiene pracovných lámp; ?hq to vypne
+  let quality = 0, ema = 16, slowMs = 0, prevActive = false;
+  const keepHq = (() => { try { return /[?&]hq\b/.test(window.location.search); } catch (err) { return false; } })();
+  const degrade = () => {
+    quality++; slowMs = 0; forceNext = true;
+    if (quality === 1 && renderer.getPixelRatio() > 1) { renderer.setPixelRatio(1); resize(); return; }
+    if (quality === 1) quality = 2;
+    scene.traverse((o) => { if (o.isSpotLight && o.castShadow) { o.castShadow = false; if (o.shadow.map) { o.shadow.map.dispose(); o.shadow.map = null; } } });
+  };
+  function adapt(gap) {
+    if (keepHq || quality >= 2 || gap < 0) return;                // len pri súvislom kreslení (nie kontrolné 4× za s)
+    gap = Math.min(gap, 1000);
+    ema = ema * 0.9 + gap * 0.1;
+    slowMs = ema > 45 ? slowMs + gap : Math.max(0, slowMs - gap);
+    if (slowMs > 3000) degrade();
+  }
   let drawCount = 0;
-  const stats = () => ({ draws: drawCount });
+  const stats = () => ({ draws: drawCount, quality });
+  // snímka obrazovky: vykreslí sa hneď a obsah plátna sa prečíta v tej istej úlohe
+  const snapshot = (cb) => { scene.updateMatrixWorld(); rawRender(scene, camera); renderer.domElement.toBlob((b) => cb(b), 'image/png'); };
 
   const dispose = () => {
     ro.disconnect(); mo.disconnect();
@@ -191,7 +213,7 @@ function createStage(mount) {
     if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
   };
   try { if (/[?&]debug/.test(window.location.search)) window.__stage = { stats }; } catch (err) { /* ignorované */ }
-  return { renderer, scene, camera, dispose, stats };
+  return { renderer, scene, camera, dispose, stats, snapshot };
 }
 
 export { LIGHT_K, createOrbit, createStage };

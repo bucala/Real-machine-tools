@@ -8,6 +8,10 @@ import { createParticles } from '../core/particles';
 import { LIGHT_K, createStage } from '../core/stage';
 import { TAU, clamp, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { exportStl } from '../core/export';
+import { createSound } from '../core/sound';
+import { ExportSection, TaskSection } from '../ui/tools';
+import { weldChecks } from './shopMath';
 import { HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -78,7 +82,24 @@ const weldParts = () => mkParts([
   ['zvarenec', 'Zvarenec', 'Weldment', 'Zvarenec s úkosmi', 'Weldment with preparation', 'Diely pripravené podľa druhu zvaru a hrúbky: medzera, otupenie a úkos. Húsenica sa tvorí podľa prúdu, rýchlosti posuvu a dĺžky oblúka.', 'Parts prepared for the chosen joint and thickness: gap, root face and bevel. The bead forms according to current, travel speed and arc length.'],
 ]);
 
-function WeldingSimulator({ onBack }) {
+const WELD_TASKS = [
+  { id: 'vpa', title: () => L('Tupý zvar V, plech 8 mm, poloha PA', 'Single-V butt weld, 8 mm plate, PA'),
+    desc: () => L('Zvar V na plechoch hrúbky 8 mm vo vodorovnej polohe PA. Zvar celú dĺžku spoja, vyplň úkos, drž krátky oblúk a rovnomernú rýchlosť, potom otlč trosku. Elektróda rutilová Ø3,2, prúd 100 – 120 A.', 'Single-V weld on 8 mm plates in the flat position PA. Weld the whole joint length, fill the groove, keep a short arc and a steady speed, then chip the slag. Rutile Ø3.2 electrode, 100 – 120 A.'),
+    setup: { wType: 'V', wT: 8, wPos: 'PA', etype: 'rutile', de: 3.2, current: 100 },
+    labels: { setup: () => L('Zvar V, 8 mm, poloha PA', 'V joint, 8 mm, position PA'), fill: () => L('Úkos vyplnený (≥ 90 %)', 'Groove filled (≥ 90 %)'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb (studený spoj, dlhý oblúk, rýchly posuv)', 'No defects (cold lap, long arc, fast travel)'), slag: () => L('Troska otlčená', 'Slag chipped off') } },
+  { id: 'kpb', title: () => L('Kútový zvar, plech 8 mm, poloha PB', 'Fillet weld, 8 mm plate, PB'),
+    desc: () => L('Kútový zvar T-spoja na plechoch 8 mm v polohe PB. Zvar celú dĺžku so šírkou húsenice aspoň 6 mm, potom otlč trosku. Elektróda rutilová Ø3,2, prúd 110 – 120 A.', 'Fillet weld of a T-joint on 8 mm plates in position PB. Weld the whole length with a bead at least 6 mm wide, then chip the slag. Rutile Ø3.2 electrode, 110 – 120 A.'),
+    setup: { wType: 'K', wT: 8, wPos: 'PB', etype: 'rutile', de: 3.2, current: 120 },
+    labels: { setup: () => L('Kútový zvar, 8 mm, poloha PB', 'Fillet weld, 8 mm, position PB'), width: () => L('Šírka húsenice ≥ 6 mm', 'Bead width ≥ 6 mm'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), slag: () => L('Troska otlčená', 'Slag chipped off') } },
+].map((t) => ({ ...t, checks: (m) => weldChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+const WELD_SAFETY = () => [
+  L('Mám zváračskú kuklu so správnym stupňom filtra (DIN 10 – 12).', 'I have a welding helmet with the right filter shade (DIN 10 – 12).'),
+  L('Mám kožené rukavice, zástere a odev bez syntetiky.', 'I wear leather gloves, an apron and no synthetic clothing.'),
+  L('Odsávanie dymu je zapnuté, v okolí nie sú horľaviny.', 'Fume extraction is on, there is nothing flammable around.'),
+  L('Zemniaca svorka je pripojená priamo na zvarenec.', 'The ground clamp is attached directly to the workpiece.'),
+];
+
+function WeldingSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), flashRef = useRef(null), glassRef = useRef(null);
   const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, tripped: false, slag: true, flashFx: !REDUCED_MOTION };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
@@ -98,7 +119,8 @@ function WeldingSimulator({ onBack }) {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
     const TT = WELD_TT;
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const snd = createSound('weld');
     const dom = renderer.domElement;
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
     const M = {
@@ -403,6 +425,9 @@ function WeldingSimulator({ onBack }) {
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
     apiRef.current.view = (n) => insp.goView(n, false);
+    apiRef.current.measure = () => ({ stats: evalWeld(), type: F.type, t: F.t, pos: c.wPos, slag: c.slag });
+    apiRef.current.exportStl = () => exportStl(weldG);
+    apiRef.current.snapshot = snapshot;
     apiRef.current.newParts = () => { if (st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; } if (c.unclamped) { say(L('Najprv polož zvarenec späť.', 'Put the weldment back first.')); return; } newParts(); insp.goView('detail', false); say(L('Pripravené nové diely.', 'New parts are prepared.'), 'info'); };
     apiRef.current.newElectrode = () => { if (st.arc) return; st.le = 350; st.stuck = false; say(L('Vložená nová elektróda.', 'A new electrode is fitted.'), 'info'); };
     apiRef.current.chip = () => { if (F.hot > 0.15) { say(L('Zvar je ešte horúci – počkaj, kým vychladne.', 'The weld is still hot – wait until it cools down.')); return false; } c.slag = false; F.dirty = true; say(L('Troska je otlčená – vidno kresbu húsenice.', 'The slag is chipped off – the bead ripples are visible.'), 'info'); return true; };
@@ -613,6 +638,7 @@ function WeldingSimulator({ onBack }) {
           flashes: st.flashes });
         if (Object.keys(pend).length) { const p = { ...pend }; Object.keys(pend).forEach((k) => delete pend[k]); setUi((u) => ({ ...u, ...p })); }
       }
+      snd.update({ on: (c.mode === 'w380' || c.mode === 'w220') && !c.tripped, arc: st.arc });
       renderer.render(scene, camera);
     };
 
@@ -643,7 +669,7 @@ function WeldingSimulator({ onBack }) {
     try { if (/[?&]debug/.test(window.location.search)) window.__weld = { F, st, evalWeld, W2, RES, jointZ, aimAt: (cx, cy) => { aimAt(cx, cy); return { ...st.aim }; }, proj: (x, z) => { const r = dom.getBoundingClientRect(), v = pivot.localToWorld(v3(x, surfAt(x, z) == null ? F.t : surfAt(x, z), z)).project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; } }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
     return () => {
-      cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose();
+      cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose();
       dom.removeEventListener('pointerdown', pd, { capture: true }); dom.removeEventListener('pointermove', pm, { capture: true });
       dom.removeEventListener('pointerup', pu, { capture: true }); dom.removeEventListener('pointercancel', pu, { capture: true });
       dom.removeEventListener('wheel', wh, { capture: true });
@@ -678,6 +704,11 @@ function WeldingSimulator({ onBack }) {
     if (s.reinf > 3.2) defects.push(L('príliš veľké prevýšenie', 'excessive reinforcement'));
     if (s.rootRisk) defects.push(L('pri zvare I nad 4 mm hrozí neprevarený koreň', 'square butt over 4 mm risks lack of root fusion'));
   }
+  const setupTask = (task) => {
+    if (tele.arc) return;
+    Object.entries(task.setup).forEach(([k, v]) => set(k, v));
+    if (apiRef.current.newParts) apiRef.current.newParts();
+  };
   const statusMsg = tele.msg ? tele.msg
     : ui.unclamped ? { kind: 'info', text: L('Prezeráš si zvarenec – ťahaním ho otáčaš.', 'Inspecting the weldment – drag to rotate it.') }
     : tele.arc ? { kind: 'run', text: `${L('Oblúk horí', 'Arc burning')} – ${tele.I} A, ${L('oblúk', 'arc')} ${fmt(tele.la)} mm, ${L('posuv', 'travel')} ${fmt(tele.v)} mm/s` }
@@ -722,6 +753,9 @@ function WeldingSimulator({ onBack }) {
           sub={L('Predloha: transformátorová zváračka Elektrokov JS 90FN, ručné zváranie obalenou elektródou (MMA).', 'Modelled after the Elektrokov JS 90FN transformer welder, manual metal arc welding (MMA).')}
           rows={[[L('Prúd A', 'Current A'), String(tele.I)], [L('Oblúk mm', 'Arc mm'), tele.la.toFixed(1)], [L('Posuv mm/s', 'Travel mm/s'), tele.v.toFixed(1)]]}
           foot={[`Ø${ui.de} ${ui.etype === 'rutile' ? 'E 6013' : 'E 7018'}`, `${L('elektróda', 'electrode')} ${Math.round(tele.le)} mm`]} status={statusMsg} />
+
+        <TaskSection machine="zvaranie" tasks={WELD_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'manual', items: WELD_SAFETY() }} />
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Zváračka', 'Welder')}</h2>
@@ -806,6 +840,7 @@ function WeldingSimulator({ onBack }) {
           <button type="button" className="btn w-full mt-2" disabled={!ui.slag} onClick={() => { if (apiRef.current.chip && apiRef.current.chip()) set('slag', false); }}>{L('Otĺcť trosku', 'Chip off the slag')}</button>
         </div>
 
+        <ExportSection machine="zvaranie" apiRef={apiRef} canSave={false} />
         <ViewSection apiRef={apiRef} views={[['detail', L('Detail spoja', 'Joint detail')], ['zhora', L('Zhora', 'Top')], ['celok', L('Celok', 'Overview')], ['zvaracka', L('Zváračka', 'Welder')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />

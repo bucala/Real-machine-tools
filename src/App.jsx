@@ -1,6 +1,7 @@
 // Hlavné menu, výber stroja a smerovanie podľa URL (#sustruh, #freza, …).
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
+import { setSoundOn } from './core/sound';
 import { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MillArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
@@ -187,6 +188,7 @@ function App() {
     PREFS[k] = v; const n = { ...PREFS }; setPrefs(n);
     try { localStorage.setItem('rmt-prefs', JSON.stringify(n)); } catch (err) { /* bez uloženia */ }
     try { document.documentElement.dataset.skin = n.skin; document.documentElement.lang = n.lang; } catch (err) { /* ignorované */ }
+    if (k === 'sound') setSoundOn(v);
   };
   useEffect(() => {
     const sync = () => { moved.current = true; setRoute(readRoute()); };
@@ -216,10 +218,13 @@ function App() {
     } catch (err) { /* ignorované */ }
     window.scrollTo(0, 0);
   };
-  const m = MACHINES.find((x) => x.id === route);
+  // #stroj alebo #stroj/uloha=… (odkaz učiteľa na konkrétnu úlohu)
+  const [mid, query = ''] = route.split('/');
+  const m = MACHINES.find((x) => x.id === mid);
+  const params = Object.fromEntries(new URLSearchParams(query));
   return (
     <PrefsCtx.Provider value={{ prefs, setPref }}>
-      {m ? <SimBoundary key={m.id} onBack={() => go('')}><Suspense fallback={<SimLoading />}><m.Comp lang={prefs.lang} onBack={() => go('')} /></Suspense></SimBoundary> : <Menu onOpen={go} />}
+      {m ? <SimBoundary key={m.id} onBack={() => go('')}><Suspense fallback={<SimLoading />}><m.Comp lang={prefs.lang} params={params} onBack={() => go('')} /></Suspense></SimBoundary> : <Menu onOpen={go} />}
     </PrefsCtx.Provider>
   );
 }

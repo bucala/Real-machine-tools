@@ -9,6 +9,10 @@ import { createDrops, createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
+import { exportStl } from '../core/export';
+import { grindChecks, hfInfo } from '../core/hfMath';
+import { createSound } from '../core/sound';
+import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -26,7 +30,19 @@ const grindParts = () => mkParts([
   ['panel', 'Elektrický panel', 'Control panel', 'Elektrický panel', 'Electrical panel', 'Hlavný vypínač, hydraulika, kotúč, magnet a chladenie (štart / stop) a núdzový STOP.', 'Main switch, hydraulics, wheel, magnet and coolant (start / stop) and the emergency stop.'],
 ]);
 
-function GrinderSimulator({ onBack }) {
+const GRIND_TASKS = [
+  { id: 'rovinnost', title: () => L('Prebrúsenie plochy o 0,1 mm', 'Grinding the face by 0.1 mm'),
+    desc: () => L('Oceľový hranol 200 × 100 × 40 mm na magnetickej doske. Prebrús celú hornú plochu tak, aby bola všade znížená aspoň o 0,1 mm a rovinná do 0,01 mm. Nastav narážky stola a priečny rozsah tak, aby kotúč prešiel celú plochu, prísuv najviac 0,02 mm na prechod.', 'Steel block 200 × 100 × 40 mm on the magnetic chuck. Grind the whole top face so that it is lowered by at least 0.1 mm everywhere and flat within 0.01 mm. Set the table dogs and the cross range so that the wheel covers the whole face; infeed at most 0.02 mm per pass.'),
+    setup: { bL: 200, bW: 100, bH: 40 },
+    labels: { cover: () => L('Prebrúsená celá plocha (≥ 98 %)', 'Whole face ground (≥ 98 %)'), removed: () => L('Úbytok všade aspoň 0,1 mm', 'At least 0.1 mm removed everywhere'), flat: () => L('Rovinnosť do 0,01 mm', 'Flatness within 0.01 mm') } },
+].map((t) => ({ ...t, checks: (m) => grindChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+const GRIND_SAFETY = () => [
+  L('Kotúč je bez prasklín (skúška zvukom), kryt kotúča je nasadený.', 'The wheel has no cracks (ring test), the wheel guard is fitted.'),
+  L('Magnetická doska je zapnutá a obrobok drží.', 'The magnetic chuck is on and holds the workpiece.'),
+  L('Mám ochranné okuliare a stojím mimo roviny kotúča pri rozbehu.', 'I wear safety glasses and stand out of the wheel plane at start-up.'),
+];
+
+function GrinderSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { power: true, hydro: false, wheel: false, magnet: true, coolant: false, light: true, manual: false, x: 300, y: 105, z: 60, autoX: false, autoY: false, speed: 8, xL: 150, xR: 450, step: 2, yA: 75, yB: 135,
     bL: 200, bW: 100, bH: 40 };
@@ -37,7 +53,8 @@ function GrinderSimulator({ onBack }) {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
     const { R, HW, WZc, CT, Y0 } = GRIND;
-    const { renderer, scene, camera, dispose: disposeStage } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const snd = createSound('grinder');
     const dom = renderer.domElement;
     const M = {
       ...baseMats(0x8fbf78, 0x76a662, 0x557a47),
@@ -185,6 +202,20 @@ function GrinderSimulator({ onBack }) {
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
     apiRef.current.view = (n) => insp.goView(n, false);
+    // meranie, uloženie a export obrobku
+    apiRef.current.measure = () => ({ info: hfInfo(hf) });
+    apiRef.current.save = () => (c.unclamped ? null : { v: 1, wk: { ...wk }, NX: hf.NX, NZ: hf.NZ, hgt: toB64(hf.hgt), mask: toB64(hf.mask) });
+    apiRef.current.load = (r) => {
+      if (!r || r.v !== 1) return false;
+      push('bL', Math.round(r.wk.WX * 100)); push('bW', Math.round(r.wk.WZ * 100)); push('bH', Math.round(r.wk.H * 100));
+      const out = apiRef.current.newBlank(); if (!out) return false;
+      Object.entries(out).forEach(([k, v]) => push(k, v));
+      if (hf.NX !== r.NX || hf.NZ !== r.NZ) return false;
+      hf.hgt.set(fromB64(r.hgt, Float32Array)); hf.mask.set(fromB64(r.mask, Uint8Array)); hf.rebuild(true);
+      return true;
+    };
+    apiRef.current.exportStl = () => exportStl(hf.mesh);
+    apiRef.current.snapshot = snapshot;
 
     // ---------- polotovar ----------
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(3.0, 9.6, 4.6),
@@ -360,13 +391,20 @@ function GrinderSimulator({ onBack }) {
           setUi((u) => ({ ...u, ...p }));
         }
       }
+      snd.update({ motor: st.wr / 2800, cut: grinding && wheelOn() ? 1 : 0 });
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose(); disposeStage(); };
   }, []);
 
   const parts = grindParts();
+  const setupTask = (task) => {
+    if (ui.wheel || tele.wrpm > 1) return;
+    ['bL', 'bW', 'bH'].forEach((k) => set(k, task.setup[k]));
+    const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v));
+  };
+  const ginfo = apiRef.current.measure ? apiRef.current.measure().info : null;
   const statusMsg = tele.msg
     ? tele.msg
     : ui.unclamped ? { kind: 'info', text: L('Obrobok je sňatý z magnetickej dosky.', 'The workpiece is taken off the magnetic chuck.') }
@@ -388,6 +426,9 @@ function GrinderSimulator({ onBack }) {
           sub={L('Predloha: BPH 300 s vodorovným vretenom a magnetickou doskou. Kotúč Ø300 × 40 mm.', 'Modelled after the BPH 300 with a horizontal spindle and a magnetic chuck. Wheel Ø300 × 40 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(3)]]}
           foot={[`${L('kotúč', 'wheel')} ${Math.round(tele.wrpm)} ${RPM()}`, `${L('úbytok', 'removed')} ${tele.removed.toFixed(3)} mm`]} status={statusMsg} />
+
+        <TaskSection machine="bruska" tasks={GRIND_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'wheel', items: GRIND_SAFETY() }} />
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
@@ -428,6 +469,17 @@ function GrinderSimulator({ onBack }) {
           <Slider id="gyb" label={L('Priečny rozsah do', 'Cross range to')} unit="mm" min={0} max={240} step={1} value={ui.yB} onChange={(v) => set('yB', v)} />
         </div>
 
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Meranie plochy', 'Surface measurement')}</h2>
+          {ginfo && ginfo.cover > 0 ? (
+            <div className="text-sm tnum" style={{ lineHeight: 1.6 }}>
+              <div>{L('Prebrúsené', 'Ground')}: <b>{Math.round(ginfo.cover * 100)} %</b> {L('plochy', 'of the face')}</div>
+              <div>{L('Úbytok', 'Removed')}: <b>{ginfo.cutMin.toFixed(3)} – {ginfo.cutMax.toFixed(3)} mm</b></div>
+              <div>{L('Rovinnosť prebrúsenej časti', 'Flatness of the ground part')}: <b>{(ginfo.cutMax - ginfo.cutMin).toFixed(3)} mm</b></div>
+            </div>
+          ) : <p className="text-xs muted">{L('Plocha zatiaľ nie je brúsená.', 'The face has not been ground yet.')}</p>}
+        </div>
+
         <BlankSection onApply={() => { const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v)); }}
           applyLabel={L('Položiť nový polotovar na dosku', 'Put a new workpiece on the chuck')}
           note={L('Oceľový hranol leží v strede magnetickej dosky 500 × 150 mm.', 'The steel block lies in the middle of the 500 × 150 mm magnetic chuck.')}>
@@ -436,6 +488,7 @@ function GrinderSimulator({ onBack }) {
           <Slider id="gbh" label={L('Výška', 'Height')} unit="mm" min={20} max={80} step={5} value={ui.bH} onChange={(v) => set('bH', v)} />
         </BlankSection>
 
+        <ExportSection machine="bruska" apiRef={apiRef} />
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail kotúča', 'Wheel detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
