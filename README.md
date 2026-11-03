@@ -216,16 +216,19 @@ Ak kontrola hlási rozdiel v `public/`, stačí spustiť `npm run build` a výsl
 
 ## Nasadenie
 
-`public/` je v repozitári už zostavený, takže nasadenie nepotrebuje build krok ani zmenu nastavení Cloudflare – funguje ručné nasadenie aj Workers Builds z Gitu:
+Nasadenie je automatické: po každom zlúčení do `main` workflow [CI](.github/workflows/ci.yml) najprv spustí lint, testy a build a ak prejdú, nasadí `public/` na Cloudflare Workers (`npx wrangler deploy`). Ručne sa dá spustiť v záložke **Actions → CI → Run workflow** na vetve `main`.
+
+Workflow potrebuje dve tajomstvá repozitára (**Settings → Secrets and variables → Actions**):
+
+| Tajomstvo | Kde ho získať |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare → **My Profile → API Tokens → Create Token** → šablóna **Edit Cloudflare Workers** |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → **Workers & Pages** → pravý panel **Account ID** |
+
+Bez nich sa krok nasadenia len preskočí s upozornením. Ručné nasadenie z počítača funguje aj naďalej – `public/` je v repozitári už zostavený:
 
 ```bash
 npx wrangler deploy
-```
-
-Alebo build a nasadenie naraz:
-
-```bash
-npm run deploy
 ```
 
 Živá verzia: **https://real-machine-tools.marcel-bucala.workers.dev**
