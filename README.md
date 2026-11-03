@@ -103,8 +103,8 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
       <h3>⚡ Oblúková zváračka</h3>
       <sub>predloha Elektrokov JS 90FN · ručné zváranie obalenou elektródou (MMA)</sub>
       <ul>
-        <li>10 druhov zvarov (I, V, ½V, Y, U, J, kútový, presahový, lemový, návar) so zvarovou prípravou podľa hrúbky</li>
-        <li>polohy PA – PG (1G – 4G/F), kontrola smeru pri PF a PG</li>
+        <li><b>tvar a poloha polotovarov</b>: rovinné plechy (I, V, ½V, Y, U, J, presah, lem, návar), kolmé plechy (T-spoj, rohový vnútorný a vonkajší), kruhové (rúra – rúra, rúra na plech) a tvarové (jokel na plech, tvarový rez po krivke); zvarová príprava podľa hrúbky</li>
+        <li>polohy PA – PG (1G – 4G/F) a rúrové PH, PJ, H-L045 (5G, 6G); kontrola smeru zvárania nahor / nadol</li>
         <li>prúd 55 – 155 A, prepínač 380 / 220 V (istič pri 220 V nad 75 A), rutilové a bázické elektródy Ø2 – Ø4</li>
         <li>húsenica podľa prúdu, rýchlosti a dĺžky oblúka; troska, popúšťacie farby, hodnotenie zvaru</li>
         <li>kukla (H): moderná samostmievacia (DIN 9 – 13, oneskorenie) alebo stará s pevným tmavým sklom</li>
@@ -130,13 +130,11 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
         <li>2-takt / 4-takt na horáku, hlavný vypínač, ovládanie priamo na paneli zdroja (displej A / V, LED režimov)</li>
         <li>plynová fľaša s ventilom a prietokomerom – pri slabej ochrane (zatvorený ventil, málo či veľa plynu, dlhý výlet drôtu) vznikajú póry</li>
         <li>výlet drôtu kolieskom pri zváraní; dlhší výlet zníži prúd</li>
-        <li>3 úlohy: zvar V 8 mm PA, kútový zvar PB, tenký plech 2 mm</li>
+        <li>4 úlohy: zvar V 8 mm PA, kútový zvar PB, tenký plech 2 mm, rúra Ø60,3 × 4 v polohe PH</li>
       </ul>
     </td>
   </tr>
 </table>
-
-**Pripravujeme:** rúrové polohy PH, PJ a H-L045 (5G, 6G).
 
 ### 🎓 Výučba
 
@@ -203,12 +201,12 @@ flowchart LR
 | [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
 | [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
 | [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
 | [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
 | [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |
 | [`public/`](public) | **zostavená aplikácia** (`npm run build`) – commituje sa, z nej nasadzuje Cloudflare |
-| [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, závit a profil sústruhu, kontroly všetkých úloh, rezné podmienky, zvarová príprava, synergia MIG/MAG, výšková mapa |
+| [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, závit a profil sústruhu, kontroly všetkých úloh, rezné podmienky, zvarová príprava, tvary polotovarov a hodnotenie po krivke, synergia MIG/MAG, výšková mapa |
 | [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.186`) |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
 | [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
