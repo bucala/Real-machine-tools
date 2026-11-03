@@ -5097,6 +5097,24 @@ const hasWebGL = () => {
   return webglOk;
 };
 
+// návod pri chýbajúcom WebGL: ako zapnúť akceleráciu grafiky alebo kde stiahnuť aktuálny prehliadač
+const BROWSERS = [['Chrome', 'https://www.google.com/chrome/'], ['Firefox', 'https://www.mozilla.org/firefox/new/'], ['Edge', 'https://www.microsoft.com/edge/download']];
+function WebGLHelp() {
+  return (
+    <div className="text-sm" style={{ lineHeight: 1.5 }}>
+      <ul className="ctl-list" style={{ marginTop: 6 }}>
+        <li><b>Chrome / Edge:</b> {L('Nastavenia → Systém → zapni „Použiť grafickú akceleráciu, keď je k dispozícii“ a reštartuj prehliadač.', 'Settings → System → turn on “Use graphics acceleration when available” and restart the browser.')}</li>
+        <li><b>Firefox:</b> {L('Nastavenia → Všeobecné → Výkon → zruš „Použiť odporúčané nastavenia výkonu“ a zapni „Použiť hardvérovú akceleráciu, ak je dostupná“.', 'Settings → General → Performance → untick “Use recommended performance settings” and tick “Use hardware acceleration when available”.')}</li>
+        <li><b>Safari:</b> {L('WebGL je zapnuté v aktuálnej verzii macOS / iOS – aktualizuj systém.', 'WebGL is on in current macOS / iOS – update the system.')}</li>
+        <li>{L('Pomôcť môže aj aktualizácia ovládača grafickej karty.', 'Updating the graphics driver can also help.')}</li>
+      </ul>
+      <p className="mt-2">{L('Alebo stiahni aktuálny prehliadač:', 'Or download a current browser:')}{' '}
+        {BROWSERS.map(([n, u], i) => <span key={n}>{i ? ' · ' : ''}<a href={u} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'underline' }}>{n}</a></span>)}
+      </p>
+    </div>
+  );
+}
+
 // zachytí chybu pri stavbe alebo behu simulátora – namiesto prázdnej stránky zobrazí hlášku a cestu späť
 class SimBoundary extends React.Component {
   constructor(props) { super(props); this.state = { err: null }; }
@@ -5112,7 +5130,8 @@ class SimBoundary extends React.Component {
           <h1 className="menu-title" tabIndex={-1}>{L('Simulátor sa nepodarilo spustiť', 'The simulator could not start')}</h1>
           <p className="menu-lead">{gl
             ? L('Pri stavbe 3D scény nastala chyba. Skús stránku načítať znova; ak sa chyba opakuje, skús iný prehliadač.', 'An error occurred while building the 3D scene. Try reloading the page; if it happens again, try another browser.')
-            : L('Prehliadač nepodporuje WebGL alebo je v ňom vypnutá hardvérová akcelerácia grafiky. Zapni ju v nastaveniach prehliadača alebo použi aktuálny Chrome, Edge, Firefox či Safari.', 'The browser does not support WebGL or hardware graphics acceleration is turned off. Enable it in the browser settings or use a current Chrome, Edge, Firefox or Safari.')}</p>
+            : L('Prehliadač nepodporuje WebGL alebo je v ňom vypnutá hardvérová akcelerácia grafiky. Zapni ju alebo použi aktuálny prehliadač:', 'The browser does not support WebGL or hardware graphics acceleration is turned off. Turn it on or use a current browser:')}</p>
+          {!gl && <div className="desc" style={{ maxWidth: '62ch' }}><WebGLHelp /></div>}
           <p className="text-xs muted mt-3" style={{ fontFamily: 'var(--f-mono)' }}>{String(this.state.err && this.state.err.message || this.state.err)}</p>
           <div className="flex gap-2 mt-6 flex-wrap">
             <button type="button" className="btn" onClick={this.props.onBack}>← {L('Späť do menu', 'Back to menu')}</button>
@@ -5127,6 +5146,7 @@ class SimBoundary extends React.Component {
 function Menu({ onOpen }) {
   const [gl] = useState(hasWebGL);
   const three = typeof THREE !== 'undefined';
+  const [hideGl, setHideGl] = useState(false);
   return (
     <main className="menu">
       <div className="menu-inner">
@@ -5141,9 +5161,14 @@ function Menu({ onOpen }) {
             {L('Nepodarilo sa načítať 3D knižnicu three.js – skontroluj pripojenie na internet a stránku načítaj znova.', 'The three.js 3D library could not be loaded – check your internet connection and reload the page.')}
           </div>
         )}
-        {three && !gl && (
-          <div className="msg msg-danger" role="alert" style={{ maxWidth: '62ch' }}><span className="lamp" />
-            {L('Tento prehliadač nepodporuje WebGL alebo má vypnutú hardvérovú akceleráciu grafiky – simulátory sa v ňom nespustia.', 'This browser does not support WebGL or has hardware graphics acceleration turned off – the simulators will not run in it.')}
+        {three && !gl && !hideGl && (
+          <div className="msg-warn" role="note" style={{ maxWidth: '68ch', marginTop: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid var(--border)' }}>
+            <div className="flex items-start justify-between gap-3">
+              <b>{L('Upozornenie: prehliadač nehlási podporu WebGL', 'Notice: the browser reports no WebGL support')}</b>
+              <button type="button" className="btn" style={{ padding: '2px 8px' }} onClick={() => setHideGl(true)} aria-label={L('Skryť upozornenie', 'Hide notice')}>✕</button>
+            </div>
+            <p className="text-sm mt-1" style={{ color: 'var(--text)' }}>{L('3D simulátory ho potrebujú. Skús stroj aj tak otvoriť – ak sa nespustí, zapni hardvérovú akceleráciu alebo použi iný prehliadač.', 'The 3D simulators need it. Try opening a machine anyway – if it does not start, turn on hardware acceleration or use another browser.')}</p>
+            <div style={{ color: 'var(--text)' }}><WebGLHelp /></div>
           </div>
         )}
         <div className="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-3">

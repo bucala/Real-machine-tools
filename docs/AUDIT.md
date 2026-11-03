@@ -24,7 +24,7 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 
 | Zistenie | Stav | Čo sa zmenilo |
 |---|---|---|
-| V1 prázdna stránka bez WebGL | ✅ opravené | `SimBoundary` okolo každého simulátora (hláška, „Späť do menu“, „Načítať znova“), upozornenie v menu pri chýbajúcom WebGL alebo three.js |
+| V1 prázdna stránka bez WebGL | ✅ opravené | `SimBoundary` okolo každého simulátora (hláška, „Späť do menu“, „Načítať znova“); v menu len skryteľné upozornenie s návodom na zapnutie akcelerácie (Chrome / Edge, Firefox, Safari) a odkazmi na stiahnutie prehliadača – stroje sa dajú otvoriť aj tak |
 | V2 prázdna stránka počas načítania | ✅ čiastočne | indikátor načítania v `#root`, `<noscript>`; preklad v prehliadači zostáva do fázy 2 (Vite) |
 | V3 skripty bez SRI | ✅ čiastočne | `integrity` + `crossorigin` pre React, ReactDOM, three.js (overené voči API cdnjs) a Babel; pri výpadku CDN hláška namiesto nekonečného načítania. Tailwind Play CDN generuje skript dynamicky, SRI sa naň dať nedá – odstráni ho fáza 2 |
 | V4 blikanie oblúka | ✅ opravené | kolísanie ~11× za s namiesto každého snímku, prepínač „Efekty záblesku“, pri `prefers-reduced-motion` predvolene vypnutý (plynulé rozjasnenie bez záblesku), upozornenie na karte zvárania |
