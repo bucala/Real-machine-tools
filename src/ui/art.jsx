@@ -269,4 +269,75 @@ function CylGrinderArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt };
+function HorizArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="30" y="20" width="40" height="132" />
+        <rect x="70" y="62" width="40" height="34" rx="3" />
+        <rect x="150" y="122" width="130" height="30" />
+        <rect x="168" y="74" width="80" height="48" />
+        <rect x="20" y="152" width="270" height="8" />
+      </g>
+      <path d="M110 79h58" fill="none" strokeWidth="6" /><circle cx="117" cy="79" r="12" fill="none" />
+      <circle cx="170" cy="79" r="6" fillOpacity=".5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function PlateRollArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="60" y="60" width="36" height="92" />
+        <rect x="224" y="60" width="36" height="92" />
+        <rect x="50" y="140" width="220" height="12" />
+      </g>
+      <path d="M96 76h128M96 104h128M96 120h128" fill="none" strokeWidth="9" opacity=".5" />
+      <path d="M30 92h130" fill="none" strokeWidth="3" />
+      <path d="M160 92c40 0 58-26 40-50s-60-14-60 10" fill="none" strokeWidth="3" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function HobberArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="30" width="50" height="122" />
+        <rect x="90" y="70" width="44" height="40" rx="3" />
+        <rect x="150" y="120" width="70" height="32" />
+        <rect x="236" y="40" width="26" height="112" />
+        <rect x="30" y="152" width="250" height="8" />
+      </g>
+      <rect x="134" y="80" width="18" height="30" rx="6" fillOpacity=".5" />
+      <path d="M137 84l12 6M137 94l12 6M137 104l12 4" fill="none" strokeWidth="1.5" />
+      <rect x="160" y="92" width="50" height="16" fillOpacity=".45" />
+      <path d="M164 92v16M172 92v16M180 92v16M188 92v16M196 92v16M204 92v16" fill="none" strokeWidth="1.2" />
+      <path d="M185 108v12M185 40v52M185 40h64" fill="none" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function ShearArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="40" width="30" height="112" />
+        <rect x="250" y="40" width="30" height="112" />
+        <rect x="70" y="96" width="180" height="24" />
+        <rect x="30" y="152" width="260" height="8" />
+      </g>
+      <path d="M70 70l180 8v12L70 82z" fillOpacity=".45" />
+      <path d="M72 94h176" fill="none" strokeWidth="3" />
+      <path d="M80 92v-6M100 92v-6M120 92v-6M140 92v-6M160 92v-6M180 92v-6M200 92v-6M220 92v-6" fill="none" strokeWidth="1.5" />
+      <rect x="132" y="146" width="40" height="6" fillOpacity=".6" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };

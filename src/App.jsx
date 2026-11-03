@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -10,8 +10,12 @@ const LatheSimulator = lazy(() => import('./machines/lathe'));
 const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
 const RadialSimulator = lazy(() => import('./machines/radial'));
+const HorizSimulator = lazy(() => import('./machines/horiz'));
+const HobberSimulator = lazy(() => import('./machines/hob'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
+const PlateRollSimulator = lazy(() => import('./machines/plate'));
+const ShearSimulator = lazy(() => import('./machines/shear'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -39,18 +43,34 @@ const MACHINES = [
     meta: L('Vŕtačka', 'Drill'), name: L('Stĺpová vŕtačka', 'Pillar drill'), model: 'TOS SV16',
     desc: L('Vŕtanie dier Ø3 – Ø16 mm do oceľovej dosky na podložkách: priečna kľuka pinoly, zdvíhací stôl, otvory naslepo aj naskrz.', 'Drilling Ø3 – Ø16 mm holes into a steel plate on parallels: capstan quill feed, rising table, blind and through holes.'),
     specs: [L('8 otáčok 125 – 1400 ot/min', '8 speeds 125 – 1400 rpm'), L('Zdvih pinoly 100 mm', 'Quill stroke 100 mm'), L('Vŕtanie do Ø16 mm', 'Drilling up to Ø16 mm')] }) },
+  { id: 'odvalovacka', Art: HobberArt, Comp: HobberSimulator, t: () => ({
+    meta: L('Odvalovacia frézka', 'Gear hobber'), name: L('Odvalovacia frézka na ozubenie', 'Gear hobbing machine'), model: 'TOS Čelákovice',
+    desc: L('Výroba čelných ozubených kolies odvalovaním: výmenné kolesá delenia i = 24 / z, sklon frézy na stúpací uhol, radiálny prísuv na hĺbku 2,25 · m, zvislý posuv a kontrola rozmeru cez zuby Wk.', 'Generating spur gears by hobbing: index change gears i = 24 / z, hob swivel to the lead angle, radial infeed to 2.25 · m, vertical feed and span-over-teeth Wk check.'),
+    specs: [L('Modul 2, z 20 – 40', 'Module 2, z 20 – 40'), L('Fréza Ø70 jednochodá', 'Single-start Ø70 hob'), L('Kontrola Wk ±0,05', 'Wk check ±0.05')] }) },
   { id: 'radialka', Art: RadialArt, Comp: RadialSimulator, t: () => ({
     meta: L('Radiálna vŕtačka', 'Radial drill'), name: L('Radiálna vŕtačka', 'Radial drilling machine'), model: 'TOS VR / VO',
     desc: L('Vŕtanie veľkých dosiek a prírub bez posúvania obrobku: rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene, upínanie stĺpa a vreteníka, automatický posuv s hĺbkovým dorazom.', 'Drilling large plates and flanges without moving the work: the arm swings around the column and is raised by a motor, the head travels along the arm, column and head clamps, power feed with a depth stop.'),
     specs: [L('Vŕtanie do Ø40 mm', 'Drilling up to Ø40 mm'), L('Vyloženie 320 – 1240 mm', 'Reach 320 – 1240 mm'), L('12 otáčok 32 – 1400 ot/min', '12 speeds 32 – 1400 rpm')] }) },
+  { id: 'horizontalka', Art: HorizArt, Comp: HorizSimulator, t: () => ({
+    meta: L('Horizontálka', 'Horizontal borer'), name: L('Horizontálna vŕtačka a frézka', 'Horizontal boring mill'), model: 'TOS Varnsdorf W',
+    desc: L('Vyvrtávanie otvorov v skriňových odliatkoch: vreteník na stojane, vysúvacie vreteno W, krížový stôl a otočný stôl s aretáciou po 90°, mikrometrická vyvrtávacia hlava a priehyb tyče podľa vyloženia.', 'Boring holes in box castings: headstock on the column, extending W spindle, compound table and a rotary table locking every 90°, micrometer boring head and bar deflection by overhang.'),
+    specs: [L('Vreteno W 500 mm', 'Spindle W 500 mm'), L('Otočný stôl B', 'Rotary table B'), L('Otvor Ø80 H7', 'Hole Ø80 H7')] }) },
   { id: 'ohybacka', Art: FolderArt, Comp: FolderSimulator, t: () => ({
     meta: L('Ohýbačka', 'Folder'), name: L('Výkyvná ohýbačka plechu', 'Manual swing-beam folder'), model: 'FASTI 204-10-2',
     desc: L('Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.', 'Manual sheet folding: clamping by handwheel through two screws, swinging the folding beam and springback according to thickness.'),
     specs: [L('Dĺžka ohybu 1 040 mm', 'Bending length 1,040 mm'), L('Plech do 2 mm', 'Sheet up to 2 mm'), L('Uhol ohybu do 130°', 'Bend angle up to 130°')] }) },
+  { id: 'noznice', Art: ShearArt, Comp: ShearSimulator, t: () => ({
+    meta: L('Tabuľové nožnice', 'Guillotine shear'), name: L('Tabuľové nožnice', 'Guillotine shear'), model: L('mechanické, s pedálom', 'mechanical, pedal-operated'),
+    desc: L('Strihanie plechov na pásy a prírezy: zadný doraz, bočný uholník, vôľa nožov podľa hrúbky, prítlaky, kryt prstov blokujúci pedál a kapacita stroja.', 'Shearing sheets into strips and blanks: back gauge, side square, blade clearance by thickness, hold-downs, a finger guard that blocks the pedal and the machine capacity.'),
+    specs: [L('Plech do 3 mm', 'Sheet up to 3 mm'), L('Dĺžka strihu 2 000 mm', 'Cut length 2,000 mm'), L('Zadný doraz do 750 mm', 'Back gauge up to 750 mm')] }) },
   { id: 'profilova', Art: BenderArt, Comp: BenderSimulator, t: () => ({
     meta: L('Profilová ohýbačka', 'Section bender'), name: L('Zakružovačka profilov', 'Section and profile bender'), model: 'COMAC 3025 HV',
     desc: L('Zakružovanie plochých tyčí, rúr, jäklov a uholníkov tromi poháňanými valcami: prísuv stredného valca, odpruženie po ohybe, tvarové valce, bočné vodiace kladky a pracovná poloha vodorovná aj zvislá.', 'Rolling flat bars, tubes, square tubes and angles with three driven rolls: centre-roll feed, springback after bending, forming rolls, side guide rollers and horizontal or vertical working position.'),
     specs: [L('3 poháňané valce v pyramíde', '3 driven rolls in a pyramid'), L('Pracovná poloha H aj V', 'Working position H and V'), L('Rýchlosť 3 / 5 / 8 m/min', 'Speed 3 / 5 / 8 m/min')] }) },
+  { id: 'zakruzovacka', Art: PlateRollArt, Comp: PlateRollSimulator, t: () => ({
+    meta: L('Zakružovačka plechu', 'Plate rolls'), name: L('Zakružovačka plechu', 'Plate bending rolls'), model: L('3 valce so zovretím', '3-roll initial pinch'),
+    desc: L('Zakružovanie plechov na plášte a oblúky: zovretie horným a spodným valcom, zdvih zadného valca, odpruženie podľa hrúbky a predohnutie začiatku otočením plechu.', 'Rolling sheets into shells and arcs: pinching between the top and bottom rolls, rear roll rise, springback by thickness and pre-bending the start by turning the sheet round.'),
+    specs: [L('Plech do 1 000 × 6 mm', 'Sheet up to 1,000 × 6 mm'), L('Valce Ø150 mm', 'Rolls Ø150 mm'), L('Plášť Ø500 z 3 mm', 'Shell Ø500 from 3 mm')] }) },
   { id: 'bruska', Art: GrinderArt, Comp: GrinderSimulator, t: () => ({
     meta: L('Brúska', 'Grinder'), name: L('Rovinná brúska', 'Surface grinder'), model: 'BPH 300',
     desc: L('Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.', 'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.'),

@@ -81,6 +81,10 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Sústruh: veľkosti a vybavenie | ✅ | TOS SN 32 / 40 / 50 / 55 (mierka stroja, mm obrobku zachované, `profileInfo(u)`), kryt skľučovadla s mikrospínačom, chladenie, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda |
 | Radiálna vŕtačka | ✅ | `#radialka`: otočné rameno, vreteník na ramene, upínanie stĺpa a vreteníka, automatický posuv s dorazom, úlohy rozteč a príruba (`radialMath.js`) |
 | Hrotová brúska na guľato | ✅ | `#gulato`: hydraulický stôl s dorazmi, prísuv 0,005 mm, odtláčanie a vyiskrovanie, prepal, úlohy h6 a h5 (`cylMath.js`) |
+| Horizontálka TOS Varnsdorf | ✅ | `#horizontalka`: vreteník Y, vreteno W, sane Z, stôl X, otočný stôl B; vyvrtávanie s priehybom tyče, úlohy Ø80 H7 a súosé otvory (`horizMath.js`) |
+| Odvalovacia frézka | ✅ | `#odvalovacka`: výmenné kolesá delenia, sklon frézy, hĺbka 2,25 · m, Wk (`hobMath.js`) |
+| Zakružovačka plechu | ✅ | `#zakruzovacka`: tri valce so zovretím, odpruženie, predohnutie otočením plechu (`plateMath.js`) |
+| Tabuľové nožnice | ✅ | `#noznice`: zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
 
 ## 2. Rozsah a metodika
 
