@@ -102,7 +102,7 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
     </td>
     <td width="50%" valign="top">
       <h3>🪚 Priečna obrážačka</h3>
-      <sub>predloha kulisová obrážačka TOS · historický stroj školských dielní</sub>
+      <sub>predloha kulisová obrážačka TOS · v menu skrytá, otvára sa priamo odkazom <code>#obrazacka</code></sub>
       <ul>
         <li>kulisový mechanizmus viditeľný cez odkrytý bok stojana: koleso s čapom, kulisa, kameň; dĺžka zdvihu 20 – 500 mm mení polomer čapu</li>
         <li>rýchly spätný chod – pracovný zdvih trvá ~230° otáčky kolesa, spätný ~130°; 6 stupňov 10 – 56 zdvihov/min, rezná rýchlosť v paneli</li>
@@ -211,7 +211,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #profilova · #bruska · #obrazacka · #zobrazacka · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #profilova · #bruska · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]

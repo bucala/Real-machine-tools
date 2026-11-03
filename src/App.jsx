@@ -49,7 +49,8 @@ const MACHINES = [
     meta: L('Brúska', 'Grinder'), name: L('Rovinná brúska', 'Surface grinder'), model: 'BPH 300',
     desc: L('Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.', 'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.'),
     specs: [L('Kotúč Ø300 × 40 mm', 'Wheel Ø300 × 40 mm'), L('Stôl 1 – 25 m/min', 'Table 1 – 25 m/min'), L('Prísuv 0,005 mm', 'Infeed 0.005 mm')] }) },
-  { id: 'obrazacka', Art: ShaperArt, Comp: ShaperSimulator, t: () => ({
+  // priečna obrážačka: v menu skrytá, simulátor zostáva dostupný cez #obrazacka
+  { id: 'obrazacka', hidden: true, Art: ShaperArt, Comp: ShaperSimulator, t: () => ({
     meta: L('Obrážačka', 'Shaper'), name: L('Priečna obrážačka', 'Shaping machine'), model: 'TOS',
     desc: L('Historický stroj školských dielní: kulisa poháňa smykadlo tam a späť s rýchlym spätným chodom, nôž v sklopnej doske reže len pri pracovnom zdvihu, stôl sa posúva západkou.', 'A classic of school workshops: the slotted link drives the ram back and forth with a quick return, the tool in the clapper box cuts only on the cutting stroke, the table is fed by a ratchet.'),
     specs: [L('Zdvih 20 – 500 mm', 'Stroke 20 – 500 mm'), L('10 – 56 zdvihov/min', '10 – 56 strokes/min'), L('Posuv 0,2 – 4 mm/zdvih', 'Feed 0.2 – 4 mm/stroke')] }) },
@@ -159,7 +160,7 @@ function Menu({ onOpen }) {
           </div>
         )}
         <div className="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-3">
-          {MACHINES.map((m) => {
+          {MACHINES.filter((m) => !m.hidden).map((m) => {
             const tx = m.t();
             return (
               <button key={m.id} type="button" className="card" onClick={() => onOpen(m.id)}>

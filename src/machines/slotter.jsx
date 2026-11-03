@@ -472,7 +472,10 @@ function SlotterSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
+        tips={[L('Posuv stola sa robí v hornej úvrati – keď je nôž nad obrobkom. S nožom v obrobku sa stôl do materiálu nepohne.', 'The table is fed at the top of the stroke – with the tool above the work. With the tool in the work the table will not move into the material.'),
+          L('Zdvih nastav tak, aby nôž vyšiel nad obrobok a dole vybehol do otvoru skľučovadla.', 'Set the stroke so that the tool clears the top of the work and overruns into the chuck hole.'),
+          L('Ďalšiu stenu štvorhranu dostaneš pootočením otočného stola o 90° (delenie z = 4).', 'The next wall of a square is reached by indexing the rotary table by 90° (z = 4).')]} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zvislá obrážačka', 'Simulator · slotting machine')} title={L('Zvislá obrážačka', 'Slotting machine')}
           sub={L('Predloha: TOS ST 350 – drážkovačka so zvislým smykadlom, kulisovým pohonom a krížovým otočným stolom. Obrába drážky pre perá a tvarové otvory v nábojoch.', 'Modelled after a TOS ST 350 slotter – vertical ram, slotted-link drive and a compound rotary table. It cuts keyways and shaped holes in hubs.')}
