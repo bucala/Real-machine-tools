@@ -363,6 +363,7 @@ function BandSawSimulator({ onBack }) {
           <div className="mt-3">
             <SegRow label={L('Rýchlosť pásu', 'Blade speed')} value={ui.speed} options={SAW_SPEEDS.map((v, i) => [i, `${v} m/s`])}
               onChange={(v) => { if (ui.running || tele.v > 0.05) return; set('speed', v); }} />
+            {(ui.running || tele.v > 0.05) && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Rýchlosť pásu sa mení len pri stojacom stroji (remeň na inom stupni remenice).', 'The blade speed can only be changed with the machine stopped (belt on another pulley step).')}</p>}
             <Slider id="sten" label={L('Napnutie pásu', 'Blade tension')} unit="%" min={0} max={100} step={1} value={ui.tension} actual={tele.tension} onChange={(v) => set('tension', v)} />
           </div>
           <p className="text-xs muted">{L(`Pre ${mat.sk.toLowerCase()} je najvyššia vhodná rýchlosť ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. Rýchlosť sa mení len pri stojacom stroji.`, `For ${mat.en.toLowerCase()} the highest suitable speed is ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. The speed is changed only with the machine stopped.`)}</p>

@@ -30,6 +30,10 @@ export default [
     languageOptions: { ecmaVersion: 5, sourceType: 'script', globals: { ...globals.browser } },
   },
   {
+    files: ['sw-template.js'],
+    languageOptions: { sourceType: 'script', globals: { ...globals.serviceworker, __PRECACHE__: 'readonly' } },
+  },
+  {
     files: ['*.config.js'],
     languageOptions: { sourceType: 'module', globals: { ...globals.node } },
   },

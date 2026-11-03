@@ -26,3 +26,28 @@ describe('výšková mapa obrobku', () => {
     expect(hf.mask.every((m) => m === 0)).toBe(true);
   });
 });
+
+describe('čiastočná prestavba po reze', () => {
+  const cutAt = (hf, x0, x1, z0, z1, h) => hf.cutRect(x0, x1, z0, z1, (k) => { hf.hgt[k] = Math.min(hf.hgt[k], h); hf.mask[k] = 1; });
+  const compare = (a, b) => { let m = 0; for (let i = 0; i < a.length; i++) m = Math.max(m, Math.abs(a[i] - b[i])); return m; };
+  it.each([
+    ['uprostred', -0.3, 0.2, -0.1, 0.15],
+    ['cez ľavú a prednú hranu', -1.2, -0.6, -0.6, -0.3],
+    ['celý obrobok', -2, 2, -1, 1],
+  ])('%s: polohy, farby aj normály sú rovnaké ako pri úplnej prestavbe', (_, x0, x1, z0, z1) => {
+    const a = make(), b = make();
+    cutAt(a, x0, x1, z0, z1, 0.3); a.rebuild();          // čiastočne
+    cutAt(b, x0, x1, z0, z1, 0.3); b.rebuild(true);      // úplne (computeVertexNormals)
+    const ga = a.mesh.geometry.attributes, gb = b.mesh.geometry.attributes;
+    expect(compare(ga.position.array, gb.position.array)).toBe(0);
+    expect(compare(ga.color.array, gb.color.array)).toBe(0);
+    expect(compare(ga.normal.array, gb.normal.array)).toBeLessThan(1e-5);
+  });
+  it('do GPU sa posiela len dotknutý pás riadkov', () => {
+    const hf = make();
+    cutAt(hf, -0.1, 0.1, -0.05, 0.05, 0.2); hf.rebuild();
+    const r = hf.mesh.geometry.attributes.position.updateRange, total = hf.mesh.geometry.attributes.position.array.length;
+    expect(r.count).toBeGreaterThan(0);
+    expect(r.count).toBeLessThan(total / 3);
+  });
+});

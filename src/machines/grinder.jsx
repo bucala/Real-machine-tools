@@ -151,7 +151,7 @@ function GrinderSimulator({ onBack }) {
     const pen = (rx, rz, wb) => { let m = 0; hf.eachRect(rx - 0.35, rx + 0.35, rz - HW, rz + HW, (k, x) => { const p = hf.hgt[k] - (wb + (x - rx) * (x - rx) / (2 * R)); if (p > m) m = p; }); return m; };
     const grind = (rx, rz, wb) => {
       let rem = 0;
-      hf.eachRect(rx - 0.35, rx + 0.35, rz - HW, rz + HW, (k, x) => {
+      hf.cutRect(rx - 0.35, rx + 0.35, rz - HW, rz + HW, (k, x) => {
         const lim = Math.max(0, wb + (x - rx) * (x - rx) / (2 * R));
         if (hf.hgt[k] > lim + 1e-7) { rem += hf.hgt[k] - lim; hf.hgt[k] = lim; hf.mask[k] = 1; }
       });
@@ -406,7 +406,8 @@ function GrinderSimulator({ onBack }) {
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2>
-          <Slider id="gx" label={L('Stôl X', 'Table X')} unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
+          <Slider id="gx" label={L('Stôl X', 'Table X')} unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} disabled={ui.autoX} />
+          {ui.autoX && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Pri zapnutom pohybe stola tam a späť sa stôl ručne neposúva – vypni ho nižšie.', 'With table reciprocation on, the table cannot be moved by hand – switch it off below.')}</p>}
           <Slider id="gy" label={L('Sane Y', 'Saddle Y')} unit="mm" min={0} max={240} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
           <Slider id="gz" label={L('Kotúč nad doskou Z', 'Wheel above chuck Z')} unit="mm" min={0} max={200} step={0.005} value={ui.z} actual={tele.z} digits={3} onChange={(v) => set('z', v)} />
           <div className="flex flex-wrap gap-2">

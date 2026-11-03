@@ -241,8 +241,22 @@ function WeldingSimulator({ onBack }) {
         F.glow[k * 3] = gl[0]; F.glow[k * 3 + 1] = gl[1]; F.glow[k * 3 + 2] = gl[2];
       }
       F.hot = hot;
+      ['color', 'glow', 'position'].forEach((n) => { F.geo.attributes[n].updateRange.count = -1; });
       F.geo.attributes.color.needsUpdate = true; F.geo.attributes.glow.needsUpdate = true;
       if (geomToo) { F.geo.attributes.position.needsUpdate = true; F.geo.computeVertexNormals(); F.geo.computeBoundingSphere(); F.geo.computeBoundingBox(); }
+    };
+    // len žiara (teplota) v obdĺžniku uzlov [i0, i1, j0, j1]; farby a tvar sa pri chladnutí nemenia
+    const rebuildGlow = ([i0, i1, j0, j1]) => {
+      const { GX } = F; let hot = 0;
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const T = F.temp[idxOf(i, j)], k = (j + 2) * GX + i + 2; if (T > hot) hot = T;
+        gl[0] = 0; gl[1] = 0; gl[2] = 0; if (T > 0.02) glowCol(T, gl);
+        F.glow[k * 3] = gl[0]; F.glow[k * 3 + 1] = gl[1]; F.glow[k * 3 + 2] = gl[2];
+      }
+      F.hot = hot;
+      const a = F.geo.attributes.glow, r = a.updateRange, off = (j0 + 2) * GX * 3, cnt = (j1 - j0 + 1) * GX * 3;
+      if (r.count !== -1) { const e = Math.max(r.offset + r.count, off + cnt); r.offset = Math.min(r.offset, off); r.count = e - r.offset; } else { r.offset = off; r.count = cnt; }
+      a.needsUpdate = true;
     };
     const onPart = (x, z) => Math.abs(x) <= F.L / 2 && Math.abs(z) <= W2;
     // výška povrchu dielu; mimo dielu null
@@ -526,9 +540,12 @@ function WeldingSimulator({ onBack }) {
       if (F.hot > 0.01 || st.arc) {
         const k = Math.exp(-dt / 2.6), hb = F.hb;
         if (hb) for (let j = hb[2]; j <= hb[3]; j++) for (let i = hb[0], q = idxOf(hb[0], j); i <= hb[1]; i++, q++) if (F.temp[q] > 0) F.temp[q] *= k;
-        F.dirty = true;
+        F.cooling = true;
       } else F.hb = null;                                               // všetko vychladlo
-      if ((F.dirty || st.geomDirty) && t - st.lastBuild > 0.1) { rebuildField(st.geomDirty); F.dirty = false; st.geomDirty = false; st.lastBuild = t; }
+      if ((F.dirty || st.geomDirty || F.cooling) && t - st.lastBuild > 0.1) {
+        if (F.dirty || st.geomDirty || !F.hb) rebuildField(st.geomDirty); else rebuildGlow(F.hb);   // pri samotnom chladnutí len žiara v ohriatej oblasti
+        F.dirty = false; F.cooling = false; st.geomDirty = false; st.lastBuild = t;
+      }
 
       // elektróda, držiak, oblúk (pri prezeraní zvarenca zostáva držiak na mieste)
       weldG.updateMatrixWorld(true);

@@ -8,15 +8,15 @@ Real machine tools je funkčne bohatá a technicky vydarená aplikácia: sedem 3
 
 Slabiny sú najmä **v dodávaní a prevádzke**, nie v samotnej simulácii:
 
-| # | Najdôležitejšie zistenie | Závažnosť |
-|---|---|---|
-| 1 | Bez WebGL (alebo pri akejkoľvek chybe v scéne) sa zobrazí **úplne prázdna stránka** bez vysvetlenia | vysoká |
-| 2 | Aplikácia sa pri každom načítaní **prekladá v prehliadači** (Babel ~2,9 MB) a štýly generuje **Tailwind Play CDN**, ktorý nie je určený na produkciu; počas načítania je stránka prázdna | vysoká |
-| 3 | Päť externých skriptov **bez SRI a bez CSP**; pri výpadku ktoréhokoľvek CDN aplikácia nefunguje | vysoká |
-| 4 | Záblesk oblúka a svetlo oblúka **blikajú náhodne každý snímok** a nerešpektujú `prefers-reduced-motion` (riziko pre fotosenzitívnych používateľov) | vysoká |
-| 5 | Kód je **dvakrát** (index.html + src/machines.jsx), v jednom súbore s 5 137 riadkami, bez testov, lintu a CI | stredná |
-| 6 | Scéna sa **renderuje nepretržite** aj v kľude (vrátane tieňových máp), panel sa prekresľuje 10× za sekundu | stredná |
-| 7 | Posuvník otáčok v paneli **obchádza blokovanie prevodovky**, ktoré páky v modeli dodržiavajú | stredná |
+| # | Najdôležitejšie zistenie | Závažnosť | Stav |
+|---|---|---|---|
+| 1 | Bez WebGL (alebo pri akejkoľvek chybe v scéne) sa zobrazí **úplne prázdna stránka** bez vysvetlenia | vysoká | ✅ hláška s návodom a cestou späť, upozornenie v menu |
+| 2 | Aplikácia sa pri každom načítaní **prekladá v prehliadači** (Babel ~2,9 MB) a štýly generuje **Tailwind Play CDN**, ktorý nie je určený na produkciu; počas načítania je stránka prázdna | vysoká | ✅ build cez Vite, úvodná obrazovka počas načítania |
+| 3 | Päť externých skriptov **bez SRI a bez CSP**; pri výpadku ktoréhokoľvek CDN aplikácia nefunguje | vysoká | ✅ všetko z vlastnej domény, prísne CSP, offline režim (service worker), inštalácia ako aplikácia |
+| 4 | Záblesk oblúka a svetlo oblúka **blikajú náhodne každý snímok** a nerešpektujú `prefers-reduced-motion` (riziko pre fotosenzitívnych používateľov) | vysoká | ✅ pomalé kolísanie, prepínač efektov, rešpektuje `prefers-reduced-motion` |
+| 5 | Kód je **dvakrát** (index.html + src/machines.jsx), v jednom súbore s 5 137 riadkami, bez testov, lintu a CI | stredná | ✅ jeden zdroj v 19 moduloch, ESLint, 46 testov, CI |
+| 6 | Scéna sa **renderuje nepretržite** aj v kľude (vrátane tieňových máp), panel sa prekresľuje 10× za sekundu | stredná | ✅ kreslí sa len pri zmene, panel len pri zmene hodnôt, obrobok a zvar sa prestavujú len v zmenenej oblasti |
+| 7 | Posuvník otáčok v paneli **obchádza blokovanie prevodovky**, ktoré páky v modeli dodržiavajú | stredná | ✅ otáčky a posuvy len zo stupňov prevodovky; zamknuté aj X brúsky pri pohybe stola, hláška pri rýchlosti pásu píly |
 
 Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a prevádzka 4/10, prístupnosť 6/10.** Väčšinu problémov z bodov 1 – 4 a 7 sa dá odstrániť za 1 – 2 dni; bod 2, 3 a 5 rieši jeden krok – zavedenie zostavenia (build) cez Vite.
 
@@ -44,13 +44,15 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | S1 duplicitný kód | ✅ opravené | jediný zdroj v `src/`, `public/` je výstup buildu; CI kontroluje, že commitnutý `public/` zodpovedá zdrojom |
 | S2 monolit, testy, nástroje | ✅ opravené | `src/machines.jsx` rozdelený na 19 modulov (`core/`, `ui/`, `machines/`, `App.jsx`) s importmi odvodenými z kódu; `package.json` s pevnými verziami, ESLint, 42 testov vo Vitest, GitHub Actions (lint, testy, build) |
 | S4 nepretržité renderovanie | ✅ opravené | `createStage` kreslí len pri zmene scény, kamery alebo pri vstupe používateľa, inak 4× za s; tiene sa prepočítajú len pri zmene scény. Stojaci sústruh: 16 vykreslení za 4 s namiesto 241 |
-| S5 prestavba výškových máp | ✅ čiastočne | chladnutie zvaru sa počíta len v obdĺžniku ohriatych buniek; úplná prestavba siete pri reze zostáva (beží len počas rezu, 10 – 16× za s) |
+| S5 prestavba výškových máp | ✅ opravené | fréza a brúska: `cutRect` si pamätá zasiahnutú oblasť a `rebuild()` prepočíta polohy, farby a normály len v nej (výsledok zhodný s `computeVertexNormals`, overené testom), do GPU ide len dotknutý pás riadkov; zváranie: chladnutie aj prefarbenie žiary len v obdĺžniku ohriatych buniek |
 | S6 panel 10× za sekundu | ✅ opravené | `useTele` nastaví stav len pri skutočnej zmene hodnôt – stojaci stroj panel neprekresľuje |
 | N1 alokácie v slučke | ✅ opravené | zváranie: pomocné vektory a kvaternión sa vytvárajú raz, kábel držiaka sa prestavuje najviac 20× za s; DRO sústruhu a frézy sa prekreslí len pri zmene údaja |
 | N2 častice | ✅ opravené | `createParticles` používa `InstancedMesh` – jedno vykreslenie na druh častíc namiesto stoviek; ležiace častice sa neposielajú znova do GPU |
 | N3 rozlíšenie výškovej mapy | ✅ opravené (fréza) | bunka ~1,2 mm podľa rozmeru obrobku (najviac 40 000 vrcholov) namiesto pevných 108 × 60 |
 | – | ✅ nové | testy odhalili chybu v `eachRect`: uzly presne na hrane obdĺžnika vypadávali kvôli zaokrúhleniu – opravené toleranciou |
 | – | ✅ nové | stroje sa načítavajú postupne (`React.lazy`): menu 58 kB gzip, 3D jadro s three.js 140 kB, každý stroj 6 – 20 kB; pri výpadku siete samostatná hláška |
+| V3 offline režim | ✅ opravené | service worker (`sw-template.js` → `public/sw.js`) pri prvej návšteve uloží všetky súbory aplikácie; stránka sa načítava najprv zo siete, bez siete z pamäte. Manifest a ikony PNG – aplikácia sa dá nainštalovať |
+| S7 ďalšie stroje | ✅ opravené | brúska: posuvník stola X je pri zapnutom pohybe tam a späť zamknutý ako ručné koleso; píla: pri pokuse zmeniť rýchlosť pásu za chodu sa zobrazí dôvod; fréza, vŕtačka a sústruh vynucujú zaistenia v hlavnej slučke, výmena nástroja je strážená |
 | S3 zastarané závislosti | ⏳ fáza 5 | three.js r128 a React 18 zostávajú; build už umožňuje prechod bez CDN obmedzení |
 
 ## 2. Rozsah a metodika

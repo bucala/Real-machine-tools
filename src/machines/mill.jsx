@@ -323,13 +323,13 @@ function MillSimulator({ onBack }) {
       buildParallels();
     };
     makeWork();
-    const eachIn = (rx, rz, r, fn) => hf.eachRect(rx - r, rx + r, rz - r, rz + r, (k, x, z) => { const d2 = (x - rx) * (x - rx) + (z - rz) * (z - rz); if (d2 <= r * r) fn(k, d2); });
+    const eachIn = (rx, rz, r, fn, write) => (write ? hf.cutRect : hf.eachRect)(rx - r, rx + r, rz - r, rz + r, (k, x, z) => { const d2 = (x - rx) * (x - rx) + (z - rz) * (z - rz); if (d2 <= r * r) fn(k, d2); });
     const limOf = (tl, wy, d2) => (tl.kind === 'ball' ? wy + tl.r - Math.sqrt(Math.max(0, tl.r * tl.r - d2)) : wy);
     // súradnice voči obrobku: rx, rz od stredu, wy = spodok nástroja nad spodkom obrobku
     const penetration = (rx, rz, wy, tl) => { let p = 0; eachIn(rx, rz - wzc(), tl.r, (k, d2) => { const v = hf.hgt[k] - limOf(tl, wy, d2); if (v > p) p = v; }); return p; };
     const cut = (rx, rz, wy, tl) => {
       let removed = 0;
-      eachIn(rx, rz - wzc(), tl.r, (k, d2) => { const lim = Math.max(0, limOf(tl, wy, d2)); if (hf.hgt[k] > lim + 1e-4) { removed += hf.hgt[k] - lim; hf.hgt[k] = lim; hf.mask[k] = 1; } });
+      eachIn(rx, rz - wzc(), tl.r, (k, d2) => { const lim = Math.max(0, limOf(tl, wy, d2)); if (hf.hgt[k] > lim + 1e-4) { removed += hf.hgt[k] - lim; hf.hgt[k] = lim; hf.mask[k] = 1; } }, true);
       return removed;
     };
     const hitObst = (rx, rz, ry, r) => {
