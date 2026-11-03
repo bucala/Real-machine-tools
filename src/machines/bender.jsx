@@ -5,11 +5,12 @@ import { L, LL } from '../core/i18n';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
+import { createWorkInspect } from '../core/workInspect';
 import { TAU, approach, clamp } from '../core/util';
 import { exportStl } from '../core/export';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
-import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
+import { BlankSection, DirRun, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { BEND_A, BEND_SPEEDS, PROFILES, bendChecks, bendInfo, createBar, kFinal, kLoaded, kYield, passBar, rollForce } from './benderMath';
 
 // =====================================================================
@@ -246,7 +247,7 @@ function BenderSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
@@ -270,6 +271,7 @@ function BenderSimulator({ onBack, params }) {
     apiRef.current.exportStl = () => exportStl(barMesh);
     apiRef.current.snapshot = snapshot;
     apiRef.current.newBlank = () => {
+      if (c.unclamped) { say(L('Najprv vlož profil späť do valcov.', 'Put the profile back into the rolls first.')); return false; }
       if (c.drive) { say(L('Najprv zastav valce.', 'Stop the rolls first.')); return false; }
       push('dT', 0); st.d = 0; makeBar();
       say(L(`Vložený nový profil: ${profName(c.prof).toLowerCase()}, ${c.len} mm.`, `New profile inserted: ${profName(c.prof).toLowerCase()}, ${c.len} mm.`), 'info');
@@ -281,7 +283,17 @@ function BenderSimulator({ onBack, params }) {
       if (st.d > 0.0005) { say(L('Najprv odsuň stredný valec (prísuv 0).', 'Retract the centre roll first (feed 0).')); return false; }
       c.rolls = id; buildRolls(); st.dirty = true; return true;
     };
-    apiRef.current.setHv = (v) => { if (c.drive) { say(L('Poloha stroja sa mení pri stojacich valcoch.', 'The machine position is changed with the rolls stopped.')); return false; } return true; };
+    // vybratie profilu zo stroja: valce stoja a stredný valec je odsunutý
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => barG, getSpot: () => v3(0, 9, 9), onState: (v) => push('unclamped', v) });
+    apiRef.current.toggleWork = () => {
+      if (wi.phase() === 'in') {
+        if (c.drive) { say(L('Profil sa vyberá pri stojacich valcoch.', 'The profile is taken out with the rolls stopped.')); return; }
+        if (st.d > 0.0005 || c.dT > 0) { say(L('Najprv odsuň stredný valec (prísuv 0) – profil je zovretý medzi valcami.', 'Retract the centre roll first (feed 0) – the profile is gripped between the rolls.')); return; }
+        if (st.tilt !== (c.hv === 'v' ? 1 : 0)) { say(L('Počkaj, kým sa stroj sklopí.', 'Wait until the machine has tilted.'), 'info'); return; }
+      }
+      if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb profilu.', 'Wait until the profile movement finishes.'), 'info');
+    };
+    apiRef.current.setHv = (v) => { if (c.unclamped) { say(L('Najprv vlož profil späť do valcov.', 'Put the profile back into the rolls first.')); return false; } if (c.drive) { say(L('Poloha stroja sa mení pri stojacich valcoch.', 'The machine position is changed with the rolls stopped.')); return false; } return true; };
 
     // ---------- ovládanie ----------
     const needPower = (fn) => () => { if (!c.power) say(L('Najprv zapni hlavný vypínač.', 'Switch on the main switch first.')); else fn(); };
@@ -303,7 +315,10 @@ function BenderSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
       if (!c.power && c.drive) push('drive', 0);
+      if (c.unclamped && c.drive) { push('drive', 0); say(L('Profil je vybratý zo stroja – najprv ho vlož späť.', 'The profile is out of the machine – put it back first.')); }
+      if (c.unclamped && c.dT > 0) { push('dT', 0); }
       // sklopenie stroja H / V
       const tgt = c.hv === 'v' ? 1 : 0;
       if (st.tilt !== tgt) {
@@ -365,7 +380,7 @@ function BenderSimulator({ onBack, params }) {
     try { if (/[?&]debug/.test(window.location.search)) window.__bender = { st, c, bar: () => bar }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
     return () => {
-      cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose();
+      cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose();
       try { if (window.__bender && window.__bender.st === st) delete window.__bender; } catch (err) { /* ignorované */ }
       disposeStage();
     };
@@ -394,7 +409,11 @@ function BenderSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
+        workLabels={[L('Vybrať profil', 'Take out the profile'), L('Vložiť do valcov', 'Back into the rolls')]}
+        tips={[L('Odpruženie: nastav menší polomer, ako má vyjsť – začni menším prísuvom, zmeraj a prisúvaj po krokoch.', 'Springback: set a smaller radius than wanted – start with a small feed, measure and feed in steps.'),
+          L('Profil sa vyberá len pri odsunutom strednom valci (prísuv 0).', 'The profile can be taken out only with the centre roll retracted (feed 0).'),
+          L('Rovné konce (asi 200 mm) sa na troch valcoch neohnú – po ohnutí sa odrežú.', 'The straight ends (about 200 mm) cannot be bent on three rolls – they are cut off afterwards.')]} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · profilová ohýbačka', 'Simulator · section bender')} title={L('Profilová ohýbačka', 'Section bending machine')}
           sub={L('Predloha: COMAC 3025 HV – tri poháňané valce v pyramíde, hydraulický prísuv stredného valca, bočné vodiace kladky, pracovná poloha vodorovná (H) aj zvislá (V).', 'Modelled after a COMAC 3025 HV – three driven rolls in a pyramid, hydraulic centre-roll feed, side guide rollers, horizontal (H) and vertical (V) working position.')}
@@ -406,11 +425,8 @@ function BenderSimulator({ onBack, params }) {
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Chod valcov', 'Roll drive')}</h2>
-          <div className="grid grid-cols-3 gap-1.5 mb-2">
-            <button type="button" className={`btn ${ui.drive === -1 ? 'on' : ''}`} onClick={() => { if (!ui.power) set('power', true); set('drive', ui.drive === -1 ? 0 : -1); }}>{L('◀ Vzad', '◀ Reverse')}</button>
-            <button type="button" className="btn" onClick={() => set('drive', 0)}>■ Stop</button>
-            <button type="button" className={`btn ${ui.drive === 1 ? 'on' : ''}`} onClick={() => { if (!ui.power) set('power', true); set('drive', ui.drive === 1 ? 0 : 1); }}>{L('Vpred ▶', 'Forward ▶')}</button>
-          </div>
+          <DirRun value={ui.drive} onChange={(d) => { if (d && ui.unclamped) return; if (d && !ui.power) set('power', true); set('drive', d); }} />
+          <div className="mt-2" />
           <Toggle on={ui.power} label={L('Hlavný vypínač', 'Main switch')} onClick={() => { const val = !ui.power; set('power', val); if (!val) set('drive', 0); }} />
           <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           <SegRow label={L('Rýchlosť m/min', 'Speed m/min')} value={ui.v} options={BEND_SPEEDS.map((n) => [n, String(n)])} onChange={(n) => set('v', n)} />

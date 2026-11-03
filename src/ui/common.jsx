@@ -122,8 +122,66 @@ function PrefBar() {
   );
 }
 
-function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint, tools }) {
+// pomocník v scéne: ovládanie kamery, ručné ovládanie, polotovar a tipy – otvára sa ikonou „i“ pri štítkoch stavu
+const splitHint = (h) => (typeof h === 'string' ? h.split(' · ') : null);
+const HELP_CAMERA = () => [
+  [L('Ťahanie', 'Drag'), L('otáčanie pohľadu', 'orbit the view')],
+  [L('Koliesko', 'Wheel'), L('priblíženie a vzdialenie', 'zoom in and out')],
+  [L('Pravé tlačidlo / Shift', 'Right button / Shift'), L('posun pohľadu', 'pan the view')],
+  [L('Klik na časť', 'Click a part'), L('zvýrazní ju a zobrazí popis v paneli', 'highlights it and shows its description in the panel')],
+  [L('Dotyk', 'Touch'), L('1 prst otáča, 2 prsty približujú a posúvajú', '1 finger orbits, 2 fingers zoom and pan')],
+  ['M', L('prepne na ručné ovládanie prvkov stroja', 'switches to manual control of the machine')],
+];
+const HELP_MANUAL = () => [
+  [L('Ťahanie', 'Drag'), L('ručné kolesá, kľuky a páky', 'handwheels, cranks and levers')],
+  [L('Klik', 'Click'), L('tlačidlá, vypínače a pedále', 'buttons, switches and pedals')],
+  [L('Koliesko', 'Wheel'), L('točí prvkom pod kurzorom (nahor = pridať)', 'turns the element under the cursor (up = increase)')],
+  [L('Kurzor nad prvkom', 'Hover'), L('zobrazí jeho názov a nastavenú hodnotu', 'shows its name and current value')],
+  ['M / Esc', L('pohľad je zamknutý – kameru vráti M alebo Esc', 'the view is locked – M or Esc returns to the camera')],
+];
+const HELP_TIPS = () => [
+  L('Úlohu vyber v paneli – zadanie, výkres a kontrola požiadaviek sa priebežne vyhodnocujú; odkaz na úlohu sa dá poslať žiakom.', 'Pick a task in the panel – the brief, drawing and requirement checks are evaluated live; the task link can be sent to students.'),
+  L('Pri stojacom stroji sa nástroj do materiálu nezareže – reže sa len za chodu.', 'With the machine stopped the tool does not cut into the material – it cuts only while running.'),
+  L('Pohľady v paneli (Celok, Detail …) vrátia kameru do pripravenej polohy.', 'The views in the panel (Overview, Detail …) return the camera to a preset position.'),
+  L('Obrobok sa dá uložiť v prehliadači a neskôr znova upnúť, alebo stiahnuť ako STL.', 'The workpiece can be saved in the browser and clamped again later, or downloaded as STL.'),
+];
+function HelpRows({ rows }) {
+  return (
+    <dl className="help-rows">
+      {rows.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{v}</dd></React.Fragment>)}
+    </dl>
+  );
+}
+function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, workLabels }) {
+  useEffect(() => {
+    const key = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
+  }, [onClose]);
+  const cam = splitHint(hint);
+  return (
+    <div className="scene-help pointer-events-auto" role="dialog" aria-label={L('Pomocník', 'Help')}>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <b className="sec-title">{L('Pomocník', 'Help')}</b>
+        <button type="button" className="help-x" onClick={onClose} aria-label={L('Zavrieť', 'Close')}>×</button>
+      </div>
+      <h3>{L('Ovládanie kamery', 'Camera control')}</h3>
+      {cam ? <ul>{cam.map((x) => <li key={x}>{x}</li>)}</ul> : <HelpRows rows={HELP_CAMERA()} />}
+      <h3>{manualLabel || L('Ručné ovládanie', 'Manual control')}</h3>
+      {manualHint ? <p>{manualHint}</p> : <HelpRows rows={HELP_MANUAL()} />}
+      {canUnclamp && (<>
+        <h3>{L('Polotovar', 'Workpiece')}</h3>
+        <p>{L(`Tlačidlo „${workLabels ? workLabels[0] : 'Odopnúť polotovar'}“ vyberie obrobok zo stroja – ťahaním ho otáčaš, kolieskom približuješ, „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na miesto.`, `“${workLabels ? workLabels[0] : 'Unclamp workpiece'}” takes the work out of the machine – drag to rotate it, scroll to zoom, “${workLabels ? workLabels[1] : 'Clamp back'}” puts it back.`)}</p>
+      </>)}
+      <h3>{L('Tipy', 'Tips')}</h3>
+      <ul>{[...(tips || []), ...HELP_TIPS()].map((x) => <li key={x}>{x}</li>)}</ul>
+    </div>
+  );
+}
+
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint, tools, tips }) {
   const inspect = ui.unclamped;
+  const [help, setHelp] = useState(false);
+  const closeHelp = React.useCallback(() => setHelp(false), []);
   return (
     <div className="scene-wrap relative flex-1 overflow-hidden">
       <div ref={mountRef} className="absolute inset-0" />
@@ -137,9 +195,14 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
       {ui.manual && <div className="manual-frame" />}
       <div ref={tipRef} className="ctl-tip" />
       <div className="absolute left-3 top-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="scene-btn" onClick={onBack} aria-label={L('Späť na výber stroja', 'Back to machine selection')}>← {L('Menu', 'Menu')}</button>
-          {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
+        <div className="flex flex-col items-start gap-2" style={{ minWidth: 0 }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="scene-btn" onClick={onBack} aria-label={L('Späť na výber stroja', 'Back to machine selection')}>← {L('Menu', 'Menu')}</button>
+            {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
+            <button type="button" className={`scene-btn help-btn ${help ? 'on' : ''}`} aria-pressed={help} aria-label={L('Pomocník: ovládanie a tipy', 'Help: controls and tips')}
+              title={L('Ovládanie a tipy', 'Controls and tips')} onClick={() => setHelp((v) => !v)}>i</button>
+          </div>
+          {help && <SceneHelp onClose={closeHelp} hint={hint} manualLabel={manualLabel} manualHint={manualHint} tips={tips} canUnclamp={canUnclamp} workLabels={workLabels} />}
         </div>
         <div className="flex flex-col items-end gap-2">
         <div className="flex flex-wrap justify-end items-center gap-2">
@@ -165,19 +228,18 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
         {tools && <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{tools}</div>}
         </div>
       </div>
-      {inspect ? (
-        <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
-          <b className="ink">{L('Polotovar je vybratý:', 'Workpiece removed:')}</b> {L(`ťahaním ho otáčaš, kolieskom približuješ. Tlačidlo „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na pôvodné miesto.`, `drag to rotate it, scroll to zoom. “${workLabels ? workLabels[1] : 'Clamp back'}” returns it to its original place.`)}
-        </div>
-      ) : ui.manual ? (
-        <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
-          {manualHint || <><b className="ink">{L('Ručné ovládanie:', 'Manual control:')}</b> {L('ťahaj ručné kolesá a páky, klikaj na tlačidlá a vypínač, koliesko myši točí prvkom pod kurzorom. Pohľad je zamknutý – kameru vráti M alebo Esc.', 'drag handwheels and levers, click buttons and switches, the mouse wheel turns the element under the cursor. The view is locked – M or Esc returns to the camera.')}</>}
-        </div>
-      ) : (
-        <div className="absolute left-3 bottom-3 hint hidden md:block pointer-events-none">
-          {hint || L('Ťahaj: otáčanie · koliesko: zoom · pravé tlačidlo: posun · klik: výber časti · M: ručné ovládanie', 'Drag: orbit · wheel: zoom · right button: pan · click: select part · M: manual control')}
-        </div>
-      )}
+    </div>
+  );
+}
+
+// chod tam a späť (vzad / stop / vpred) v rovnakom štýle ako hlavné tlačidlo Štart / Stop
+function DirRun({ value, onChange, labels }) {
+  const [lb, ls, lf] = labels || [L('◀ Vzad', '◀ Reverse'), L('■ Stop', '■ Stop'), L('Vpred ▶', 'Forward ▶')];
+  return (
+    <div className="run-row" role="group" aria-label={L('Smer chodu', 'Drive direction')}>
+      <button type="button" className={`btn-run start ${value === -1 ? 'is-on' : 'is-off'}`} aria-pressed={value === -1} onClick={() => onChange(value === -1 ? 0 : -1)}>{lb}</button>
+      <button type="button" className={`btn-run stop ${value ? 'is-on' : 'is-off'}`} onClick={() => onChange(0)}>{ls}</button>
+      <button type="button" className={`btn-run start ${value === 1 ? 'is-on' : 'is-off'}`} aria-pressed={value === 1} onClick={() => onChange(value === 1 ? 0 : 1)}>{lf}</button>
     </div>
   );
 }
@@ -264,10 +326,10 @@ function SegRow({ label, value, options, onChange }) {
 function HelpFooter() {
   return (
     <div className="sec text-xs muted" style={{ borderBottom: 0 }}>
-      {L('Ovládanie: ťahaním myšou otáčaš pohľad, koliesko približuje, pravým tlačidlom (alebo Shift) posúvaš. Na dotykovej obrazovke sa pohľad otáča jedným prstom a približuje dvoma. Kláves M alebo prepínač vpravo hore v scéne zamkne pohľad a prepne na ručné ovládanie prvkov stroja.',
-        'Controls: drag to orbit, the wheel zooms, the right button (or Shift) pans. On a touch screen one finger orbits and two fingers zoom. The M key or the switch at the top right of the scene locks the view and switches to manual control of the machine elements.')}
+      {L('Ovládanie kamery, ručné ovládanie prvkov stroja a tipy nájdeš pod ikonou „i“ vľavo hore v scéne. Kláves M prepína kameru a ručné ovládanie.',
+        'Camera control, manual control of the machine and tips are under the “i” icon at the top left of the scene. The M key switches between camera and manual control.')}
     </div>
   );
 }
 
-export { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
+export { BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
