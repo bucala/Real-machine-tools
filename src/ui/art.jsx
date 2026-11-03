@@ -286,4 +286,20 @@ function HorizArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt };
+function PlateRollArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="60" y="60" width="36" height="92" />
+        <rect x="224" y="60" width="36" height="92" />
+        <rect x="50" y="140" width="220" height="12" />
+      </g>
+      <path d="M96 76h128M96 104h128M96 120h128" fill="none" strokeWidth="9" opacity=".5" />
+      <path d="M30 92h130" fill="none" strokeWidth="3" />
+      <path d="M160 92c40 0 58-26 40-50s-60-14-60 10" fill="none" strokeWidth="3" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt };

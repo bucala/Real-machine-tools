@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -13,6 +13,7 @@ const RadialSimulator = lazy(() => import('./machines/radial'));
 const HorizSimulator = lazy(() => import('./machines/horiz'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
+const PlateRollSimulator = lazy(() => import('./machines/plate'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -56,6 +57,10 @@ const MACHINES = [
     meta: L('Profilová ohýbačka', 'Section bender'), name: L('Zakružovačka profilov', 'Section and profile bender'), model: 'COMAC 3025 HV',
     desc: L('Zakružovanie plochých tyčí, rúr, jäklov a uholníkov tromi poháňanými valcami: prísuv stredného valca, odpruženie po ohybe, tvarové valce, bočné vodiace kladky a pracovná poloha vodorovná aj zvislá.', 'Rolling flat bars, tubes, square tubes and angles with three driven rolls: centre-roll feed, springback after bending, forming rolls, side guide rollers and horizontal or vertical working position.'),
     specs: [L('3 poháňané valce v pyramíde', '3 driven rolls in a pyramid'), L('Pracovná poloha H aj V', 'Working position H and V'), L('Rýchlosť 3 / 5 / 8 m/min', 'Speed 3 / 5 / 8 m/min')] }) },
+  { id: 'zakruzovacka', Art: PlateRollArt, Comp: PlateRollSimulator, t: () => ({
+    meta: L('Zakružovačka plechu', 'Plate rolls'), name: L('Zakružovačka plechu', 'Plate bending rolls'), model: L('3 valce so zovretím', '3-roll initial pinch'),
+    desc: L('Zakružovanie plechov na plášte a oblúky: zovretie horným a spodným valcom, zdvih zadného valca, odpruženie podľa hrúbky a predohnutie začiatku otočením plechu.', 'Rolling sheets into shells and arcs: pinching between the top and bottom rolls, rear roll rise, springback by thickness and pre-bending the start by turning the sheet round.'),
+    specs: [L('Plech do 1 000 × 6 mm', 'Sheet up to 1,000 × 6 mm'), L('Valce Ø150 mm', 'Rolls Ø150 mm'), L('Plášť Ø500 z 3 mm', 'Shell Ø500 from 3 mm')] }) },
   { id: 'bruska', Art: GrinderArt, Comp: GrinderSimulator, t: () => ({
     meta: L('Brúska', 'Grinder'), name: L('Rovinná brúska', 'Surface grinder'), model: 'BPH 300',
     desc: L('Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.', 'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.'),
