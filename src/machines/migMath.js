@@ -37,7 +37,7 @@ export function migSynergic({ wire, vd, prog, gas, corr = 0 }) {
 }
 
 // odporúčaný prúd podľa hrúbky plechu (A)
-export const migRange = (t) => { const lo = clamp(30 + 13 * t, 50, 260); return [lo, Math.round(lo * 1.8)]; };
+export const migRange = (t) => { const lo = clamp(20 + 10 * t, 40, 220); return [lo, Math.round(lo * 2.4)]; };   // 2 mm: 40 – 96 A, 8 mm: 100 – 240 A
 // dlhší výlet drôtu ho viac ohreje odporom – prúd klesá (pri rovnakej rýchlosti drôtu)
 export const stickoutI = (I, ctwd) => I * clamp(1 - 0.012 * (ctwd - 12), 0.75, 1.1);
 // kvalita plynovej ochrany 0 – 1 podľa ventilu fľaše, prietoku (l/min) a výletu drôtu (mm)

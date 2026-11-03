@@ -104,8 +104,8 @@ const MIG_TASKS = [
     setup: { wType: 'K', wT: 8, wPos: 'PB', wire: 1, gas: 'M21', vd: 9, corr: 0, prog: 'std', flow: 14, valve: true, ctwd: 12 },
     labels: { setup: () => L('Kútový zvar, 8 mm, poloha PB', 'Fillet weld, 8 mm, position PB'), width: () => L('Šírka húsenice ≥ 6 mm', 'Bead width ≥ 6 mm'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), por: () => L('Bez pórov', 'No porosity') } },
   { id: 'mtenky', title: () => L('MAG: tenký plech 2 mm, zvar I, PA', 'MAG: thin 2 mm sheet, square butt, PA'),
-    desc: () => L('Zvar I na plechoch 2 mm. Drôt Ø0,8, nízka rýchlosť drôtu (3 – 4 m/min), rýchlejší posuv bez zastavenia – pri vysokom prúde hrozí prepálenie.', 'Square butt on 2 mm sheets. Ø0.8 wire, low wire speed (3 – 4 m/min), faster steady travel – high current risks burning through.'),
-    setup: { wType: 'I', wT: 2, wPos: 'PA', wire: 0.8, gas: 'M21', vd: 3.5, corr: 0, prog: 'std', flow: 12, valve: true, ctwd: 10 },
+    desc: () => L('Zvar I na plechoch 2 mm. Drôt Ø0,8, nízka rýchlosť drôtu (4 – 6 m/min), rýchlejší posuv bez zastavenia – pri vysokom prúde hrozí prepálenie.', 'Square butt on 2 mm sheets. Ø0.8 wire, low wire speed (4 – 6 m/min), faster steady travel – high current risks burning through.'),
+    setup: { wType: 'I', wT: 2, wPos: 'PA', wire: 0.8, gas: 'M21', vd: 5, corr: 0, prog: 'std', flow: 12, valve: true, ctwd: 10 },
     labels: { setup: () => L('Zvar I, 2 mm, poloha PA', 'Square butt, 2 mm, position PA'), cur: () => L('Prúd primeraný hrúbke (do 110 A)', 'Current suited to the thickness (up to 110 A)'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), por: () => L('Bez pórov', 'No porosity') } },
 ].map((t) => ({ ...t, checks: (m) => migChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const MIG_SAFETY = () => [

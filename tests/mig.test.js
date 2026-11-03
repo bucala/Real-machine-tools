@@ -64,3 +64,20 @@ describe('úlohy MAG', () => {
     expect(cs.filter((c) => c.ok).map((c) => c.key)).toEqual(['setup']);
   });
 });
+
+describe('predpísané nastavenie úloh MAG je v odporúčanom rozsahu', () => {
+  // rovnaké hodnoty ako setup v MIG_TASKS (weld.jsx)
+  const setups = [
+    { t: 8, wire: 1, vd: 8, ctwd: 12 }, { t: 8, wire: 1, vd: 9, ctwd: 12 }, { t: 2, wire: 0.8, vd: 5, ctwd: 10 },
+  ];
+  it.each(setups)('plech $t mm, Ø$wire, $vd m/min', ({ t, wire, vd, ctwd }) => {
+    const I = stickoutI(migSynergic({ wire, vd, prog: 'std', gas: 'M21' }).I, ctwd), [lo, hi] = migRange(t);
+    expect(I).toBeGreaterThanOrEqual(lo);
+    expect(I).toBeLessThanOrEqual(hi);
+    expect(migSynergic({ wire, vd, prog: 'std', gas: 'M21' }).mode).toBe('short');
+  });
+  it('rozsahy v popise úloh: 6 – 9 m/min pre 8 mm, 4 – 6 m/min pre 2 mm', () => {
+    for (const vd of [6, 9]) { const I = migSynergic({ wire: 1, vd, prog: 'std', gas: 'M21' }).I, [lo, hi] = migRange(8); expect(I).toBeGreaterThanOrEqual(lo); expect(I).toBeLessThanOrEqual(hi); }
+    for (const vd of [4, 6]) { const I = migSynergic({ wire: 0.8, vd, prog: 'std', gas: 'M21' }).I, [lo, hi] = migRange(2); expect(I).toBeGreaterThanOrEqual(lo); expect(I).toBeLessThanOrEqual(hi); }
+  });
+});
