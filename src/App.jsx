@@ -2,13 +2,14 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
 const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
+const RadialSimulator = lazy(() => import('./machines/radial'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
@@ -37,6 +38,10 @@ const MACHINES = [
     meta: L('Vŕtačka', 'Drill'), name: L('Stĺpová vŕtačka', 'Pillar drill'), model: 'TOS SV16',
     desc: L('Vŕtanie dier Ø3 – Ø16 mm do oceľovej dosky na podložkách: priečna kľuka pinoly, zdvíhací stôl, otvory naslepo aj naskrz.', 'Drilling Ø3 – Ø16 mm holes into a steel plate on parallels: capstan quill feed, rising table, blind and through holes.'),
     specs: [L('8 otáčok 125 – 1400 ot/min', '8 speeds 125 – 1400 rpm'), L('Zdvih pinoly 100 mm', 'Quill stroke 100 mm'), L('Vŕtanie do Ø16 mm', 'Drilling up to Ø16 mm')] }) },
+  { id: 'radialka', Art: RadialArt, Comp: RadialSimulator, t: () => ({
+    meta: L('Radiálna vŕtačka', 'Radial drill'), name: L('Radiálna vŕtačka', 'Radial drilling machine'), model: 'TOS VR / VO',
+    desc: L('Vŕtanie veľkých dosiek a prírub bez posúvania obrobku: rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene, upínanie stĺpa a vreteníka, automatický posuv s hĺbkovým dorazom.', 'Drilling large plates and flanges without moving the work: the arm swings around the column and is raised by a motor, the head travels along the arm, column and head clamps, power feed with a depth stop.'),
+    specs: [L('Vŕtanie do Ø40 mm', 'Drilling up to Ø40 mm'), L('Vyloženie 320 – 1240 mm', 'Reach 320 – 1240 mm'), L('12 otáčok 32 – 1400 ot/min', '12 speeds 32 – 1400 rpm')] }) },
   { id: 'ohybacka', Art: FolderArt, Comp: FolderSimulator, t: () => ({
     meta: L('Ohýbačka', 'Folder'), name: L('Výkyvná ohýbačka plechu', 'Manual swing-beam folder'), model: 'FASTI 204-10-2',
     desc: L('Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.', 'Manual sheet folding: clamping by handwheel through two screws, swinging the folding beam and springback according to thickness.'),
