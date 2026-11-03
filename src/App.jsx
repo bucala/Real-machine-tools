@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -10,6 +10,7 @@ const LatheSimulator = lazy(() => import('./machines/lathe'));
 const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
 const RadialSimulator = lazy(() => import('./machines/radial'));
+const HorizSimulator = lazy(() => import('./machines/horiz'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
@@ -43,6 +44,10 @@ const MACHINES = [
     meta: L('Radiálna vŕtačka', 'Radial drill'), name: L('Radiálna vŕtačka', 'Radial drilling machine'), model: 'TOS VR / VO',
     desc: L('Vŕtanie veľkých dosiek a prírub bez posúvania obrobku: rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene, upínanie stĺpa a vreteníka, automatický posuv s hĺbkovým dorazom.', 'Drilling large plates and flanges without moving the work: the arm swings around the column and is raised by a motor, the head travels along the arm, column and head clamps, power feed with a depth stop.'),
     specs: [L('Vŕtanie do Ø40 mm', 'Drilling up to Ø40 mm'), L('Vyloženie 320 – 1240 mm', 'Reach 320 – 1240 mm'), L('12 otáčok 32 – 1400 ot/min', '12 speeds 32 – 1400 rpm')] }) },
+  { id: 'horizontalka', Art: HorizArt, Comp: HorizSimulator, t: () => ({
+    meta: L('Horizontálka', 'Horizontal borer'), name: L('Horizontálna vŕtačka a frézka', 'Horizontal boring mill'), model: 'TOS Varnsdorf W',
+    desc: L('Vyvrtávanie otvorov v skriňových odliatkoch: vreteník na stojane, vysúvacie vreteno W, krížový stôl a otočný stôl s aretáciou po 90°, mikrometrická vyvrtávacia hlava a priehyb tyče podľa vyloženia.', 'Boring holes in box castings: headstock on the column, extending W spindle, compound table and a rotary table locking every 90°, micrometer boring head and bar deflection by overhang.'),
+    specs: [L('Vreteno W 500 mm', 'Spindle W 500 mm'), L('Otočný stôl B', 'Rotary table B'), L('Otvor Ø80 H7', 'Hole Ø80 H7')] }) },
   { id: 'ohybacka', Art: FolderArt, Comp: FolderSimulator, t: () => ({
     meta: L('Ohýbačka', 'Folder'), name: L('Výkyvná ohýbačka plechu', 'Manual swing-beam folder'), model: 'FASTI 204-10-2',
     desc: L('Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.', 'Manual sheet folding: clamping by handwheel through two screws, swinging the folding beam and springback according to thickness.'),
