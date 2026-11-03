@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MillArt, WelderArt } from './ui/art';
+import { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -13,6 +13,7 @@ const FolderSimulator = lazy(() => import('./machines/folder'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
+const MigSimulator = lazy(() => import('./machines/weld').then((m) => ({ default: m.MigSimulator })));
 
 function SimLoading() {
   return (
@@ -49,6 +50,11 @@ const MACHINES = [
     meta: L('Zváranie', 'Welding'), name: L('Oblúková zváračka', 'Arc welder'), model: 'Elektrokov JS 90FN',
     desc: L('Ručné zváranie obalenou elektródou: 10 druhov zvarov so zvarovou prípravou, 4 polohy, kukla proti zábleskom a hodnotenie húsenice.', 'Manual metal arc welding: 10 joint types with edge preparation, 4 positions, a helmet against the flash and bead assessment.'),
     specs: [L('Prúd 55 – 155 A', 'Current 55 – 155 A'), L('380 / 220 V', '380 / 220 V'), L('Elektródy Ø2 – Ø4 mm', 'Electrodes Ø2 – Ø4 mm')],
+    note: L('Obsahuje svetelné záblesky. Blikanie sa dá vypnúť v paneli (Efekty záblesku).', 'Contains light flashes. Flicker can be turned off in the panel (Flash effects).') }) },
+  { id: 'mag', Art: MigArt, Comp: MigSimulator, t: () => ({
+    meta: L('Zváranie MIG/MAG', 'MIG/MAG welding'), name: L('Zváranie v ochrannom plyne', 'Gas metal arc welder'), model: 'Fronius TransPuls Synergic TPS 450',
+    desc: L('Poloautomatické zváranie drôtom v ochrannom plyne: synergický program podľa drôtu a plynu, štandardný aj impulzný oblúk, 2T / 4T, plynová fľaša a výlet drôtu.', 'Semi-automatic welding with wire under shielding gas: synergic program by wire and gas, standard and pulsed arc, 2-step / 4-step, gas cylinder and stick-out.'),
+    specs: [L('Prúd 3 – 450 A', 'Current 3 – 450 A'), L('Drôt Ø0,8 – 1,2 mm', 'Wire Ø0.8 – 1.2 mm'), L('Ar + CO₂ / CO₂', 'Ar + CO₂ / CO₂')],
     note: L('Obsahuje svetelné záblesky. Blikanie sa dá vypnúť v paneli (Efekty záblesku).', 'Contains light flashes. Flicker can be turned off in the panel (Flash effects).') }) },
 ];
 const SOON = [];

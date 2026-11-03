@@ -117,3 +117,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .spec span{font-size:12px;padding:3px 8px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted)}
 .card-cta{margin-top:auto;padding-top:8px;font-weight:700;color:var(--accent);font-size:14px}
 @media (prefers-reduced-motion: reduce){.sw i,.card{transition:none}}
+.pop-in{animation:pop-in .32s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop-in{from{opacity:0;transform:translateY(14px) scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.pop-in{animation:none}}

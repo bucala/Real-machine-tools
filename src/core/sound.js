@@ -1,4 +1,4 @@
-// Zvuk strojov syntetizovaný cez Web Audio – motor, rez, iskrenie brúsky, transformátor a oblúk zváračky.
+// Zvuk strojov syntetizovaný cez Web Audio – motor, rez, iskrenie brúsky, transformátor, podávač drôtu a oblúk zváračky.
 // Nič sa nesťahuje. Predvolene vypnutý; zapína sa v hornej lište (PREFS.sound), prehliadač ho pustí až po prvom kliknutí.
 import { PREFS } from './i18n';
 
@@ -34,7 +34,8 @@ const PROFILES = {
   drill: { motor: [60, 170], cut: 1300, q: 3, cutGain: 0.13 },
   grinder: { motor: [70, 240], cut: 6500, q: 1.2, cutGain: 0.14 },
   saw: { motor: [50, 140], cut: 3300, q: 6, cutGain: 0.14 },
-  weld: { hum: 100 },
+  weld: { hum: 100, arc: true },
+  mig: { motor: [95, 210], arc: true },                                // invertor nehučí – počuť podávač drôtu a oblúk
   folder: {},
 };
 
@@ -59,6 +60,8 @@ function createSound(kind) {
     if (P.hum) {
       N.hg = gain(); N.hlp = filter('lowpass', 420, 0.7); N.hlp.connect(N.hg);
       N.ho = ctx.createOscillator(); N.ho.type = 'sawtooth'; N.ho.frequency.value = P.hum; N.ho.connect(N.hlp); N.ho.start();
+    }
+    if (P.arc) {
       N.ag = gain(); N.ahp = filter('highpass', 1400, 0.7); N.ahp.connect(N.ag);
       N.an = noise(); N.an.connect(N.ahp);
     }
@@ -86,6 +89,8 @@ function createSound(kind) {
     if (N.hg) {
       to(N.hg.gain, on ? (arc ? 0.06 : 0.025) : 0, 0.1);
       to(N.ho.frequency, arc ? P.hum * 0.97 : P.hum, 0.1);
+    }
+    if (N.ag) {
       // praskanie oblúka: náhodná hlasitosť šumu pri každej aktualizácii
       to(N.ag.gain, arc ? 0.05 + 0.12 * Math.random() : 0, 0.008);
     }

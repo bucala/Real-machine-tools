@@ -149,4 +149,28 @@ function WelderArt() {
   );
 }
 
-export { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MillArt, WelderArt };
+// invertorový zdroj MIG/MAG na vozíku: chladiaci modul dole, zdroj, podávač drôtu navrchu, fľaša za vozíkom, horák na hadici
+function MigArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <rect x="70" y="22" width="22" height="128" rx="10" fillOpacity=".1" />
+      <path d="M76 22v-8h10v8M74 14h14" fill="none" />
+      <g fillOpacity=".16">
+        <rect x="96" y="128" width="84" height="18" rx="2" />
+        <rect x="100" y="62" width="76" height="66" rx="4" />
+        <rect x="104" y="30" width="68" height="30" rx="3" />
+      </g>
+      <rect x="108" y="70" width="40" height="20" rx="2" fillOpacity=".35" />
+      <circle cx="162" cy="80" r="7" fill="none" /><circle cx="162" cy="106" r="7" fill="none" />
+      <circle cx="116" cy="112" r="4" fillOpacity=".5" /><circle cx="134" cy="112" r="4" fillOpacity=".5" />
+      <circle cx="128" cy="45" r="11" fill="none" /><circle cx="128" cy="45" r="4" fillOpacity=".5" />
+      <path d="M92 146h96" fill="none" /><circle cx="104" cy="154" r="6" fill="none" /><circle cx="176" cy="154" r="6" fill="none" />
+      <path d="M172 44q40 4 52 50q8 30 30 30" fill="none" strokeWidth="4" />
+      <path d="M254 124l18-10" fill="none" strokeWidth="6" strokeLinecap="round" /><path d="M272 114l12-6" fill="none" strokeWidth="3" />
+      <path d="M286 100l6-6M290 110h8M280 96v-8" fill="none" strokeWidth="1.5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, WelderArt };
