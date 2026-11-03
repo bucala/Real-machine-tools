@@ -559,9 +559,9 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     if (MIG) {
       ctrl.reg({ type: 'lever', angles: [0.6, -0.6], minR: 0.2, label: LL('Hlavný vypínač', 'Main switch'), hint: LL('0 = vypnuté, I = zapnuté.', '0 = off, I = on.'),
         getIdx: () => (c.power ? 1 : 0), onSet: (i) => { push('power', i === 1); if (i === 0) { st.arc = false; st.latch = false; } say(i ? L('Zdroj zapnutý.', 'Source on.') : L('Zdroj vypnutý.', 'Source off.'), 'info'); }, read: () => (c.power ? 'I' : '0') }, fr.mainSw);
-      ctrl.reg({ type: 'wheel', minR: 0.15, inc: 1, label: LL('Rýchlosť drôtu (synergia)', 'Wire speed (synergic)'), hint: LL('Otáčaním sa mení rýchlosť drôtu; prúd a napätie dopočíta synergia.', 'Turning changes the wire speed; the synergic line sets current and voltage.'),
+      ctrl.reg({ type: 'wheel', minR: 0.15, inc: -1, label: LL('Rýchlosť drôtu (synergia)', 'Wire speed (synergic)'), hint: LL('V smere hodinových ručičiek (alebo kolieskom nahor) pribúda; prúd a napätie dopočíta synergia.', 'Clockwise (or wheel up) increases; the synergic line sets current and voltage.'),
         turn: (d) => push('vd', Math.round(clamp(c.vd - d * 2, 1, 22) * 10) / 10), read: () => `${c.vd.toFixed(1)} m/min` }, fr.knobVd);
-      ctrl.reg({ type: 'wheel', minR: 0.15, inc: 1, label: LL('Korekcia dĺžky oblúka', 'Arc length correction'), hint: LL('Plus = dlhší oblúk (vyššie napätie), mínus = kratší.', 'Plus = longer arc (higher voltage), minus = shorter.'),
+      ctrl.reg({ type: 'wheel', minR: 0.15, inc: -1, label: LL('Korekcia dĺžky oblúka', 'Arc length correction'), hint: LL('Plus = dlhší oblúk (vyššie napätie), mínus = kratší.', 'Plus = longer arc (higher voltage), minus = shorter.'),
         turn: (d) => push('corr', Math.round(clamp(c.corr - d * 0.8, -3, 3) * 10) / 10), read: () => `${c.corr > 0 ? '+' : ''}${c.corr.toFixed(1)} V` }, fr.knobCorr);
       ctrl.reg({ type: 'button', label: LL('Proces: štandard / impulz', 'Process: standard / pulse'), hint: LL('Prepína synergický štandardný a impulzný oblúk.', 'Switches between synergic standard and pulsed arc.'),
         action: () => push('prog', c.prog === 'std' ? 'pulse' : 'std'), read: () => (c.prog === 'std' ? 'SYNERGIC STANDARD' : 'SYNERGIC PULS') }, fr.btnProg);
@@ -828,7 +828,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       jaw.rotation.z = c.ground ? 0 : 0.5; jaw.position.y = clampAt.y + (c.ground ? 0 : 0.25);
       if (brLever) brLever.rotation.x = c.tripped ? 0.8 : 0;
       if (fr) {
-        fr.update(dt, { feed: st.arc ? c.vd : 0, flow: c.valve ? c.flow : 0, valveOpen: c.valve });
+        fr.update(dt, { feed: st.arc ? c.vd : 0, flow: c.valve ? c.flow : 0, vd: c.vd, corr: c.corr });
         const sy = migSynergic({ wire: c.wire, vd: c.vd, prog: c.prog, gas: c.gas, corr: c.corr });
         fr.drawPanel({ power: c.power, I: st.arc ? I : sy.I, U: sy.U, vd: c.vd, prog: c.prog, trig: c.trig, arc: st.arc });
         fr.setGas(c.gas);
@@ -881,7 +881,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         rootRisk: (F.type === 'I' || F.S.sub === 'I') && th > 4, thinPrep: (F.type === 'V' || F.type === 'HV' || F.type === 'Y') && th < 4 };
     };
 
-    try { if (/[?&]debug/.test(window.location.search)) window.__weld = { F, st, evalWeld, W2, RES, jointZ, aimAt: (cx, cy) => { aimAt(cx, cy); return { ...st.aim }; }, proj: (x, z) => { const r = dom.getBoundingClientRect(), v = locW(x, surfAt(x, z) == null ? F.t : surfAt(x, z), z, v3(0, 0, 0)).project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__weld = { F, st, evalWeld, W2, RES, jointZ, fr, camera, dom, aimAt: (cx, cy) => { aimAt(cx, cy); return { ...st.aim }; }, proj: (x, z) => { const r = dom.getBoundingClientRect(), v = locW(x, surfAt(x, z) == null ? F.t : surfAt(x, z), z, v3(0, 0, 0)).project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; } }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); wi.dispose();

@@ -16,7 +16,6 @@ export function buildFronius({ kit, M, grp, v3, std }) {
   [[-1.15, -2.7], [1.15, -2.7], [-1.15, 2.6], [1.15, 2.6]].forEach(([x, z]) => { cylX(wel, 0.36, 0.36, x - 0.12, x + 0.12, 0.36, z, M.black, 24); cylX(wel, 0.14, 0.14, x - 0.14, x + 0.14, 0.36, z, M.steel, 12); });
   box(wel, -1.5, 1.5, 0.62, 0.76, -3.7, 3.4, R.dark);
   box(wel, -1.5, 1.5, 0.76, 1.6, -4.0, -3.7, R.dark);                    // zadná opierka fľaše
-  box(wel, -0.08, 0.08, 0.76, 7.0, 3.4, 3.55, R.dark); box(wel, -1.4, 1.4, 6.9, 7.05, 3.4, 3.55, R.dark);   // rukoväť vpredu
 
   // ---------- chladiaci modul FK ----------
   const fk = grp('chladenie', wel);
@@ -40,6 +39,10 @@ export function buildFronius({ kit, M, grp, v3, std }) {
   const pTex = new THREE.CanvasTexture(pCv); pTex.colorSpace = THREE.SRGBColorSpace; pTex.anisotropy = 4;
   add(src, new THREE.PlaneGeometry(2.5, 4.25), new THREE.MeshBasicMaterial({ map: pTex, toneMapped: false }), 0, 5.575, 3.135).castShadow = false;
   let panelKey = '';
+  const PX = 0.005, cvX = (x) => (x + 1.25) / PX, cvY = (y) => (7.7 - y) / PX;
+  // poloha ovládacích prvkov na paneli (lokálne súradnice zdroja) – popisy a stupnice sa kreslia k nim
+  const P = { vd: [-0.62, 5.15], corr: [0.62, 5.15], prog: [-0.75, 5.89], trig: [0.3, 5.89], sw: [0, 4.2], sock: [-0.75, 0.75], sockY: 3.72 };
+  const KNOB_A = 2.356;                                                    // stupnica gombíka ±135° od zvislice
   const drawPanel = ({ power, I, U, vd, prog, trig, arc }) => {
     const key = `${power}|${Math.round(I)}|${U.toFixed(1)}|${vd.toFixed(1)}|${prog}|${trig}|${arc}`;
     if (key === panelKey) return; panelKey = key;
@@ -59,10 +62,24 @@ export function buildFronius({ kit, M, grp, v3, std }) {
     const led = (x, y, on, txt) => { g.fillStyle = power && on ? '#3ee06c' : '#5a5a52'; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2b2b2b'; g.font = 'bold 16px Barlow, Arial'; g.fillText(txt, x + 18, y + 6); };
     led(40, 262, prog === 'std', 'SYNERGIC STANDARD'); led(40, 296, prog === 'pulse', 'SYNERGIC PULS');
     led(290, 262, trig === '2T', '2-TAKT'); led(290, 296, trig === '4T', '4-TAKT');
-    g.fillStyle = '#2b2b2b'; g.font = 'bold 15px Barlow, Arial';
-    g.fillText('PROZESS', 28, 352); g.fillText('BETRIEBSART', 280, 352); g.fillText('DRAHTVORSCHUB', 288, 452); g.fillText('LICHTBOGEN-', 288, 552); g.fillText('LÄNGENKORREKTUR', 288, 570);
-    g.fillText('NETZ', 214, 728); g.fillText('0', 166, 690); g.fillText('I', 324, 690);
-    g.strokeStyle = '#8d846c'; g.lineWidth = 2; g.strokeRect(14, 96, 472, 280);
+    g.fillStyle = '#2b2b2b'; g.font = 'bold 15px Barlow, Arial'; g.textAlign = 'center';
+    // popisy nad tlačidlami
+    g.fillText('PROZESS', cvX(P.prog[0]), 334); g.fillText('BETRIEBSART', cvX(P.trig[0]), 334);
+    // gombíky: popis nad stupnicou, rysky po 27° a krajné hodnoty
+    const scale = ([x, y], t1, t2, lo, hi) => {
+      const cx = cvX(x), cy = cvY(y);
+      g.fillText(t1, cx, cy - 74); if (t2) g.fillText(t2, cx, cy - 57);
+      g.strokeStyle = '#2b2b2b'; g.lineWidth = 2;
+      for (let k = 0; k <= 10; k++) { const a = KNOB_A - k * KNOB_A / 5, sx = -Math.sin(a), sy = -Math.cos(a), r0 = k % 5 ? 48 : 45; g.beginPath(); g.moveTo(cx + sx * r0, cy + sy * r0); g.lineTo(cx + sx * 54, cy + sy * 54); g.stroke(); }
+      g.font = 'bold 13px Barlow, Arial'; g.fillText(lo, cx - 44, cy + 56); g.fillText(hi, cx + 44, cy + 56); g.font = 'bold 15px Barlow, Arial';
+    };
+    scale(P.vd, 'DRAHTVORSCHUB', 'm/min', '1', '22'); scale(P.corr, 'LICHTBOGEN-', 'LÄNGENKORREKTUR', '−3', '+3');
+    // hlavný vypínač: 0 vľavo hore, I vpravo hore (podľa natočenia páčky ±34°), NETZ pod ním
+    const sx = cvX(P.sw[0]), sy = cvY(P.sw[1]);
+    g.font = 'bold 20px Barlow, Arial'; g.fillText('0', sx - 46, sy - 66); g.fillText('I', sx + 46, sy - 66);
+    g.font = 'bold 15px Barlow, Arial'; g.fillText('NETZ', sx, sy + 82); g.textAlign = 'left';
+    g.strokeStyle = '#8d846c'; g.lineWidth = 2; g.strokeRect(14, 96, 472, 296);
+    pTex.needsUpdate = true;                                               // nové hodnoty displeja a kontroliek do GPU
   };
   // gombíky (rýchlosť drôtu, korekcia oblúka), tlačidlá procesov, hlavný vypínač, zásuvky
   const knob = (x, y, r = 0.2) => {
@@ -70,12 +87,15 @@ export function buildFronius({ kit, M, grp, v3, std }) {
     cylZ(pv, r, r * 0.9, 0, 0.14, 0, 0, M.black, 28); add(pv, new THREE.BoxGeometry(0.04, r * 0.8, 0.02), M.white, 0, r * 0.45, 0.15);
     hitProxy(pv, r + 0.12, 0, 0, 0.1); return pv;
   };
-  const knobVd = knob(0.62, 6.0), knobCorr = knob(0.62, 5.0);
+  const knobVd = knob(...P.vd), knobCorr = knob(...P.corr);
   const pbtn = (x, y) => { const g = new THREE.Group(); g.position.set(x, y, 3.14); src.add(g); box(g, -0.13, 0.13, -0.08, 0.08, 0, 0.06, R.grey); hitProxy(g, 0.2, 0, 0, 0.05); return g; };
-  const btnProg = pbtn(-0.75, 5.75), btnTrig = pbtn(0.3, 5.75);
-  const mainSw = new THREE.Group(); mainSw.position.set(0, 4.25, 3.16); src.add(mainSw);
-  cylZ(mainSw, 0.3, 0.3, -0.03, 0.03, 0, 0, M.yellow, 28); box(mainSw, -0.07, 0.07, -0.32, 0.32, 0.03, 0.16, M.red);
-  const sockets = [-0.75, 0.75].map((x) => { cylZ(src, 0.15, 0.15, 3.13, 3.23, x, 3.75, M.black, 24); cylZ(src, 0.06, 0.06, 3.23, 3.24, x, 3.75, M.copper, 16); return v3(x, 3.75, 3.24); });
+  const btnProg = pbtn(...P.prog), btnTrig = pbtn(...P.trig);
+  // hlavný vypínač: žltá doska pevná na paneli, červená páčka sa otáča okolo osi kolmej na panel (rysku má hore)
+  cylZ(src, 0.3, 0.3, 3.13, 3.17, ...P.sw, M.yellow, 28);
+  const mainSw = new THREE.Group(); mainSw.position.set(...P.sw, 3.17); src.add(mainSw);
+  box(mainSw, -0.07, 0.07, -0.24, 0.3, 0, 0.13, M.red); box(mainSw, -0.02, 0.02, 0.12, 0.27, 0.13, 0.135, M.white);
+  hitProxy(mainSw, 0.36, 0, 0, 0.06);
+  const sockets = P.sock.map((x) => { cylZ(src, 0.15, 0.15, 3.13, 3.23, x, P.sockY, M.black, 24); cylZ(src, 0.06, 0.06, 3.23, 3.24, x, P.sockY, M.copper, 16); return v3(x, P.sockY, 3.24); });
 
   // ---------- podávač drôtu VR s cievkou (bočný kryt priehľadný) ----------
   const vr = grp('podavac', wel);
@@ -124,9 +144,10 @@ export function buildFronius({ kit, M, grp, v3, std }) {
   const setGas = (gas) => { R.shoulder.color.setHex(gas === 'C1' ? 0x7d8386 : 0x45b04d).convertSRGBToLinear(); };
   // každý snímok: kladky a cievka sa točia pri podávaní, gulička prietokomera ukazuje prietok
   let spin = 0;
-  const update = (dt, { feed, flow, valveOpen }) => {
+  // gombíky ukazujú nastavenú hodnotu: doľava dole minimum, doprava dole maximum (v smere hodinových ručičiek pribúda)
+  const update = (dt, { feed, flow, vd = 8, corr = 0 }) => {
     if (feed > 0) { spin += feed * dt; spool.rotation.x = -spin * 0.6; feedRolls.forEach((r, i) => { r.rotation.x = (i ? 1 : -1) * spin * 6; }); }
-    vWheel.rotation.z = valveOpen ? -1.6 : 0;
+    knobVd.rotation.z = KNOB_A - (vd - 1) / 21 * 2 * KNOB_A; knobCorr.rotation.z = -corr / 3 * KNOB_A;
     flowBall.position.y = 12.5 + Math.min(1, flow / 25) * 0.58;
   };
   return { wel, src, sockW, knobVd, knobCorr, btnProg, btnTrig, mainSw, vWheel, drawPanel, setGas, update, anchors: {
