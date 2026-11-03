@@ -73,6 +73,9 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Výmena elektródy | ✅ | pri dohorenej elektróde vyskočí tlačidlo „Vymeň elektródu“ (aj E); animácia: držiak sa zdvihne, ohorok vypadne, nová elektróda sa zasunie do čeľustí |
 | Zváranie MIG/MAG | ✅ | 8. stroj `#mag` – Fronius TransPuls Synergic TPS 450 s podávačom VR 4000, chladením FK a fľašou; synergia (`migMath.js`), 2T/4T, štandard/impulz, plynová ochrana a póry, 3 úlohy (`migChecks`) |
 | Tvar a poloha polotovarov | ✅ | skupiny rovinné / kolmé / kruhové / tvarové plechy; spoj je ľubovoľná krivka (`weldShape.js`), rúra – rúra sa zobrazuje na valci s polohami PH, PJ, H-L045 a PC; hodnotenie po krivke je pri priamych spojoch zhodné s pôvodným (test) |
+| Obrážačka TOS | ✅ | 9. stroj `#obrazacka` za brúskou: kulisový mechanizmus s rýchlym spätným chodom, sklopná doska, západkový posuv, 4 nože, 3 úlohy (`shaperMath.js`) |
+| Rez zvarom, zvarová mierka, viacvrstvové zvary | ✅ | makrovýbrus v ľubovoľnom mieste, natavenie, vrstvy, vtrúseniny, mierka h / b / a (`sectionMetrics`), polohovadlo rúr, 2 nové úlohy |
+| Deliaci prístroj na fréze | ✅ | tyč r(x, θ), delenie n = 40 / z s kruhom dier, aretácia, koník, úlohy šesťhran a štvorhran (`millIndex.js`) |
 
 ## 2. Rozsah a metodika
 
