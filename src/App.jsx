@@ -2,16 +2,18 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
 const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
+const RadialSimulator = lazy(() => import('./machines/radial'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
+const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
 const SlotterSimulator = lazy(() => import('./machines/slotter'));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
@@ -37,6 +39,10 @@ const MACHINES = [
     meta: L('Vŕtačka', 'Drill'), name: L('Stĺpová vŕtačka', 'Pillar drill'), model: 'TOS SV16',
     desc: L('Vŕtanie dier Ø3 – Ø16 mm do oceľovej dosky na podložkách: priečna kľuka pinoly, zdvíhací stôl, otvory naslepo aj naskrz.', 'Drilling Ø3 – Ø16 mm holes into a steel plate on parallels: capstan quill feed, rising table, blind and through holes.'),
     specs: [L('8 otáčok 125 – 1400 ot/min', '8 speeds 125 – 1400 rpm'), L('Zdvih pinoly 100 mm', 'Quill stroke 100 mm'), L('Vŕtanie do Ø16 mm', 'Drilling up to Ø16 mm')] }) },
+  { id: 'radialka', Art: RadialArt, Comp: RadialSimulator, t: () => ({
+    meta: L('Radiálna vŕtačka', 'Radial drill'), name: L('Radiálna vŕtačka', 'Radial drilling machine'), model: 'TOS VR / VO',
+    desc: L('Vŕtanie veľkých dosiek a prírub bez posúvania obrobku: rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene, upínanie stĺpa a vreteníka, automatický posuv s hĺbkovým dorazom.', 'Drilling large plates and flanges without moving the work: the arm swings around the column and is raised by a motor, the head travels along the arm, column and head clamps, power feed with a depth stop.'),
+    specs: [L('Vŕtanie do Ø40 mm', 'Drilling up to Ø40 mm'), L('Vyloženie 320 – 1240 mm', 'Reach 320 – 1240 mm'), L('12 otáčok 32 – 1400 ot/min', '12 speeds 32 – 1400 rpm')] }) },
   { id: 'ohybacka', Art: FolderArt, Comp: FolderSimulator, t: () => ({
     meta: L('Ohýbačka', 'Folder'), name: L('Výkyvná ohýbačka plechu', 'Manual swing-beam folder'), model: 'FASTI 204-10-2',
     desc: L('Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.', 'Manual sheet folding: clamping by handwheel through two screws, swinging the folding beam and springback according to thickness.'),
@@ -49,6 +55,10 @@ const MACHINES = [
     meta: L('Brúska', 'Grinder'), name: L('Rovinná brúska', 'Surface grinder'), model: 'BPH 300',
     desc: L('Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.', 'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.'),
     specs: [L('Kotúč Ø300 × 40 mm', 'Wheel Ø300 × 40 mm'), L('Stôl 1 – 25 m/min', 'Table 1 – 25 m/min'), L('Prísuv 0,005 mm', 'Infeed 0.005 mm')] }) },
+  { id: 'gulato', Art: CylGrinderArt, Comp: CylGrinderSimulator, t: () => ({
+    meta: L('Brúska na guľato', 'Cylindrical grinder'), name: L('Hrotová brúska na guľato', 'Cylindrical grinder'), model: 'TOS BUA',
+    desc: L('Brúsenie hriadeľov medzi hrotmi na mikróny: hydraulický stôl s dorazmi, prísuv kotúča po 0,005 mm, automatický prísuv na obrate, vyiskrovanie, prepal pri veľkom zábere a meranie mikrometrom.', 'Grinding shafts between centres to microns: hydraulic table with dogs, 0.005 mm wheel infeed, automatic infeed at reversal, spark-out, burning at too large an infeed and micrometer measurement.'),
+    specs: [L('Kotúč Ø400 × 40 mm', 'Wheel Ø400 × 40 mm'), L('Prísuv 0,005 mm', 'Infeed 0.005 mm'), L('Tolerancia h5 / h6', 'Tolerance h5 / h6')] }) },
   // priečna obrážačka: v menu skrytá, simulátor zostáva dostupný cez #obrazacka
   { id: 'obrazacka', hidden: true, Art: ShaperArt, Comp: ShaperSimulator, t: () => ({
     meta: L('Obrážačka', 'Shaper'), name: L('Priečna obrážačka', 'Shaping machine'), model: 'TOS',

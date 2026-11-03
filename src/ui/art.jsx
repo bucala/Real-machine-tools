@@ -232,4 +232,41 @@ function BenderArt() {
   );
 }
 
-export { BandSawArt, BenderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, SlotterArt, WelderArt };
+function RadialArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="148" width="240" height="12" />
+        <rect x="64" y="22" width="22" height="126" />
+        <rect x="64" y="40" width="200" height="16" />
+        <rect x="170" y="56" width="40" height="40" rx="3" />
+        <rect x="160" y="114" width="80" height="34" />
+      </g>
+      <rect x="178" y="30" width="24" height="10" fillOpacity=".4" />
+      <path d="M190 96v14" fill="none" strokeWidth="4" /><path d="M190 110l-3 6h6z" />
+      <rect x="168" y="108" width="54" height="6" fillOpacity=".5" />
+      <path d="M100 48a30 10 0 0 1 0 0" fill="none" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function CylGrinderArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="30" y="112" width="260" height="40" rx="3" />
+        <rect x="30" y="152" width="260" height="8" />
+        <rect x="50" y="100" width="220" height="12" />
+        <rect x="58" y="70" width="34" height="30" />
+        <rect x="226" y="76" width="30" height="24" />
+      </g>
+      <circle cx="160" cy="58" r="30" fillOpacity=".3" /><circle cx="160" cy="58" r="6" />
+      <path d="M92 86h134" fill="none" strokeWidth="7" />
+      <path d="M150 88l-6 10M162 88l2 12M170 88l8 8" fill="none" strokeWidth="1.5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, RadialArt, ShaperArt, SlotterArt, WelderArt };

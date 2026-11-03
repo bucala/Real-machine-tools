@@ -120,6 +120,29 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 <table>
   <tr>
     <td width="50%" valign="top">
+      <h3>🧭 Radiálna vŕtačka</h3>
+      <sub>predloha TOS rad VR / VO · <code>#radialka</code></sub>
+      <ul>
+        <li>rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene – obrobok stojí</li>
+        <li>upínanie stĺpa a vreteníka (bez neho sa nevŕta), automatický posuv 0,1 – 0,4 mm/ot s hĺbkovým dorazom</li>
+        <li>vrtáky Ø10 – Ø40, displej polohy vretena od stredu dosky; úlohy rozteč 300 × 200 a príruba 6 × Ø20 na Ø300 (<code>radialMath.js</code>)</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>💎 Hrotová brúska na guľato</h3>
+      <sub>predloha TOS BUA · <code>#gulato</code></sub>
+      <ul>
+        <li>hydraulický stôl s dorazmi obratu, prísuv kotúča po 0,005 mm, automatický prísuv na obrate s dorazom</li>
+        <li>pružné odtláčanie kotúča – vyiskrovanie, prepal pri veľkom zábere alebo bez chladenia, iskry a emulzia</li>
+        <li>meranie mikrometrom po 0,001 mm, úlohy Ø40 h6 a Ø25 h5 s kontrolou kužeľovitosti (<code>cylMath.js</code>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
       <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zobrazacka"><img src="docs/img/slotter.png" alt="Zvislá obrážačka – drážka v náboji"></a>
       <h3>⬇️ Zvislá obrážačka</h3>
       <sub>predloha TOS ST 350 · drážkovačka s krížovým otočným stolom</sub>
@@ -213,7 +236,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #profilova · #bruska · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #ohybacka · #profilova · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
