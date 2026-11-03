@@ -190,7 +190,7 @@ const WELD_SAFETY = () => [
 function WeldingSimulator({ onBack, params, process = 'mma' }) {
   const MIG = process === 'mig';
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), flashRef = useRef(null), glassRef = useRef(null);
-  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, wD: 60.3, rotOn: false, rotV: 3, secOn: false, secPos: 50, tripped: false, slag: true, flashFx: !REDUCED_MOTION,
+  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, wD: 60.3, rotOn: false, rotV: 3, secOn: false, secPos: 50, tiltA: 20, tiltB: 0, tripped: false, slag: true, flashFx: !REDUCED_MOTION,
     ...(MIG ? { power: true, prog: 'std', trig: '2T', wire: 1, gas: 'M21', vd: 8, corr: 0, valve: true, flow: 14, ctwd: 12, handV: 8, slag: false } : {}) };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useTele({ arc: false, I: 0, la: 3, v: 0, le: 350, msg: null, stats: null, U: 0, mode: 'short', cover: 1, wire: 0 });
@@ -700,14 +700,20 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       if (e.pointerType === 'touch') { io.touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); e.stopImmediatePropagation(); mouseUsed = true; aimAt(...centroid()); return; }
       setBtns(e); mouseUsed = io.right;
       if (io.right) { e.stopImmediatePropagation(); try { dom.setPointerCapture(e.pointerId); } catch (err) { /* ignorované */ } aimAt(e.clientX, e.clientY); }
+      else if (io.left && !ctrl.isUsed()) { io.tilt = { x: e.clientX, y: e.clientY }; e.stopImmediatePropagation(); try { dom.setPointerCapture(e.pointerId); } catch (err) { /* ignorované */ } }
     };
     const pm = (e) => {
       if (!active()) { io.right = io.left = false; io.touches.clear(); return; }
       if (e.pointerType === 'touch') { if (io.touches.has(e.pointerId)) { io.touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); e.stopImmediatePropagation(); aimAt(...centroid()); } return; }
       setBtns(e);
       if (io.right) { mouseUsed = true; e.stopImmediatePropagation(); aimAt(e.clientX, e.clientY); }
+      else if (io.tilt && io.left) {
+        // ťahom hore / dole sklon v smere zvárania, do strán pracovný uhol
+        const dx = e.clientX - io.tilt.x, dy = e.clientY - io.tilt.y; io.tilt.x = e.clientX; io.tilt.y = e.clientY;
+        push('tiltA', Math.round(clamp(c.tiltA - dy * 0.35, -40, 70))); push('tiltB', Math.round(clamp(c.tiltB + dx * 0.35, -60, 60))); e.stopImmediatePropagation();
+      }
     };
-    const pu = (e) => { if (e.pointerType === 'touch') { io.touches.delete(e.pointerId); return; } setBtns(e); };
+    const pu = (e) => { if (e.pointerType === 'touch') { io.touches.delete(e.pointerId); return; } setBtns(e); if (!io.left) io.tilt = null; };
     const wh = (e) => {
       if (!active() || !io.right) return; e.preventDefault(); e.stopImmediatePropagation();
       if (MIG) push('ctwd', clamp(c.ctwd + (e.deltaY > 0 ? -1 : 1), 2, 30)); else push('arcLen', clamp(c.arcLen + (e.deltaY > 0 ? -0.5 : 0.5), 0, 12));
@@ -770,7 +776,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       if (MIG) {
         syn = migSynergic({ wire: c.wire, vd: c.vd, prog: c.prog, gas: c.gas, corr: c.corr });
         I = stickoutI(syn.I, c.ctwd); [lo, hi] = migRange(F.t);
-        cover = gasCover({ valve: c.valve, flow: c.flow, ctwd: c.ctwd });
+        cover = gasCover({ valve: c.valve, flow: c.flow, ctwd: c.ctwd }) * (Math.abs(c.tiltA) > 45 || Math.abs(c.tiltB) > 50 ? 0.6 : 1);   // veľký sklon: plyn uniká bokom
       } else {
         I = c.current; [lo, hi] = elRange();
         if (st.arc) {
@@ -784,7 +790,8 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       const rpNow = MIG ? clamp(1.3 + 0.022 * I + 0.35 * (syn.la - 2), 2.5, 9) : clamp(1.1 * de + 0.025 * I, 2.5, 8);
       // hĺbka natavenia základného materiálu (mm): rastie s prúdom, pri pomalom posuve a sprchovom prenose; pri nízkom prúde a dlhom oblúku klesá
       const speedK = clamp(Math.sqrt(4 / Math.max(st.v, 1)), 0.6, 1.4);
-      st.penNow = clamp((MIG ? 0.011 * I * ({ short: 0.85, globular: 1, spray: 1.6, pulse: 1.25 }[syn.mode] || 1) : 0.013 * I * (c.etype === 'basic' ? 1.1 : 1) * (st.la > de + 1.5 ? 0.7 : 1)) * speedK * (I < lo ? 0.3 : 1), 0, 6);
+      const tiltK = clamp(1 + 0.35 * Math.sin(c.tiltA * Math.PI / 180), 0.75, 1.3), tiltBig = Math.abs(c.tiltA) > 45 || Math.abs(c.tiltB) > 50;
+      st.penNow = tiltK * clamp((MIG ? 0.011 * I * ({ short: 0.85, globular: 1, spray: 1.6, pulse: 1.25 }[syn.mode] || 1) : 0.013 * I * (c.etype === 'basic' ? 1.1 : 1) * (st.la > de + 1.5 ? 0.7 : 1)) * speedK * (I < lo ? 0.3 : 1), 0, 6);
 
       // zapálenie a udržanie oblúka
       if (MIG) {
@@ -844,7 +851,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           sayOnce('glob', syn.mode === 'globular', L('Prechodový oblúk – veľký rozstrek. Zmeň rýchlosť drôtu alebo zapni impulz.', 'Globular transfer – heavy spatter. Change the wire speed or switch to pulse.'), 'warn');
           sayOnce('sprayv', vert && syn.mode === 'spray', L('Sprchový prenos sa v tejto polohe nedá použiť – kúpeľ steká. Zníž rýchlosť drôtu alebo použi impulz.', 'Spray transfer cannot be used in this position – the pool runs. Lower the wire speed or use pulse.'), 'warn');
           sayOnce('ctwdS', c.ctwd < 7, L('Horák je veľmi blízko – rozstrek sa lepí na hubicu.', 'The torch is very close – spatter sticks to the nozzle.'), 'warn');
-          spAcc += dt * syn.spat * (cover < 0.5 ? 1.5 : 1) * (c.ctwd > 18 ? 1.4 : 1);
+          spAcc += dt * syn.spat * (cover < 0.5 ? 1.5 : 1) * (c.ctwd > 18 ? 1.4 : 1) * (tiltBig ? 1.8 : 1);
           smAcc += dt * 8;
         } else {
           const eff = I < lo * 0.85 ? 0.55 : 1;
@@ -859,9 +866,12 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           sayOnce('hot', I > hi, L(`Prúd je vysoký pre elektródu Ø${de} – veľký rozstrek a prepal.`, `The current is high for a Ø${de} electrode – heavy spatter and burn-through.`), 'warn');
           sayOnce('long', st.la > de + 1.5, L('Oblúk je dlhý – rozstrek a póry. Drž elektródu bližšie.', 'The arc is long – spatter and porosity. Keep the electrode closer.'), 'warn');
           sayOnce('sag', vert && I > hi * 0.9, L('V tejto polohe kúpeľ steká – zníž prúd.', 'In this position the pool runs – reduce the current.'), 'warn');
-          spAcc += dt * (25 + (st.la > de + 1 ? 70 : 0) + (I > hi ? 60 : 0));
+          spAcc += dt * (25 + (st.la > de + 1 ? 70 : 0) + (I > hi ? 60 : 0)) * (tiltBig ? 1.8 : 1);
           smAcc += dt * 14;
         }
+        // rady k sklonu horáka / elektródy
+        sayOnce('tiltBig', tiltBig, L('Príliš veľký sklon – oblúk fúka bokom, pribúda rozstrek' + (MIG ? ' a plyn kúpeľ nechráni.' : '.'), 'Tilt too large – the arc blows sideways, more spatter' + (MIG ? ' and the gas no longer covers the pool.' : '.')), 'warn');
+        sayOnce('tiltFil', FILLETS.includes(F.type) && F.type !== 'L' && Math.abs(c.tiltB) < 20 && st.v > 0.5, L('Pri kútovom zvare nakloň ' + (MIG ? 'horák' : 'elektródu') + ' asi o 45° do kúta – drž ľavé tlačidlo a ťahaj do strany.', 'For a fillet weld tilt the ' + (MIG ? 'torch' : 'electrode') + ' about 45° into the corner – hold the left button and drag sideways.'), 'info');
         // rozstrek a dym
         tipW.copy(locW(st.tx, surf, st.tz));
         nrmW(st.tx, nW);
@@ -887,7 +897,8 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       nrmW(st.tx, nW); const pp = nearestOnPath(F.S, st.tx, st.tz);
       xW.set(...tangentOf(F.S, st.tx, pp.tx, pp.tz, mp)).transformDirection(pivot.matrixWorld);
       tipW.copy(locW(st.tx, surf + st.la, st.tz));                              // hrot elektródy pri zváraní
-      dirW.copy(nW).multiplyScalar(Math.cos(0.35)).addScaledVector(xW, -Math.sin(0.35)).normalize();
+      const ta = c.tiltA * Math.PI / 180, tb = c.tiltB * Math.PI / 180;      // sklon v smere zvárania (+ ťahom) a pracovný uhol do strany
+      dirW.copy(nW).multiplyScalar(Math.cos(ta)).addScaledVector(xW, -Math.sin(ta)).normalize().applyAxisAngle(xW, tb);
       let endW;
       if (MIG) {
         // horák: kontaktná špička vo vzdialenosti výletu drôtu od dielu, drôt trčí z hubice k oblúku
@@ -1071,7 +1082,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
   };
   const statusMsg = tele.msg ? tele.msg
     : ui.unclamped ? { kind: 'info', text: L('Prezeráš si zvarenec – ťahaním ho otáčaš.', 'Inspecting the weldment – drag to rotate it.') }
-    : tele.arc && MIG ? { kind: 'run', text: `${L('Oblúk horí', 'Arc burning')} – ${tele.I} A, ${fmt(tele.U)} V, ${modeName(tele.mode)}, ${L('posuv', 'travel')} ${fmt(tele.v)} mm/s` }
+    : tele.arc && MIG ? { kind: 'run', text: `${L('Oblúk horí', 'Arc burning')} – ${tele.I} A, ${fmt(tele.U)} V, ${modeName(tele.mode)}, ${L('posuv', 'travel')} ${fmt(tele.v)} mm/s, ${L('sklon', 'tilt')} ${ui.tiltA}° / ${ui.tiltB}°` }
     : tele.arc ? { kind: 'run', text: `${L('Oblúk horí', 'Arc burning')} – ${tele.I} A, ${L('oblúk', 'arc')} ${fmt(tele.la)} mm, ${L('posuv', 'travel')} ${fmt(tele.v)} mm/s` }
     : tele.stuck ? { kind: 'danger', text: L('Elektróda je prilepená – pusti tlačidlá.', 'The electrode is stuck – release the buttons.') }
     : MIG && !ui.manual ? { kind: 'idle', text: L('Prepni na režim Zváranie (M) – potom drž pravé tlačidlo a veď horák, ľavé tlačidlo je spúšťač. Kukla: H.', 'Switch to welding mode (M) – then hold the right button to guide the torch, the left button is the trigger. Helmet: H.') }
@@ -1123,7 +1134,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           </button>}
         </>}
         hint={L('Ťahaj: otáčanie · pravé tlačidlo: posun · koliesko: zoom · M: režim Zváranie · H: kukla', 'Drag: orbit · right button: pan · wheel: zoom · M: welding mode · H: helmet')}
-        manualHint={MIG ? <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď horák, ľavé tlačidlo pri držanom pravom je spúšťač (2T / 4T), koliesko s pravým mení výlet drôtu. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the torch, the left button with the right held is the trigger (2T / 4T), the wheel with the right button sets the stick-out. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</> : <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď elektródu, ľavým pri držanom pravom zapáliš oblúk, koliesko s pravým mení dĺžku oblúka. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the electrode, press the left one as well to strike the arc, the wheel with the right button sets the arc length. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</>} />
+        manualHint={MIG ? <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď horák, ľavé tlačidlo pri držanom pravom je spúšťač (2T / 4T), samotné ľavé tlačidlo nakláňa horák, koliesko s pravým mení výlet drôtu. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the torch, the left button with the right held is the trigger (2T / 4T), the left button alone tilts the torch, the wheel with the right button sets the stick-out. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</> : <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď elektródu, ľavým pri držanom pravom zapáliš oblúk, samotné ľavé tlačidlo nakláňa elektródu, koliesko s pravým mení dĺžku oblúka. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the electrode, press the left one as well to strike the arc, the left button alone tilts the electrode, the wheel with the right button sets the arc length. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</>} />
       <aside className="panel">
         {MIG ? (
           <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zváranie MIG/MAG', 'Simulator · MIG/MAG welding')} title={L('Zváranie v ochrannom plyne', 'Gas metal arc welder')}
@@ -1247,6 +1258,14 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
             {groove > 1 && <div className="mt-1">{L(`Odhad: ${groove} húseníc pri ${curNow} A.`, `Estimate: ${groove} passes at ${curNow} A.`)}</div>}
             {thWarn && <div className="mt-1" style={{ color: 'var(--warn)' }}>{L(`Tento druh zvaru sa používa pre hrúbky ${wt.t[0]} – ${wt.t[1]} mm.`, `This joint is used for thicknesses ${wt.t[0]} – ${wt.t[1]} mm.`)}</div>}
           </div>
+          <div className="text-sm font-semibold mt-3 mb-1">{MIG ? L('Sklon horáka', 'Torch angle') : L('Sklon elektródy', 'Electrode angle')}</div>
+          <Slider id="wta" label={L('V smere zvárania (+ ťahom, − tlačením)', 'Along the travel (+ drag, − push)')} unit="°" min={-40} max={70} step={1} value={ui.tiltA} onChange={(v) => set('tiltA', v)} />
+          <Slider id="wtb" label={L('Pracovný uhol do strany', 'Work angle sideways')} unit="°" min={-60} max={60} step={1} value={ui.tiltB} onChange={(v) => set('tiltB', v)} />
+          <div className="flex gap-2 mb-1">
+            <button type="button" className="btn" onClick={() => { set('tiltA', 20); set('tiltB', 0); }}>{L('Vyrovnať', 'Reset')}</button>
+            {FILLETS.includes(ui.wType) && ui.wType !== 'L' && <button type="button" className="btn" onClick={() => { set('tiltA', 15); set('tiltB', ui.tiltB < 0 ? -45 : 45); }}>{L('45° do kúta', '45° into the corner')}</button>}
+          </div>
+          <p className="text-xs muted">{L('V režime Zváranie nakláňaš aj myšou: drž samotné ľavé tlačidlo a ťahaj – hore / dole sklon v smere zvárania, do strán pracovný uhol. Ťahom (10 – 25°) sa zvar viac natavuje, tlačením je plochší; nad 45° pribúda rozstrek' + (MIG ? ' a plyn uniká.' : '.'), 'In welding mode you can tilt with the mouse too: hold the left button alone and drag – up / down tilts along the travel, sideways sets the work angle. Dragging (10 – 25°) gives deeper fusion, pushing a flatter bead; beyond 45° spatter increases' + (MIG ? ' and the gas escapes.' : '.'))}</p>
           <button type="button" className="btn w-full mt-2" onClick={() => apiRef.current.newParts && apiRef.current.newParts()}>{L('Pripraviť nové diely', 'Prepare new parts')}</button>
         </div>
 
