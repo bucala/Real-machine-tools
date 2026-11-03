@@ -1,0 +1,270 @@
+// Spoločné prvky rozhrania simulátorov.
+import React, { useEffect, useRef, useState } from 'react';
+import { L, PrefsCtx } from '../core/i18n';
+import { logNear } from '../core/util';
+
+// ---------- spoločné prvky rozhrania ----------
+// telemetria pre panel: nový stav sa nastaví len pri skutočnej zmene – stojaci stroj panel neprekresľuje
+const same = (a, b, deep = true) => {
+  if (a === b) return true;
+  if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 1e-4;
+  if (!deep || !a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) || Array.isArray(b)) return false;
+  for (const k in a) if (!same(a[k], b[k], false)) return false;
+  for (const k in b) if (!(k in a)) return false;
+  return true;
+};
+function useTele(init) {
+  const [tele, setRaw] = useState(init);
+  const set = useRef((next) => setRaw((prev) => (same(prev, next) ? prev : next))).current;
+  return [tele, set];
+}
+
+function useMachine(init) {
+  const ctl = useRef({ labels: false, unclamped: false, ...init, highlight: null });
+  const [ui, setUi] = useState({ labels: false, unclamped: false, ...init });
+  const [selected, setSelected] = useState(null);
+  const apiRef = useRef({});
+  const set = (k, v) => { ctl.current[k] = v; setUi((u) => ({ ...u, [k]: v })); };
+  const selectPart = (k) => {
+    const next = ctl.current.highlight === k ? null : k;
+    ctl.current.highlight = next; setSelected(next);
+  };
+  apiRef.current.onPick = (k) => { ctl.current.highlight = k; setSelected(k); };
+  // M = prepnutie kamera / ručné ovládanie, Esc = späť na kameru
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = e.target && e.target.tagName;
+      if (e.ctrlKey || e.metaKey || e.altKey || tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && e.target.type !== 'range')) return;
+      if (ctl.current.unclamped) return;
+      if (e.key === 'm' || e.key === 'M') set('manual', !ctl.current.manual);
+      else if (e.key === 'Escape' && ctl.current.manual) set('manual', false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return { ctl, ui, setUi, set, selected, selectPart, apiRef };
+}
+
+function Slider({ id, label, value, min, max, step, unit, onChange, actual, disabled, digits = 0 }) {
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="font-semibold">{label}</span>
+        <span className="tnum muted text-xs">
+          {actual != null && <span>{L('skut.', 'act.')} {actual.toFixed(digits)} · </span>}
+          <span className="ink font-semibold text-sm">{Number(value).toFixed(digits)} {unit}</span>
+        </span>
+      </label>
+      <input id={id} className="range" type="range" min={min} max={max} step={step} value={value} disabled={disabled}
+        onChange={(e) => onChange(parseFloat(e.target.value))} />
+    </div>
+  );
+}
+
+// výber z odstupňovaných hodnôt prevodovky (otáčky, posuvy); locked = preradenie nie je dovolené (vreteno sa točí)
+function StepSelect({ id, label, values, value, unit, onChange, locked, lockNote, fmt = (v) => String(v) }) {
+  const cur = values[logNear(values, value)];
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm mb-1">
+        <span className="font-semibold">{label}</span>
+        <span className="ink font-semibold text-sm tnum">{fmt(cur)} {unit}</span>
+      </label>
+      <select id={id} className="sel" value={cur} disabled={locked} onChange={(e) => onChange(Number(e.target.value))}>
+        {values.map((v) => <option key={v} value={v}>{fmt(v)} {unit}</option>)}
+      </select>
+      {locked && lockNote && <p className="text-xs mt-1" style={{ color: 'var(--warn)' }}>{lockNote}</p>}
+    </div>
+  );
+}
+const GEAR_LOCK = () => L('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'Speeds can only be changed with the spindle stopped – stop it first.');
+
+function Toggle({ on, onClick, label }) {
+  return (
+    <button type="button" onClick={onClick} className="flex items-center justify-between w-full text-sm py-1 gap-3 text-left" aria-pressed={on}>
+      <span className="font-semibold">{label}</span>
+      <span className={`sw ${on ? 'on' : ''}`}><i /></span>
+    </button>
+  );
+}
+
+function Seg({ value, options, onChange, label }) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map(([v, l]) => (
+        <button key={String(v)} type="button" className={value === v ? 'on' : ''} aria-pressed={value === v} onClick={() => onChange(v)}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+// prepínač vzhľadu (skin) a jazyka
+function PrefBar() {
+  const { prefs, setPref } = React.useContext(PrefsCtx);
+  const skins = [['green', '#4f7f3b', L('Zelený', 'Green')], ['dark', '#2b3138', L('Tmavý', 'Dark')], ['light', '#e9ece5', L('Svetlý', 'Light')]];
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5" role="group" aria-label={L('Vzhľad', 'Skin')}>
+        {skins.map(([k, col, name]) => (
+          <button key={k} type="button" className={`swatch ${prefs.skin === k ? 'on' : ''}`} style={{ background: col }}
+            aria-pressed={prefs.skin === k} aria-label={name} title={name} onClick={() => setPref('skin', k)} />
+        ))}
+      </div>
+      <Seg label={L('Jazyk', 'Language')} value={prefs.lang} options={[['sk', 'SK'], ['en', 'EN']]} onChange={(v) => setPref('lang', v)} />
+      <button type="button" className={`btn ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
+        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
+        onClick={() => setPref('sound', !prefs.sound)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
+          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint, tools }) {
+  const inspect = ui.unclamped;
+  return (
+    <div className="scene-wrap relative flex-1 overflow-hidden">
+      <div ref={mountRef} className="absolute inset-0" />
+      <div ref={layerRef} className={`absolute inset-0 pointer-events-none overflow-hidden ${ui.labels && !ui.manual && !inspect ? '' : 'hidden'}`}>
+        {parts.map((p) => (
+          <button key={p.key} type="button" data-part={p.key} onClick={() => selectPart(p.key)}
+            className={`part-label ${selected === p.key ? 'is-active' : ''}`}>{p.short}</button>
+        ))}
+      </div>
+      {overlay}
+      {ui.manual && <div className="manual-frame" />}
+      <div ref={tipRef} className="ctl-tip" />
+      <div className="absolute left-3 top-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="scene-btn" onClick={onBack} aria-label={L('Späť na výber stroja', 'Back to machine selection')}>← {L('Menu', 'Menu')}</button>
+          {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
+        </div>
+        <div className="flex flex-wrap justify-end items-center gap-2">
+          <div className="mode-seg pointer-events-auto" role="group" aria-label={L('Režim ovládania', 'Control mode')}>
+            <button type="button" className={ui.manual ? '' : 'on'} aria-pressed={!ui.manual} onClick={() => set('manual', false)} title={L('Ovládanie kamery (M)', 'Camera control (M)')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z" /><circle cx="12" cy="13" r="3.5" /></svg>
+              <span className="hidden lg:inline">{L('Ovládanie kamery', 'Camera control')}</span><span className="lg:hidden">{L('Kamera', 'Camera')}</span>
+            </button>
+            <button type="button" className={ui.manual ? 'on' : ''} aria-pressed={ui.manual} disabled={inspect} onClick={() => set('manual', true)} title={L('Ručné ovládanie prvkov stroja (M)', 'Manual control of machine elements (M)')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v8M14 11.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 15.5L3 12a1.5 1.5 0 0 1 2.7-1.2L8 14" /></svg>
+              <span className="hidden lg:inline">{manualLabel || L('Ručné ovládanie', 'Manual control')}</span><span className="lg:hidden">{manualLabel || L('Ručne', 'Manual')}</span>
+            </button>
+          </div>
+          {canUnclamp && (
+            <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
+              onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
+              {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Odopnúť polotovar', 'Unclamp workpiece')}
+            </button>
+          )}
+        </div>
+      </div>
+      {tools && <div className="absolute right-3 flex flex-wrap justify-end gap-2" style={{ top: 58, zIndex: 6 }}>{tools}</div>}
+      {inspect ? (
+        <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
+          <b className="ink">{L('Polotovar je vybratý:', 'Workpiece removed:')}</b> {L(`ťahaním ho otáčaš, kolieskom približuješ. Tlačidlo „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na pôvodné miesto.`, `drag to rotate it, scroll to zoom. “${workLabels ? workLabels[1] : 'Clamp back'}” returns it to its original place.`)}
+        </div>
+      ) : ui.manual ? (
+        <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
+          {manualHint || <><b className="ink">{L('Ručné ovládanie:', 'Manual control:')}</b> {L('ťahaj ručné kolesá a páky, klikaj na tlačidlá a vypínač, koliesko myši točí prvkom pod kurzorom. Pohľad je zamknutý – kameru vráti M alebo Esc.', 'drag handwheels and levers, click buttons and switches, the mouse wheel turns the element under the cursor. The view is locked – M or Esc returns to the camera.')}</>}
+        </div>
+      ) : (
+        <div className="absolute left-3 bottom-3 hint hidden md:block pointer-events-none">
+          {hint || L('Ťahaj: otáčanie · koliesko: zoom · pravé tlačidlo: posun · klik: výber časti · M: ručné ovládanie', 'Drag: orbit · wheel: zoom · right button: pan · click: select part · M: manual control')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
+  return (
+    <div className="sec">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
+        <PrefBar />
+      </div>
+      <h1 className="app-title mt-3" tabIndex={-1}>{title}</h1>
+      <p className="text-xs muted mt-1">{sub}</p>
+      <div className="dro mt-3 tnum">
+        {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
+        <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
+      </div>
+      <div className={`msg msg-${status.kind}`} role="status" aria-live={status.kind === 'run' || status.kind === 'idle' ? 'off' : 'polite'}><span className="lamp" />{status.text}</div>
+      <div className="mt-2">
+        <Toggle on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
+      </div>
+    </div>
+  );
+}
+
+function ViewSection({ views, apiRef }) {
+  return (
+    <div className="sec">
+      <h2 className="sec-title mb-2">{L('Pohľad', 'View')}</h2>
+      <div className="flex flex-wrap gap-2">
+        {views.map(([k, l]) => (
+          <button key={k} type="button" className="btn" onClick={() => apiRef.current.view && apiRef.current.view(k)}>{l}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PartsSection({ parts, selected, selectPart }) {
+  const sel = parts.find((p) => p.key === selected);
+  return (
+    <div className="sec">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2>
+        {selected && <button type="button" className="text-xs muted underline" onClick={() => selectPart(selected)}>{L('Zrušiť výber', 'Clear selection')}</button>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {parts.map((p) => (
+          <button key={p.key} type="button" className={`part-btn ${selected === p.key ? 'active' : ''}`} onClick={() => selectPart(p.key)}>{p.short}</button>
+        ))}
+      </div>
+      <div className="desc">
+        {sel ? (<><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></>)
+          : <span className="muted">{L('Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.', 'Pick a part from the list or click it in the model – it is highlighted and its description is shown.')}</span>}
+      </div>
+    </div>
+  );
+}
+
+// časti stroja: [kľúč, krátky SK, krátky EN, názov SK, názov EN, popis SK, popis EN]
+const mkParts = (rows) => rows.map(([key, ss, se, ns, ne, ds, de]) => ({ key, short: L(ss, se), name: L(ns, ne), desc: L(ds, de) }));
+
+// sekcia polotovaru: voľby rozmeru a tvaru + tlačidlo na upnutie nového kusu
+function BlankSection({ title, children, onApply, applyLabel, note }) {
+  return (
+    <div className="sec">
+      <h2 className="sec-title mb-2">{title || L('Polotovar', 'Workpiece')}</h2>
+      {children}
+      <button type="button" className="btn mt-1 w-full" onClick={onApply}>{applyLabel || L('Upnúť nový polotovar', 'Clamp a new workpiece')}</button>
+      {note && <p className="text-xs muted mt-2">{note}</p>}
+    </div>
+  );
+}
+
+function SegRow({ label, value, options, onChange }) {
+  return (
+    <div className="flex items-center justify-between text-sm gap-2 mb-3">
+      <span className="font-semibold">{label}</span>
+      <Seg label={label} value={value} options={options} onChange={onChange} />
+    </div>
+  );
+}
+
+function HelpFooter() {
+  return (
+    <div className="sec text-xs muted" style={{ borderBottom: 0 }}>
+      {L('Ovládanie: ťahaním myšou otáčaš pohľad, koliesko približuje, pravým tlačidlom (alebo Shift) posúvaš. Na dotykovej obrazovke sa pohľad otáča jedným prstom a približuje dvoma. Kláves M alebo prepínač vpravo hore v scéne zamkne pohľad a prepne na ručné ovládanie prvkov stroja.',
+        'Controls: drag to orbit, the wheel zooms, the right button (or Shift) pans. On a touch screen one finger orbits and two fingers zoom. The M key or the switch at the top right of the scene locks the view and switches to manual control of the machine elements.')}
+    </div>
+  );
+}
+
+export { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };

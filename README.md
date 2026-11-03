@@ -6,9 +6,10 @@
 
 [![Spustiť simulátor](https://img.shields.io/badge/%E2%96%B6%20Spusti%C5%A5-real--machine--tools-4f7f3b?style=for-the-badge)](https://real-machine-tools.marcel-bucala.workers.dev)
 
-![React 18](https://img.shields.io/badge/React-18.3-61dafb?logo=react&logoColor=white)
-![three.js r128](https://img.shields.io/badge/three.js-r128-000000?logo=threedotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19.3-61dafb?logo=react&logoColor=white)
+![three.js r186](https://img.shields.io/badge/three.js-r186-000000?logo=threedotjs&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwindcss&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)
 ![Jazyk: SK / EN](https://img.shields.io/badge/jazyk-SK%20%2F%20EN-0b4ea2)
 [![License: MIT](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
@@ -19,7 +20,7 @@
 
 Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov. Dá sa otáčať a približovať, jednotlivé časti sa po kliknutí zvýraznia a zobrazí sa ich popis. V stroji sa naozaj obrába: nôž odoberá materiál podľa svojho tvaru, fréza vyrezáva drážky, vrták vŕta diery, plech sa ohýba, brúsny kotúč odoberá stotiny milimetra a pásová píla reže dosku. Kontroly kolízií zabránia nezmyselným pohybom.
 
-**Spoločné pre všetky stroje:** slovenčina aj angličtina (prepínač SK / EN), tri vzhľady (zelený, tmavý, svetlý), voľba rozmeru a tvaru polotovaru, tlačidlo **Odopnúť polotovar** – kus sa vyberie zo stroja, dá sa otáčať a po „Upnúť späť“ sa vráti na pôvodné miesto.
+**Spoločné pre všetky stroje:** po prvej návšteve fungujú aj bez internetu a dajú sa nainštalovať ako aplikácia, slovenčina aj angličtina (prepínač SK / EN), tri vzhľady (zelený, tmavý, svetlý), voľba rozmeru a tvaru polotovaru, tlačidlo **Odopnúť polotovar** – kus sa vyberie zo stroja, dá sa otáčať a po „Upnúť späť“ sa vráti na pôvodné miesto.
 
 ## Stroje
 
@@ -30,7 +31,8 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
       <h3>🛠️ Konvenčný hrotový sústruh</h3>
       <sub>predloha TOS SN / VDF · tyč kruhová alebo šesťhran, mosadz / oceľ / hliník</sub>
       <ul>
-        <li>štvorpolohová nožová hlava, 8 typov nožov v pravom aj ľavom prevedení, animovaná výmena</li>
+        <li>štvorpolohová nožová hlava, 8 typov nožov v pravom aj ľavom prevedení a závitový nôž 60°, animovaná výmena</li>
+        <li>rezanie metrických závitov P 0,75 – 3 mm cez maticu vodiacej skrutky, skrutkovicový profil závitu</li>
         <li>horné sane s mikroposuvom, páky odistenia hlavy, pinoly a koníka</li>
         <li>12 otáčok, prevodovka posuvov Norton, DRO na ramene, pracovná lampa</li>
       </ul>
@@ -115,6 +117,20 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 
 **Pripravujeme:** rúrové polohy PH, PJ a H-L045 (5G, 6G).
 
+### 🎓 Výučba
+
+| | |
+| --- | --- |
+| **Úlohy s kontrolou** | každý stroj má úlohy podľa výkresu (napr. osadenie Ø40 × 50, zápich, závit M30 × 1,5, drážka 20 × 5, dve diery Ø10 naskrz, ohyb 90°, prebrúsenie o 0,1 mm, tupý zvar V); požiadavky sa kontrolujú priebežne z modelu, vyhodnotenie dá percentá a známku, počíta sa čas aj varovania |
+| **Odkaz pre žiakov** | tlačidlo skopíruje odkaz, ktorý otvorí stroj rovno s úlohou, napr. `…/#sustruh/uloha=zavit` |
+| **Kontrola BOZP** | pri úlohe sa stroj spustí až po potvrdení kontrolného zoznamu (kľúč zo skľučovadla, okuliare, upnutie, kukla …) |
+| **Meranie** | sústruh: posuvné meradlo s krúžkom na obrobku a tabuľka osadení a závitu; fréza: hĺbkomer; vŕtačka: zoznam dier s rozostupom; brúska: úbytok a rovinnosť |
+| **Rezné podmienky** | kalkulačka n = 1000 · vc / (π · D) podľa materiálu a nástroja (HSS / SK), najbližší stupeň prevodovky jedným klikom |
+| **Uloženie a export** | rozpracovaný obrobok sa uloží v prehliadači a dá sa znova upnúť; export obrobku do STL v mm a snímka scény do PNG |
+| **Zvuk** | motor podľa otáčok, rez, iskrenie brúsky, bzučanie transformátora a praskanie oblúka – syntetizované v prehliadači, zapína sa ikonou reproduktora (predvolene vypnutý) |
+
+Na slabšom hardvéri sa kvalita zníži automaticky (rozlíšenie, potom tiene lámp); parameter `?hq` v adrese to vypne.
+
 ### ✋ Ručné ovládanie
 
 Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie prvky sa zvýraznia namodro. Ťahaním sa točia ručné kolesá a kľuky a prestavujú páky, tlačidlá, vypínače a núdzový STOP sa stláčajú myšou. Pracovné lampy (sústruh, fréza, brúska) majú skutočné bodové svetlo s tieňmi.
@@ -162,18 +178,54 @@ flowchart LR
 
 | Cesta | Obsah |
 | --- | --- |
-| [`public/index.html`](public/index.html) | celá aplikácia v jednom súbore (React, three.js r128, Tailwind a Babel z CDN) |
-| [`src/machines.jsx`](src/machines.jsx) | ten istý kód ako ES modul – `export default App` a jednotlivé simulátory, vyžaduje `three@0.128` |
+| [`index.html`](index.html), [`src/main.jsx`](src/main.jsx) | vstup aplikácie pre Vite |
+| [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
+| [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
+| [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania) |
+| [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
+| [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
+| [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |
+| [`public/`](public) | **zostavená aplikácia** (`npm run build`) – commituje sa, z nej nasadzuje Cloudflare |
+| [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, závit a profil sústruhu, kontroly všetkých úloh, rezné podmienky, zvarová príprava, výšková mapa |
+| [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.186`) |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
-| [`docs/img`](docs/img) | snímky obrazovky pre toto README |
+| [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
 
-## Spustenie
+## Vývoj
+
+Potrebný je Node.js 22.12 alebo novší. Závislosti sa nainštalujú raz:
 
 ```bash
-npx serve public
+npm install
 ```
 
+Vývojový server s okamžitým obnovením stránky:
+
+```bash
+npm run dev
+```
+
+Pred commitom: lint, testy, build a kontrola, že commitnutý `public/` zodpovedá zdrojom (to isté robí CI pri každom pull requeste):
+
+```bash
+npm run check
+```
+
+Ak kontrola hlási rozdiel v `public/`, stačí spustiť `npm run build` a výsledok commitnúť.
+
 ## Nasadenie
+
+Nasadenie je automatické: po každom zlúčení do `main` workflow [CI](.github/workflows/ci.yml) najprv spustí lint, testy a build a ak prejdú, nasadí `public/` na Cloudflare Workers (`npx wrangler deploy`). Ručne sa dá spustiť v záložke **Actions → CI → Run workflow** na vetve `main`.
+
+Workflow potrebuje dve tajomstvá repozitára (**Settings → Secrets and variables → Actions**):
+
+| Tajomstvo | Kde ho získať |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare → **My Profile → API Tokens → Create Token** → šablóna **Edit Cloudflare Workers** |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → **Workers & Pages** → pravý panel **Account ID** |
+
+Bez nich sa krok nasadenia len preskočí s upozornením. Ručné nasadenie z počítača funguje aj naďalej – `public/` je v repozitári už zostavený:
 
 ```bash
 npx wrangler deploy

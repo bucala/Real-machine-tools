@@ -1,0 +1,17 @@
+{
+  "name": "Real machine tools – simulátory obrábacích strojov",
+  "short_name": "Machine tools",
+  "description": "Interaktívne 3D simulátory konvenčných obrábacích strojov: sústruh, fréza, vŕtačka, ohýbačka, brúska, pásová píla a oblúková zváračka.",
+  "lang": "sk",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111511",
+  "theme_color": "#111511",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
