@@ -20,6 +20,21 @@ Slabiny sú najmä **v dodávaní a prevádzke**, nie v samotnej simulácii:
 
 Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a prevádzka 4/10, prístupnosť 6/10.** Väčšinu problémov z bodov 1 – 4 a 7 sa dá odstrániť za 1 – 2 dni; bod 2, 3 a 5 rieši jeden krok – zavedenie zostavenia (build) cez Vite.
 
+### Stav opráv – fáza 1 (3. 11. 2026)
+
+| Zistenie | Stav | Čo sa zmenilo |
+|---|---|---|
+| V1 prázdna stránka bez WebGL | ✅ opravené | `SimBoundary` okolo každého simulátora (hláška, „Späť do menu“, „Načítať znova“), upozornenie v menu pri chýbajúcom WebGL alebo three.js |
+| V2 prázdna stránka počas načítania | ✅ čiastočne | indikátor načítania v `#root`, `<noscript>`; preklad v prehliadači zostáva do fázy 2 (Vite) |
+| V3 skripty bez SRI | ✅ čiastočne | `integrity` + `crossorigin` pre React, ReactDOM, three.js (overené voči API cdnjs) a Babel; pri výpadku CDN hláška namiesto nekonečného načítania. Tailwind Play CDN generuje skript dynamicky, SRI sa naň dať nedá – odstráni ho fáza 2 |
+| V4 blikanie oblúka | ✅ opravené | kolísanie ~11× za s namiesto každého snímku, prepínač „Efekty záblesku“, pri `prefers-reduced-motion` predvolene vypnutý (plynulé rozjasnenie bez záblesku), upozornenie na karte zvárania |
+| S1 duplicitný kód | ✅ zmiernené | `tools/sync-index.mjs` generuje blok v `index.html` zo `src/machines.jsx`, `--check` overí zhodu |
+| S7 panel obchádza prevodovku | ✅ opravené | otáčky sústruhu, frézy a vŕtačky len zo stupňov prevodovky a len pri stojacom vretene; posuvy sústruhu a frézy zo stupňov prevodovky |
+| S8 živá oblasť | ✅ opravené | priebežné údaje (`run`, `idle`) majú `aria-live="off"`, hlásky a varovania sa naďalej oznamujú |
+| N4 drobnosti | ✅ opravené | odstránené mŕtve volanie `span`, `window.__weld` sa pri odchode zo zvárania zmaže |
+| N5 – N7 prístupnosť | ✅ opravené | dotykové ciele ≥ 24 px, sekcie panelu `<h2>`, fokus na nadpis po prechode menu ↔ stroj |
+| N8 meta a ikona | ✅ čiastočne | ikona (SVG), `theme-color`, Open Graph; manifest a offline režim vo fáze 4 |
+
 ## 2. Rozsah a metodika
 
 - **Prehliadka kódu** – celé jadro (riadky 1 – 1 100), celý simulátor sústruhu, kľúčové časti frézy a zvárania, životný cyklus (`useEffect`, `requestAnimationFrame`, `dispose`, poslucháči udalostí) vo všetkých siedmich simulátoroch.

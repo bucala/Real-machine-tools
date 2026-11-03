@@ -163,7 +163,8 @@ flowchart LR
 | Cesta | Obsah |
 | --- | --- |
 | [`public/index.html`](public/index.html) | celá aplikácia v jednom súbore (React, three.js r128, Tailwind a Babel z CDN) |
-| [`src/machines.jsx`](src/machines.jsx) | ten istý kód ako ES modul – `export default App` a jednotlivé simulátory, vyžaduje `three@0.128` |
+| [`src/machines.jsx`](src/machines.jsx) | zdrojový kód ako ES modul – `export default App` a jednotlivé simulátory, vyžaduje `three@0.128`; zmeny sa robia tu |
+| [`tools/sync-index.mjs`](tools/sync-index.mjs) | prenesie `src/machines.jsx` do `public/index.html`, s `--check` len overí zhodu |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
 | [`docs/img`](docs/img) | snímky obrazovky pre toto README |
 | [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, návrhy opráv a vylepšení |
@@ -172,6 +173,18 @@ flowchart LR
 
 ```bash
 npx serve public
+```
+
+Kód sa upravuje v `src/machines.jsx`, potom sa prenesie do `public/index.html`:
+
+```bash
+node tools/sync-index.mjs
+```
+
+Pred commitom sa dá overiť, že oba súbory sú zhodné:
+
+```bash
+node tools/sync-index.mjs --check
 ```
 
 ## Nasadenie

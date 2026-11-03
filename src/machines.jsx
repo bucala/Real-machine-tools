@@ -22,6 +22,8 @@ const L = (sk, en) => (PREFS.lang === 'en' ? en : sk);
 // text vyhodnotený až pri zobrazení – pre popisy ovládacích prvkov vytvorené raz pri stavbe scény
 const LL = (sk, en) => ({ toString: () => L(sk, en) });
 const RPM = () => L('ot/min', 'rpm');
+// používateľ si v systéme vyžiadal obmedzenie pohybu – bez blikania a zábleskov
+const REDUCED_MOTION = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) { return false; } })();
 const PrefsCtx = React.createContext({ prefs: PREFS, setPref: () => {} });
 
 const CSS = `
@@ -61,6 +63,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 }
 .sec{padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--border)}
 .sec-title{font-family:var(--f-head);font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
+.app-title:focus,.menu-title:focus{outline:none}
 .app-title{font-family:var(--f-head);font-size:26px;line-height:1.05;font-weight:700;margin:0;text-wrap:balance}
 .muted{color:var(--muted)} .ink{color:var(--text)} .tnum{font-variant-numeric:tabular-nums}
 .range{width:100%;accent-color:var(--accent);margin-top:6px;cursor:pointer}
@@ -91,7 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .scene-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:var(--chrome);color:#e9eee6;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--f-ui);pointer-events:auto}
 .scene-btn:hover{border-color:var(--accent)} .scene-btn.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .scene-btn:focus-visible{outline:2px solid #fff;outline-offset:1px}
-.swatch{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0}
+.swatch{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0}
 .swatch.on{border-color:var(--text);box-shadow:0 0 0 2px var(--panel) inset}
 .swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tool-slot{border:1px solid var(--border);background:var(--panel-2);border-radius:8px;padding:6px 8px;font-size:12px;text-align:left;cursor:pointer;color:var(--text);font-family:var(--f-ui);line-height:1.25}
@@ -107,7 +110,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .part-btn.active{background:var(--hl);border-color:var(--hl);color:#1b1204}
 .desc{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin-top:10px}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
-.seg button{padding:3px 9px;font-size:12px;font-weight:600;background:var(--panel-2);color:var(--muted);border:0;cursor:pointer;font-family:var(--f-ui)}
+.seg button{min-height:26px;padding:3px 10px;font-size:12px;font-weight:600;background:var(--panel-2);color:var(--muted);border:0;cursor:pointer;font-family:var(--f-ui)}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
 .mode-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chrome);border:1px solid rgba(255,255,255,.18)}
 .mode-seg button{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:7px;border:0;background:transparent;color:#d9e0d5;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f-ui)}
@@ -863,6 +866,24 @@ function Slider({ id, label, value, min, max, step, unit, onChange, actual, disa
   );
 }
 
+// výber z odstupňovaných hodnôt prevodovky (otáčky, posuvy); locked = preradenie nie je dovolené (vreteno sa točí)
+function StepSelect({ id, label, values, value, unit, onChange, locked, lockNote, fmt = (v) => String(v) }) {
+  const cur = values[logNear(values, value)];
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm mb-1">
+        <span className="font-semibold">{label}</span>
+        <span className="ink font-semibold text-sm tnum">{fmt(cur)} {unit}</span>
+      </label>
+      <select id={id} className="sel" value={cur} disabled={locked} onChange={(e) => onChange(Number(e.target.value))}>
+        {values.map((v) => <option key={v} value={v}>{fmt(v)} {unit}</option>)}
+      </select>
+      {locked && lockNote && <p className="text-xs mt-1" style={{ color: 'var(--warn)' }}>{lockNote}</p>}
+    </div>
+  );
+}
+const GEAR_LOCK = () => L('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'Speeds can only be changed with the spindle stopped – stop it first.');
+
 function Toggle({ on, onClick, label }) {
   return (
     <button type="button" onClick={onClick} className="flex items-center justify-between w-full text-sm py-1 gap-3 text-left" aria-pressed={on}>
@@ -963,13 +984,13 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
         <PrefBar />
       </div>
-      <h1 className="app-title mt-3">{title}</h1>
+      <h1 className="app-title mt-3" tabIndex={-1}>{title}</h1>
       <p className="text-xs muted mt-1">{sub}</p>
       <div className="dro mt-3 tnum">
         {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
         <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
       </div>
-      <div className={`msg msg-${status.kind}`} role="status"><span className="lamp" />{status.text}</div>
+      <div className={`msg msg-${status.kind}`} role="status" aria-live={status.kind === 'run' || status.kind === 'idle' ? 'off' : 'polite'}><span className="lamp" />{status.text}</div>
       <div className="mt-2">
         <Toggle on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
       </div>
@@ -980,7 +1001,7 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
 function ViewSection({ views, apiRef }) {
   return (
     <div className="sec">
-      <h3 className="sec-title mb-2">{L('Pohľad', 'View')}</h3>
+      <h2 className="sec-title mb-2">{L('Pohľad', 'View')}</h2>
       <div className="flex flex-wrap gap-2">
         {views.map(([k, l]) => (
           <button key={k} type="button" className="btn" onClick={() => apiRef.current.view && apiRef.current.view(k)}>{l}</button>
@@ -995,7 +1016,7 @@ function PartsSection({ parts, selected, selectPart }) {
   return (
     <div className="sec">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="sec-title">{L('Časti stroja', 'Machine parts')}</h3>
+        <h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2>
         {selected && <button type="button" className="text-xs muted underline" onClick={() => selectPart(selected)}>{L('Zrušiť výber', 'Clear selection')}</button>}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -1018,7 +1039,7 @@ const mkParts = (rows) => rows.map(([key, ss, se, ns, ne, ds, de]) => ({ key, sh
 function BlankSection({ title, children, onApply, applyLabel, note }) {
   return (
     <div className="sec">
-      <h3 className="sec-title mb-2">{title || L('Polotovar', 'Workpiece')}</h3>
+      <h2 className="sec-title mb-2">{title || L('Polotovar', 'Workpiece')}</h2>
       {children}
       <button type="button" className="btn mt-1 w-full" onClick={onApply}>{applyLabel || L('Upnúť nový polotovar', 'Clamp a new workpiece')}</button>
       {note && <p className="text-xs muted mt-2">{note}</p>}
@@ -1057,6 +1078,7 @@ const LIM = { tipMin: -3.35, rMax: 1.3, quillMax: 1.5, tailMax: 9.0, carToTail: 
 const SPEEDS = [40, 56, 80, 112, 160, 224, 315, 450, 630, 900, 1250, 1800];   // 3 × 4 stupne otáčok
 const FEED_BASE = [0.05, 0.07, 0.1, 0.14, 0.2, 0.25, 0.35, 0.5], FEED_MULT = [1, 2];
 const A_ANG = [0.75, 0, -0.75], B_ANG = [0.95, 0.32, -0.32, -0.95];      // polohy pák otáčok
+const LATHE_FEEDS = [...new Set(FEED_MULT.flatMap((m) => FEED_BASE.map((b) => Math.round(b * m * 100) / 100)))].sort((a, b) => a - b);   // všetky posuvy prevodovky
 const FEED_ANG = FEED_BASE.map((_, i) => 1.4 - i * 2.8 / 7), MULT_ANG = [0.5, -0.5];
 
 // sústružnícke nože (pravé prevedenie): obrys v pôdoryse (x doprava, z k obsluhe, hrot v 0,0),
@@ -1473,7 +1495,7 @@ function LatheSimulator({ onBack }) {
       // pri otáčaní hlavy opisujú nože kružnicu okolo stredu hlavy – nesmú zasiahnuť obrobok ani skľučovadlo
       const cx = st.car + st.top + POST.x, cz = st.r - TIP_LZ + POST.z, R = 1.17;
       if (cx - R < JAW_X + 0.05 && cz - R < 1.4) return false;
-      let mr = 0; span(cx, () => {});
+      let mr = 0;
       const i0 = Math.max(0, Math.floor((cx - R - W_X0) / wk.dx)), i1 = Math.min(W_N - 1, Math.floor((cx + R - W_X0) / wk.dx));
       for (let i = i0; i <= i1; i++) mr = Math.max(mr, prof[i]);
       if (st.tail - st.q - 0.7 < cx + R) mr = Math.max(mr, 0.4);
@@ -1793,7 +1815,7 @@ function LatheSimulator({ onBack }) {
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
+          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${running ? 'stop' : 'start'}`}
             onClick={() => { if (!running && !ui.power) set('power', true); set('running', !running); }}>
             {running ? L('■ Stop vretena', '■ Stop spindle') : L('▶ Štart vretena', '▶ Start spindle')}
@@ -1803,25 +1825,27 @@ function LatheSimulator({ onBack }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <div className="mt-3">
-            <Slider id="rpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} min={40} max={2000} step={10} value={ui.rpm} onChange={(v) => set('rpm', v)} />
+            <StepSelect id="rpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
+              locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} />
           </div>
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h3>
+          <h2 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h2>
           <Slider id="z" label={L('Suport pozdĺžne Z (od čeľustí)', 'Carriage Z (from the jaws)')} unit="mm" min={10} max={1150} step={1} value={ui.z} actual={tele.carZ} onChange={(v) => set('z', v)} />
           <Slider id="top" label={L('Mikroposuv – horné sane Z', 'Fine feed – top slide Z')} unit="mm" min={-50} max={50} step={0.05} value={ui.top} actual={tele.top} digits={2} onChange={(v) => set('top', v)} />
           <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={-10} max={260} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
           <Toggle on={ui.autoFeed} label={L('Automatický pozdĺžny posuv k skľučovadlu', 'Automatic longitudinal feed towards the chuck')} onClick={() => set('autoFeed', !ui.autoFeed)} />
           <div className="mt-2">
-            <Slider id="feed" label={L('Posuv na otáčku', 'Feed per revolution')} unit={L('mm/ot', 'mm/rev')} min={0.05} max={1} step={0.01} value={ui.feed} digits={2} onChange={(v) => set('feed', v)} />
+            <StepSelect id="feed" label={L('Posuv na otáčku', 'Feed per revolution')} unit={L('mm/ot', 'mm/rev')} values={LATHE_FEEDS} value={ui.feed} onChange={(v) => set('feed', v)}
+              fmt={(v) => L(v.toFixed(2).replace('.', ','), v.toFixed(2))} />
             <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
             <p className="text-xs muted">{L('Údaj Z na displeji je poloha hrotu noža = suport + horné sane + vyloženie zvoleného noža. X = 0 je os vretena, nôž prejde až 5 mm za os.', 'The Z readout is the tool tip position = carriage + top slide + offset of the selected tool. X = 0 is the spindle axis; the tool can go 5 mm past it.')}</p>
           </div>
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Nožová hlava', 'Tool post')}</h3>
+          <h2 className="sec-title mb-2">{L('Nožová hlava', 'Tool post')}</h2>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {ui.slots.map((s, k) => (
               <button key={k} type="button" className={`tool-slot ${tele.slot === k ? 'on' : ''}`} aria-pressed={tele.slot === k}
@@ -1840,7 +1864,7 @@ function LatheSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Koník', 'Tailstock')}</h3>
+          <h2 className="sec-title mb-2">{L('Koník', 'Tailstock')}</h2>
           <Toggle on={ui.tailLock} label={L('Koník zaistený na lôžku', 'Tailstock clamped to the bed')} onClick={() => set('tailLock', !ui.tailLock)} />
           <Toggle on={ui.quillLock} label={L('Pinola zaistená', 'Quill locked')} onClick={() => set('quillLock', !ui.quillLock)} />
           <div className="mt-2">
@@ -2511,7 +2535,7 @@ function MillSimulator({ onBack }) {
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vf ${tele.vf} mm/min`, `${L('pinola', 'quill')} ${tele.q.toFixed(1)}`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
+          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${running ? 'stop' : 'start'}`}
             onClick={() => { if (!running && !ui.power) set('power', true); set('running', !running); }}>
             {running ? L('■ Stop vretena', '■ Stop spindle') : L('▶ Štart vretena', '▶ Start spindle')}
@@ -2522,12 +2546,13 @@ function MillSimulator({ onBack }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <div className="mt-3">
-            <Slider id="mrpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} min={40} max={2000} step={5} value={ui.rpm} onChange={(v) => set('rpm', v)} />
+            <StepSelect id="mrpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={MILL_SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
+              locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} />
           </div>
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Nástroj', 'Tool')}</h3>
+          <h2 className="sec-title mb-2">{L('Nástroj', 'Tool')}</h2>
           <SegRow label={L('Druh', 'Type')} value={curKind} options={kinds}
             onChange={(k) => { const first = MILL_TOOL_LIST.find((x) => x.kind === k && x.d === (k === 'face' ? 63 : k === 'ball' ? 10 : 20)) || MILL_TOOL_LIST.find((x) => x.kind === k); set('tool', first.id); }} />
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2539,7 +2564,7 @@ function MillSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h3>
+          <h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2>
           <Slider id="mx" label={L('Stôl pozdĺžne X', 'Table X')} unit="mm" min={0} max={800} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
           <Slider id="my" label={L('Sane priečne Y', 'Saddle Y')} unit="mm" min={0} max={300} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
           <Slider id="mz" label={L('Konzola zvisle Z', 'Knee Z')} unit="mm" min={0} max={420} step={0.5} value={ui.z} actual={tele.z} digits={1} onChange={(v) => set('z', v)} />
@@ -2549,7 +2574,8 @@ function MillSimulator({ onBack }) {
           <Toggle on={ui.quillLock} label={L('Pinola zaistená', 'Quill locked')} onClick={() => set('quillLock', !ui.quillLock)} />
           <div className="mb-3" />
           <SegRow label={L('Posuv stola', 'Table feed')} value={ui.feedDir} options={[[-1, L('← Vľavo', '← Left')], [0, 'Stop'], [1, L('Vpravo →', 'Right →')]]} onChange={(v) => set('feedDir', v)} />
-          <Slider id="mfeed" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/min" min={19} max={950} step={1} value={ui.feed} onChange={(v) => set('feed', v)} />
+          <StepSelect id="mfeed" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/min" values={MILL_FEEDS} value={ui.feed} onChange={(v) => set('feed', v)}
+            fmt={(v) => L(String(v).replace('.', ','), String(v))} />
           <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
           <p className="text-xs muted">{L('Automatický posuv stola beží len pri otáčajúcom sa vretene. Pri X = 400 a Y = 120 je os frézy nad stredom 100 mm širokého obrobku.', 'The table power feed only runs while the spindle turns. At X = 400 and Y = 120 the cutter axis is above the centre of a 100 mm wide workpiece.')}</p>
         </div>
@@ -2953,17 +2979,18 @@ function DrillSimulator({ onBack }) {
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
+          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
             onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); }}>
             {ui.running ? L('■ Stop vretena', '■ Stop spindle') : L('▶ Štart vretena', '▶ Start spindle')}
           </button>
           <div className="mt-2"><Toggle on={ui.power} label={L('Hlavný vypínač', 'Main switch')} onClick={() => { const v = !ui.power; set('power', v); if (!v) set('running', false); }} /></div>
-          <div className="mt-3"><Slider id="drpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} min={125} max={1400} step={5} value={ui.rpm} onChange={(v) => set('rpm', v)} /></div>
+          <div className="mt-3"><StepSelect id="drpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={DRILL_SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
+            locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} /></div>
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Vrták', 'Drill')}</h3>
+          <h2 className="sec-title mb-2">{L('Vrták', 'Drill')}</h2>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {DRILL_SIZES.map((d) => <button key={d} type="button" className={`btn ${ui.bit === d ? 'active' : ''}`} aria-pressed={ui.bit === d} onClick={() => set('bit', d)}>Ø{d}</button>)}
           </div>
@@ -2971,7 +2998,7 @@ function DrillSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h3>
+          <h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2>
           <Slider id="dq" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={100} step={0.5} value={ui.quill} actual={tele.quill} digits={1} onChange={(v) => set('quill', v)} />
           <Slider id="dt" label={L('Výška stola', 'Table height')} unit="mm" min={0} max={500} step={1} value={ui.table} actual={tele.table} onChange={(v) => set('table', v)} />
           <SegRow label={L('Zrýchlenie vŕtania', 'Drilling acceleration')} value={ui.timeScale} options={[[1, '1×'], [5, '5×'], [20, '20×']]} onChange={(v) => set('timeScale', v)} />
@@ -2979,7 +3006,7 @@ function DrillSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h3>
+          <h2 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h2>
           <Slider id="du" label={L('Posun dosky X', 'Plate offset X')} unit="mm" min={-60} max={60} step={1} value={ui.u} onChange={(v) => set('u', v)} />
           <Slider id="dv" label={L('Posun dosky Y', 'Plate offset Y')} unit="mm" min={-50} max={50} step={1} value={ui.v} onChange={(v) => set('v', v)} />
           <p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p>
@@ -3243,7 +3270,7 @@ function FolderSimulator({ onBack }) {
           foot={[`${L('plech', 'sheet')} ${ui.thick} mm`, `${L('odpruženie', 'springback')} ${fmt(sb)}°`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Plech a upínanie', 'Sheet and clamping')}</h3>
+          <h2 className="sec-title mb-2">{L('Plech a upínanie', 'Sheet and clamping')}</h2>
           <SegRow label={L('Hrúbka plechu', 'Sheet thickness')} value={ui.thick} options={[[0.5, L('0,5 mm', '0.5 mm')], [1, '1 mm'], [2, '2 mm']]} onChange={(v) => set('thick', v)} />
           <Slider id="ffl" label={L('Vyloženie (dĺžka ohnutého okraja)', 'Flange length (bent edge)')} unit="mm" min={10} max={150} step={1} value={ui.flange} onChange={(v) => set('flange', v)} />
           <Slider id="fgap" label={L('Upínacia lišta – medzera nad stolom', 'Clamping beam – gap above the bed')} unit="mm" min={0} max={40} step={0.1} value={ui.gap} actual={tele.gap} digits={1} onChange={(v) => set('gap', v)} />
@@ -3254,7 +3281,7 @@ function FolderSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Ohýbanie', 'Bending')}</h3>
+          <h2 className="sec-title mb-2">{L('Ohýbanie', 'Bending')}</h2>
           <Slider id="fbeam" label={L('Uhol ohýbacej lišty', 'Folding beam angle')} unit="°" min={0} max={130} step={0.5} value={ui.beam} actual={tele.beam} digits={1} onChange={(v) => set('beam', v)} />
           <div className="flex flex-wrap gap-2">
             {[45, 90, 120].map((a) => <button key={a} type="button" className="btn" onClick={() => set('beam', a + sb)}>{a}° (+{fmt(sb)}°)</button>)}
@@ -3656,7 +3683,7 @@ function GrinderSimulator({ onBack }) {
           foot={[`${L('kotúč', 'wheel')} ${Math.round(tele.wrpm)} ${RPM()}`, `${L('úbytok', 'removed')} ${tele.removed.toFixed(3)} mm`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
+          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${ui.wheel ? 'stop' : 'start'}`}
             onClick={() => { if (!ui.wheel && !ui.power) set('power', true); set('wheel', !ui.wheel); }}>
             {ui.wheel ? L('■ Stop kotúča', '■ Stop wheel') : L('▶ Štart kotúča', '▶ Start wheel')}
@@ -3671,7 +3698,7 @@ function GrinderSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Polohy', 'Positions')}</h3>
+          <h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2>
           <Slider id="gx" label={L('Stôl X', 'Table X')} unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
           <Slider id="gy" label={L('Sane Y', 'Saddle Y')} unit="mm" min={0} max={240} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
           <Slider id="gz" label={L('Kotúč nad doskou Z', 'Wheel above chuck Z')} unit="mm" min={0} max={200} step={0.005} value={ui.z} actual={tele.z} digits={3} onChange={(v) => set('z', v)} />
@@ -3682,7 +3709,7 @@ function GrinderSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hydraulický posuv', 'Hydraulic feed')}</h3>
+          <h2 className="sec-title mb-2">{L('Hydraulický posuv', 'Hydraulic feed')}</h2>
           <Toggle on={ui.autoX} label={L('Pohyb stola tam a späť', 'Table reciprocation')} onClick={() => set('autoX', !ui.autoX)} />
           <Slider id="gsp" label={L('Rýchlosť stola', 'Table speed')} unit="m/min" min={1} max={25} step={0.5} value={ui.speed} digits={1} onChange={(v) => set('speed', v)} />
           <Slider id="gxl" label={L('Ľavá narážka', 'Left dog')} unit="mm" min={0} max={600} step={1} value={ui.xL} onChange={(v) => set('xL', v)} />
@@ -4054,7 +4081,7 @@ function BandSawSimulator({ onBack }) {
           foot={[`${L('pás', 'blade')} ${tele.v.toFixed(1)} m/s`, `${L('napnutie', 'tension')} ${Math.round(tele.tension)} %`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h3>
+          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
             onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); }}>
             {ui.running ? L('■ Stop píly', '■ Stop saw') : L('▶ Štart píly', '▶ Start saw')}
@@ -4069,7 +4096,7 @@ function BandSawSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h3>
+          <h2 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h2>
           <Slider id="sgd" label={L('Výška horného vodidla nad stolom', 'Upper guide height above the table')} unit="mm" min={10} max={300} step={1} value={ui.guide} actual={tele.guide} onChange={(v) => set('guide', v)} />
           <Slider id="sfd" label={L('Posuv obrobku proti pásu', 'Workpiece feed against the blade')} unit="mm" min={0} max={ui.bL + 120} step={1} value={ui.feed} actual={tele.feed} onChange={(v) => set('feed', v)} />
           <Toggle on={ui.autoFeed} label={L('Rovnomerný posuv', 'Steady feed')} onClick={() => set('autoFeed', !ui.autoFeed)} />
@@ -4164,7 +4191,7 @@ const weldParts = () => mkParts([
 
 function WeldingSimulator({ onBack }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), flashRef = useRef(null), glassRef = useRef(null);
-  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, tripped: false, slag: true };
+  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, tripped: false, slag: true, flashFx: !REDUCED_MOTION };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useState({ arc: false, I: 0, la: 3, v: 0, le: 350, msg: null, stats: null });
 
@@ -4529,7 +4556,7 @@ function WeldingSimulator({ onBack }) {
 
     // ---------- hlavná slučka ----------
     const dirW = v3(), xW = v3(), nW = v3(), tipW = v3(), tmp = v3();
-    let raf, cableKey = '';
+    let raf, cableKey = '', flick = 1, flickT = 0;
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
@@ -4632,7 +4659,10 @@ function WeldingSimulator({ onBack }) {
       }
       }
       const arcPos = pivot.localToWorld(tmp.set(st.tx, surf + st.la * 0.5, st.tz));
-      const fl = 0.75 + Math.random() * 0.5;
+      // kolísanie oblúka: nová hodnota ~11× za sekundu (nie v každom snímku), bez efektov stály jas
+      flickT += dt;
+      if (flickT > 0.09) { flickT = 0; flick = 0.85 + Math.random() * 0.3; }
+      const fl = c.flashFx ? flick : 1;
       arcCore.visible = halo.visible = st.arc; arcCore.position.copy(arcPos); halo.position.copy(arcPos); halo.scale.setScalar(0.7 + 0.35 * fl);
       arcLight.position.copy(arcPos).addScaledVector(nW, 0.15); arcLight.intensity = st.arc ? 5 * fl : 0;
       jaw.rotation.z = c.ground ? 0 : 0.5; jaw.position.y = clampAt.y + (c.ground ? 0 : 0.25);
@@ -4642,7 +4672,9 @@ function WeldingSimulator({ onBack }) {
       // záblesk bez kukly a sklo kukly
       const fe = flashRef.current, ge = glassRef.current;
       if (fe) {
-        const op = st.arc && !c.helmet ? 0.78 + Math.random() * 0.22 : Math.max(0, (parseFloat(fe.style.opacity) || 0) - dt * 2.5);
+        // s efektmi: okamžitý záblesk s jemným kolísaním v svetlej oblasti; bez efektov plynulý nábeh na stály jas
+        const prevOp = parseFloat(fe.style.opacity) || 0;
+        const op = st.arc && !c.helmet ? (c.flashFx ? 0.82 + 0.4 * (fl - 0.85) : Math.min(0.55, prevOp + dt * 2)) : Math.max(0, prevOp - dt * 2.5);
         fe.style.opacity = op.toFixed(3);
         if (st.arc) { const v = arcPos.clone().project(camera); fe.style.setProperty('--fx', `${((v.x + 1) / 2 * 100).toFixed(1)}%`); fe.style.setProperty('--fy', `${((1 - v.y) / 2 * 100).toFixed(1)}%`); }
       }
@@ -4704,6 +4736,7 @@ function WeldingSimulator({ onBack }) {
       dom.removeEventListener('pointerdown', pd, { capture: true }); dom.removeEventListener('pointermove', pm, { capture: true });
       dom.removeEventListener('pointerup', pu, { capture: true }); dom.removeEventListener('pointercancel', pu, { capture: true });
       dom.removeEventListener('wheel', wh, { capture: true });
+      try { if (window.__weld && window.__weld.F === F) delete window.__weld; } catch (err) { /* ignorované */ }
       disposeStage();
     };
   }, []);
@@ -4780,7 +4813,7 @@ function WeldingSimulator({ onBack }) {
           foot={[`Ø${ui.de} ${ui.etype === 'rutile' ? 'E 6013' : 'E 7018'}`, `${L('elektróda', 'electrode')} ${Math.round(tele.le)} mm`]} status={statusMsg} />
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Zváračka', 'Welder')}</h3>
+          <h2 className="sec-title mb-2">{L('Zváračka', 'Welder')}</h2>
           <SegRow label={L('Prepínač', 'Switch')} value={ui.mode} options={[['off', '0'], ['w380', '380 V'], ['w220', '220 V'], ['charge', L('Nabíjanie', 'Charging')]]} onChange={(v) => set('mode', v)} />
           <div className="text-sm font-semibold mb-1">{L('Zvárací prúd', 'Welding current')}</div>
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -4792,7 +4825,7 @@ function WeldingSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Elektróda', 'Electrode')}</h3>
+          <h2 className="sec-title mb-2">{L('Elektróda', 'Electrode')}</h2>
           <SegRow label={L('Druh', 'Type')} value={ui.etype} options={Object.entries(ELECTRODES).map(([k, e]) => [k, L(e.sk, e.en)])}
             onChange={(v) => { set('etype', v); if (!ELECTRODES[v].r[ui.de]) set('de', 3.2); }} />
           <SegRow label={L('Priemer', 'Diameter')} value={ui.de} options={Object.keys(ELECTRODES[ui.etype].r).map(Number).sort((a, b) => a - b).map((d) => [d, `Ø${L(String(d).replace('.', ','), String(d))}`])} onChange={(v) => set('de', v)} />
@@ -4805,7 +4838,7 @@ function WeldingSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Zvar a polotovar', 'Joint and parts')}</h3>
+          <h2 className="sec-title mb-2">{L('Zvar a polotovar', 'Joint and parts')}</h2>
           <div className="grid grid-cols-5 gap-1.5 mb-3">
             {WELD_TYPES.map((w) => (
               <button key={w.id} type="button" className={`weld-type ${ui.wType === w.id ? 'on' : ''}`} aria-pressed={ui.wType === w.id} onClick={() => set('wType', w.id)} title={L(w.sk, w.en)}>
@@ -4838,7 +4871,7 @@ function WeldingSimulator({ onBack }) {
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Ochrana', 'Protection')}</h3>
+          <h2 className="sec-title mb-2">{L('Ochrana', 'Protection')}</h2>
           <SegRow label={L('Kukla', 'Helmet')} value={ui.helmetType} options={[['auto', L('Moderná (senzor)', 'Modern (sensor)')], ['old', L('Stará (pevné sklo)', 'Old (fixed glass)')]]} onChange={(v) => set('helmetType', v)} />
           <Toggle on={ui.helmet} label={L('Zváračská kukla spustená (H)', 'Welding helmet down (H)')} onClick={() => set('helmet', !ui.helmet)} />
           {ui.helmetType === 'auto' ? (<div className="mt-2">
@@ -4846,11 +4879,12 @@ function WeldingSimulator({ onBack }) {
             <Slider id="wdl" label={L('Oneskorenie zosvetlenia', 'Light-state delay')} unit="s" min={0.1} max={1} step={0.1} value={ui.adfDelay} digits={1} onChange={(v) => set('adfDelay', v)} />
             <p className="text-xs muted">{L('Senzory zachytia oblúk a sklo okamžite stmavne; bez oblúka je priehľadné, takže vidíš, kam priložíš elektródu.', 'The sensors detect the arc and the glass darkens instantly; without the arc it is clear, so you see where to place the electrode.')}</p>
           </div>) : <p className="text-xs muted mt-2">{L('Pevné tmavé sklo DIN 11 – bez oblúka cez neho takmer nič nevidno, elektródu treba priložiť naslepo.', 'Fixed dark DIN 11 glass – without the arc you can hardly see anything, the electrode has to be placed blind.')}</p>}
-          <p className="text-xs muted mt-2">{L(`Bez kukly oblúk oslňuje celú obrazovku. Záblesky bez kukly: ${tele.flashes || 0}.`, `Without the helmet the arc blinds the whole screen. Flashes without helmet: ${tele.flashes || 0}.`)}</p>
+          <Toggle on={ui.flashFx} label={L('Efekty záblesku (blikanie oblúka)', 'Flash effects (arc flicker)')} onClick={() => set('flashFx', !ui.flashFx)} />
+          <p className="text-xs muted mt-2">{L(`Bez kukly oblúk oslňuje celú obrazovku. Záblesky bez kukly: ${tele.flashes || 0}.`, `Without the helmet the arc blinds the whole screen. Flashes without helmet: ${tele.flashes || 0}.`)} {L('Pri vypnutých efektoch sa obrazovka rozjasní plynulo a nebliká.', 'With effects off the screen brightens smoothly and does not flicker.')}</p>
         </div>
 
         <div className="sec">
-          <h3 className="sec-title mb-2">{L('Hodnotenie zvaru', 'Weld assessment')}</h3>
+          <h2 className="sec-title mb-2">{L('Hodnotenie zvaru', 'Weld assessment')}</h2>
           {s ? (<div className="text-sm" style={{ lineHeight: 1.6 }}>
             <div>{L('Zvarená dĺžka', 'Welded length')}: <b>{Math.round(s.cov * 100)} %</b></div>
             {s.fill != null && <div>{L('Vyplnenie úkosu', 'Groove filled')}: <b>{Math.round(s.fill * 100)} %</b></div>}
@@ -5046,11 +5080,53 @@ const MACHINES = [
   { id: 'zvaranie', Art: WelderArt, Comp: WeldingSimulator, t: () => ({
     meta: L('Zváranie', 'Welding'), name: L('Oblúková zváračka', 'Arc welder'), model: 'Elektrokov JS 90FN',
     desc: L('Ručné zváranie obalenou elektródou: 10 druhov zvarov so zvarovou prípravou, 4 polohy, kukla proti zábleskom a hodnotenie húsenice.', 'Manual metal arc welding: 10 joint types with edge preparation, 4 positions, a helmet against the flash and bead assessment.'),
-    specs: [L('Prúd 55 – 155 A', 'Current 55 – 155 A'), L('380 / 220 V', '380 / 220 V'), L('Elektródy Ø2 – Ø4 mm', 'Electrodes Ø2 – Ø4 mm')] }) },
+    specs: [L('Prúd 55 – 155 A', 'Current 55 – 155 A'), L('380 / 220 V', '380 / 220 V'), L('Elektródy Ø2 – Ø4 mm', 'Electrodes Ø2 – Ø4 mm')],
+    note: L('Obsahuje svetelné záblesky. Blikanie sa dá vypnúť v paneli (Efekty záblesku).', 'Contains light flashes. Flicker can be turned off in the panel (Flash effects).') }) },
 ];
 const SOON = [];
 
+// podpora WebGL – bez nej sa 3D scéna nedá vytvoriť
+let webglOk = null;
+const hasWebGL = () => {
+  if (webglOk !== null) return webglOk;
+  try {
+    const cv = document.createElement('canvas'), gl = window.WebGLRenderingContext && (cv.getContext('webgl2') || cv.getContext('webgl'));
+    webglOk = !!gl;
+    if (gl) { const ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); }   // skúšobný kontext hneď uvoľniť
+  } catch (err) { webglOk = false; }
+  return webglOk;
+};
+
+// zachytí chybu pri stavbe alebo behu simulátora – namiesto prázdnej stránky zobrazí hlášku a cestu späť
+class SimBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err) { try { console.error(err); } catch (e) { /* ignorované */ } }
+  render() {
+    if (!this.state.err) return this.props.children;
+    const gl = hasWebGL();
+    return (
+      <main className="menu">
+        <div className="menu-inner">
+          <p className="menu-kicker">Real machine tools</p>
+          <h1 className="menu-title" tabIndex={-1}>{L('Simulátor sa nepodarilo spustiť', 'The simulator could not start')}</h1>
+          <p className="menu-lead">{gl
+            ? L('Pri stavbe 3D scény nastala chyba. Skús stránku načítať znova; ak sa chyba opakuje, skús iný prehliadač.', 'An error occurred while building the 3D scene. Try reloading the page; if it happens again, try another browser.')
+            : L('Prehliadač nepodporuje WebGL alebo je v ňom vypnutá hardvérová akcelerácia grafiky. Zapni ju v nastaveniach prehliadača alebo použi aktuálny Chrome, Edge, Firefox či Safari.', 'The browser does not support WebGL or hardware graphics acceleration is turned off. Enable it in the browser settings or use a current Chrome, Edge, Firefox or Safari.')}</p>
+          <p className="text-xs muted mt-3" style={{ fontFamily: 'var(--f-mono)' }}>{String(this.state.err && this.state.err.message || this.state.err)}</p>
+          <div className="flex gap-2 mt-6 flex-wrap">
+            <button type="button" className="btn" onClick={this.props.onBack}>← {L('Späť do menu', 'Back to menu')}</button>
+            <button type="button" className="btn" onClick={() => window.location.reload()}>{L('Načítať znova', 'Reload')}</button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+}
+
 function Menu({ onOpen }) {
+  const [gl] = useState(hasWebGL);
+  const three = typeof THREE !== 'undefined';
   return (
     <main className="menu">
       <div className="menu-inner">
@@ -5058,8 +5134,18 @@ function Menu({ onOpen }) {
           <p className="menu-kicker">Real machine tools</p>
           <PrefBar />
         </div>
-        <h1 className="menu-title">{L('Simulátory konvenčných obrábacích strojov', 'Conventional machine tool simulators')}</h1>
+        <h1 className="menu-title" tabIndex={-1}>{L('Simulátory konvenčných obrábacích strojov', 'Conventional machine tool simulators')}</h1>
         <p className="menu-lead">{L('Vyber stroj. Každý model je zostavený v 3D, dá sa otáčať, rezať v ňom a v režime ručného ovládania sa obsluhuje kolesami, pákami a tlačidlami ako skutočný stroj.', 'Choose a machine. Every model is built in 3D; you can orbit it, cut with it and, in manual mode, operate it with handwheels, levers and buttons like the real thing.')}</p>
+        {!three && (
+          <div className="msg msg-danger" role="alert" style={{ maxWidth: '62ch' }}><span className="lamp" />
+            {L('Nepodarilo sa načítať 3D knižnicu three.js – skontroluj pripojenie na internet a stránku načítaj znova.', 'The three.js 3D library could not be loaded – check your internet connection and reload the page.')}
+          </div>
+        )}
+        {three && !gl && (
+          <div className="msg msg-danger" role="alert" style={{ maxWidth: '62ch' }}><span className="lamp" />
+            {L('Tento prehliadač nepodporuje WebGL alebo má vypnutú hardvérovú akceleráciu grafiky – simulátory sa v ňom nespustia.', 'This browser does not support WebGL or has hardware graphics acceleration turned off – the simulators will not run in it.')}
+          </div>
+        )}
         <div className="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-3">
           {MACHINES.map((m) => {
             const tx = m.t();
@@ -5072,6 +5158,7 @@ function Menu({ onOpen }) {
                   <span className="text-sm muted" style={{ lineHeight: 1.45 }}>{tx.desc}</span>
                   <span className="text-sm"><span className="muted">{L('Predloha', 'Modelled after')}:</span> <b>{tx.model}</b></span>
                   <span className="spec">{tx.specs.map((s) => <span key={s}>{s}</span>)}</span>
+                  {tx.note && <span className="text-xs" style={{ color: 'var(--warn)' }}>⚠ {tx.note}</span>}
                   <span className="card-cta">{L('Spustiť simulátor →', 'Open simulator →')}</span>
                 </div>
               </button>
@@ -5105,18 +5192,26 @@ function App() {
   const readRoute = () => { try { return (window.location.hash || '').replace('#', ''); } catch (err) { return ''; } };
   const [route, setRoute] = useState(readRoute);
   const [prefs, setPrefs] = useState({ ...PREFS });
+  const moved = useRef(false);
   const setPref = (k, v) => {
     PREFS[k] = v; const n = { ...PREFS }; setPrefs(n);
     try { localStorage.setItem('rmt-prefs', JSON.stringify(n)); } catch (err) { /* bez uloženia */ }
     try { document.documentElement.dataset.skin = n.skin; document.documentElement.lang = n.lang; } catch (err) { /* ignorované */ }
   };
   useEffect(() => {
-    const sync = () => setRoute(readRoute());
+    const sync = () => { moved.current = true; setRoute(readRoute()); };
     window.addEventListener('hashchange', sync); window.addEventListener('popstate', sync);
     return () => { window.removeEventListener('hashchange', sync); window.removeEventListener('popstate', sync); };
   }, []);
   useEffect(() => { document.title = L('Simulátory obrábacích strojov', 'Machine tool simulators'); }, [prefs.lang]);
+  // po prechode menu ↔ stroj presunie fokus na hlavný nadpis (čítačky obrazovky, klávesnica)
+  useEffect(() => {
+    if (!moved.current) return;
+    const h = document.querySelector('.app-title, .menu-title');
+    if (h) { try { h.focus({ preventScroll: true }); } catch (err) { /* ignorované */ } }
+  }, [route]);
   const go = (id) => {
+    moved.current = true;
     setRoute(id);
     try {
       if (id) window.location.hash = id;
@@ -5128,7 +5223,7 @@ function App() {
   return (
     <PrefsCtx.Provider value={{ prefs, setPref }}>
       <style>{CSS}</style>
-      {m ? <m.Comp key={m.id} lang={prefs.lang} onBack={() => go('')} /> : <Menu onOpen={go} />}
+      {m ? <SimBoundary key={m.id} onBack={() => go('')}><m.Comp lang={prefs.lang} onBack={() => go('')} /></SimBoundary> : <Menu onOpen={go} />}
     </PrefsCtx.Provider>
   );
 }
