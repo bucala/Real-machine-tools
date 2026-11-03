@@ -4,7 +4,7 @@ import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, mkTex, std } from '../core/kit';
-import { createParticles } from '../core/particles';
+import { createDrops, createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
@@ -24,7 +24,17 @@ const TIP_LZ = -0.05;                     // hrot noža voči osi priečnych san
 const TIP0 = -0.36;                       // vzťažná poloha hrotu voči suportu pre údaj Z suportu
 const POST = { x: 0.15, y: 6.62, z: 1.0 };   // stred nožovej hlavy na horných saniach
 const LIM = { tipMin: -3.35, rMax: 1.3, quillMax: 1.5, tailMax: 9.0, carToTail: 1.85, quillClear: 0.42, topMin: -0.5, topMax: 0.5 };
-const SPEEDS = [40, 56, 80, 112, 160, 224, 315, 450, 630, 900, 1250, 1800];   // 3 × 4 stupne otáčok
+const SPEEDS = [40, 56, 80, 112, 160, 224, 315, 450, 630, 900, 1250, 1800];   // 3 × 4 stupne otáčok (SN 50)
+// veľkosti TOS SN: S = mierka stroja voči SN 50 (výška hrotov 250 mm), axisH = výška osi vretena nad podlahou (jednotky scény).
+// Rozmery obrobku a nožov zostávajú v skutočných mm – menší stroj má kratšie lôžko, nižšie hroty a menšie nože.
+// Otáčky a rozmery sú orientačné hodnoty simulátora.
+const LATHE_MODELS = {
+  sn32: { name: 'SN 32', S: 0.64, axisH: 6.7, speeds: [56, 80, 112, 160, 224, 315, 450, 630, 900, 1250, 1800, 2500] },
+  sn40: { name: 'SN 40', S: 0.8, axisH: 7.1, speeds: [45, 63, 90, 125, 180, 250, 355, 500, 710, 1000, 1400, 2000] },
+  sn50: { name: 'SN 50', S: 1, axisH: 7.5, speeds: SPEEDS },
+  sn55: { name: 'SN 55', S: 1.1, axisH: 8.0, speeds: [28, 40, 56, 80, 112, 160, 224, 315, 450, 630, 900, 1250] },
+};
+const MODEL_KEY = 'rmt.lathe.model';
 const FEED_BASE = [0.05, 0.07, 0.1, 0.14, 0.2, 0.25, 0.35, 0.5], FEED_MULT = [1, 2];
 const A_ANG = [0.75, 0, -0.75], B_ANG = [0.95, 0.32, -0.32, -0.95];      // polohy pák otáčok
 const LATHE_FEEDS = [...new Set(FEED_MULT.flatMap((m) => FEED_BASE.map((b) => Math.round(b * m * 100) / 100)))].sort((a, b) => a - b);   // všetky posuvy prevodovky
@@ -68,6 +78,13 @@ const latheParts = () => mkParts([
   ['konik', 'Koník', 'Tailstock', 'Koník', 'Tailstock', 'Posúva sa po lôžku po uvoľnení páky zaistenia. Ručným kolesom sa vysúva pinola s otočným hrotom, ktorý podopiera dlhé obrobky; pinola sa aretuje pákou hore.', 'Slides along the bed once its clamp lever is released. The handwheel extends the quill with a live centre that supports long workpieces; the quill is locked by the lever on top.'],
   ['skrutky', 'Skrutka a ťažná tyč', 'Leadscrew & feed rod', 'Vodiaca skrutka a ťažná tyč', 'Leadscrew and feed rod', 'Vodiaca skrutka (so závitom) poháňa suport pri rezaní závitov cez maticu. Ťažná tyč (s drážkou) prenáša pohyb pre bežné pozdĺžne a priečne posuvy.', 'The leadscrew drives the carriage through the half-nut when cutting threads. The feed rod (with a keyway) transmits motion for ordinary longitudinal and cross feeds.'],
   ['prevodovka', 'Prevodovka posuvov', 'Feed gearbox', 'Prevodovka posuvov (Norton)', 'Feed gearbox (Norton)', 'Volí sa ňou veľkosť posuvu v mm/ot a stúpanie závitu. Pohon dostáva od vretena cez výmenné kolesá pod ľavým krytom.', 'Selects the feed in mm/rev and the thread pitch. It is driven from the spindle through change gears under the left cover.'],
+  ['kryt', 'Kryt skľučovadla', 'Chuck guard', 'Ochranný kryt skľučovadla', 'Chuck guard', 'Obyčajný odklápací plechový kryt nad skľučovadlom. Mikrospínač na pánte nedovolí spustiť vreteno, kým je kryt otvorený, a pri otvorení za chodu vreteno zastaví.', 'A plain hinged sheet-metal cover over the chuck. A microswitch on the hinge prevents the spindle from starting while the cover is open and stops it if the cover is opened while running.'],
+  ['chladenie', 'Chladenie', 'Coolant', 'Chladiaci systém', 'Coolant system', 'Čerpadlo v nádrži pravého podstavca vedie reznú kvapalinu ohybnou článkovou hadicou (Loc-Line) priamo na nôž. Kvapalina chladí, maže a odplavuje triesky, steká do vane a späť do nádrže.', 'A pump in the tank of the right stand feeds cutting fluid through a flexible segmented hose (Loc-Line) straight onto the tool. The fluid cools, lubricates and flushes the chips, then drains into the tray and back to the tank.'],
+  ['zadnykryt', 'Zadný kryt', 'Splash guard', 'Zadný ochranný kryt', 'Splash and chip guard', 'Plechový štít po celej dĺžke za strojom zachytáva odlietavajúce triesky a emulziu, aby nezasiahli okolie.', 'A sheet-metal shield along the whole back of the machine catches flying chips and coolant so that they do not reach the surroundings.'],
+  ['luneta', 'Pevná luneta', 'Steady rest', 'Pevná luneta', 'Steady rest', 'Prstenec upnutý na lôžku s tromi nastaviteľnými čeľusťami s kladkami podopiera dlhý hriadeľ. Suport ani koník cez ňu neprejdú.', 'A ring clamped to the bed with three adjustable roller jaws supports a long shaft. Neither the carriage nor the tailstock can pass it.'],
+  ['luneta2', 'Pohyblivá luneta', 'Follow rest', 'Pohyblivá luneta', 'Follow rest', 'Je upnutá na suporte a jej dve čeľuste podopierajú obrobok tesne pri noži – pri sústružení dlhých tenkých hriadeľov bráni prehýbaniu a chveniu.', 'Mounted on the carriage, its two jaws support the work right next to the tool – when turning long slender shafts it prevents bending and chatter.'],
+  ['krytskrutky', 'Kryt skrutiek', 'Screw guard', 'Kryt vodiacej skrutky a ťažnej tyče', 'Leadscrew and feed-rod guard', 'Teleskopický kryt zakrýva rotujúce tyče, aby sa na ne nenavinul odev alebo handra.', 'A telescopic cover over the rotating rods so that clothing or a rag cannot wind onto them.'],
+  ['brzda', 'Nožná brzda', 'Foot brake', 'Nožná brzda', 'Foot brake', 'Pedál po celej dĺžke stroja – šliapnutím sa vreteno okamžite zabrzdí a vypne, obsluha má ruky voľné.', 'A pedal along the whole machine – stepping on it brakes and switches off the spindle at once, with the hands free.'],
   ['podstavec', 'Podstavec', 'Stands', 'Podstavce a vaňa na triesky', 'Stands and chip tray', 'Podstavce nesú lôžko, v ľavom je hlavný elektromotor a rozvádzač. Vaňa medzi nimi zachytáva triesky a chladiacu kvapalinu.', 'The stands carry the bed; the left one houses the main motor and the electrical cabinet. The tray between them catches chips and coolant.'],
 ]);
 
@@ -122,18 +139,22 @@ const LATHE_SAFETY = () => [
   L('Obrobok je pevne upnutý, nôž je zaistený v nožovej hlave.', 'The workpiece is clamped firmly, the tool is secured in the tool post.'),
   L('Mám ochranné okuliare a priliehavý odev, bez rukavíc a šperkov.', 'I wear safety glasses and close-fitting clothes, no gloves or jewellery.'),
   L('V pracovnom priestore nie je náradie ani meradlá.', 'No tools or gauges are left in the working area.'),
+  L('Kryt skľučovadla je zatvorený, kryt skrutiek je na mieste a viem, kde je nožná brzda.', 'The chuck guard is closed, the screw guard is in place and I know where the foot brake is.'),
 ];
 
-function LatheSimulator({ onBack, params }) {
+function LatheCore({ onBack, params, model, onModel }) {
+  const MD = LATHE_MODELS[model] || LATHE_MODELS.sn50, S = MD.S, U = 100 * S, U2 = 2 * U, SPD = MD.speeds;
+  const maxD = Math.round(120 * S / 5) * 5, maxLen = Math.round(600 * S / 10) * 10;
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = {
-    running: false, power: true, light: true, manual: false, rpm: 450, z: 395, x: 140, top: 0, quill: 0, tail: 765, autoFeed: false, feed: 0.25, timeScale: 10,
+    running: false, power: true, light: true, manual: false, rpm: SPD[7], z: 395, x: Math.min(140, maxD + 40), top: 0, quill: 0, tail: Math.round(765 * S), autoFeed: false, feed: 0.25, timeScale: 10,
     slot: 0, slots: [{ type: 'rough', hand: 'R' }, { type: 'bent', hand: 'R' }, { type: 'parting', hand: 'R' }, { type: 'finish', hand: 'R' }],
-    postLock: true, quillLock: false, tailLock: true, bShape: 'round', bD: 90, bLen: 605, bMat: 'brass',
+    postLock: true, quillLock: false, tailLock: true, bShape: 'round', bD: Math.min(90, maxD), bLen: Math.min(605, maxLen), bMat: 'brass',
     pitch: 1.5, halfNut: false, measure: false, measZ: 300,
+    guard: true, guardOpen: false, coolant: true, coolOn: false, splash: true, steady: false, steadyZ: Math.round(600 * S / 10) * 10, follow: false, screwGuard: true, brake: true,
   };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
-  const [tele, setTele] = useTele({ rpm: 0, z: 395, x: 140, quill: 0, tail: 765, vc: 0, msg: null, cutting: false, engaged: false, workD: 90, slot: 0, busy: false, postLocked: true, blank: 'round 90 605 brass' });
+  const [tele, setTele] = useTele({ rpm: 0, z: 395, x: 140, quill: 0, tail: Math.round(765 * S), vc: 0, msg: null, cutting: false, engaged: false, workD: 90, slot: 0, busy: false, postLocked: true, blank: 'round 90 605 brass' });
   const [edit, setEdit] = useState(null);
 
   useEffect(() => {
@@ -167,6 +188,10 @@ function LatheSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, pivotLeverY, pivotLeverX, detents, handwheel } = kit;
 
     const root = new THREE.Group(); scene.add(root);
+    // veľkosť stroja: celý model sa zmenší / zväčší, obrobok a nože majú v mm stále skutočné rozmery (U mm na jednotku)
+    root.scale.setScalar(S); root.position.y = MD.axisH - AXIS_Y * S; root.updateMatrixWorld(true);
+    const lift = root.position.y / S;                                    // predĺženie podstavcov (miestne jednotky)
+    const W = (v) => root.localToWorld(v);
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
 
@@ -182,6 +207,8 @@ function LatheSimulator({ onBack, params }) {
     box(base, -5.2, 9.6, 1.4, 1.55, -2.0, 2.8, M.greenDark);
     box(base, -5.2, 9.6, 1.55, 2.05, 2.7, 2.8, M.greenDark);
     box(base, -5.2, 9.6, 1.55, 2.4, -2.0, -1.9, M.greenDark);
+    const baseK = (3.5 + lift) / 3.5; base.position.y = -lift; base.scale.y = baseK;
+    const floorY = -lift + 0.02, trayY = -lift + 1.57 * baseK;
 
     // ---------- lôžko s vodiacimi plochami ----------
     const bed = grp('lozko');
@@ -218,7 +245,7 @@ function LatheSimulator({ onBack, params }) {
     const mainSwitch = new THREE.Group(); mainSwitch.position.set(-6.3, 6.0, 1.95); hs.add(mainSwitch);
     cylZ(mainSwitch, 0.28, 0.28, -0.1, 0, 0, 0, M.black, 28);
     box(mainSwitch, -0.34, 0.34, -0.07, 0.07, 0, 0.16, M.red);
-    const lamp = createLamp(scene, hs, kit, M, { base: v3(-5.6, 9.25, -1.25), elbow: v3(-5.4, 11.7, -1.1), head: v3(-3.7, 11.4, -0.3), aim: v3(-2.1, AXIS_Y, 0.25), angle: 0.5, power: 3.4 });
+    const lamp = createLamp(scene, hs, kit, M, { base: v3(-5.6, 9.25, -1.25), elbow: v3(-5.4, 11.7, -1.1), head: v3(-3.7, 11.4, -0.3), aim: W(v3(-2.1, AXIS_Y, 0.25)), angle: 0.5, power: 3.4 });
 
     // ---------- prevodovka posuvov ----------
     const gb = grp('prevodovka');
@@ -313,7 +340,7 @@ function LatheSimulator({ onBack, params }) {
     rebuildWork();
     // meradlo: tenký krúžok okolo obrobku v meranom mieste (stojí, netočí sa s obrobkom)
     const gaugeGeo = new THREE.TorusGeometry(1, 0.012, 8, 72); gaugeGeo.rotateY(Math.PI / 2);
-    const gauge = new THREE.Mesh(gaugeGeo, new THREE.MeshBasicMaterial({ color: 0xff8a1f, toneMapped: false })); gauge.visible = false; scene.add(gauge);
+    const gauge = new THREE.Mesh(gaugeGeo, new THREE.MeshBasicMaterial({ color: 0xff8a1f, toneMapped: false })); gauge.visible = false; root.add(gauge);
 
     // ---------- koník ----------
     const tail = grp('konik');
@@ -408,15 +435,79 @@ function LatheSimulator({ onBack, params }) {
       g.userData.key = `${s.type}${s.hand}`; g.userData.tool = tool;
     };
 
+    // ---------- prídavné vybavenie ----------
+    // ochranný kryt skľučovadla: obyčajný plechový polkruhový kryt na pánte vzadu, mikrospínač pri pánte
+    const guardG = grp('kryt', hs);
+    const gPiv = new THREE.Group(); gPiv.position.set(0, AXIS_Y, -1.66); guardG.add(gPiv);
+    const shellGeo = new THREE.CylinderGeometry(1.66, 1.66, 2.0, 40, 1, true, 0, Math.PI); shellGeo.rotateZ(Math.PI / 2);
+    const shellMat = M.green.clone(); shellMat.side = THREE.DoubleSide;
+    add(gPiv, shellGeo, shellMat, -3.95, 0, 1.66);
+    [-4.95, -2.95].forEach((x) => { const r = add(gPiv, new THREE.TorusGeometry(1.66, 0.035, 6, 40, Math.PI), M.greenDark, x, 0, 1.66); r.rotation.y = -Math.PI / 2; });   // zahnuté okraje plechu
+    box(gPiv, -4.95, -2.95, -0.04, 0.04, 3.28, 3.36, M.greenDark);
+    box(gPiv, -4.2, -3.7, 0.1, 0.18, 3.3, 3.42, M.black);                    // rukoväť
+    cylX(guardG, 0.045, 0.045, -4.95, -2.95, AXIS_Y, -1.66, M.steel, 10);   // pánt
+    box(guardG, -4.95, -4.6, AXIS_Y - 0.3, AXIS_Y + 0.12, -1.95, -1.72, M.yellow);   // mikrospínač
+    hitProxy(gPiv, 0.5, -3.95, 1.4, 2.3);
+    // chladenie: nádrž s čerpadlom v pravom podstavci, článková hadica na horných saniach mieri na nôž
+    const coolG = grp('chladenie');
+    box(coolG, 9.95, 11.65, -lift + 0.15, -lift + 1.05, -1.45, 1.25, M.steelDark);
+    cylY(coolG, 0.24, 0.24, -lift + 1.05, -lift + 1.6, 11.1, 0.7, M.blue, 20);
+    const hose = new THREE.Group(); hose.userData.part = 'chladenie'; top.add(hose);
+    const orange = std(0xff7a1a, 0.4, 0.1);
+    const hp0 = v3(-0.55, 6.62, 1.32), hp1 = v3(-0.85, AXIS_Y + 1.3, 1.05), hp2 = v3(-0.32, AXIS_Y + 0.45, 0.28);
+    box(hose, -0.72, -0.38, 6.6, 6.74, 1.18, 1.46, M.black);                 // magnetický stojan
+    const bez = (k) => v3(0, 0, 0).addScaledVector(hp0, (1 - k) ** 2).addScaledVector(hp1, 2 * k * (1 - k)).addScaledVector(hp2, k * k);
+    for (let k = 0; k <= 14; k++) { const q = bez(k / 14); add(hose, new THREE.SphereGeometry(0.052, 10, 8), k % 2 ? orange : M.blue, q.x, q.y, q.z); }
+    const nozzle = new THREE.Group(); nozzle.position.copy(hp2); hose.add(nozzle);
+    const ndir = v3(-0.32, AXIS_Y, TIP_LZ).sub(hp2).normalize();
+    nozzle.quaternion.setFromUnitVectors(v3(0, -1, 0), ndir);
+    add(nozzle, new THREE.CylinderGeometry(0.06, 0.03, 0.16, 12), orange, 0, -0.08, 0);
+    const nozTip = new THREE.Object3D(); nozTip.position.set(0, -0.17, 0); nozzle.add(nozTip);
+    const drops = createDrops(root, 220);
+    let dropAcc = 0;
+    // zadný ochranný kryt po celej dĺžke
+    const splashG = grp('zadnykryt');
+    box(splashG, -5.0, 11.9, 4.9, 10.7, -2.14, -2.08, M.green);
+    box(splashG, -5.0, 11.9, 10.6, 10.7, -2.14, -1.75, M.greenDark);
+    [-4.6, 3.4, 11.5].forEach((x) => box(splashG, x - 0.08, x + 0.08, 4.4, 5.0, -2.14, -1.5, M.greenDark));
+    // pevná luneta na lôžku: prstenec s tromi čeľusťami s kladkami
+    const steadyG = grp('luneta');
+    box(steadyG, -0.32, 0.32, 5.14, 5.55, -1.5, 1.5, M.green);
+    box(steadyG, -0.16, 0.16, 5.55, AXIS_Y - 0.6, -1.25, -0.85, M.green); box(steadyG, -0.16, 0.16, 5.55, AXIS_Y - 0.6, 0.85, 1.25, M.green);
+    const ring = add(steadyG, new THREE.TorusGeometry(1.08, 0.15, 10, 40), M.green, 0, AXIS_Y, 0); ring.rotation.y = Math.PI / 2;
+    const sJaws = [0, 1, 2].map((k) => {
+      const rg = new THREE.Group(); rg.position.y = AXIS_Y; rg.rotation.x = k * TAU / 3; steadyG.add(rg);
+      const jg = new THREE.Group(); rg.add(jg);
+      box(jg, -0.07, 0.07, 0.1, 0.62, -0.07, 0.07, M.steel); cylX(jg, 0.08, 0.08, -0.06, 0.06, 0.06, 0, M.steelDark, 14);
+      return jg;
+    });
+    const steadyX = () => JAW_X + c.steadyZ / U;
+    // pohyblivá luneta na suporte: dve čeľuste (zhora a zozadu) pri noži
+    const FX = 0.78;
+    const followG = grp('luneta2', car);
+    box(followG, FX - 0.12, FX + 0.12, 5.6, AXIS_Y + 1.18, -1.48, -1.22, M.green);
+    box(followG, FX - 0.12, FX + 0.12, AXIS_Y + 1.0, AXIS_Y + 1.18, -1.48, 0.25, M.green);
+    const fTop = new THREE.Group(); followG.add(fTop); box(fTop, FX - 0.06, FX + 0.06, 0, 1.0, -0.06, 0.06, M.steel);
+    const fBack = new THREE.Group(); followG.add(fBack); box(fBack, FX - 0.06, FX + 0.06, -0.06, 0.06, -1.2, 0, M.steel);
+    // teleskopický kryt vodiacej skrutky a ťažnej tyče
+    const scrG = grp('krytskrutky');
+    const scrL = box(scrG, -0.5, 0.5, 3.12, 4.48, 1.58, 2.04, M.greenDark), scrR = box(scrG, -0.5, 0.5, 3.12, 4.48, 1.58, 2.04, M.greenDark);
+    // nožná brzda: pedál po celej dĺžke stroja
+    const brakeG = grp('brzda');
+    const brakeBar = new THREE.Group(); brakeG.add(brakeBar);
+    box(brakeBar, -4.9, 9.4, -lift + 0.42, -lift + 0.54, 2.45, 2.7, M.red);
+    [-4.7, 9.2].forEach((x) => box(brakeG, x - 0.06, x + 0.06, -lift + 0.45, -lift + 0.55, 1.9, 2.5, M.steelDark));
+    hitProxy(brakeBar, 0.4, 2.2, -lift + 0.5, 2.6);
+
     // ---------- triesky ----------
-    const chipsP = createParticles(scene, new THREE.BoxGeometry(0.06, 0.015, 0.1), M.chip, 140);
+    const chipsP = createParticles(root, new THREE.BoxGeometry(0.06, 0.015, 0.1), M.chip, 140);
     let chipAcc = 0;
 
     // ---------- stav simulácie ----------
     const st = {
-      car: JAW_X + c.z / 100 - TIP0, top: c.top / 100, r: c.x / 200, q: c.quill / 100, tail: JAW_X + c.tail / 100, tipX: 0,
+      car: JAW_X + c.z / U - TIP0, top: c.top / U, r: c.x / U2, q: c.quill / U, tail: JAW_X + c.tail / U, tipX: 0,
       rpm: 0, spin: 0, rodA: 0, cutting: false, cutT: -9, workEnd: wk.x1, msg: null,
-      slot: c.slot, ang: 0, postLocked: c.postLock, job: null, jobs: [],
+      slot: c.slot, ang: 0, postLocked: c.postLock, job: null, jobs: [], gOpen: c.guardOpen ? 1 : 0, brakeT: -9,
     };
     const slots = c.slots.map((s) => ({ ...s }));
     slots.forEach((s, k) => buildTool(k, s));
@@ -464,7 +555,7 @@ function LatheSimulator({ onBack, params }) {
     };
     // rez závitu pri zapnutej matici: drážka sa prehĺbi vo všetkých úsekoch, cez ktoré hrot prešiel; vonkajší priemer zostáva
     const cutThread = (xa, xb, rr) => {
-      const p = c.pitch / 100, lo = Math.min(xa, xb) - 0.004, hi = Math.max(xa, xb) + 0.004;
+      const p = c.pitch / U, lo = Math.min(xa, xb) - 0.004, hi = Math.max(xa, xb) + 0.004;
       const i0 = Math.max(0, Math.floor((lo - W_X0) / wk.dx)), i1 = Math.min(W_N - 1, Math.floor((hi - W_X0) / wk.dx));
       let removed = 0;
       for (let i = i0; i <= i1; i++) {
@@ -507,6 +598,9 @@ function LatheSimulator({ onBack, params }) {
       skrutky: () => v3(8.6, 4.3, 1.9),
       prevodovka: () => v3(-7.5, 5.0, 2.35),
       podstavec: () => v3(-7.6, 3.4, 1.95),
+      kryt: () => v3(-3.95, AXIS_Y + 1.7 + st.gOpen * 0.4, -0.4 - st.gOpen * 1.2), chladenie: () => v3(st.car + st.top - 0.8, AXIS_Y + 1.35, st.r + 1.0),
+      zadnykryt: () => v3(6.0, 10.75, -2.1), luneta: () => v3(steadyX(), AXIS_Y + 1.3, 0), luneta2: () => v3(st.car + FX, AXIS_Y + 1.25, -1.3),
+      krytskrutky: () => v3(8.5, 4.5, 2.05), brzda: () => v3(2.2, -lift + 0.6, 2.7),
     };
     const views = {
       celok: () => [[3.5, 12.5, 20], [1, 6, 0]],
@@ -516,6 +610,9 @@ function LatheSimulator({ onBack, params }) {
       zhora: () => [[1, 25, 0.6], [1, 6, 0]],
       konik: () => [[st.tail + 4.8, 10.2, 6.5], [st.tail + 0.2, 7, 0], true],
     };
+    // pohľady a popisy sú v miestnych súradniciach stroja – prepočet na svet podľa veľkosti stroja
+    Object.keys(anchors).forEach((k) => { const f = anchors[k]; anchors[k] = () => W(f()); });
+    Object.keys(views).forEach((k) => { const f = views[k]; views[k] = () => { const [pp, tt, fx] = f(); return [W(v3(...pp)).toArray(), W(v3(...tt)).toArray(), fx]; }; });
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
       enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
@@ -525,10 +622,11 @@ function LatheSimulator({ onBack, params }) {
     apiRef.current.view = (n) => insp.goView(n, false);
 
     // ---------- polotovar: nový kus, odopnutie ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => v3(1.0, AXIS_Y + 1.2, 5.5), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => W(v3(1.0, AXIS_Y + 1.2, 5.5)), onState: (v) => push('unclamped', v) });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Polotovar sa odopína len pri stojacom vretene.', 'The workpiece can only be unclamped with the spindle stopped.')); return; }
+        if (c.guard && !c.guardOpen) { say(L('Najprv otvor ochranný kryt skľučovadla.', 'Open the chuck guard first.')); return; }
         if (tailEngaged()) { say(L('Najprv odsuň pinolu koníka – hrot podopiera obrobok.', 'Retract the tailstock quill first – the centre is supporting the workpiece.')); return; }
         if (penetration(st.tipX, st.r).pen > 0.002 || st.r < wk.r0 + 0.03) { say(L('Najprv odsuň nôž od obrobku (os X).', 'Move the tool away from the workpiece first (X axis).')); return; }
       }
@@ -537,12 +635,12 @@ function LatheSimulator({ onBack, params }) {
     apiRef.current.newBlank = () => {
       if (c.unclamped) { say(L('Najprv upni polotovar späť.', 'Clamp the workpiece back first.')); return null; }
       if (c.running || st.rpm > 1) { say(L('Polotovar sa mení len pri stojacom vretene.', 'The workpiece can only be changed with the spindle stopped.')); return null; }
-      wk.shape = c.bShape; wk.r0 = c.bD / 200; wk.x1 = JAW_X + c.bLen / 100; wk.dx = (wk.x1 - W_X0) / W_N; wk.mat = c.bMat;
+      wk.shape = c.bShape; wk.r0 = c.bD / U2; wk.x1 = JAW_X + c.bLen / U; wk.dx = (wk.x1 - W_X0) / W_N; wk.mat = c.bMat;
       prof.fill(wk.r0); thr.fill(0); pit.fill(0); st.workEnd = wk.x1; workDirty = true;
       const m = workMat(); workRound.material = m; workHex.material = m; M.chip.color.setHex(LATHE_MATS[wk.mat][0]).convertSRGBToLinear();
       const out = {};
-      if (st.tail - st.q - 0.7 < wk.x1 + 0.03) { st.q = 0; c.quill = 0; out.quill = 0; st.tail = Math.min(LIM.tailMax, wk.x1 + 0.8); c.tail = (st.tail - JAW_X) * 100; out.tail = c.tail; }
-      if (penetration(st.tipX, st.r).pen > 0.001 || penetration(st.tipX, st.r).side > 0.001) { st.r = wk.r0 + 0.15; c.x = st.r * 200; out.x = c.x; }
+      if (st.tail - st.q - 0.7 < wk.x1 + 0.03) { st.q = 0; c.quill = 0; out.quill = 0; st.tail = Math.min(LIM.tailMax, wk.x1 + 0.8); c.tail = (st.tail - JAW_X) * U; out.tail = c.tail; }
+      if (penetration(st.tipX, st.r).pen > 0.001 || penetration(st.tipX, st.r).side > 0.001) { st.r = wk.r0 + 0.15; c.x = st.r * U2; out.x = c.x; }
       say(L('Upnutý nový polotovar.', 'A new workpiece is clamped.'), 'info');
       return out;
     };
@@ -597,7 +695,7 @@ function LatheSimulator({ onBack, params }) {
     };
 
     // ---------- ručné ovládanie prvkov ----------
-    const spdIdx = () => logNear(SPEEDS, c.rpm);
+    const spdIdx = () => logNear(SPD, c.rpm);
     const feedSel = () => {
       let best = [0, 0], bd = Infinity;
       FEED_BASE.forEach((b, i) => FEED_MULT.forEach((m, j) => { const d = Math.abs(Math.log(b * m / c.feed)) + j * 1e-6; if (d < bd) { bd = d; best = [i, j]; } }));
@@ -607,9 +705,9 @@ function LatheSimulator({ onBack, params }) {
       if (!c.running && st.rpm < 1) return true;
       say(L('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'Speeds can only be changed with the spindle stopped – stop it first.'), 'warn'); return false;
     };
-    const setSpeed = (a, b) => { push('rpm', SPEEDS[a * 4 + b]); say(`${L('Zaradené otáčky', 'Speed selected:')} ${c.rpm} ${RPM()}.`, 'info'); };
+    const setSpeed = (a, b) => { push('rpm', SPD[a * 4 + b]); say(`${L('Zaradené otáčky', 'Speed selected:')} ${c.rpm} ${RPM()}.`, 'info'); };
     const setFeed = (i, j) => { push('feed', Math.round(FEED_BASE[i] * FEED_MULT[j] * 100) / 100); say(`${L('Posuv nastavený na', 'Feed set to')} ${c.feed.toFixed(2)} ${L('mm/ot', 'mm/rev')}.`, 'info'); };
-    const zCar = () => (st.car + TIP0 - JAW_X) * 100;
+    const zCar = () => (st.car + TIP0 - JAW_X) * U;
 
     // ručné kolesá: turn(d) dostane pootočenie v radiánoch okolo osi kolesa
     ctrl.reg({ type: 'wheel', minR: 0.45, inc: -1, label: LL('Ručné koleso suportu (Z)', 'Carriage handwheel (Z)'), hint: LL('Ťahaj za veniec alebo kľučku, alebo toč kolieskom myši. 1 otáčka = 30 mm.', 'Drag the rim or handle, or use the mouse wheel. 1 turn = 30 mm.'),
@@ -617,15 +715,15 @@ function LatheSimulator({ onBack, params }) {
       turn: (d) => { const a = zCar(); push('z', clamp(clamp(c.z - d * 30 / TAU, a - 20, a + 20), 10, 1150)); },
       read: () => `Z ${zCar().toFixed(1)} mm` }, wheelZ);
     ctrl.reg({ type: 'wheel', minR: 0.38, inc: 1, label: LL('Ručné koleso priečnych saní (X)', 'Cross slide handwheel (X)'), hint: LL('V smere hodinových ručičiek ide nôž k osi. 1 otáčka = 10 mm na priemere.', 'Clockwise moves the tool towards the axis. 1 turn = 10 mm on diameter.'),
-      turn: (d) => { const a = st.r * 200; push('x', clamp(clamp(c.x + d * 10 / TAU, a - 5, a + 5), -10, 260)); },
-      read: () => `X Ø${(st.r * 200).toFixed(2)} mm` }, wheelX);
+      turn: (d) => { const a = st.r * U2; push('x', clamp(clamp(c.x + d * 10 / TAU, a - 5, a + 5), -10, 260)); },
+      read: () => `X Ø${(st.r * U2).toFixed(2)} mm` }, wheelX);
     ctrl.reg({ type: 'wheel', minR: 0.22, inc: 1, label: LL('Mikroposuv – horné sane (Z)', 'Fine feed – top slide (Z)'), hint: LL('Jemný pozdĺžny posun noža. 1 otáčka = 2 mm, rozsah ±50 mm.', 'Fine longitudinal tool movement. 1 turn = 2 mm, range ±50 mm.'),
-      turn: (d) => { const a = st.top * 100; push('top', clamp(clamp(c.top + d * 2 / TAU, a - 2, a + 2), -50, 50)); },
-      read: () => `${(st.top * 100).toFixed(2)} mm` }, wheelTop);
+      turn: (d) => { const a = st.top * U; push('top', clamp(clamp(c.top + d * 2 / TAU, a - 2, a + 2), -50, 50)); },
+      read: () => `${(st.top * U).toFixed(2)} mm` }, wheelTop);
     ctrl.reg({ type: 'wheel', minR: 0.5, inc: -1, label: LL('Ručné koleso koníka – pinola', 'Tailstock handwheel – quill'), hint: LL('V smere hodinových ručičiek sa pinola vysúva. 1 otáčka = 6 mm.', 'Clockwise extends the quill. 1 turn = 6 mm.'),
       guard: () => { if (!c.quillLock) return true; say(L('Pinola je zaistená – najprv uvoľni páku aretácie na koníku.', 'The quill is locked – release the lock lever on the tailstock first.'), 'warn'); return false; },
-      turn: (d) => { const a = st.q * 100; push('quill', clamp(clamp(c.quill - d * 6 / TAU, a - 5, a + 5), 0, 150)); },
-      read: () => `${L('pinola', 'quill')} ${(st.q * 100).toFixed(1)} mm` }, wheelT);
+      turn: (d) => { const a = st.q * U; push('quill', clamp(clamp(c.quill - d * 6 / TAU, a - 5, a + 5), 0, 150)); },
+      read: () => `${L('pinola', 'quill')} ${(st.q * U).toFixed(1)} mm` }, wheelT);
 
     // páky s aretovanými polohami
     ctrl.reg({ type: 'lever', angles: A_ANG, minR: 0.25, guard: gearGuard, label: LL('Páka otáčok I (rozsah)', 'Speed lever I (range)'), hint: LL('Ťahaj do polohy alebo klikni. Preraďuje sa len pri stojacom vretene.', 'Drag to a position or click. Shift only with the spindle stopped.'),
@@ -677,13 +775,19 @@ function LatheSimulator({ onBack, params }) {
         if (queueIndex((st.slot + 1) % 4)) push('slot', (st.slot + 1) % 4);
       } }, postBody);
 
+    const footBrake = () => { if (!c.brake) return; push('running', false); push('autoFeed', false); st.brakeT = t; say(L('Nožná brzda – vreteno zabrzdené a vypnuté.', 'Foot brake – the spindle is braked and switched off.'), 'danger'); };
+    apiRef.current.footBrake = footBrake;
+    ctrl.reg({ type: 'button', label: LL('Ochranný kryt skľučovadla', 'Chuck guard'), hint: LL('Klik kryt otvorí alebo zatvorí. Pri otvorenom kryte mikrospínač nedovolí spustiť vreteno.', 'Click to open or close the guard. While it is open the microswitch prevents the spindle from starting.'),
+      read: () => (c.guardOpen ? L('otvorený', 'open') : L('zatvorený', 'closed')), action: () => push('guardOpen', !c.guardOpen) }, gPiv);
+    ctrl.reg({ type: 'button', label: LL('Nožná brzda', 'Foot brake'), hint: LL('Šliapnutie okamžite zabrzdí a vypne vreteno.', 'Stepping on it brakes and stops the spindle at once.'), action: footBrake }, brakeBar);
+
     // koník sa posúva ťahaním za teleso (zvyšok skupiny koníka, okrem kolesa a pák)
     let tail0 = 0;
-    ctrl.reg({ type: 'slide', label: LL('Koník', 'Tailstock'), hint: LL('Ťahaj teleso koníka po lôžku (po uvoľnení páky zaistenia).', 'Drag the tailstock body along the bed (after releasing the clamp lever).'), read: () => `${((st.tail - JAW_X) * 100).toFixed(0)} ${L('mm od čeľustí', 'mm from the jaws')}`,
+    ctrl.reg({ type: 'slide', label: LL('Koník', 'Tailstock'), hint: LL('Ťahaj teleso koníka po lôžku (po uvoľnení páky zaistenia).', 'Drag the tailstock body along the bed (after releasing the clamp lever).'), read: () => `${((st.tail - JAW_X) * U).toFixed(0)} ${L('mm od čeľustí', 'mm from the jaws')}`,
       guard: () => { if (!c.tailLock) return true; say(L('Koník je zaistený – uvoľni páku na jeho spodku.', 'The tailstock is clamped – release the lever at its base.'), 'warn'); return false; },
       start: () => { tail0 = st.tail; },
-      slide: (dx) => { const a = (st.tail - JAW_X) * 100; push('tail', clamp(clamp((tail0 + dx - JAW_X) * 100, a - 40, a + 40), 350, 1245)); },
-      nudge: (dir) => push('tail', clamp((st.tail - JAW_X) * 100 + dir * 10, 350, 1245)) }, tail);
+      slide: (dx) => { const a = (st.tail - JAW_X) * U; push('tail', clamp(clamp((tail0 + dx - JAW_X) * U, a - 40, a + 40), Math.round(350 * S), Math.round(1245 * S))); },
+      nudge: (dir) => push('tail', clamp((st.tail - JAW_X) * U + dir * 10, Math.round(350 * S), Math.round(1245 * S))) }, tail);
 
     // požiadavky z panelu
     apiRef.current.setSlot = (k) => { if (queueIndex(k)) push("slot", k); };
@@ -698,7 +802,7 @@ function LatheSimulator({ onBack, params }) {
       getIdx: () => (c.halfNut ? 1 : 0), onSet: (i) => setHalfNut(i === 1), read: () => (c.halfNut ? L(`zapnutá · P ${c.pitch}`, `engaged · P ${c.pitch}`) : L('vypnutá', 'off')) }, levNut);
     apiRef.current.setHalfNut = setHalfNut;
     // meranie, uloženie a export obrobku
-    const measure = () => ({ info: profileInfo(prof, thr, pit, { x0: W_X0, dx: wk.dx, jaw: JAW_X }), D0: wk.r0 * 200 });
+    const measure = () => ({ info: profileInfo(prof, thr, pit, { x0: W_X0, dx: wk.dx, jaw: JAW_X, u: U }), D0: wk.r0 * U2 });
     apiRef.current.measure = measure;
     apiRef.current.save = () => {
       if (c.unclamped) { say(L('Najprv upni polotovar späť.', 'Clamp the workpiece back first.')); return null; }
@@ -706,11 +810,11 @@ function LatheSimulator({ onBack, params }) {
     };
     apiRef.current.load = (r) => {
       if (!r || r.v !== 1 || !r.wk) return false;
-      ['bShape', 'bD', 'bLen', 'bMat'].forEach((k, i) => push(k, [r.wk.shape, Math.round(r.wk.r0 * 200), Math.round((r.wk.x1 - JAW_X) * 100), r.wk.mat][i]));
+      ['bShape', 'bD', 'bLen', 'bMat'].forEach((k, i) => push(k, [r.wk.shape, Math.round(r.wk.r0 * U2), Math.round((r.wk.x1 - JAW_X) * U), r.wk.mat][i]));
       const out = apiRef.current.newBlank(); if (!out) return false;
       Object.entries(out).forEach(([k, v]) => push(k, v));
       prof.set(fromB64(r.prof, Float32Array)); thr.set(fromB64(r.thr, Float32Array)); pit.set(fromB64(r.pit, Float32Array)); workDirty = true;
-      if (penetration(st.tipX, st.r).pen > 0.001) { st.r = wk.r0 + 0.15; c.x = st.r * 200; push('x', c.x); }
+      if (penetration(st.tipX, st.r).pen > 0.001) { st.r = wk.r0 + 0.15; c.x = st.r * U2; push('x', c.x); }
       return true;
     };
     apiRef.current.exportStl = () => exportStl(work);
@@ -727,7 +831,12 @@ function LatheSimulator({ onBack, params }) {
 
       // hlavný chod – s odopnutým polotovarom sa nespustí
       if (c.unclamped && c.running) { push('running', false); say(L('Polotovar nie je upnutý – vreteno sa nespustí.', 'The workpiece is not clamped – the spindle will not start.')); }
-      st.rpm = approach(st.rpm, c.running && c.power ? c.rpm : 0, 1400 * dt);
+      // kryt skľučovadla s mikrospínačom
+      st.gOpen = approach(st.gOpen, c.guard && c.guardOpen ? 1 : 0, 2.2 * dt); gPiv.rotation.x = -1.9 * st.gOpen; guardG.visible = c.guard;
+      if (c.guard && c.guardOpen && c.running) { push('running', false); say(L('Kryt skľučovadla je otvorený – mikrospínač nedovolí, aby sa vreteno točilo. Zatvor kryt.', 'The chuck guard is open – the microswitch does not let the spindle run. Close the guard.'), 'danger'); }
+      const braking = t - st.brakeT < 1.2;
+      brakeG.visible = c.brake; brakeBar.position.y = braking ? -0.12 : 0;
+      st.rpm = approach(st.rpm, c.running && c.power ? c.rpm : 0, (braking ? 9000 : 1400) * dt);
       const running = st.rpm > 15;
       const revs = st.rpm > 0 ? 4.5 * st.rpm / (st.rpm + 500) : 0;     // vizuálne spomalené otáčanie
       st.spin += revs * TAU * dt; spindle.rotation.x = st.spin;
@@ -753,21 +862,21 @@ function LatheSimulator({ onBack, params }) {
 
       // automatický pozdĺžny posuv (smerom k skľučovadlu)
       if (c.autoFeed && running) {
-        const zMin = (LIM.tipMin - st.top - POST.x - toolOx(slots[st.slot]) + TIP0 - JAW_X) * 100;
+        const zMin = (LIM.tipMin - st.top - POST.x - toolOx(slots[st.slot]) + TIP0 - JAW_X) * U;
         c.z = Math.max(c.z - c.feed * st.rpm / 60 * c.timeScale * dt, zCar() - 3, zMin);
         if (c.z <= zMin + 0.01 && zCar() <= zMin + 0.05) { c.autoFeed = false; say(L('Automatický posuv vypnutý – suport dosiahol koncovú polohu pri skľučovadle.', 'Automatic feed off – the carriage reached its end position at the chuck.'), 'info'); }
       } else if (c.autoFeed) c.z = zCar();                              // posuv stojí s vretenom, suport nedobieha
       // matica vodiacej skrutky: suport ide k skľučovadlu o stúpanie na otáčku (vylučuje sa s posuvom)
       if (c.halfNut && c.autoFeed) { c.autoFeed = false; say(L('Matica vodiacej skrutky a automatický posuv sa vylučujú – posuv je vypnutý.', 'The half-nut and the automatic feed are mutually exclusive – the feed is off.'), 'warn'); }
       if (c.halfNut && running) {
-        const zMin = (LIM.tipMin - st.top - POST.x - toolOx(slots[st.slot]) + TIP0 - JAW_X) * 100;
+        const zMin = (LIM.tipMin - st.top - POST.x - toolOx(slots[st.slot]) + TIP0 - JAW_X) * U;
         c.z = Math.max(c.z - c.pitch * st.rpm / 60 * c.timeScale * dt, zCar() - 3, zMin);
         if (c.z <= zMin + 0.01 && zCar() <= zMin + 0.05) { c.halfNut = false; pend.halfNut = false; say(L('Matica vypnutá – suport dosiahol koncovú polohu pri skľučovadle.', 'Half-nut disengaged – the carriage reached its end position at the chuck.'), 'info'); }
       } else if (c.halfNut) c.z = zCar();
 
       // pinola koníka (zaistená pinola sa nehýbe)
-      if (c.quillLock && Math.abs(c.quill - st.q * 100) > 0.05) { sayOnce('qlock', true, L('Pinola je zaistená – uvoľni páku aretácie na koníku.', 'The quill is locked – release the lock lever on the tailstock.'), 'warn'); c.quill = st.q * 100; pend.quill = c.quill; } else flags.qlock = false;
-      const qT = clamp(c.quill / 100, 0, LIM.quillMax);
+      if (c.quillLock && Math.abs(c.quill - st.q * U) > 0.05) { sayOnce('qlock', true, L('Pinola je zaistená – uvoľni páku aretácie na koníku.', 'The quill is locked – release the lock lever on the tailstock.'), 'warn'); c.quill = st.q * U; pend.quill = c.quill; } else flags.qlock = false;
+      const qT = clamp(c.quill / U, 0, LIM.quillMax);
       let qMax = st.tail - 0.7 - (st.workEnd - 0.03), qWhy = 'work';
       if (c.unclamped) qMax = LIM.quillMax;
       if (st.r < LIM.quillClear) { const m2 = st.tail - 0.7 - (st.tipX + 0.05); if (m2 < qMax) { qMax = m2; qWhy = 'tool'; } }
@@ -777,19 +886,23 @@ function LatheSimulator({ onBack, params }) {
       wheelT.rotation.z -= (nq - st.q) / 0.06 * TAU; st.q = nq;
 
       // poloha koníka na lôžku (zaistený koník stojí)
-      if (c.tailLock && Math.abs(c.tail - (st.tail - JAW_X) * 100) > 0.5) { sayOnce('tlock', true, L('Koník je zaistený – uvoľni páku zaistenia na jeho spodku.', 'The tailstock is clamped – release the clamp lever at its base.'), 'warn'); c.tail = (st.tail - JAW_X) * 100; pend.tail = c.tail; } else flags.tlock = false;
-      const tT = clamp(JAW_X + c.tail / 100, -2, LIM.tailMax);
+      if (c.tailLock && Math.abs(c.tail - (st.tail - JAW_X) * U) > 0.5) { sayOnce('tlock', true, L('Koník je zaistený – uvoľni páku zaistenia na jeho spodku.', 'The tailstock is clamped – release the clamp lever at its base.'), 'warn'); c.tail = (st.tail - JAW_X) * U; pend.tail = c.tail; } else flags.tlock = false;
+      const tT = clamp(JAW_X + c.tail / U, -2, LIM.tailMax);
       let tMin = st.car + LIM.carToTail, tWhy = 'car';
       const m3 = st.workEnd - 0.03 + st.q + 0.7; if (m3 > tMin && !c.unclamped) { tMin = m3; tWhy = 'work'; }
       if (st.r < LIM.quillClear) { const m4 = st.tipX + 0.05 + st.q + 0.7; if (m4 > tMin) { tMin = m4; tWhy = 'tool'; } }
+      if (c.steady && st.tail > steadyX()) tMin = Math.max(tMin, steadyX() + 0.35);
       let nt = approach(st.tail, tT, 2.2 * dt);
       if (nt < st.tail && nt < tMin) nt = Math.min(st.tail, tMin);
       sayOnce('tail', tT < tMin - 0.004 && nt <= tMin + 0.004, tWhy === 'car' ? L('Koník narazil na suport.', 'The tailstock hit the carriage.') : tWhy === 'work' ? L('Hrot koníka dosadol na obrobok.', 'The tailstock centre touched the workpiece.') : L('Hrot koníka by narazil do noža.', 'The tailstock centre would hit the tool.'), tWhy === 'work' ? 'info' : 'warn');
       st.tail = nt;
 
       // suport (Z), horné sane (mikroposuv) a priečne sane (X) s kontrolou kolízií
-      const carWant = JAW_X + c.z / 100 - TIP0, carMax = st.tail - LIM.carToTail;
-      const carT = clamp(carWant, -3.4, Math.max(-3.4, carMax)), topT = clamp(c.top / 100, LIM.topMin, LIM.topMax), xT = clamp(c.x / 200, -0.05, LIM.rMax);
+      const carWant = JAW_X + c.z / U - TIP0, carMax = st.tail - LIM.carToTail;
+      let carLo = -3.4, carHi = Math.max(-3.4, carMax);
+      if (c.steady) { const sx = steadyX(); if (st.car < sx) carHi = Math.min(carHi, sx - 1.95); else carLo = Math.max(carLo, sx + 1.95); }
+      sayOnce('steadycar', c.steady && (carWant > carHi + 0.004 || carWant < carLo - 0.004) && (Math.abs(st.car - carHi) < 0.01 || Math.abs(st.car - carLo) < 0.01), L('Suport narazil na pevnú lunetu – cez ňu neprejde.', 'The carriage hit the steady rest – it cannot pass it.'), 'warn');
+      const carT = clamp(carWant, carLo, Math.max(carLo, carHi)), topT = clamp(c.top / U, LIM.topMin, LIM.topMax), xT = clamp(c.x / U2, -0.05, LIM.rMax);
       const vz = st.cutting ? 0.35 : 2.6, vx = st.cutting ? 0.22 : 0.75, vt = st.cutting ? 0.12 : 0.4;
       let nc = approach(st.car, carT, vz * dt), ntp = approach(st.top, topT, vt * dt), nr = approach(st.r, xT, vx * dt);
       sayOnce('cartail', carWant > carMax + 0.004 && st.car >= carMax - 0.003, L('Suport narazil na koník – koncový doraz.', 'The carriage hit the tailstock – end stop.'), 'warn');
@@ -834,6 +947,10 @@ function LatheSimulator({ onBack, params }) {
         const removed = c.halfNut && slots[st.slot].type === 'thread' ? cutThread(tip0, st.tipX, st.r) : cut(st.tipX, st.r);
         if (removed > 0) {
           st.cutT = t; workDirty = true; checkPartOff();
+          const ii = clamp(Math.floor((st.tipX - W_X0) / wk.dx), 0, W_N - 1), Dm = prof[ii] * U2, zc = (st.tipX - JAW_X) * U, sx = steadyX();
+          const sup = tailEngaged() || c.follow || (c.steady && sx > st.tipX - 0.05 && st.workEnd > sx + 0.05);
+          sayOnce('chatter', !sup && Dm > 1 && zc > 6 * Dm, L(`Dlhý tenký obrobok (${Math.round(zc)} mm od čeľustí pri Ø${Math.round(Dm)}) sa pri reze prehýba a chveje – podopri ho hrotom koníka alebo lunetou.`, `A long slender part (${Math.round(zc)} mm from the jaws at Ø${Math.round(Dm)}) bends and chatters in the cut – support it with the tailstock centre or a steady rest.`), 'warn');
+          sayOnce('heat', wk.mat === 'steel' && !(c.coolant && c.coolOn) && Math.PI * Dm * st.rpm / 1000 > 120, L('Oceľ pri vysokej reznej rýchlosti bez chladenia – nôž sa prehrieva. Zapni chladenie alebo zníž otáčky.', 'Steel at a high cutting speed without coolant – the tool overheats. Switch on the coolant or reduce the speed.'), 'warn');
           chipAcc += dt * 45; while (chipAcc >= 1) { spawnChip(); chipAcc -= 1; }
         }
       }
@@ -846,26 +963,60 @@ function LatheSimulator({ onBack, params }) {
       cross.position.z = st.r - TIP_LZ;
       tail.position.x = st.tail;
       quill.position.x = -st.q;
+      // chladenie: kvapalina z hadice na hrot noža, kým beží čerpadlo
+      coolG.visible = c.coolant; hose.visible = c.coolant;
+      if (c.coolant && c.coolOn && c.power) {
+        dropAcc += dt * 70;
+        const np = root.worldToLocal(nozTip.getWorldPosition(v3(0, 0, 0))), tipL = v3(st.tipX, AXIS_Y, st.r), dv = tipL.sub(np).normalize();
+        while (dropAcc >= 1) { dropAcc -= 1; drops.spawn(np.clone(), dv.clone().multiplyScalar(2.2 + Math.random()).add(v3((Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3)), 0.9); }
+      }
+      drops.update(dt, (q) => (q.x > -5.2 && q.x < 12 && Math.abs(q.z) < 1.5 ? 5.16 : q.x > -5.2 && q.x < 9.6 && q.z > -2 && q.z < 2.7 ? trayY : floorY));
+      splashG.visible = c.splash;
+      // pevná luneta: čeľuste dosadnú na obrobok v jej mieste
+      if (c.steady && Math.abs(st.car - steadyX()) < 1.95) {
+        // luneta sa upne na voľné miesto vedľa suportu (ku koníku, inak k skľučovadlu)
+        const zOk = (x) => x > JAW_X + 1.0 && x < st.tail - 0.45 ? Math.round((x - JAW_X) * U / 5) * 5 : null;
+        const z = zOk(st.car + 2.05) ?? zOk(st.car - 2.05);
+        if (z != null) { push('steadyZ', z); say(L(`Pevná luneta upnutá vedľa suportu, ${z} mm od čeľustí.`, `Steady rest clamped next to the carriage, ${z} mm from the jaws.`), 'info'); }
+        else { push('steady', false); say(L('Pevná luneta sa sem nezmestí – posuň suport alebo koník.', 'The steady rest does not fit here – move the carriage or the tailstock.')); }
+      }
+      if (c.steady && st.tail > steadyX() - 0.3 && st.tail < steadyX() + 0.35) { push('steady', false); say(L('Pevná luneta by bola v koníku – posuň koník alebo lunetu.', 'The steady rest would be inside the tailstock – move the tailstock or the rest.')); }
+      steadyG.visible = c.steady;
+      if (c.steady) {
+        const sx = steadyX(), i = clamp(Math.floor((sx - W_X0) / wk.dx), 0, W_N - 1), rw = !c.unclamped && sx < st.workEnd && prof[i] > 0.012 ? prof[i] : 0.7;
+        steadyG.position.x = sx; sJaws.forEach((j) => { j.position.y = rw; });
+      }
+      followG.visible = c.follow;
+      if (c.follow) {
+        const fx = st.car + FX, i = clamp(Math.floor((fx - W_X0) / wk.dx), 0, W_N - 1), rw = !c.unclamped && fx < st.workEnd && fx > JAW_X ? Math.max(0.05, prof[i]) : 0.8;
+        fTop.position.y = AXIS_Y + rw; fBack.position.z = -rw;
+      }
+      // teleskopický kryt skrutiek medzi koncami lôžka a zámkovou skriňou
+      scrG.visible = c.screwGuard;
+      if (c.screwGuard) {
+        const a = -5.25, b = st.car - 1.8, d = st.car + 1.8, e = 11.3;
+        scrL.scale.x = Math.max(0.01, b - a); scrL.position.x = (a + b) / 2; scrR.scale.x = Math.max(0.01, e - d); scrR.position.x = (d + e) / 2;
+      }
       M.lamp.emissive.setHex(c.running && c.power ? 0x22dd55 : c.power ? 0x8a5a00 : 0x000000);
       lamp.update(c.light);
       // meradlo: krúžok na meranom mieste obrobku
       gauge.visible = !!c.measure && !c.unclamped;
-      if (gauge.visible) { const gz = clamp(c.measZ, 0, Math.max(0, (st.workEnd - JAW_X) * 100)), gx = JAW_X + gz / 100, i = clamp(Math.floor((gx - W_X0) / wk.dx), 0, W_N - 1), gr = Math.max(0.01, prof[i] - (thr[i] > 1e-5 ? thr[i] : 0)); gauge.position.set(gx, AXIS_Y, 0); gauge.scale.setScalar(Math.max(0.05, prof[i] || gr)); }
-      snd.update({ motor: st.rpm / 1800, cut: st.cutting && running ? 1 : 0 });
+      if (gauge.visible) { const gz = clamp(c.measZ, 0, Math.max(0, (st.workEnd - JAW_X) * U)), gx = JAW_X + gz / U, i = clamp(Math.floor((gx - W_X0) / wk.dx), 0, W_N - 1), gr = Math.max(0.01, prof[i] - (thr[i] > 1e-5 ? thr[i] : 0)); gauge.position.set(gx, AXIS_Y, 0); gauge.scale.setScalar(Math.max(0.05, prof[i] || gr)); }
+      snd.update({ motor: st.rpm / SPD[SPD.length - 1], cut: st.cutting && running ? 1 : 0 });
 
-      chipsP.update(dt, (p) => (p.x > -5.2 && p.x < 12 && Math.abs(p.z) < 1.5 ? 5.16 : p.x > -5.2 && p.x < 9.6 && p.z > -2 && p.z < 2.7 ? 1.57 : 0.02));
+      chipsP.update(dt, (p) => (p.x > -5.2 && p.x < 12 && Math.abs(p.z) < 1.5 ? 5.16 : p.x > -5.2 && p.x < 9.6 && p.z > -2 && p.z < 2.7 ? trayY : floorY));
 
       ctrl.update(dt);
       insp.update(t, c);
 
       if (t - teleT > 0.1) {
         teleT = t;
-        const zmm = (st.tipX - JAW_X) * 100, dmm = st.r * 200;
+        const zmm = (st.tipX - JAW_X) * U, dmm = st.r * U2;
         const iTool = clamp(Math.floor((st.tipX - W_X0) / wk.dx), 0, W_N - 1);
         setTele({
-          rpm: st.rpm, z: zmm, x: dmm, quill: st.q * 100, tail: (st.tail - JAW_X) * 100, carZ: zCar(), top: st.top * 100,
+          rpm: st.rpm, z: zmm, x: dmm, quill: st.q * U, tail: (st.tail - JAW_X) * U, carZ: zCar(), top: st.top * U,
           vc: Math.PI * Math.max(0, dmm) * st.rpm / 1000, cutting: st.cutting && running, engaged: tailEngaged() && !c.unclamped,
-          msg: st.msg && st.msg.until > t ? st.msg : null, workD: prof[iTool] * 200, slot: st.slot, busy: !!st.job || st.jobs.length > 0, postLocked: st.postLocked,
+          msg: st.msg && st.msg.until > t ? st.msg : null, workD: prof[iTool] * U2, slot: st.slot, busy: !!st.job || st.jobs.length > 0, postLocked: st.postLocked,
         });
         if (c.autoFeed) pend.z = Math.round(c.z * 10) / 10;
         if (lastAuto !== c.autoFeed) pend.autoFeed = c.autoFeed;
@@ -924,12 +1075,18 @@ function LatheSimulator({ onBack, params }) {
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · sústruh', 'Simulator · lathe')} title={L('Konvenčný hrotový sústruh', 'Conventional centre lathe')}
-          sub={L('Predloha: sústruhy TOS SN a VDF. Mierka 1 : 100 mm.', 'Modelled after TOS SN and VDF lathes. Scale 1 : 100 mm.')}
+          sub={L(`Predloha: sústruhy TOS SN a VDF, veľkosť TOS ${MD.name}.`, `Modelled after TOS SN and VDF lathes, size TOS ${MD.name}.`)}
           rows={[['X Ø', tele.x.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
           foot={[`n ${Math.round(tele.rpm)} ${RPM()}`, `vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
 
         <TaskSection machine="sustruh" tasks={LATHE_TASKS} apiRef={apiRef} params={params} status={statusMsg} onSetup={setupTask}
           safety={{ ui, set, runKey: 'running', items: LATHE_SAFETY() }} />
+
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Veľkosť stroja', 'Machine size')}</h2>
+          <SegRow label="TOS" value={model} options={Object.entries(LATHE_MODELS).map(([k, m]) => [k, m.name])} onChange={(m) => { if (stopped && m !== model) onModel(m); }} />
+          <p className="text-xs muted">{L(`${MD.name}: výška hrotov ${Math.round(250 * S)} mm, točný priemer nad lôžkom ${Math.round(500 * S)} mm, vzdialenosť hrotov ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} ot/min, polotovar do Ø${maxD}. Rozmery sú orientačné. Zmena veľkosti postaví nový stroj (len pri stojacom vretene).`, `${MD.name}: centre height ${Math.round(250 * S)} mm, swing over bed ${Math.round(500 * S)} mm, distance between centres ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} rpm, bar up to Ø${maxD}. Approximate dimensions. Changing the size builds a new machine (spindle stopped only).`)}</p>
+        </div>
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
@@ -942,17 +1099,33 @@ function LatheSimulator({ onBack, params }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <div className="mt-3">
-            <StepSelect id="rpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)}
+            <StepSelect id="rpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={SPD} value={ui.rpm} onChange={(v) => set('rpm', v)}
               locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} />
-            <CutCalc D={tele.workD > 1 ? tele.workD : ui.bD} mat={ui.bMat} speeds={SPEEDS} rpm={ui.rpm} locked={!stopped} onApply={(n) => set('rpm', n)} what={L('Priemer pri noži', 'Diameter at the tool')} />
+            <CutCalc D={tele.workD > 1 ? tele.workD : ui.bD} mat={ui.bMat} speeds={SPD} rpm={ui.rpm} locked={!stopped} onApply={(n) => set('rpm', n)} what={L('Priemer pri noži', 'Diameter at the tool')} />
           </div>
         </div>
 
         <div className="sec">
+          <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Accessories')}</h2>
+          <Toggle on={ui.guard} label={L('Ochranný kryt skľučovadla s mikrospínačom', 'Chuck guard with microswitch')} onClick={() => set('guard', !ui.guard)} />
+          {ui.guard && <div className="flex gap-2 mb-2"><button type="button" className={`btn ${ui.guardOpen ? 'active' : ''}`} onClick={() => set('guardOpen', !ui.guardOpen)}>{ui.guardOpen ? L('Zatvoriť kryt', 'Close the guard') : L('Otvoriť kryt', 'Open the guard')}</button><span className="text-xs muted self-center">{ui.guardOpen ? L('otvorený – vreteno sa nespustí', 'open – the spindle will not start') : L('zatvorený', 'closed')}</span></div>}
+          <Toggle on={ui.coolant} label={L('Chladiaci systém (čerpadlo, vaňa, hadica Loc-Line)', 'Coolant system (pump, tray, Loc-Line hose)')} onClick={() => { set('coolant', !ui.coolant); if (ui.coolant) set('coolOn', false); }} />
+          {ui.coolant && <Toggle on={ui.coolOn} label={L('Chladenie zapnuté', 'Coolant on')} onClick={() => set('coolOn', !ui.coolOn)} />}
+          <Toggle on={ui.splash} label={L('Zadný ochranný kryt (triesky a emulzia)', 'Rear splash and chip guard')} onClick={() => set('splash', !ui.splash)} />
+          <Toggle on={ui.steady} label={L('Pevná luneta na lôžku', 'Steady rest on the bed')} onClick={() => { if (stopped) set('steady', !ui.steady); }} />
+          {ui.steady && <Slider id="steadyz" label={L('Poloha lunety od čeľustí', 'Steady rest position from the jaws')} unit="mm" min={Math.round(150 * S)} max={Math.round(1100 * S)} step={5} value={ui.steadyZ} onChange={(v) => { if (stopped) set('steadyZ', v); }} />}
+          <Toggle on={ui.follow} label={L('Pohyblivá luneta na suporte', 'Follow rest on the carriage')} onClick={() => { if (stopped) set('follow', !ui.follow); }} />
+          <Toggle on={ui.screwGuard} label={L('Kryt vodiacej skrutky a ťažnej tyče', 'Leadscrew and feed-rod guard')} onClick={() => set('screwGuard', !ui.screwGuard)} />
+          <Toggle on={ui.brake} label={L('Nožná brzda po celej dĺžke stroja', 'Foot brake along the machine')} onClick={() => set('brake', !ui.brake)} />
+          {ui.brake && <button type="button" className="btn-run stop mt-2" onClick={() => apiRef.current.footBrake && apiRef.current.footBrake()}>{L('Šliapnuť na nožnú brzdu', 'Step on the foot brake')}</button>}
+          <p className="text-xs muted mt-2">{L('Lunety sa nasadzujú pri stojacom vretene. Dlhý tenký obrobok (vyloženie nad 6 × Ø) bez podopretia sa pri reze chveje; oceľ pri vysokej reznej rýchlosti potrebuje chladenie.', 'The rests are fitted with the spindle stopped. A long slender part (over 6 × Ø stick-out) without support chatters in the cut; steel at a high cutting speed needs coolant.')}</p>
+        </div>
+
+        <div className="sec">
           <h2 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h2>
-          <Slider id="z" label={L('Suport pozdĺžne Z (od čeľustí)', 'Carriage Z (from the jaws)')} unit="mm" min={10} max={1150} step={1} value={ui.z} actual={tele.carZ} onChange={(v) => set('z', v)} />
+          <Slider id="z" label={L('Suport pozdĺžne Z (od čeľustí)', 'Carriage Z (from the jaws)')} unit="mm" min={10} max={Math.round(1150 * S)} step={1} value={ui.z} actual={tele.carZ} onChange={(v) => set('z', v)} />
           <Slider id="top" label={L('Mikroposuv – horné sane Z', 'Fine feed – top slide Z')} unit="mm" min={-50} max={50} step={0.05} value={ui.top} actual={tele.top} digits={2} onChange={(v) => set('top', v)} />
-          <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={-10} max={260} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
+          <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={-10} max={Math.round(260 * S)} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
           <Toggle on={ui.autoFeed} label={L('Automatický pozdĺžny posuv k skľučovadlu', 'Automatic longitudinal feed towards the chuck')} onClick={() => set('autoFeed', !ui.autoFeed)} />
           <div className="mt-2">
             <StepSelect id="feed" label={L('Posuv na otáčku', 'Feed per revolution')} unit={L('mm/ot', 'mm/rev')} values={LATHE_FEEDS} value={ui.feed} onChange={(v) => set('feed', v)}
@@ -1012,8 +1185,8 @@ function LatheSimulator({ onBack, params }) {
           <Toggle on={ui.tailLock} label={L('Koník zaistený na lôžku', 'Tailstock clamped to the bed')} onClick={() => set('tailLock', !ui.tailLock)} />
           <Toggle on={ui.quillLock} label={L('Pinola zaistená', 'Quill locked')} onClick={() => set('quillLock', !ui.quillLock)} />
           <div className="mt-2">
-            <Slider id="quill" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={150} step={1} value={ui.quill} actual={tele.quill} onChange={(v) => set('quill', v)} />
-            <Slider id="tail" label={L('Poloha koníka na lôžku', 'Tailstock position')} unit="mm" min={350} max={1245} step={1} value={ui.tail} actual={tele.tail} onChange={(v) => set('tail', v)} />
+            <Slider id="quill" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={Math.round(150 * S)} step={1} value={ui.quill} actual={tele.quill} onChange={(v) => set('quill', v)} />
+            <Slider id="tail" label={L('Poloha koníka na lôžku', 'Tailstock position')} unit="mm" min={Math.round(350 * S)} max={Math.round(1245 * S)} step={1} value={ui.tail} actual={tele.tail} onChange={(v) => set('tail', v)} />
           </div>
         </div>
 
@@ -1021,8 +1194,8 @@ function LatheSimulator({ onBack, params }) {
           note={L('Šesťhran sa upína na plochy, priemer je cez rohy. Polotovar sa mení len pri stojacom vretene.', 'A hexagon is clamped on its flats; the size is across the corners. The workpiece can only be changed with the spindle stopped.')}>
           <SegRow label={L('Tvar', 'Shape')} value={ui.bShape} options={[['round', L('Kruhová tyč', 'Round bar')], ['hex', L('Šesťhran', 'Hexagon')]]} onChange={(v) => set('bShape', v)} />
           <SegRow label={L('Materiál', 'Material')} value={ui.bMat} options={[['brass', L('Mosadz', 'Brass')], ['steel', L('Oceľ', 'Steel')], ['alu', L('Hliník', 'Alu')]]} onChange={(v) => set('bMat', v)} />
-          <Slider id="bd" label={L('Priemer', 'Diameter')} unit="mm" min={30} max={120} step={5} value={ui.bD} onChange={(v) => set('bD', v)} />
-          <Slider id="blen" label={L('Vyloženie zo skľučovadla', 'Stick-out from the chuck')} unit="mm" min={150} max={600} step={10} value={ui.bLen} onChange={(v) => set('bLen', v)} />
+          <Slider id="bd" label={L('Priemer', 'Diameter')} unit="mm" min={20} max={maxD} step={5} value={ui.bD} onChange={(v) => set('bD', v)} />
+          <Slider id="blen" label={L('Vyloženie zo skľučovadla', 'Stick-out from the chuck')} unit="mm" min={100} max={maxLen} step={10} value={ui.bLen} onChange={(v) => set('bLen', v)} />
         </BlankSection>
 
         <ExportSection machine="sustruh" apiRef={apiRef} />
@@ -1035,5 +1208,12 @@ function LatheSimulator({ onBack, params }) {
   );
 }
 
-export { LatheSimulator, LATHE_TOOLS, SPEEDS, LATHE_FEEDS, FEED_BASE, FEED_MULT };
+// výber veľkosti stroja – pri zmene sa stroj postaví nanovo (iný stroj = nový stav)
+function LatheSimulator(props) {
+  const [model, setModel] = useState(() => { try { const m = window.localStorage.getItem(MODEL_KEY); return LATHE_MODELS[m] ? m : 'sn50'; } catch (err) { return 'sn50'; } });
+  const onModel = (m) => { try { window.localStorage.setItem(MODEL_KEY, m); } catch (err) { /* ignorované */ } setModel(m); };
+  return <LatheCore key={model} {...props} model={model} onModel={onModel} />;
+}
+
+export { LatheSimulator, LATHE_MODELS, LATHE_TOOLS, SPEEDS, LATHE_FEEDS, FEED_BASE, FEED_MULT };
 export default LatheSimulator;

@@ -29,8 +29,10 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
     <td width="50%" valign="top">
       <a href="https://real-machine-tools.marcel-bucala.workers.dev/#sustruh"><img src="docs/img/lathe-tools.png" alt="Sústruh – štvorpolohová nožová hlava"></a>
       <h3>🛠️ Konvenčný hrotový sústruh</h3>
-      <sub>predloha TOS SN / VDF · tyč kruhová alebo šesťhran, mosadz / oceľ / hliník</sub>
+      <sub>predloha TOS SN / VDF · veľkosti SN 32 / 40 / 50 / 55 · tyč kruhová alebo šesťhran, mosadz / oceľ / hliník</sub>
       <ul>
+        <li>4 veľkosti stroja (výška hrotov, dĺžka lôžka, otáčky, najväčší polotovar) – obrobok a nože vždy v skutočných mm</li>
+        <li>prídavné vybavenie: plechový kryt skľučovadla s mikrospínačom, chladenie s hadicou Loc-Line, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda; dlhý tenký obrobok bez podopretia sa chveje</li>
         <li>štvorpolohová nožová hlava, 8 typov nožov v pravom aj ľavom prevedení a závitový nôž 60°, animovaná výmena</li>
         <li>rezanie metrických závitov P 0,75 – 3 mm cez maticu vodiacej skrutky, skrutkovicový profil závitu</li>
         <li>horné sane s mikroposuvom, páky odistenia hlavy, pinoly a koníka</li>
