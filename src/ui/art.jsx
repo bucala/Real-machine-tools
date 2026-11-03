@@ -173,4 +173,25 @@ function MigArt() {
   );
 }
 
-export { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, WelderArt };
+// priečna obrážačka: stojan s oknom ku kulise, smykadlo s nožovou hlavou, stôl na priečniku so zverákom
+function ShaperArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="56" width="120" height="96" rx="3" />
+        <rect x="30" y="152" width="230" height="8" />
+        <rect x="40" y="40" width="170" height="16" rx="2" />
+        <rect x="162" y="96" width="70" height="20" />
+      </g>
+      <rect x="196" y="56" width="14" height="22" fillOpacity=".4" /><path d="M203 78v8" fill="none" strokeWidth="3" />
+      <circle cx="95" cy="108" r="26" fill="none" /><circle cx="95" cy="108" r="4" />
+      <path d="M95 148L112 58" fill="none" strokeWidth="5" /><circle cx="108" cy="90" r="4" fillOpacity=".7" />
+      <rect x="176" y="84" width="44" height="12" fillOpacity=".5" />
+      <rect x="216" y="116" width="10" height="36" fillOpacity=".3" />
+      <path d="M156 102h6M156 110h6" fill="none" strokeWidth="1.5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, WelderArt };

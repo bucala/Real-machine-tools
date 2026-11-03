@@ -34,6 +34,7 @@ const PROFILES = {
   drill: { motor: [60, 170], cut: 1300, q: 3, cutGain: 0.13 },
   grinder: { motor: [70, 240], cut: 6500, q: 1.2, cutGain: 0.14 },
   saw: { motor: [50, 140], cut: 3300, q: 6, cutGain: 0.14 },
+  shaper: { motor: [38, 95], cut: 1500, q: 2.5, cutGain: 0.17 },
   weld: { hum: 100, arc: true },
   mig: { motor: [95, 210], arc: true },                                // invertor nehučí – počuť podávač drôtu a oblúk
   folder: {},
