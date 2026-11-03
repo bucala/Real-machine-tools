@@ -141,6 +141,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
           <button type="button" className="scene-btn" onClick={onBack} aria-label={L('Späť na výber stroja', 'Back to machine selection')}>← {L('Menu', 'Menu')}</button>
           {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
         </div>
+        <div className="flex flex-col items-end gap-2">
         <div className="flex flex-wrap justify-end items-center gap-2">
           <div className="mode-seg pointer-events-auto" role="group" aria-label={L('Režim ovládania', 'Control mode')}>
             <button type="button" className={ui.manual ? '' : 'on'} aria-pressed={!ui.manual} onClick={() => set('manual', false)} title={L('Ovládanie kamery (M)', 'Camera control (M)')}>
@@ -160,8 +161,10 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
             </button>
           )}
         </div>
+        {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
+        {tools && <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{tools}</div>}
+        </div>
       </div>
-      {tools && <div className="absolute right-3 flex flex-wrap justify-end gap-2" style={{ top: 58, zIndex: 6 }}>{tools}</div>}
       {inspect ? (
         <div className="absolute left-3 right-3 bottom-3 md:right-auto hint pointer-events-none" style={{ maxWidth: 520 }}>
           <b className="ink">{L('Polotovar je vybratý:', 'Workpiece removed:')}</b> {L(`ťahaním ho otáčaš, kolieskom približuješ. Tlačidlo „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na pôvodné miesto.`, `drag to rotate it, scroll to zoom. “${workLabels ? workLabels[1] : 'Clamp back'}” returns it to its original place.`)}
