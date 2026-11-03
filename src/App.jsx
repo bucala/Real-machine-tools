@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, WelderArt } from './ui/art';
+import { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -11,6 +11,7 @@ const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
+const ShaperSimulator = lazy(() => import('./machines/shaper'));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
 const MigSimulator = lazy(() => import('./machines/weld').then((m) => ({ default: m.MigSimulator })));
@@ -42,6 +43,10 @@ const MACHINES = [
     meta: L('Brúska', 'Grinder'), name: L('Rovinná brúska', 'Surface grinder'), model: 'BPH 300',
     desc: L('Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.', 'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.'),
     specs: [L('Kotúč Ø300 × 40 mm', 'Wheel Ø300 × 40 mm'), L('Stôl 1 – 25 m/min', 'Table 1 – 25 m/min'), L('Prísuv 0,005 mm', 'Infeed 0.005 mm')] }) },
+  { id: 'obrazacka', Art: ShaperArt, Comp: ShaperSimulator, t: () => ({
+    meta: L('Obrážačka', 'Shaper'), name: L('Priečna obrážačka', 'Shaping machine'), model: 'TOS',
+    desc: L('Historický stroj školských dielní: kulisa poháňa smykadlo tam a späť s rýchlym spätným chodom, nôž v sklopnej doske reže len pri pracovnom zdvihu, stôl sa posúva západkou.', 'A classic of school workshops: the slotted link drives the ram back and forth with a quick return, the tool in the clapper box cuts only on the cutting stroke, the table is fed by a ratchet.'),
+    specs: [L('Zdvih 20 – 500 mm', 'Stroke 20 – 500 mm'), L('10 – 56 zdvihov/min', '10 – 56 strokes/min'), L('Posuv 0,2 – 4 mm/zdvih', 'Feed 0.2 – 4 mm/stroke')] }) },
   { id: 'pila', Art: BandSawArt, Comp: BandSawSimulator, t: () => ({
     meta: L('Píla', 'Saw'), name: L('Strojná pásová píla', 'Vertical band saw'), model: 'TOS PPN',
     desc: L('Rezanie dreva, hliníka a ocele pásom: napínanie pásu, nastavenie horného vodidla, voľba rýchlosti pásu podľa materiálu.', 'Cutting wood, aluminium and steel with a band: blade tensioning, upper guide setting, blade speed chosen by material.'),

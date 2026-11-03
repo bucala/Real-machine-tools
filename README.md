@@ -40,11 +40,12 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
     <td width="50%" valign="top">
       <a href="https://real-machine-tools.marcel-bucala.workers.dev/#freza"><img src="docs/img/mill-tools.png" alt="Fréza – guľová fréza nad obrobkom"></a>
       <h3>⚙️ Univerzálna konzolová fréza</h3>
-      <sub>predloha TOS FA 3 B · hranol alebo tyč vo zveráku</sub>
+      <sub>predloha TOS FA 3 B · hranol alebo tyč vo zveráku, tyč v deliacom prístroji</sub>
       <ul>
         <li>stopkové frézy Ø6 – Ø25, guľové Ø6 – Ø16, čelné Ø50 – Ø100</li>
         <li>stôl X, sane Y, konzola Z; automatický posuv stola, chladenie</li>
         <li>zverák sa prispôsobí šírke obrobku, kolízie s čeľusťami a podložkami</li>
+        <li><b>deliaci prístroj</b> so skľučovadlom a koníkom: jednoduché delenie n = 40 / z (výpočet otáčok kľuky a kruhu dier), aretácia vretena, úlohy šesťhran a štvorhran</li>
       </ul>
     </td>
   </tr>
@@ -97,6 +98,26 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 <table>
   <tr>
     <td width="50%" valign="top">
+      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#obrazacka"><img src="docs/img/shaper.png" alt="Obrážačka – kulisa a smykadlo"></a>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🪚 Priečna obrážačka</h3>
+      <sub>predloha kulisová obrážačka TOS · historický stroj školských dielní</sub>
+      <ul>
+        <li>kulisový mechanizmus viditeľný cez odkrytý bok stojana: koleso s čapom, kulisa, kameň; dĺžka zdvihu 20 – 500 mm mení polomer čapu</li>
+        <li>rýchly spätný chod – pracovný zdvih trvá ~230° otáčky kolesa, spätný ~130°; 6 stupňov 10 – 56 zdvihov/min, rezná rýchlosť v paneli</li>
+        <li>nôž v sklopnej doske reže len pri pracovnom zdvihu, pri spätnom sa nadvihne</li>
+        <li>západkový posuv stola o krok na začiatku každého zdvihu, prísuv noža kolieskom na hlave</li>
+        <li>4 nože (ubierací, hladiaci, drážkovacie 6 a 10 mm) s najväčším záberom – pri preťažení sa stroj zastaví; náraz do čeľustí zveráka</li>
+        <li>3 úlohy: rovina o 2 mm, drážka pre pero 10 × 5, osadenie 30 × 10</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
       <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zvaranie"><img src="docs/img/weld-helmet.png" alt="Zváranie – pohľad cez kuklu"></a>
     </td>
     <td width="50%" valign="top">
@@ -111,6 +132,9 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
         <li>režim <b>Zváranie</b> (M): pravé tlačidlo vedie elektródu, pravé + ľavé zvára, na dotyk dva prsty; v režime kamery pravé tlačidlo posúva pohľad</li>
         <li>navárať sa dá kdekoľvek na diel, ďalšie vrstvy sa ukladajú na predchádzajúce</li>
         <li>pri dohorenej elektróde vyskočí tlačidlo <b>Vymeň elektródu</b> (alebo E) – animácia: ohorok vypadne, nová elektróda sa zasunie do čeľustí</li>
+        <li><b>rez zvarom (makrovýbrus)</b> kdekoľvek pozdĺž spoja: plechy, jednotlivé húsenice, hranica natavenia, tepelne ovplyvnená oblasť, póry, troskové vtrúseniny a neprievar; miesto rezu ukazuje červená rovina v scéne</li>
+        <li><b>zvarová mierka</b> v reze: prevýšenie h a šírka b, pri kútovom zvare ramená z₁, z₂ a účinná hrúbka a</li>
+        <li><b>viacvrstvové zvary</b>: každé zapálenie oblúka je nová húsenica, rez ukazuje koreň, výplň a kryciu vrstvu; zvar cez neotlčenú trosku zanechá vtrúseniny; rúra na <b>polohovadle</b> (1G) sa otáča pod horákom</li>
       </ul>
     </td>
   </tr>
@@ -130,7 +154,7 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
         <li>2-takt / 4-takt na horáku, hlavný vypínač, ovládanie priamo na paneli zdroja (displej A / V, LED režimov)</li>
         <li>plynová fľaša s ventilom a prietokomerom – pri slabej ochrane (zatvorený ventil, málo či veľa plynu, dlhý výlet drôtu) vznikajú póry</li>
         <li>výlet drôtu kolieskom pri zváraní; dlhší výlet zníži prúd</li>
-        <li>4 úlohy: zvar V 8 mm PA, kútový zvar PB, tenký plech 2 mm, rúra Ø60,3 × 4 v polohe PH</li>
+        <li>úlohy: zvar V 8 mm PA, kútový zvar PB, tenký plech 2 mm, rúra Ø60,3 × 4 v polohe PH, rúra Ø88,9 × 8 na polohovadle (3 vrstvy)</li>
       </ul>
     </td>
   </tr>
@@ -158,7 +182,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #bruska · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #bruska · #obrazacka · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -201,7 +225,7 @@ flowchart LR
 | [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
 | [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
 | [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
 | [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
 | [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |

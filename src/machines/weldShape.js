@@ -47,7 +47,7 @@ export const ALL_POS = ['PA', 'PB', 'PC', 'PD', 'PE', 'PF', 'PG'];
 // polohy zvárania, ktoré sa pre daný tvar dajú nastaviť (EN ISO 6947); pôvodné druhy majú všetky polohy plechov
 const POS = {
   C: ['PA', 'PB', 'PD', 'PF', 'PG'], O: ['PA', 'PF', 'PG'], TV: ['PA', 'PC', 'PE', 'PF', 'PG'],
-  RP: ['PB', 'PD', 'PH', 'PJ'], JK: ['PB', 'PD', 'PH', 'PJ'], RR: ['PH', 'PJ', 'H-L045', 'PC'],
+  RP: ['PB', 'PD', 'PH', 'PJ'], JK: ['PB', 'PD', 'PH', 'PJ'], RR: ['PH', 'PJ', 'H-L045', 'PC', 'PA'],
 };
 export const posAllowed = (id) => POS[id] || ALL_POS;
 export const usesSize = (id) => id === 'RR' || id === 'RP' || id === 'JK';
@@ -194,4 +194,44 @@ export function evalBead(S, f) {
     cov: covered / S.path.length, off: S.id === 'N' ? 0 : Math.max(0, 1 - depAll / depTotal),
     fill: S.groove && grooveSum > 0 ? fillSum / grooveSum : null, width: covered ? widthSum / covered : 0, reinf: covered ? reinf / covered : 0,
   };
+}
+
+// ---------- rez zvarom (makrovýbrus) a zvarová mierka ----------
+// sec.cols = stĺpce naprieč spojom: { u (mm od osi), h0 (pôvodný povrch), h (povrch), dep, fus (natavenie pod h0),
+// passes: [{ id, th }] (vrstvy zdola nahor), por, inc } alebo null mimo dielu.
+// Vráti šírku húsenice, prevýšenie, počet vrstiev nad sebou, vyplnenie koreňa, natavenie bokov a pri kútovom zvare ramená a účinnú hrúbku a.
+export function sectionMetrics(sec) {
+  const cols = sec.cols.filter(Boolean), weld = cols.filter((c) => c.dep > 0.1);
+  if (!weld.length) return null;
+  const width = cols.filter((c) => c.dep > 0.2).length * RES;
+  const reinf = Math.max(0, ...weld.map((c) => c.h - sec.ref));
+  const layers = Math.max(...weld.map((c) => c.passes.filter((p) => p.th > 0.15).length));
+  const groove = cols.filter((c) => sec.groove && c.h0 < sec.gref - 0.01);
+  const gap = groove.filter((c) => c.h0 < 0.01);
+  const rootFilled = gap.length ? gap.every((c) => c.dep > 0.1) : null;
+  // natavenie bokov úkosu: najmenšie natavenie pod zvarovým kovom na šikmej / zvislej stene
+  const wall = groove.filter((c) => c.h0 >= 0.05 && c.dep > 0.1);
+  const wallFus = wall.length ? Math.min(...wall.map((c) => c.fus)) : null;
+  const lof = wall.some((c) => c.fus < 0.2);
+  let legs = null;
+  if (sec.fillet) {
+    // stena kútového spoja: stĺpce s povrchom výrazne nad plechom; ramená merané od jej líca
+    const isWall = (c) => c.h0 > sec.gref + 0.5;
+    const iw = sec.cols.findIndex((c) => c && isWall(c));
+    if (iw >= 0) {
+      let ie = iw; while (ie + 1 < sec.cols.length && sec.cols[ie + 1] && isWall(sec.cols[ie + 1])) ie++;
+      // od líca steny smerom dir: z2 = výška zvaru pri stene, z1 = dĺžka súvislého zvaru na plechu
+      const leg = (q0, dir) => {
+        let z1 = 0, z2 = 0;
+        for (let q = q0, n = 0; q >= 0 && q < sec.cols.length; q += dir, n++) {
+          const c = sec.cols[q]; if (!c || c.dep <= 0.2) break;
+          if (n === 0) z2 = c.dep; z1 = (n + 1) * RES;
+        }
+        return { z1, z2 };
+      };
+      const l = leg(iw - 1, -1), r = leg(ie + 1, 1), g = r.z1 * r.z2 >= l.z1 * l.z2 ? r : l;
+      legs = { ...g, a: g.z1 && g.z2 ? g.z1 * g.z2 / Math.hypot(g.z1, g.z2) : 0 };
+    }
+  }
+  return { width, reinf, layers, rootFilled, wallFus, lof, legs, por: weld.filter((c) => c.por).length, inc: weld.filter((c) => c.inc).length };
 }

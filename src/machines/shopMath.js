@@ -73,6 +73,14 @@ export const weldChecks = {
     { key: 'width', ok: !!m.stats && m.stats.width >= 6, actual: m.stats ? `${f1(m.stats.width)} mm` : '–' },
     ...weldCommon(m),
   ],
+  // viacvrstvový zvar V 12 mm: koreň, výplň, krycia vrstva, troska otlčená medzi vrstvami
+  vrstvy: (m) => [
+    { key: 'setup', ok: m.type === 'V' && m.t === 12 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
+    { key: 'layers', ok: !!m.stats && m.stats.layers >= 3, actual: m.stats ? `${m.stats.layers}` : '–' },
+    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    { key: 'inc', ok: !!m.stats && (m.stats.inc || 0) <= 15, actual: m.stats ? `${Math.round(m.stats.inc || 0)} mm²` : '–' },
+    ...weldCommon(m),
+  ],
   // rúra na plech: kútový zvar dookola
   rpb: (m) => [
     { key: 'setup', ok: m.type === 'RP' && m.t === 6 && m.pos === 'PB', actual: `${m.type} ${m.t} mm ${m.pos}` },
@@ -103,6 +111,13 @@ export const migChecks = {
   // rúra Ø60,3 × 4: obvodový tupý zvar V v polohe PH
   mrr: (m) => [
     { key: 'setup', ok: m.type === 'RR' && m.t === 4 && m.D === 60.3 && m.pos === 'PH', actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}` },
+    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    ...migCommon(m),
+  ],
+  // rúra Ø88,9 × 8 na polohovadle: tri vrstvy dookola
+  mrr3: (m) => [
+    { key: 'setup', ok: m.type === 'RR' && m.t === 8 && m.D === 88.9 && m.pos === 'PA', actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}` },
+    { key: 'layers', ok: !!m.stats && m.stats.layers >= 3, actual: m.stats ? `${m.stats.layers}` : '–' },
     { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
     ...migCommon(m),
   ],

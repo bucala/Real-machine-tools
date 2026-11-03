@@ -11,6 +11,7 @@ import { TAU, approach, clamp, fanAngles, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
 import { exportStl } from '../core/export';
 import { hfInfo, millChecks } from '../core/hfMath';
+import { DIVISIONS, DIV_RATIO, barCut, createBar, indexChecks, indexPlan } from './millIndex';
 import { createSound } from '../core/sound';
 import { CutCalc, ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
@@ -44,6 +45,8 @@ const millParts = () => mkParts([
   ['sane', 'Priečne sane', 'Saddle', 'Priečne sane', 'Saddle', 'Sane jazdia po konzole k stojanu a od neho (os Y). Nesú pracovný stôl a páku automatického posuvu stola.', 'The saddle travels on the knee towards and away from the column (Y axis). It carries the table and the table feed lever.'],
   ['stol', 'Pracovný stôl', 'Table', 'Pracovný stôl', 'Work table', 'Stôl 1300 × 300 mm s tromi T-drážkami sa posúva pozdĺžne (os X) ručnými kolesami na koncoch alebo automatickým posuvom. Červené narážky vpredu obmedzujú posuv.', 'The 1300 × 300 mm table with three T-slots moves longitudinally (X axis) by the handwheels at its ends or by the power feed. The red dogs at the front limit the travel.'],
   ['zverak', 'Zverák', 'Vise', 'Strojný zverák', 'Machine vise', 'Zverák upnutý v T-drážkach drží obrobok medzi pevnou a posuvnou čeľusťou na rovnobežných podložkách. Fréza nesmie zasiahnuť čeľuste ani podložky.', 'The vise bolted in the T-slots holds the workpiece between the fixed and the moving jaw on parallels. The cutter must not touch the jaws or the parallels.'],
+  ['deliaci', 'Deliaci prístroj', 'Dividing head', 'Deliaci prístroj so skľučovadlom', 'Dividing head with chuck', 'Vreteno so skľučovadlom poháňa závitovka s pomerom 40 : 1. Kľuka s kolíkom zapadá do dier deliaceho kotúča: jeden dielik je n = 40 / z otáčok kľuky. Pri frézovaní sa vreteno zaistí aretáciou.', 'The spindle with the chuck is driven by a 40 : 1 worm. The crank pin engages the holes of the index plate: one division is n = 40 / z turns of the crank. The spindle is locked while milling.'],
+  ['konik', 'Koník', 'Tailstock', 'Koník s hrotom', 'Tailstock with centre', 'Podopiera dlhú tyč na voľnom konci. Pri krátkom presahu sa odsunie, aby fréza mohla obrábať koniec tyče.', 'Supports a long bar at its free end. With a short overhang it is moved away so the cutter can machine the bar end.'],
   ['obrobok', 'Obrobok', 'Workpiece', 'Obrobok', 'Workpiece', 'Oceľový hranol alebo kruhová tyč zvoleného rozmeru s tmavou okujenou povrchou. Pri bežiacom vretene fréza odoberá materiál a obrobená plocha je lesklá. Pri stojacom vretene do neho fréza nevnikne.', 'Steel block or round bar of the selected size with a dark mill-scale surface. With the spindle running the cutter removes material and the machined surface is bright. With the spindle stopped the cutter cannot enter it.'],
   ['rozvadzac', 'Rozvádzač', 'Control cabinet', 'Elektrický rozvádzač', 'Electrical cabinet', 'Na pravom boku stojana: ampérmeter, hlavný vypínač, tlačidlá Štart, Stop a chladenie a núdzový STOP. Pod ním sú páky otáčok vretena.', 'On the right side of the column: ammeter, main switch, Start, Stop and coolant buttons and the emergency stop. The spindle speed levers are below it.'],
 ]);
@@ -71,7 +74,15 @@ const MILL_TASKS = [
     setup: { bShape: 'block', bL: 180, bW: 100, bH: 60, tool: 'face100', rpm: 80 },
     drawing: () => <TopSketch L={180} W={100} label="rovina" dims={[['180', 140, 112], ['−2 ±0,1', 120, 66]]} />,
     labels: { share: () => L('Plocha znížená o 2 ±0,1 mm (≥ 95 %)', 'Surface lowered by 2 ±0.1 mm (≥ 95 %)'), max: () => L('Nikde hlbšie ako 2,1 mm', 'Nowhere deeper than 2.1 mm') } },
-].map((t) => ({ ...t, checks: (m) => millChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+  { id: 'sesthran', title: () => L('Šesťhran s = 36 mm v deliacom prístroji', 'Hexagon s = 36 mm on the dividing head'),
+    desc: () => L('Tyč Ø45 × 120 mm v skľučovadle deliaceho prístroja, koník odsunutý. Čelnou frézou Ø100 vyfrézuj na voľnom konci na dĺžke aspoň 40 mm šesťhran s rozmerom cez plochy 36 ±0,15 mm. Stenu frézuj priečnym posuvom (Y) s čelom frézy 18 mm nad osou tyče, potom pootoč o dielik: n = 40 / 6 = 6 2/3 otáčky kľuky (6 otáčok + 12 dier na kruhu 18).', 'Ø45 × 120 mm bar in the dividing-head chuck, tailstock moved away. With the Ø100 face mill cut a hexagon 36 ±0.15 mm across flats on the free end over at least 40 mm. Mill each face with the cross feed (Y), cutter face 18 mm above the bar axis, then index one division: n = 40 / 6 = 6 2/3 crank turns (6 turns + 12 holes on the 18-hole circle).'),
+    setup: { hold: 'div', bShape: 'round', bL: 120, bD: 45, tail: false, divZ: 6, tool: 'face100', rpm: 80 }, div: true,
+    labels: { size: () => L('Rozmer cez plochy 36 ±0,15 mm', 'Across flats 36 ±0.15 mm'), flat: () => L('Rovinné steny (do 0,2 mm)', 'Flat faces (within 0.2 mm)'), len: () => L('Dĺžka šesťhranu aspoň 40 mm', 'Hexagon length at least 40 mm') } },
+  { id: 'stvorhran', title: () => L('Štvorhran 30 × 30 mm v deliacom prístroji', 'Square 30 × 30 mm on the dividing head'),
+    desc: () => L('Tyč Ø45 × 120 mm, koník odsunutý. Na voľnom konci vyfrézuj na dĺžke aspoň 40 mm štvorhran 30 ±0,15 mm. Delenie: n = 40 / 4 = 10 otáčok kľuky.', 'Ø45 × 120 mm bar, tailstock moved away. Mill a 30 ±0.15 mm square on the free end over at least 40 mm. Indexing: n = 40 / 4 = 10 crank turns.'),
+    setup: { hold: 'div', bShape: 'round', bL: 120, bD: 45, tail: false, divZ: 4, tool: 'face100', rpm: 80 }, div: true,
+    labels: { size: () => L('Rozmer cez plochy 30 ±0,15 mm', 'Across flats 30 ±0.15 mm'), flat: () => L('Rovinné steny (do 0,2 mm)', 'Flat faces (within 0.2 mm)'), len: () => L('Dĺžka štvorhranu aspoň 40 mm', 'Square length at least 40 mm') } },
+].map((t) => ({ ...t, checks: (m) => (t.div ? indexChecks : millChecks)[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const MILL_SAFETY = () => [
   L('Obrobok je pevne upnutý vo zveráku, kľúč od zveráka je odložený.', 'The workpiece is clamped firmly in the vise, the vise handle is put away.'),
   L('Fréza je upnutá v klieštine a dotiahnutá.', 'The cutter is clamped in the collet and tightened.'),
@@ -82,9 +93,9 @@ const MILL_SAFETY = () => [
 function MillSimulator({ onBack, params }) {
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null);
   const init = { running: false, power: true, coolant: false, light: true, manual: false, rpm: 400, x: 400, y: 120, z: 150, feedDir: 0, feed: 118, timeScale: 10, tool: 'end20', quill: 0, quillLock: false, kneeLock: false, sadLock: false,
-    bShape: 'block', bL: 180, bW: 100, bH: 60, bD: 60, probe: false, px: 90, pz: 50 };
+    bShape: 'block', bL: 180, bW: 100, bH: 60, bD: 60, probe: false, px: 90, pz: 50, hold: 'vise', tail: true, divZ: 6, divLock: true };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
-  const [tele, setTele] = useTele({ rpm: 0, x: 400, y: 120, z: 150, q: 0, vc: 0, vf: 0, msg: null, cutting: false, depth: 0, tool: 'end20', changing: false });
+  const [tele, setTele] = useTele({ rpm: 0, x: 400, y: 120, z: 150, q: 0, vc: 0, vf: 0, msg: null, cutting: false, depth: 0, tool: 'end20', changing: false, hold: 'vise', idx: 0, phi: 0, indexing: false });
 
   useEffect(() => {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
@@ -311,7 +322,7 @@ function MillSimulator({ onBack, params }) {
     [head, knee].forEach(recolor);
 
     // ---------- zverák: pevná čeľusť vzadu (z = -0,5), posuvná sa prispôsobí šírke obrobku ----------
-    const wk = { shape: 'block', WX: 1.8, WZ: 1.0, WH: 0.6, WB: 0.45 };
+    const wk = { shape: 'block', WX: 1.8, WZ: 1.0, WH: 0.6, WB: 0.45, hold: 'vise' };
     const wzc = () => -0.5 + wk.WZ / 2;
     const vise = grp('zverak', tbl); vise.position.y = 0.75;
     box(vise, -1.25, 1.25, 0, 0.35, -0.95, 0.95, M.vise);
@@ -331,14 +342,68 @@ function MillSimulator({ onBack, params }) {
       box(pars, -0.95, 0.95, 0.35, wk.WB, z0 + 0.03, z0 + 0.15, M.steel);
       box(pars, -0.95, 0.95, 0.35, wk.WB, z1 - 0.15, z1 - 0.03, M.steel);
     };
-    const obstacles = () => [
+    const obstacles = () => (isDiv() ? [
+      { x0: -3.05, x1: -1.85, z0: -0.62, z1: 0.62, top: 1.4, name: L('deliaceho prístroja', 'the dividing head') },
+      { x0: -1.88, x1: DIV.CH, z0: -0.42, z1: 0.42, top: DIV.AY + 0.42, name: L('skľučovadla', 'the chuck') },
+      ...(c.tail ? [{ x0: tailX() - 0.4, x1: tailX() + 0.8, z0: -0.45, z1: 0.45, top: 1.2, name: L('koníka', 'the tailstock') }] : []),
+      { x0: -6.5, x1: 6.5, z0: -1.5, z1: 1.5, top: 0, name: L('stola', 'the table') },
+    ] : [
       { x0: -1.25, x1: 1.25, z0: -0.95, z1: 0.95, top: 0.35, name: L('zveráka', 'the vise') },
       { x0: -1.25, x1: 1.25, z0: -0.95, z1: -0.5, top: 0.85, name: L('pevnej čeľuste zveráka', 'the fixed vise jaw') },
       { x0: -1.1, x1: 1.1, z0: -0.5 + wk.WZ, z1: -0.05 + wk.WZ, top: 0.85, name: L('posuvnej čeľuste zveráka', 'the moving vise jaw') },
       { x0: -0.95, x1: 0.95, z0: -0.5, z1: -0.5 + wk.WZ, top: wk.WB, name: L('podložiek', 'the parallels') },
       { x0: -0.5, x1: 0.5, z0: 0.95, z1: 1.75, top: 0.72, name: L('skrutky zveráka', 'the vise screw') },
       { x0: -6.5, x1: 6.5, z0: -1.5, z1: 1.5, top: 0, name: L('stola', 'the table') },
-    ];
+    ]);
+
+    // ---------- deliaci prístroj a koník (montujú sa na stôl namiesto zveráka) ----------
+    // os tyče DIV.AY nad stolom (úroveň 0,75), čelo skľučovadla v x = DIV.CH; tyč sa vsunie DIV.IN do skľučovadla
+    const DIV = { AY: 1.0, CH: -1.6, IN: 0.25 };
+    const divG = grp('deliaci', tbl); divG.visible = false;
+    box(divG, -3.05, -1.85, 0.75, 1.1, -0.62, 0.62, M.vise);                       // pätka s perami do T-drážky
+    box(divG, -2.95, -2.0, 1.1, 2.15, -0.55, 0.55, M.green);                       // skriňa so závitovkou
+    cylX(divG, 0.34, 0.34, -2.0, -1.88, 0.75 + DIV.AY, 0, M.greenDark, 28);
+    const spinG = new THREE.Group(); spinG.position.set(0, 0.75 + DIV.AY, 0); divG.add(spinG);   // vreteno so skľučovadlom (otáča sa)
+    cylX(spinG, 0.42, 0.42, -1.88, DIV.CH, 0, 0, M.steelDark, 32);
+    for (let q = 0; q < 3; q++) { const a = q * TAU / 3, j = box(spinG, DIV.CH - 0.02, DIV.CH + 0.06, -0.06, 0.06, -0.1, 0.1, M.steel); j.position.set(DIV.CH + 0.02, Math.cos(a) * 0.32, Math.sin(a) * 0.32); j.rotation.x = a; }
+    // deliaci kotúč s dierami a kľuka (os kolmá na vreteno, na strane obsluhy)
+    cylZ(divG, 0.4, 0.4, 0.55, 0.6, -2.48, 1.62, M.steel, 40);
+    for (let q = 0; q < 18; q++) { const a = q * TAU / 18; cylZ(divG, 0.018, 0.018, 0.6, 0.605, -2.48 + Math.sin(a) * 0.31, 1.62 + Math.cos(a) * 0.31, M.black, 6); }
+    const crankI = crank(divG, 0.31, -2.48, 1.62, 0.62);
+    const levDiv = pivotLever(divG, -2.1, 2.15, 0.35, 0.3, 1.0);                   // aretácia vretena
+    const tailG = grp('konik', tbl); tailG.visible = false;
+    box(tailG, 0, 0.8, 0.75, 1.05, -0.45, 0.45, M.vise); box(tailG, 0.05, 0.75, 1.05, 1.95, -0.3, 0.3, M.green);
+    cylX(tailG, 0.12, 0.12, -0.25, 0.05, 0.75 + DIV.AY, 0, M.steel, 16); cylX(tailG, 0.0, 0.12, -0.4, -0.25, 0.75 + DIV.AY, 0, M.steel, 16);
+    handwheel(tailG, 0.25, 0.85, 0.75 + DIV.AY, 0, 'x', 0.15);
+    let bar = null, barMesh = null;
+    const barG = new THREE.Group(); barG.userData.part = 'obrobok'; tbl.add(barG);
+    const barX0 = () => DIV.CH - DIV.IN, barCx = () => barX0() + bar.L / 2, tailX = () => (c.tail && bar ? barX0() + bar.L + 0.35 : 5.4);
+    const RAWC = new THREE.Color(0x474b50).convertSRGBToLinear(), CUTC = new THREE.Color(0xdfe3e7).convertSRGBToLinear();
+    const buildBar = () => {
+      if (barMesh) { barG.remove(barMesh); barMesh.geometry.dispose(); }
+      const L = wk.WX, R = wk.WZ / 2;
+      bar = createBar({ L, R, NX: Math.max(40, Math.round(L * 100 / 1.5)), NT: 240 });
+      const { NX, NT } = bar, n = (NX + 1) * NT, idx = [];
+      for (let i = 0; i < NX; i++) for (let j = 0; j < NT; j++) { const a = i * NT + j, b = i * NT + (j + 1) % NT, c2 = a + NT, d = b + NT; idx.push(a, c2, b, b, c2, d); }
+      for (let j = 0; j < NT; j++) { idx.push(n, (j + 1) % NT, j); idx.push(n + 1, NX * NT + j, NX * NT + (j + 1) % NT); }   // čelá
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((n + 2) * 3), 3)); geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((n + 2) * 3), 3));
+      geo.setIndex(idx);
+      barMesh = new THREE.Mesh(geo, M.work); barMesh.castShadow = true; barMesh.receiveShadow = true; barMesh.userData.part = 'obrobok'; barG.add(barMesh);
+      rebuildBar();
+    };
+    const rebuildBar = () => {
+      const { NX, NT, dX, dT, r, mask } = bar, pos = barMesh.geometry.attributes.position.array, col = barMesh.geometry.attributes.color.array, n = (NX + 1) * NT;
+      for (let i = 0; i <= NX; i++) for (let j = 0; j < NT; j++) {
+        const k = i * NT + j, a = j * dT, cc = mask[k] ? CUTC : RAWC;
+        pos[k * 3] = -bar.L / 2 + i * dX; pos[k * 3 + 1] = r[k] * Math.cos(a); pos[k * 3 + 2] = r[k] * Math.sin(a);
+        col[k * 3] = cc.r; col[k * 3 + 1] = cc.g; col[k * 3 + 2] = cc.b;
+      }
+      pos[n * 3] = -bar.L / 2; pos[n * 3 + 1] = 0; pos[n * 3 + 2] = 0; pos[n * 3 + 3] = bar.L / 2; pos[n * 3 + 4] = 0; pos[n * 3 + 5] = 0;
+      for (let q = n * 3; q < n * 3 + 6; q++) col[q] = RAWC.r;
+      const g = barMesh.geometry; g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere();
+    };
+    const isDiv = () => wk.hold === 'div';
 
     // ---------- obrobok: výšková mapa ----------
     let hf = null;
@@ -358,6 +423,12 @@ function MillSimulator({ onBack, params }) {
       tbl.add(hf.mesh); G.obrobok = hf.mesh;
       buildParallels();
     };
+    // upnutie: zverák alebo deliaci prístroj s tyčou (zverák a jeho obrobok sa vtedy skryjú)
+    const applyHold = () => {
+      const d = isDiv();
+      vise.visible = !d; hf.mesh.visible = !d; divG.visible = d; tailG.visible = d; barG.visible = d;
+      if (d) { buildBar(); barG.position.set(barCx(), 0.75 + DIV.AY, 0); barG.rotation.x = st.phi; tailG.position.x = tailX(); G.obrobok = barG; } else G.obrobok = hf.mesh;
+    };
     makeWork();
     const eachIn = (rx, rz, r, fn, write) => (write ? hf.cutRect : hf.eachRect)(rx - r, rx + r, rz - r, rz + r, (k, x, z) => { const d2 = (x - rx) * (x - rx) + (z - rz) * (z - rz); if (d2 <= r * r) fn(k, d2); });
     const limOf = (tl, wy, d2) => (tl.kind === 'ball' ? wy + tl.r - Math.sqrt(Math.max(0, tl.r * tl.r - d2)) : wy);
@@ -368,6 +439,9 @@ function MillSimulator({ onBack, params }) {
       eachIn(rx, rz - wzc(), tl.r, (k, d2) => { const lim = Math.max(0, limOf(tl, wy, d2)); if (hf.hgt[k] > lim + 1e-4) { removed += hf.hgt[k] - lim; hf.hgt[k] = lim; hf.mask[k] = 1; } }, true);
       return removed;
     };
+    // tyč: fréza s rovným čelom vo výške ry nad stolom, os tyče DIV.AY nad stolom (guľovú frézu berieme ako rovnú)
+    const penAt = (rx, rz, ry, tl, phi = st.phi) => (isDiv() ? barCut(bar, phi, tl.r, ry - DIV.AY, rx - barCx(), rz, false).pen : penetration(rx, rz, ry - wk.WB, tl));
+    const cutAt = (rx, rz, ry, tl) => (isDiv() ? barCut(bar, st.phi, tl.r, ry - DIV.AY, rx - barCx(), rz, true).rem : cut(rx, rz, ry - wk.WB, tl));
     const hitObst = (rx, rz, ry, r) => {
       for (const o of obstacles()) {
         if (ry >= o.top - 1e-4) continue;
@@ -392,7 +466,7 @@ function MillSimulator({ onBack, params }) {
     let chipAcc = 0, dropAcc = 0;
 
     // ---------- stav simulácie ----------
-    const st = { tx: X0 + c.x / 100, sz: Y0 + c.y / 100, h: H0 + c.z / 100, q: c.quill / 100, rpm: 0, spin: 0, cutT: -9, cutting: false, tool: c.tool, msg: null, change: null };
+    const st = { phi: 0, phiT: 0, idx: 0, tx: X0 + c.x / 100, sz: Y0 + c.y / 100, h: H0 + c.z / 100, q: c.quill / 100, rpm: 0, spin: 0, cutT: -9, cutting: false, tool: c.tool, msg: null, change: null };
     let t = 0, last = performance.now(), teleT = 0, workDirty = false, lastBuild = 0, lastDir = c.feedDir;
     const flags = {};
     const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.6 }; };
@@ -417,7 +491,8 @@ function MillSimulator({ onBack, params }) {
       sane: () => v3(1.45, st.h - 1.35 + 0.35, st.sz + 0.95),
       stol: () => v3(st.tx + 5, st.h + 0.05, st.sz + 1.5),
       zverak: () => v3(st.tx + 1.25, st.h + 0.55, st.sz + 0.95),
-      obrobok: () => v3(st.tx - 0.6, st.h + wk.WB + wk.WH + 0.05, st.sz + wzc()),
+      obrobok: () => (isDiv() ? v3(st.tx + barCx(), st.h + 0.75 + DIV.AY + wk.WZ / 2 + 0.05, st.sz) : v3(st.tx - 0.6, st.h + wk.WB + wk.WH + 0.05, st.sz + wzc())),
+      deliaci: () => v3(st.tx - 2.5, st.h + 2.2, st.sz + 0.6), konik: () => v3(st.tx + tailX() + 0.4, st.h + 2.0, st.sz + 0.3),
       rozvadzac: () => v3(2.2, 11.3, -3.0),
     };
     const views = {
@@ -435,9 +510,10 @@ function MillSimulator({ onBack, params }) {
     const { push, pend } = ctrl;
     apiRef.current.view = (n) => insp.goView(n, false);
     // meranie, uloženie a export obrobku
-    apiRef.current.measure = () => ({ info: hfInfo(hf) });
+    apiRef.current.measure = () => ({ info: hfInfo(hf), bar: isDiv() ? bar : null });
     apiRef.current.save = () => {
       if (c.unclamped) { say(L('Najprv upni polotovar späť.', 'Clamp the workpiece back first.')); return null; }
+      if (isDiv()) { say(L('Tyč v deliacom prístroji sa zatiaľ neukladá – exportuj ju do STL.', 'A bar on the dividing head is not saved yet – export it to STL.'), 'info'); return null; }
       return { v: 1, wk: { ...wk }, NX: hf.NX, NZ: hf.NZ, hgt: toB64(hf.hgt), mask: toB64(hf.mask) };
     };
     apiRef.current.load = (r) => {
@@ -450,30 +526,32 @@ function MillSimulator({ onBack, params }) {
       hf.hgt.set(fromB64(r.hgt, Float32Array)); hf.mask.set(fromB64(r.mask, Uint8Array)); hf.rebuild(true);
       return true;
     };
-    apiRef.current.exportStl = () => exportStl(hf.mesh);
+    apiRef.current.exportStl = () => exportStl(isDiv() ? barMesh : hf.mesh);
     apiRef.current.snapshot = snapshot;
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(3.2, 8.4, 4.6), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => (isDiv() ? barG : hf.mesh), getSpot: () => v3(3.2, 8.4, 4.6), onState: (v) => push('unclamped', v) });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Polotovar sa odopína len pri stojacom vretene.', 'The workpiece can only be unclamped with the spindle stopped.')); return; }
         const [rx, rz, ry] = rel(st.tx, st.sz, st.h);
-        if (penetration(rx, rz, ry - wk.WB, MILL_TOOLS[st.tool]) > 0.001 || ry - wk.WB < wk.WH + 0.05 && Math.abs(rx) < wk.WX / 2 + 0.6 && Math.abs(rz - wzc()) < wk.WZ / 2 + 0.6) { say(L('Najprv spusti konzolu nižšie – fréza je pri obrobku.', 'Lower the knee first – the cutter is next to the workpiece.')); return; }
+        const near = isDiv() ? ry < DIV.AY + wk.WZ / 2 + 0.05 && Math.abs(rx - barCx()) < wk.WX / 2 + 0.6 && Math.abs(rz) < wk.WZ / 2 + 0.6
+          : ry - wk.WB < wk.WH + 0.05 && Math.abs(rx) < wk.WX / 2 + 0.6 && Math.abs(rz - wzc()) < wk.WZ / 2 + 0.6;
+        if (penAt(rx, rz, ry, MILL_TOOLS[st.tool]) > 0.001 || near) { say(L('Najprv spusti konzolu nižšie – fréza je pri obrobku.', 'Lower the knee first – the cutter is next to the workpiece.')); return; }
       }
       if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb polotovaru.', 'Wait until the workpiece movement finishes.'), 'info');
     };
     apiRef.current.newBlank = () => {
       if (c.unclamped) { say(L('Najprv upni polotovar späť.', 'Clamp the workpiece back first.')); return null; }
       if (c.running || st.rpm > 1) { say(L('Polotovar sa mení len pri stojacom vretene.', 'The workpiece can only be changed with the spindle stopped.')); return null; }
-      wk.shape = c.bShape; wk.WX = c.bL / 100;
+      wk.hold = c.hold; wk.shape = wk.hold === 'div' ? 'round' : c.bShape; wk.WX = c.bL / 100;
       if (wk.shape === 'round') { wk.WZ = c.bD / 100; wk.WH = c.bD / 100; } else { wk.WZ = c.bW / 100; wk.WH = c.bH / 100; }
-      wk.WB = Math.max(0.45, 0.97 - wk.WH);
-      makeWork(); st.lastRel = null;
+      if (!isDiv()) { wk.WB = Math.max(0.45, 0.97 - wk.WH); makeWork(); }
+      st.phi = st.phiT = 0; st.idx = 0; applyHold(); st.lastRel = null;
       say(L('Upnutý nový polotovar.', 'A new workpiece is clamped.'), 'info');
       const [rx, rz, ry] = rel(st.tx, st.sz, st.h), tl = MILL_TOOLS[st.tool];
-      if (penetration(rx, rz, ry - wk.WB, tl) > 0.001 || hitObst(rx, rz, ry, tl.r)) {
-        st.h = clamp(yT() - wk.WB - wk.WH - 0.2, H0, H0 + 4.2); c.z = (st.h - H0) * 100; return { z: c.z };
+      if (penAt(rx, rz, ry, tl) > 0.001 || hitObst(rx, rz, ry, tl.r)) {
+        st.h = clamp(yT() - (isDiv() ? DIV.AY + wk.WZ / 2 + 0.3 : wk.WB + wk.WH) - 0.2, H0, H0 + 4.2); c.z = (st.h - H0) * 100; return { z: c.z };
       }
       return {};
     };
@@ -542,6 +620,23 @@ function MillSimulator({ onBack, params }) {
     ctrl.reg(lockLever('sadLock', LL('Aretácia saní', 'Saddle clamp'), 'Zaistené sane sa nepohnú v osi Y.', 'A clamped saddle cannot move in Y.'), levSad);
     ctrl.reg({ type: 'button', still: true, label: LL('Pracovná lampa', 'Work lamp'), hint: LL('Klik zapne alebo vypne lampu.', 'Click to switch the lamp on or off.'), action: () => push('light', !c.light) }, lamp.shade);
 
+    // delenie o dielik (n = 40 / z otáčok kľuky); fréza musí byť mimo obrobku
+    apiRef.current.index = (dir = 1) => {
+      if (!isDiv()) return;
+      if (st.indexing) { say(L('Delenie ešte prebieha.', 'Indexing is still in progress.'), 'info'); return; }
+      const z = c.divZ, nphi = st.phiT + dir * TAU / z, [rx, rz, ry] = rel(st.tx, st.sz, st.h), tl = MILL_TOOLS[st.tool];
+      if (penAt(rx, rz, ry, tl) > 0.0005 || penAt(rx, rz, ry, tl, nphi) > 0.0005) { say(L('Najprv odsuň frézu od obrobku – pri delení by doň narazila.', 'Move the cutter away from the work first – it would hit it while indexing.')); return; }
+      const p = indexPlan(z);
+      st.phiT = nphi; st.idx = ((st.idx + dir) % z + z) % z; st.indexing = true; push('divLock', false);
+      say(L(`Delenie: ${p.turns} otáčok kľuky${p.holes ? ` + ${p.holes} dier na kruhu ${p.circle}` : ''} (n = 40 / ${z}).`, `Indexing: ${p.turns} crank turns${p.holes ? ` + ${p.holes} holes on the ${p.circle}-hole circle` : ''} (n = 40 / ${z}).`), 'info');
+    };
+    ctrl.reg({ type: 'wheel', minR: 0.2, inc: -1, label: LL('Kľuka deliaceho prístroja', 'Dividing-head crank'), hint: LL('Jedna otáčka kľuky = 1/40 otáčky vretena. Točí sa len s uvoľnenou aretáciou; na celý dielik použi tlačidlo v paneli.', 'One crank turn = 1/40 of a spindle turn. Only with the lock released; for a whole division use the panel button.'),
+      guard: () => { if (!isDiv()) return false; if (c.divLock) { say(L('Vreteno deliaceho prístroja je zaistené – uvoľni aretáciu.', 'The dividing-head spindle is locked – release the lock.')); return false; } return true; },
+      turn: (d) => { const nphi = st.phiT - d / DIV_RATIO, [rx, rz, ry] = rel(st.tx, st.sz, st.h); if (penAt(rx, rz, ry, MILL_TOOLS[st.tool], nphi) > 0.0005) { say(L('Obrobok by narazil do frézy.', 'The work would hit the cutter.')); return; } st.phiT = nphi; st.phi = nphi; },
+      read: () => `${(((st.phi * 180 / Math.PI) % 360) + 360) % 360 | 0}°` }, crankI);
+    ctrl.reg({ type: 'lever', angles: [-0.45, 0.5], minR: 0.18, label: LL('Aretácia vretena deliaceho prístroja', 'Dividing-head spindle lock'), hint: LL('Pri frézovaní musí byť zaistená, pri delení uvoľnená.', 'Locked while milling, released while indexing.'),
+      getIdx: () => (c.divLock ? 1 : 0), onSet: (i) => { push('divLock', i === 1); say(i ? L('Zaistené.', 'Locked.') : L('Uvoľnené.', 'Released.'), 'info'); }, read: () => (c.divLock ? L('zaistené', 'locked') : L('uvoľnené', 'released')) }, levDiv);
+
     insp.goView('celok', true);
 
     // ---------- hlavná slučka ----------
@@ -564,7 +659,7 @@ function MillSimulator({ onBack, params }) {
       if (c.tool !== st.tool && !st.change) {
         const nt = MILL_TOOLS[c.tool], [rx, rz, ry] = rel(st.tx, st.sz, st.h, c.tool);
         if (c.running || running) { say(L('Nástroj sa mení len pri stojacom vretene.', 'The tool can only be changed with the spindle stopped.'), 'warn'); push('tool', st.tool); }
-        else if (!c.unclamped && (penetration(rx, rz, ry - wk.WB, nt) > 0.002 || hitObst(rx, rz, ry, nt.r))) { say(L('Nový nástroj by zasiahol obrobok alebo zverák – najprv spusti konzolu nižšie (os Z).', 'The new tool would hit the workpiece or the vise – lower the knee first (Z axis).'), 'warn'); push('tool', st.tool); }
+        else if (!c.unclamped && (penAt(rx, rz, ry, nt) > 0.002 || hitObst(rx, rz, ry, nt.r))) { say(L('Nový nástroj by zasiahol obrobok alebo zverák – najprv spusti konzolu nižšie (os Z).', 'The new tool would hit the workpiece or the vise – lower the knee first (Z axis).'), 'warn'); push('tool', st.tool); }
         else st.change = { to: c.tool, t: 0, swapped: false };
       }
       if (st.change) {
@@ -593,13 +688,13 @@ function MillSimulator({ onBack, params }) {
       let blocked = null;
       if (nx !== st.tx || ny !== st.sz || nh !== st.h || nq !== st.q) {
         const r = st.change ? 0.24 : tl.r, [rx0, rz0, ry0] = rel(st.tx, st.sz, st.h);
-        const pen0 = running || c.unclamped ? 0 : penetration(rx0, rz0, ry0 - wk.WB, tl), obst0 = hitObst(rx0, rz0, ry0, r);
+        const pen0 = running || c.unclamped ? 0 : penAt(rx0, rz0, ry0, tl), obst0 = hitObst(rx0, rz0, ry0, r);
         let why = null;
         const ok = (a, b, h2, q2 = st.q) => {
           const [rx, rz, ry] = rel(a, b, h2, st.tool, q2);
           const o = hitObst(rx, rz, ry, r);
           if (o && !obst0) { why = o; return false; }
-          if (!running && !c.unclamped && penetration(rx, rz, ry - wk.WB, tl) > Math.max(0.002, pen0 + 1e-5)) { why = 'work'; return false; }
+          if (!running && !c.unclamped && penAt(rx, rz, ry, tl) > Math.max(0.002, pen0 + 1e-5)) { why = 'work'; return false; }
           return true;
         };
         if (!ok(nx, ny, nh, nq)) {
@@ -626,12 +721,15 @@ function MillSimulator({ onBack, params }) {
       // frézovanie po celej dráhe od minulej snímky, aby pri rýchlom posuve nezostali hrebene
       const cur = rel(st.tx, st.sz, st.h), prev = st.lastRel || cur;
       st.lastRel = cur;
-      if (running && !st.change && !c.unclamped) {
+      // deliaci prístroj: s uvoľnenou aretáciou alebo počas delenia sa nesmie frézovať
+      if (running && isDiv() && (!c.divLock || st.indexing) && !c.unclamped && penAt(cur[0], cur[1], cur[2], tl) > 0.0005) {
+        push('running', false); say(L('Vreteno deliaceho prístroja nie je zaistené – obrobok by sa pootočil. Stroj zastavený; zaisti aretáciu.', 'The dividing-head spindle is not locked – the work would turn. Machine stopped; lock the spindle.'), 'danger');
+      } else if (running && !st.change && !c.unclamped) {
         const n = Math.min(60, Math.max(1, Math.ceil(Math.hypot(cur[0] - prev[0], cur[1] - prev[1], cur[2] - prev[2]) / (tl.r * 0.3))));
         let removed = 0;
         for (let s = 1; s <= n; s++) {
           const f = s / n;
-          removed += cut(prev[0] + (cur[0] - prev[0]) * f, prev[1] + (cur[1] - prev[1]) * f, prev[2] + (cur[2] - prev[2]) * f - wk.WB, tl);
+          removed += cutAt(prev[0] + (cur[0] - prev[0]) * f, prev[1] + (cur[1] - prev[1]) * f, prev[2] + (cur[2] - prev[2]) * f, tl);
         }
         if (removed > 0) {
           st.cutT = t; workDirty = true;
@@ -639,7 +737,13 @@ function MillSimulator({ onBack, params }) {
         }
       }
       st.cutting = t - st.cutT < 0.25;
-      if (workDirty && t - lastBuild > 0.06) { hf.rebuild(); workDirty = false; lastBuild = t; }
+      if (workDirty && t - lastBuild > 0.06) { if (isDiv()) rebuildBar(); else hf.rebuild(); workDirty = false; lastBuild = t; }
+      // delenie: vreteno sa pootočí na cieľový uhol, kľuka sa točí 40× rýchlejšie; potom sa aretácia zaistí
+      if (isDiv()) {
+        if (st.phi !== st.phiT) { st.phi = approach(st.phi, st.phiT, TAU / Math.max(2, c.divZ) / 1.4 * dt); if (st.phi === st.phiT && st.indexing) { st.indexing = false; push('divLock', true); say(L('Pootočené o dielik – aretácia vretena zaistená.', 'Indexed one division – spindle lock engaged.'), 'info'); } }
+        barG.rotation.x = st.phi; spinG.rotation.x = st.phi; crankI.rotation.z = -st.phi * DIV_RATIO;
+        tailG.position.x = approach(tailG.position.x, tailX(), 3 * dt);
+      }
 
       // pohyb skupín, chladenie, lampa
       knee.position.y = st.h - 1.35; sad.position.z = st.sz; tbl.position.x = st.tx;
@@ -670,7 +774,8 @@ function MillSimulator({ onBack, params }) {
         setTele({
           rpm: st.rpm, x: xAct(), y: yAct(), z: zAct(), q: st.q * 100, vc: Math.PI * tl.d * st.rpm / 1000,
           vf: c.feedDir && running ? c.feed : 0, cutting: st.cutting && running, tool: st.tool, changing: !!st.change,
-          depth: over ? Math.max(0, (wk.WB + wk.WH - ry) * 100) : 0, msg: st.msg && st.msg.until > t ? st.msg : null,
+          depth: isDiv() ? Math.max(0, (DIV.AY + wk.WZ / 2 - ry) * 100) : over ? Math.max(0, (wk.WB + wk.WH - ry) * 100) : 0, msg: st.msg && st.msg.until > t ? st.msg : null,
+          hold: wk.hold, idx: st.idx, phi: st.phi, indexing: !!st.indexing,
         });
         drawDro(xAct(), yAct(), zAct() + st.q * 100);
         if (c.feedDir) pend.x = Math.round(c.x * 10) / 10;
@@ -708,7 +813,8 @@ function MillSimulator({ onBack, params }) {
   const stopped = !ui.running && tele.rpm <= 1;
   const setupTask = (task) => {
     const su = task.setup; if (!stopped) return;
-    ['bShape', 'bL', 'bW', 'bH'].forEach((k) => set(k, su[k]));
+    set('hold', su.hold || 'vise');
+    ['bShape', 'bL', 'bW', 'bH', 'bD', 'tail', 'divZ'].forEach((k) => { if (su[k] !== undefined) set(k, su[k]); });
     const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v));
     set('z', Math.min(ui.z, 150)); set('tool', su.tool); set('rpm', su.rpm);
   };
@@ -787,11 +893,34 @@ function MillSimulator({ onBack, params }) {
           </div>)}
         </div>
 
+        {tele.hold === 'div' && (() => {
+          const p = indexPlan(ui.divZ), deg = ((tele.phi * 180 / Math.PI) % 360 + 360) % 360;
+          return (
+            <div className="sec">
+              <h2 className="sec-title mb-2">{L('Deliaci prístroj', 'Dividing head')}</h2>
+              <SegRow label={L('Počet dielov z', 'Divisions z')} value={ui.divZ} options={DIVISIONS.map((z) => [z, String(z)])} onChange={(z) => { if (!tele.indexing) set('divZ', z); }} />
+              <div className="desc" style={{ marginTop: 0 }}>
+                <div className="font-semibold">n = 40 / {ui.divZ} = {p.turns}{p.holes ? ` ${p.holes}/${p.circle}` : ''} {L('otáčky kľuky', 'crank turns')}</div>
+                <div>{p.holes ? L(`${p.turns} celých otáčok a ${p.holes} dier na kruhu ${p.circle} deliaceho kotúča (nožnice nastav na ${p.holes} medzier).`, `${p.turns} full turns and ${p.holes} holes on the ${p.circle}-hole circle (set the sector arms to ${p.holes} spaces).`) : L(`${p.turns} celých otáčok kľuky.`, `${p.turns} full crank turns.`)}</div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button type="button" className="btn" disabled={tele.indexing} onClick={() => apiRef.current.index && apiRef.current.index(-1)}>{L('← Dielik späť', '← Division back')}</button>
+                <button type="button" className="btn active" style={{ flex: 1 }} disabled={tele.indexing} onClick={() => apiRef.current.index && apiRef.current.index(1)}>{L('Pootočiť o 1 dielik →', 'Index 1 division →')}</button>
+              </div>
+              <p className="text-sm tnum mt-2">{L('Dielik', 'Division')} <b>{tele.idx + 1} / {ui.divZ}</b> · {L('uhol', 'angle')} <b>{L(deg.toFixed(1).replace('.', ','), deg.toFixed(1))}°</b>{tele.indexing ? ` · ${L('delí sa…', 'indexing…')}` : ''}</p>
+              <Toggle on={ui.divLock} label={L('Aretácia vretena zaistená', 'Spindle lock engaged')} onClick={() => set('divLock', !ui.divLock)} />
+              <p className="text-xs muted mt-1">{L('Pri frézovaní musí byť vreteno zaistené. Na delenie odsuň frézu od obrobku. V ručnom ovládaní sa dá točiť aj kľukou (1 otáčka = 9°).', 'The spindle must be locked while milling. Move the cutter clear before indexing. In manual control the crank can be turned too (1 turn = 9°).')}</p>
+            </div>
+          );
+        })()}
+
         <BlankSection onApply={() => { const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v)); }}
           note={L('Obrobok leží vo zveráku na podložkách pri pevnej čeľusti; posuvná čeľusť dosadne podľa šírky. Nízky kus sa podloží vyššie, aby vyčnieval nad čeľuste.', 'The workpiece sits on parallels against the fixed jaw; the moving jaw closes to its width. A low part is raised on higher parallels so it sticks out above the jaws.')}>
-          <SegRow label={L('Tvar', 'Shape')} value={ui.bShape} options={[['block', L('Hranol', 'Block')], ['round', L('Kruhová tyč', 'Round bar')]]} onChange={(v) => set('bShape', v)} />
+          <SegRow label={L('Upnutie', 'Work holding')} value={ui.hold} options={[['vise', L('Zverák', 'Vise')], ['div', L('Deliaci prístroj', 'Dividing head')]]} onChange={(v) => { set('hold', v); if (v === 'div') set('bShape', 'round'); }} />
+          {ui.hold === 'div' && <Toggle on={ui.tail} label={L('Koník podopiera tyč', 'Tailstock supports the bar')} onClick={() => set('tail', !ui.tail)} />}
+          {ui.hold !== 'div' && <SegRow label={L('Tvar', 'Shape')} value={ui.bShape} options={[['block', L('Hranol', 'Block')], ['round', L('Kruhová tyč', 'Round bar')]]} onChange={(v) => set('bShape', v)} />}
           <Slider id="bl" label={L('Dĺžka', 'Length')} unit="mm" min={100} max={250} step={5} value={ui.bL} onChange={(v) => set('bL', v)} />
-          {ui.bShape === 'block' ? (<>
+          {ui.bShape === 'block' && ui.hold !== 'div' ? (<>
             <Slider id="bw" label={L('Šírka', 'Width')} unit="mm" min={30} max={100} step={5} value={ui.bW} onChange={(v) => set('bW', v)} />
             <Slider id="bh" label={L('Výška', 'Height')} unit="mm" min={20} max={80} step={5} value={ui.bH} onChange={(v) => set('bH', v)} />
           </>) : (
