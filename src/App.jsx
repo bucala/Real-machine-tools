@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -11,6 +11,7 @@ const MillSimulator = lazy(() => import('./machines/mill'));
 const DrillSimulator = lazy(() => import('./machines/drill'));
 const RadialSimulator = lazy(() => import('./machines/radial'));
 const HorizSimulator = lazy(() => import('./machines/horiz'));
+const HobberSimulator = lazy(() => import('./machines/hob'));
 const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
 const PlateRollSimulator = lazy(() => import('./machines/plate'));
@@ -41,6 +42,10 @@ const MACHINES = [
     meta: L('Vŕtačka', 'Drill'), name: L('Stĺpová vŕtačka', 'Pillar drill'), model: 'TOS SV16',
     desc: L('Vŕtanie dier Ø3 – Ø16 mm do oceľovej dosky na podložkách: priečna kľuka pinoly, zdvíhací stôl, otvory naslepo aj naskrz.', 'Drilling Ø3 – Ø16 mm holes into a steel plate on parallels: capstan quill feed, rising table, blind and through holes.'),
     specs: [L('8 otáčok 125 – 1400 ot/min', '8 speeds 125 – 1400 rpm'), L('Zdvih pinoly 100 mm', 'Quill stroke 100 mm'), L('Vŕtanie do Ø16 mm', 'Drilling up to Ø16 mm')] }) },
+  { id: 'odvalovacka', Art: HobberArt, Comp: HobberSimulator, t: () => ({
+    meta: L('Odvalovacia frézka', 'Gear hobber'), name: L('Odvalovacia frézka na ozubenie', 'Gear hobbing machine'), model: 'TOS Čelákovice',
+    desc: L('Výroba čelných ozubených kolies odvalovaním: výmenné kolesá delenia i = 24 / z, sklon frézy na stúpací uhol, radiálny prísuv na hĺbku 2,25 · m, zvislý posuv a kontrola rozmeru cez zuby Wk.', 'Generating spur gears by hobbing: index change gears i = 24 / z, hob swivel to the lead angle, radial infeed to 2.25 · m, vertical feed and span-over-teeth Wk check.'),
+    specs: [L('Modul 2, z 20 – 40', 'Module 2, z 20 – 40'), L('Fréza Ø70 jednochodá', 'Single-start Ø70 hob'), L('Kontrola Wk ±0,05', 'Wk check ±0.05')] }) },
   { id: 'radialka', Art: RadialArt, Comp: RadialSimulator, t: () => ({
     meta: L('Radiálna vŕtačka', 'Radial drill'), name: L('Radiálna vŕtačka', 'Radial drilling machine'), model: 'TOS VR / VO',
     desc: L('Vŕtanie veľkých dosiek a prírub bez posúvania obrobku: rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene, upínanie stĺpa a vreteníka, automatický posuv s hĺbkovým dorazom.', 'Drilling large plates and flanges without moving the work: the arm swings around the column and is raised by a motor, the head travels along the arm, column and head clamps, power feed with a depth stop.'),

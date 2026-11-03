@@ -302,4 +302,24 @@ function PlateRollArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt };
+function HobberArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="40" y="30" width="50" height="122" />
+        <rect x="90" y="70" width="44" height="40" rx="3" />
+        <rect x="150" y="120" width="70" height="32" />
+        <rect x="236" y="40" width="26" height="112" />
+        <rect x="30" y="152" width="250" height="8" />
+      </g>
+      <rect x="134" y="80" width="18" height="30" rx="6" fillOpacity=".5" />
+      <path d="M137 84l12 6M137 94l12 6M137 104l12 4" fill="none" strokeWidth="1.5" />
+      <rect x="160" y="92" width="50" height="16" fillOpacity=".45" />
+      <path d="M164 92v16M172 92v16M180 92v16M188 92v16M196 92v16M204 92v16" fill="none" strokeWidth="1.2" />
+      <path d="M185 108v12M185 40v52M185 40h64" fill="none" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, SlotterArt, WelderArt };
