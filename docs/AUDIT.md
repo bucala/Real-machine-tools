@@ -83,7 +83,7 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Hrotová brúska na guľato | ✅ | `#gulato`: hydraulický stôl s dorazmi, prísuv 0,005 mm, odtláčanie a vyiskrovanie, prepal, úlohy h6 a h5 (`cylMath.js`) |
 | Horizontálka TOS Varnsdorf | ✅ | `#horizontalka`: vreteník Y, vreteno W, sane Z, stôl X, otočný stôl B; vyvrtávanie s priehybom tyče, úlohy Ø80 H7 a súosé otvory (`horizMath.js`) |
 | Odvalovacia frézka | ✅ | `#odvalovacka`: výmenné kolesá delenia, sklon frézy, hĺbka 2,25 · m, Wk (`hobMath.js`) |
-| Zakružovačka plechu | ✅ | `#zakruzovacka`: tri valce so zovretím, odpruženie, predohnutie otočením plechu (`plateMath.js`) |
+| Zakružovačka plechu TOS XZC 3000/10 | ✅ | `#zakruzovacka`: trojvalcová pyramída, prísuv horného valca kolesom, odpruženie, predohnutie koncov podložným plechom, odklopné ložisko s kolíkom (`plateMath.js`) |
 | Tabuľové nožnice | ✅ | `#noznice`: zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
 
 ## 2. Rozsah a metodika

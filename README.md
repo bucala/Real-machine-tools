@@ -141,11 +141,12 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   <tr>
     <td width="50%" valign="top">
       <h3>🌀 Zakružovačka plechu</h3>
-      <sub>tri valce so zovretím · <code>#zakruzovacka</code></sub>
+      <sub>TOS XZC 3000/10 · trojvalcová pyramída · <code>#zakruzovacka</code></sub>
       <ul>
-        <li>horný a spodný valec ťahajú plech, zadný valec ohýba; odpruženie podľa hrúbky</li>
-        <li>začiatok zostane rovný po zadný valec – predohne sa otočením plechu</li>
-        <li>úlohy plášť Ø500 z 3 mm a oblúk R 400 zo 4 mm (<code>plateMath.js</code>)</li>
+        <li>dva poháňané spodné valce, horný valec prisúva ručné koleso na stĺpiku; odpruženie podľa hrúbky</li>
+        <li>konce zostanú rovné na polovicu rozostupu valcov – predohnú sa podložným plechom</li>
+        <li>hotový plášť sa vysunie po vytiahnutí kolíka cez odklopné ložisko</li>
+        <li>úlohy plášť Ø1000 zo 6 mm a oblúk R 800 z 10 mm (<code>plateMath.js</code>)</li>
       </ul>
     </td>
     <td width="50%" valign="top">

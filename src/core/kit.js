@@ -57,6 +57,7 @@ function makeKit(M) {
     const outer = new THREE.Group(); outer.position.set(x, y, z);
     if (axis === 'x') outer.rotation.y = Math.PI / 2;
     if (axis === '-x') outer.rotation.y = -Math.PI / 2;
+    if (axis === 'y') outer.rotation.x = -Math.PI / 2;
     p.add(outer);
     const spin = new THREE.Group(); outer.add(spin);
     add(spin, new THREE.TorusGeometry(R, R * 0.075, 10, 40), M.steel);

@@ -1,26 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { deltaFor, kLoadedFor } from '../src/machines/benderMath';
-import { PLATE_A, bendInfo, createSheet, passPinch, plateChecks, plateProfile, reverseSheet } from '../src/machines/plateMath';
+import { PLATE_A, bendInfo, createSheet, passPyramid, plateChecks, plateProfile } from '../src/machines/plateMath';
 
-const roll = (sh, p, h, step = 0.004) => { for (let s = 0; s < sh.L; s += step) passPinch(sh, p, s, s + step, h); };
-describe('zakružovačka plechu so zovretím', () => {
-  const p = plateProfile(3);
-  const h = deltaFor(kLoadedFor(1 / 0.25, p), PLATE_A);
-  it('jeden prechod: začiatok zostane rovný v dĺžke po zadný valec, koniec sa ohne takmer celý', () => {
-    const sh = createSheet(1.57); roll(sh, p, h);
+const roll = (sh, p, d, opt = {}, step = 0.004) => { for (let s = 0; s < sh.L; s += step) passPyramid(sh, p, s, s + step, d, opt); };
+describe('zakružovačka plechu – trojvalcová pyramída', () => {
+  const p = plateProfile(6, 1500);
+  const d = deltaFor(kLoadedFor(1 / 0.5, p), PLATE_A);
+  it('bez podložného plechu zostanú oba konce rovné v dĺžke polovice rozostupu valcov', () => {
+    const sh = createSheet(3.14); roll(sh, p, d);
     const b = bendInfo(sh);
-    expect(b.R).toBeCloseTo(250, 0); expect(b.ends[0]).toBeCloseTo(PLATE_A * 1000, -1); expect(b.ends[1]).toBeLessThan(10);
+    expect(b.R).toBeCloseTo(500, 0); expect(b.ends[0]).toBeCloseTo(PLATE_A * 1000, -1); expect(b.ends[1]).toBeCloseTo(PLATE_A * 1000, -1);
     expect(plateChecks.plast({ sheet: sh }).find((c) => c.key === 'ends').ok).toBe(false);
   });
-  it('po otočení plechu sa predohne aj začiatok – plášť Ø500 je splnený', () => {
-    const sh = createSheet(1.57); roll(sh, p, h); reverseSheet(sh); roll(sh, p, h);
-    const b = bendInfo(sh); expect(b.angle).toBeGreaterThan(345); expect(Math.max(...b.ends)).toBeLessThan(25);
+  it('s podložným plechom sa konce predohnú – plášť Ø1000 je splnený', () => {
+    const sh = createSheet(3.14); roll(sh, p, d, { backing: true });
+    const b = bendInfo(sh); expect(b.angle).toBeGreaterThan(340); expect(Math.max(...b.ends)).toBeLessThan(50);
     expect(plateChecks.plast({ sheet: sh }).every((c) => c.ok)).toBe(true);
   });
-  it('hrubší plech odpruží menej: rovnaký zdvih dá pri 4 mm menší polomer ako pri 3 mm', () => {
-    const a3 = createSheet(1.0), a4 = createSheet(1.0); const hh = deltaFor(1 / 0.3, PLATE_A);
-    roll(a3, plateProfile(3), hh); roll(a4, plateProfile(4), hh);
-    expect(bendInfo(a4).R).toBeLessThan(bendInfo(a3).R);
+  it('hrubší plech odpruží menej: rovnaký prísuv dá pri 10 mm menší polomer ako pri 6 mm', () => {
+    const a6 = createSheet(2.0), a10 = createSheet(2.0); const dd = deltaFor(1 / 0.7, PLATE_A);
+    roll(a6, plateProfile(6), dd); roll(a10, plateProfile(10), dd);
+    expect(bendInfo(a10).R).toBeLessThan(bendInfo(a6).R);
     expect(plateChecks.oblukP({}).some((c) => c.ok)).toBe(false);
   });
 });
