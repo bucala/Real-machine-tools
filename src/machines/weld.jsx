@@ -14,7 +14,7 @@ import { ExportSection, TaskSection } from '../ui/tools';
 import { buildFronius } from './fronius';
 import { MIG_GASES, MIG_WIRES, MODE_NAMES, gasCover, migRange, migSynergic, stickoutI } from './migMath';
 import { migChecks, weldChecks } from './shopMath';
-import { POS_DOWN, POS_UP, POS_VERT, RES, SHAPE_GROUPS, W2, diffX, evalBead, makeShape, mapPoint, nearestOnPath, normalAt, posAllowed, sizeDefault, sizeOptions, tangentOf, unmapPoint, usesSize, weldPrep, weldProfile, wrapX } from './weldShape';
+import { POS_DOWN, POS_UP, POS_VERT, RES, SHAPE_GROUPS, W2, diffX, evalBead, sectionMetrics, makeShape, mapPoint, nearestOnPath, normalAt, posAllowed, sizeDefault, sizeOptions, tangentOf, unmapPoint, usesSize, weldPrep, weldProfile, wrapX } from './weldShape';
 import { HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -89,6 +89,10 @@ const MIG_TASKS = [
     desc: () => L('Kútový zvar T-spoja v polohe PB, šírka húsenice aspoň 6 mm. Drôt Ø1,0 alebo Ø1,2, plyn M21, rýchlosť drôtu 8 – 10 m/min.', 'Fillet weld of a T-joint in position PB, bead at least 6 mm wide. Ø1.0 or Ø1.2 wire, M21 gas, wire speed 8 – 10 m/min.'),
     setup: { wType: 'K', wT: 8, wPos: 'PB', wire: 1, gas: 'M21', vd: 9, corr: 0, prog: 'std', flow: 14, valve: true, ctwd: 12 },
     labels: { setup: () => L('Kútový zvar, 8 mm, poloha PB', 'Fillet weld, 8 mm, position PB'), width: () => L('Šírka húsenice ≥ 6 mm', 'Bead width ≥ 6 mm'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), por: () => L('Bez pórov', 'No porosity') } },
+  { id: 'mrr3', title: () => L('MAG: rúra Ø88,9 × 8 na polohovadle, 3 vrstvy', 'MAG: Ø88.9 × 8 pipe on a positioner, 3 passes'),
+    desc: () => L('Tupý zvar V rúr Ø88,9 × 8 mm v polohe PA: polohovadlo otáča rúru, horák drž na vrchu a veď priečne. Prvá otáčka koreň (nižšia rýchlosť drôtu), ďalšie výplň a krycia vrstva – spolu aspoň 3 vrstvy nad sebou. Drôt Ø1,0, plyn M21.', 'Single-V butt weld of Ø88.9 × 8 mm pipes in position PA: the positioner turns the pipe, keep the torch on top and move it across. First turn root (lower wire speed), then fill and cap – at least 3 layers stacked. Ø1.0 wire, M21 gas.'),
+    setup: { wType: 'RR', wT: 8, wD: 88.9, wPos: 'PA', rotOn: true, rotV: 3, wire: 1, gas: 'M21', vd: 7, corr: 0, prog: 'std', flow: 14, valve: true, ctwd: 12 },
+    labels: { setup: () => L('Rúra Ø88,9 × 8, poloha PA (polohovadlo)', 'Pipe Ø88.9 × 8, position PA (positioner)'), layers: () => L('Aspoň 3 vrstvy nad sebou', 'At least 3 layers stacked'), fill: () => L('Úkos vyplnený (≥ 90 %)', 'Groove filled (≥ 90 %)'), cov: () => L('Zvarený celý obvod (≥ 95 %)', 'Whole circumference welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), por: () => L('Bez pórov', 'No porosity') } },
   { id: 'mtenky', title: () => L('MAG: tenký plech 2 mm, zvar I, PA', 'MAG: thin 2 mm sheet, square butt, PA'),
     desc: () => L('Zvar I na plechoch 2 mm. Drôt Ø0,8, nízka rýchlosť drôtu (4 – 6 m/min), rýchlejší posuv bez zastavenia – pri vysokom prúde hrozí prepálenie.', 'Square butt on 2 mm sheets. Ø0.8 wire, low wire speed (4 – 6 m/min), faster steady travel – high current risks burning through.'),
     setup: { wType: 'I', wT: 2, wPos: 'PA', wire: 0.8, gas: 'M21', vd: 5, corr: 0, prog: 'std', flow: 12, valve: true, ctwd: 10 },
@@ -105,6 +109,59 @@ const MIG_SAFETY = () => [
   L('Zemniaca svorka je na zvarenci, hadicové vedenie nie je zalomené.', 'The ground clamp is on the work, the hose pack is not kinked.'),
 ];
 
+// ---------- rez zvarom (makrovýbrus) so zvarovou mierkou ----------
+const PASS_COL = ['#c9d0d6', '#aeb7bf', '#d8dee3', '#9fa9b2', '#bcc4cb', '#e2e7eb'];
+function WeldSection({ sec, m }) {
+  const cols = sec.cols, ok = cols.filter(Boolean);
+  const top = Math.min(Math.max(...ok.map((c) => c.h)), sec.gref + 14) + 2;
+  const bot = Math.min(0, ...ok.map((c) => c.h0 - c.fus - c.heat * 2.5)) - 1;
+  const W = 300, H = 178, k = Math.min((W - 24) / (2 * sec.span), (H - 34) / (top - bot)), f1 = (v) => L(v.toFixed(1).replace('.', ','), v.toFixed(1));
+  const X = (u) => W / 2 + u * k, Y = (y) => H - 22 - (Math.min(y, top) - bot) * k, dw = RES * k + 0.5;
+  const rect = (c, y0, y1, fill, key, op = 1) => (y1 > y0 + 1e-3 ? <rect key={key} x={X(c.u) - dw / 2} y={Y(y1)} width={dw} height={Math.max(0.3, Y(y0) - Y(y1))} fill={fill} opacity={op} /> : null);
+  const els = [];
+  cols.forEach((c, i) => {
+    if (!c) return;
+    els.push(rect(c, bot + 0.6, Math.min(c.h0, top), '#7b838a', `b${i}`));                          // základný materiál (leptaný)
+    if (c.fus > 0.05 || c.heat > 0.05) els.push(rect(c, c.h0 - c.fus - c.heat * 2.5, c.h0 - c.fus, '#8f8a6d', `z${i}`, 0.75));   // tepelne ovplyvnená oblasť
+    if (c.fus > 0.05) els.push(rect(c, c.h0 - c.fus, c.h0, PASS_COL[0], `f${i}`));               // natavený základný materiál
+    let y = c.h0;
+    c.passes.forEach((p, q) => { if (p.th > 0.02) els.push(rect(c, y, y + p.th, PASS_COL[p.id % PASS_COL.length], `p${i}-${q}`)); y += p.th; });
+  });
+  const surf = ok.map((c) => `${X(c.u).toFixed(1)},${Y(c.h).toFixed(1)}`).join(' ');
+  const fusion = ok.filter((c) => c.fus > 0.05 || c.dep > 0.1).map((c) => `${X(c.u).toFixed(1)},${Y(c.h0 - c.fus).toFixed(1)}`).join(' ');
+  const pores = ok.filter((c, i) => c.por && c.dep > 0.3 && i % 3 === 0).map((c, i) => <circle key={`o${i}`} cx={X(c.u)} cy={Y(c.h0 + c.dep * 0.55)} r={1.6} fill="#111" />);
+  const incs = ok.filter((c, i) => c.inc && c.passes.length > 1 && i % 2 === 0).map((c, i) => <ellipse key={`s${i}`} cx={X(c.u)} cy={Y(c.h0 + c.passes[0].th)} rx={2.2} ry={0.9} fill="#2a2118" />);
+  const lof = ok.filter((c) => sec.groove && c.dep > 0.1 && c.h0 > 0.05 && c.h0 < sec.gref - 0.01 && c.fus < 0.2).map((c, i) => <rect key={`l${i}`} x={X(c.u) - dw / 2} y={Y(c.h0) - 0.8} width={dw} height={1.6} fill="#e0402a" />);
+  // zvarová mierka: pri tupom zvare prevýšenie h a šírka b, pri kútovom ramená z a účinná hrúbka a
+  const gauge = [];
+  const weldCols = ok.filter((c) => c.dep > 0.2);
+  if (m && m.legs && m.legs.a > 0) {
+    const iw = cols.findIndex((c) => c && c.h0 > sec.gref + 0.5); let ie = iw;
+    while (ie + 1 < cols.length && cols[ie + 1] && cols[ie + 1].h0 > sec.gref + 0.5) ie++;
+    const rightW = cols[ie + 1] && cols[ie + 1].dep > 0.2, face = rightW ? cols[ie].u + RES / 2 : cols[iw].u - RES / 2, dir = rightW ? 1 : -1;
+    const cx = X(face), cy = Y(sec.gref), ax = X(face + dir * m.legs.z1), ay = Y(sec.gref + m.legs.z2);
+    const L2 = Math.hypot(ax - cx, ay - cy) || 1, nx = (ay - cy) / L2, ny = -(ax - cx) / L2, tq = m.legs.a * k;
+    gauge.push(<polyline key="tri" points={`${ax},${cy} ${cx},${ay}`} fill="none" stroke="#f0a020" strokeWidth="1.6" strokeDasharray="4 2" />);
+    gauge.push(<line key="thr" x1={cx} y1={cy} x2={cx + dir * Math.abs(nx) * tq} y2={cy - Math.abs(ny) * tq} stroke="#f0a020" strokeWidth="2" />);
+    gauge.push(<text key="ta" x={cx + dir * (Math.abs(nx) * tq + 6) - (dir < 0 ? 52 : 0)} y={cy - Math.abs(ny) * tq - 4} fontSize="11" fill="#f0a020" fontFamily="var(--f-mono)">a = {f1(m.legs.a)}</text>);
+    gauge.push(<text key="tz" x={Math.min(cx, ax) + 2} y={cy + 13} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">z₁ {f1(m.legs.z1)}</text>);
+  } else if (m && weldCols.length) {
+    const lo = weldCols[0].u, hi = weldCols[weldCols.length - 1].u, crown = weldCols.reduce((a, c) => (c.h > a.h ? c : a), weldCols[0]);
+    gauge.push(<line key="bar" x1={X(lo - 5)} y1={Y(sec.ref)} x2={X(hi + 5)} y2={Y(sec.ref)} stroke="#f0a020" strokeWidth="2" />);
+    if (m.reinf > 0.05) gauge.push(<line key="pin" x1={X(crown.u)} y1={Y(sec.ref)} x2={X(crown.u)} y2={Y(crown.h)} stroke="#f0a020" strokeWidth="2.4" />);
+    gauge.push(<text key="th" x={X(crown.u) + 5} y={Y(Math.max(crown.h, sec.ref)) - 4} fontSize="11" fill="#f0a020" fontFamily="var(--f-mono)">h = {f1(m.reinf)}</text>);
+    gauge.push(<text key="tb" x={X(lo)} y={H - 6} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">b = {f1(m.width)} mm</text>);
+  }
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={L('Rez zvarom', 'Weld section')} style={{ display: 'block', background: '#25292c', borderRadius: 8 }}>
+      {els}
+      <polyline points={fusion} fill="none" stroke="#3c3f30" strokeWidth="1" strokeDasharray="3 2" />
+      <polyline points={surf} fill="none" stroke="#15181a" strokeWidth="1.2" />
+      {pores}{incs}{lof}{gauge}
+    </svg>
+  );
+}
+
 const WELD_TASKS = [
   { id: 'vpa', title: () => L('Tupý zvar V, plech 8 mm, poloha PA', 'Single-V butt weld, 8 mm plate, PA'),
     desc: () => L('Zvar V na plechoch hrúbky 8 mm vo vodorovnej polohe PA. Zvar celú dĺžku spoja, vyplň úkos, drž krátky oblúk a rovnomernú rýchlosť, potom otlč trosku. Elektróda rutilová Ø3,2, prúd 100 – 120 A.', 'Single-V weld on 8 mm plates in the flat position PA. Weld the whole joint length, fill the groove, keep a short arc and a steady speed, then chip the slag. Rutile Ø3.2 electrode, 100 – 120 A.'),
@@ -114,6 +171,10 @@ const WELD_TASKS = [
     desc: () => L('Kútový zvar T-spoja na plechoch 8 mm v polohe PB. Zvar celú dĺžku so šírkou húsenice aspoň 6 mm, potom otlč trosku. Elektróda rutilová Ø3,2, prúd 110 – 120 A.', 'Fillet weld of a T-joint on 8 mm plates in position PB. Weld the whole length with a bead at least 6 mm wide, then chip the slag. Rutile Ø3.2 electrode, 110 – 120 A.'),
     setup: { wType: 'K', wT: 8, wPos: 'PB', etype: 'rutile', de: 3.2, current: 120 },
     labels: { setup: () => L('Kútový zvar, 8 mm, poloha PB', 'Fillet weld, 8 mm, position PB'), width: () => L('Šírka húsenice ≥ 6 mm', 'Bead width ≥ 6 mm'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), slag: () => L('Troska otlčená', 'Slag chipped off') } },
+  { id: 'vrstvy', title: () => L('Viacvrstvový zvar V, plech 12 mm, PA', 'Multi-pass V weld, 12 mm, PA'),
+    desc: () => L('Zvar V na plechoch 12 mm: koreňová vrstva, výplňová a krycia vrstva (aspoň 3 vrstvy nad sebou). Pred každou ďalšou húsenicou otlč trosku – inak vzniknú troskové vtrúseniny. Výsledok skontroluj rezom zvarom. Bázická Ø3,2, koreň 90 – 100 A, výplň a krycia 110 – 130 A.', 'Single-V weld on 12 mm plates: root pass, fill and cap (at least 3 layers stacked). Chip the slag before every further pass – otherwise slag inclusions form. Check the result with the weld section. Basic Ø3.2, root 90 – 100 A, fill and cap 110 – 130 A.'),
+    setup: { wType: 'V', wT: 12, wPos: 'PA', etype: 'basic', de: 3.2, current: 100 },
+    labels: { setup: () => L('Zvar V, 12 mm, poloha PA', 'V joint, 12 mm, position PA'), layers: () => L('Aspoň 3 vrstvy nad sebou', 'At least 3 layers stacked'), fill: () => L('Úkos vyplnený (≥ 90 %)', 'Groove filled (≥ 90 %)'), inc: () => L('Bez troskových vtrúsenín', 'No slag inclusions'), cov: () => L('Zvarená celá dĺžka (≥ 95 %)', 'Whole length welded (≥ 95 %)'), off: () => L('Materiál mimo spoja ≤ 15 %', 'Metal off the joint ≤ 15 %'), flaws: () => L('Bez chýb', 'No defects'), slag: () => L('Troska otlčená', 'Slag chipped off') } },
   { id: 'rpb', title: () => L('Rúra na plech, kútový zvar dookola, PB', 'Pipe on plate, fillet all round, PB'),
     desc: () => L('Rúra Ø60,3 postavená na plech 6 mm, kútový zvar po celom obvode v polohe PB (šírka húsenice aspoň 5 mm). Veď elektródu po modrej kružnici, na prechode okolo rúry plynule natáčaj ruku, potom otlč trosku. Rutilová Ø3,2, 90 – 110 A.', 'Ø60.3 pipe set on a 6 mm plate, fillet all round in position PB (bead at least 5 mm wide). Guide the electrode along the blue circle, turn your hand smoothly around the pipe, then chip the slag. Rutile Ø3.2, 90 – 110 A.'),
     setup: { wType: 'RP', wT: 6, wD: 60.3, wL: 150, wPos: 'PB', etype: 'rutile', de: 3.2, current: 100 },
@@ -129,7 +190,7 @@ const WELD_SAFETY = () => [
 function WeldingSimulator({ onBack, params, process = 'mma' }) {
   const MIG = process === 'mig';
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), flashRef = useRef(null), glassRef = useRef(null);
-  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, wD: 60.3, tripped: false, slag: true, flashFx: !REDUCED_MOTION,
+  const init = { manual: false, mode: 'w380', current: 100, etype: 'rutile', de: 3.2, ground: true, helmet: false, helmetType: 'auto', shade: 11, adfDelay: 0.3, autoArc: true, arcLen: 3, handV: 6, wType: 'V', wPos: 'PA', wT: 8, wL: 150, wD: 60.3, rotOn: false, rotV: 3, secOn: false, secPos: 50, tripped: false, slag: true, flashFx: !REDUCED_MOTION,
     ...(MIG ? { power: true, prog: 'std', trig: '2T', wire: 1, gas: 'M21', vd: 8, corr: 0, valve: true, flow: 14, ctwd: 12, handV: 8, slag: false } : {}) };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useTele({ arc: false, I: 0, la: 3, v: 0, le: 350, msg: null, stats: null, U: 0, mode: 'short', cover: 1, wire: 0 });
@@ -253,7 +314,19 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       straw: new THREE.Color(0xa9844a).convertSRGBToLinear(), bronze: new THREE.Color(0x7a4f62).convertSRGBToLinear(), blue: new THREE.Color(0x4a5a8a).convertSRGBToLinear(), tmp: new THREE.Color(),
     };
     const glowCol = (T, out) => { const k = Math.max(0, (T - 0.3) / 0.7); out[0] = 3.2 * Math.pow(k, 0.8); out[1] = 1.3 * k * k; out[2] = 0.5 * k * k * k * k; };
-    const idxOf = (i, j) => j * (F.NX + 1) + i, gl = [0, 0, 0], mp = [0, 0, 0];
+    const idxOf = (i, j) => j * (F.NX + 1) + i, gl = [0, 0, 0], mp = [0, 0, 0], LAYS = 6;
+    // pridanie hrúbky a do vrstvy aktuálnej húsenice v bunke k
+    const addPass = (k, a) => {
+      const n = F.ln[k], b = k * LAYS;
+      if (n && F.lid[b + n - 1] === st.pass) F.lh[b + n - 1] += a;
+      else if (n < LAYS) { F.lid[b + n] = st.pass; F.lh[b + n] = a; F.ln[k] = n + 1; }
+      else { F.lh[b + LAYS - 1] += a; F.lid[b + LAYS - 1] = st.pass; }
+    };
+    const copyCell = (k, k2) => {
+      F.h[k2] = F.h[k]; F.dep[k2] = F.dep[k]; F.rip[k2] = F.rip[k]; F.por[k2] = F.por[k]; F.temp[k2] = F.temp[k];
+      F.fus[k2] = F.fus[k]; F.sl[k2] = F.sl[k]; F.inc[k2] = F.inc[k]; F.ln[k2] = F.ln[k];
+      for (let q = 0; q < LAYS; q++) { F.lid[k2 * LAYS + q] = F.lid[k * LAYS + q]; F.lh[k2 * LAYS + q] = F.lh[k * LAYS + q]; }
+    };
     // stĺpec siete; na rúre sa obvod uzatvára (stĺpec NX je ten istý ako 0), na plechu mimo dielu −1
     const colOf = (i) => (F.R ? ((i % F.NX) + F.NX) % F.NX : i < 0 || i > F.NX ? -1 : i);
     const RIP = 2 * Math.PI / 1.4;                                            // rozostup šupín húsenice ~1,4 mm
@@ -261,7 +334,11 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       if (F.mesh) { pivot.remove(F.mesh); F.geo.dispose(); }
       const S = F.S, L = F.L = S.L, NX = F.NX = Math.round(L / RES), VN = (NX + 1) * (NZ + 1);
       F.R = S.R; F.hb = null;
-      F.por = new Uint8Array(VN); F.bev = new Uint8Array(VN); F.h = new Float32Array(VN); F.h0 = new Float32Array(VN); F.dep = new Float32Array(VN); F.temp = new Float32Array(VN); F.heat = new Float32Array(VN); F.rip = new Float32Array(VN);
+      F.por = new Uint8Array(VN); F.bev = new Uint8Array(VN);
+      // natavenie základného materiálu (mm pod pôvodným povrchom), troska na povrchu, vtrúseniny
+      F.fus = new Float32Array(VN); F.sl = new Uint8Array(VN); F.inc = new Uint8Array(VN);
+      // vrstvy nad sebou: až LAYS húseníc na bunku (číslo húsenice a hrúbka), F.ln = počet
+      F.lid = new Uint8Array(VN * LAYS); F.lh = new Float32Array(VN * LAYS); F.ln = new Uint8Array(VN); F.h = new Float32Array(VN); F.h0 = new Float32Array(VN); F.dep = new Float32Array(VN); F.temp = new Float32Array(VN); F.heat = new Float32Array(VN); F.rip = new Float32Array(VN);
       // tvar polotovarov: výška povrchu a úkosy v každom bode siete
       for (let j = 0; j <= NZ; j++) { const z = j * RES - W2; for (let i = 0; i <= NX; i++) { const x = i * RES - L / 2, k = idxOf(i, j), hz = S.h0(x, z); F.h[k] = hz; F.h0[k] = hz; F.bev[k] = S.bev(x, z) ? 1 : 0; } }
       const GX = NX + 5, GZ = NZ + 5, n = GX * GZ, idx = [];
@@ -290,9 +367,10 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         if (!ring && !edge) {
           T = F.temp[vi]; if (T > hot) hot = T;
           if (d > 0.06) {
-            C.tmp.copy(c.slag ? C.slag : C.weld).multiplyScalar(c.slag ? 0.88 + 0.12 * rp : 0.62 + 0.5 * rp * rp);
-            if (F.por[vi] && !c.slag && ((vi * 2654435761) >>> 0) % 5 < 2) C.tmp.multiplyScalar(0.28);   // póry (zvar bez plynovej ochrany)
-            if (!c.slag && d < 0.7) C.tmp.lerp(C.toe, (1 - d / 0.7) * 0.55);            // tmavší okraj (prechod do základného materiálu)
+            const sl = F.sl[vi];                                                    // troska len na húseniciach, ktoré ešte nie sú otlčené
+            C.tmp.copy(sl ? C.slag : C.weld).multiplyScalar(sl ? 0.88 + 0.12 * rp : 0.62 + 0.5 * rp * rp);
+            if (F.por[vi] && !sl && ((vi * 2654435761) >>> 0) % 5 < 2) C.tmp.multiplyScalar(0.28);   // póry (zvar bez plynovej ochrany)
+            if (!sl && d < 0.7) C.tmp.lerp(C.toe, (1 - d / 0.7) * 0.55);            // tmavší okraj (prechod do základného materiálu)
             col = C.tmp;
           } else {
             col = F.bev[vi] ? C.bevel : C.raw;
@@ -350,9 +428,15 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       for (const [k, r2, k2] of cells) {
         const a = Math.max(0, lo - crown * r2 - F.h[k]);
         // šupiny sú oblúky vypuklé v smere zvárania: okraje kúpeľa tuhnú o kúsok skôr
-        if (a > 0.002) { F.h[k] += a; F.dep[k] += a; added += a * A; F.rip[k] = (s - 0.45 * rp * r2) * RIP; if (porous) F.por[k] = 1; }
+        if (a > 0.002) {
+          // zvar cez neotlčenú trosku inej húsenice zanechá troskové vtrúseniny
+          if (F.sl[k] && F.dep[k] > 0.05 && F.ln[k] && F.lid[k * LAYS + F.ln[k] - 1] !== st.pass) { if (!F.inc[k]) st.inc += A; F.inc[k] = 1; }
+          F.h[k] += a; F.dep[k] += a; added += a * A; F.rip[k] = (s - 0.45 * rp * r2) * RIP; if (porous) F.por[k] = 1;
+          addPass(k, a); if (!MIG) F.sl[k] = 1;
+        }
+        F.fus[k] = Math.max(F.fus[k], st.penNow * (1 - r2 * 0.8));                    // natavenie pod kúpeľom (na okraji ~20 %)
         F.temp[k] = Math.max(F.temp[k], 1 - r2 * 0.4);
-        if (k2 >= 0) { F.h[k2] = F.h[k]; F.dep[k2] = F.dep[k]; F.rip[k2] = F.rip[k]; F.por[k2] = F.por[k]; F.temp[k2] = F.temp[k]; }
+        if (k2 >= 0) copyCell(k, k2);
       }
       // ohrev okolia (popúšťacie farby)
       const rh = rp * 2.4 / RES;
@@ -378,7 +462,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           const ii = colOf(i); if (ii < 0) continue;
           const r2 = ((i - xi) * (i - xi) + (j - zj) * (j - zj)) / (rc * rc); if (r2 > 1) continue;
           const k = idxOf(ii, j), cut = Math.min(F.dep[k] * 0.6, 0.55 * (1 - r2));
-          if (cut > 0) { F.h[k] -= cut; F.dep[k] -= cut; if (F.R && ii === 0) { const k2 = idxOf(F.NX, j); F.h[k2] = F.h[k]; F.dep[k2] = F.dep[k]; } }
+          if (cut > 0) { F.h[k] -= cut; F.dep[k] -= cut; const n = F.ln[k]; if (n) F.lh[k * LAYS + n - 1] = Math.max(0, F.lh[k * LAYS + n - 1] - cut); if (F.R && ii === 0) copyCell(k, idxOf(F.NX, j)); }
         }
     };
     // ---------- držiak, elektróda, oblúk, kábel ----------
@@ -442,11 +526,21 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       }
     };
     const tmpL = v3(0, 0, 0), ZAX = v3(0, 0, 1);
+    const secMark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
+    secMark.renderOrder = 6; secMark.visible = false; pivot.add(secMark);
+    const secBasis = new THREE.Matrix4(), sU = v3(0, 0, 0), sT = v3(0, 0, 0), sA = v3(0, 0, 0);
+    const placeSecMark = () => {
+      const S = F.S, p = S.path[clamp(Math.round(c.secPos / 100 * (S.path.length - 1)), 0, S.path.length - 1)], span = S.wTop + 6, hgt = S.gref + 16;
+      const cx = p.x - p.tz * S.so, cz = p.z + p.tx * S.so;
+      sU.set(...normalAt(S, cx, mp)); sT.set(...tangentOf(S, cx, p.tx, p.tz, mp)); sA.crossVectors(sU, sT);
+      secBasis.makeBasis(sA, sU, sT); secMark.quaternion.setFromRotationMatrix(secBasis);
+      secMark.position.set(...mapPoint(S, cx, hgt / 2 - 3, cz, mp)); secMark.scale.set(2 * span, hgt, 1);
+    };
     const spatter = createParticles(scene, new THREE.BoxGeometry(0.012, 0.012, 0.03), M.spatter, 220, false);
     const smoke = createParticles(scene, new THREE.SphereGeometry(0.035, 10, 8), M.smoke, 160, false);
 
     // ---------- stav ----------
-    const st = { wire: 0, por: 0, latch: false, trigPrev: false, tip: v3(), aim: { x: 0, z: 0 }, tx: -40, tz: 0, wrongDir: 0, la: c.arcLen, arc: false, stuck: false, le: 350, v: 0, msg: null, phase: 0, cold: 0, longArc: 0, fast: 0, spat: 0, flashes: 0, sag: 0, lastBuild: 0, geomDirty: false, strikeT: -9 };
+    const st = { pass: 0, inc: 0, penNow: 0, wire: 0, por: 0, latch: false, trigPrev: false, tip: v3(), aim: { x: 0, z: 0 }, tx: -40, tz: 0, wrongDir: 0, la: c.arcLen, arc: false, stuck: false, le: 350, v: 0, msg: null, phase: 0, cold: 0, longArc: 0, fast: 0, spat: 0, flashes: 0, sag: 0, lastBuild: 0, geomDirty: false, strikeT: -9 };
     let t = 0, last = performance.now(), teleT = 0, statT = 0, spAcc = 0, smAcc = 0, stats = null;
     const flags = {};
     const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 2.8 }; };
@@ -502,7 +596,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       buildField(); placeWeld();
       // začiatok: pri plechu 10 mm od okraja, pri rúre na vrchu, pri uzavretom obryse prvý bod krivky
       const S = F.S, p0 = S.R ? nearestOnPath(S, 0, 0) : S.closed ? S.path[0] : nearestOnPath(S, -F.L / 2 + 10, S.path[0].z);
-      st.tx = p0.x; st.tz = p0.z; st.aim.x = st.tx; st.aim.z = st.tz; placeJoint(); st.cold = 0; st.longArc = 0; st.fast = 0; st.spat = 0; st.sag = 0; st.wrongDir = 0; st.por = 0; st.Imax = 0; stats = null;
+      st.tx = p0.x; st.tz = p0.z; st.aim.x = st.tx; st.aim.z = st.tz; placeJoint(); st.cold = 0; st.longArc = 0; st.fast = 0; st.spat = 0; st.sag = 0; st.wrongDir = 0; st.por = 0; st.Imax = 0; st.pass = 0; st.inc = 0; stats = null;
       c.slag = !MIG;                                                  // MAG plným drôtom: bez trosky
     };
     newParts();
@@ -546,7 +640,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       st.swap = { t: 0, oldLe: st.le, dropped: false, fitted: false }; st.stuck = false;
       say(L('Výmena elektródy…', 'Changing the electrode…'), 'info');
     };
-    apiRef.current.chip = () => { if (F.hot > 0.15) { say(L('Zvar je ešte horúci – počkaj, kým vychladne.', 'The weld is still hot – wait until it cools down.')); return false; } c.slag = false; F.dirty = true; say(L('Troska je otlčená – vidno kresbu húsenice.', 'The slag is chipped off – the bead ripples are visible.'), 'info'); return true; };
+    apiRef.current.chip = () => { if (F.hot > 0.15) { say(L('Zvar je ešte horúci – počkaj, kým vychladne.', 'The weld is still hot – wait until it cools down.')); return false; } c.slag = false; F.sl.fill(0); F.dirty = true; say(L('Troska je otlčená – vidno kresbu húsenice.', 'The slag is chipped off – the bead ripples are visible.'), 'info'); return true; };
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => weldG, getSpot: () => v3(2.4, TT + 2.6, 4.2), onState: (v) => push('unclamped', v) });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; }
@@ -647,9 +741,17 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
 
       // vedenie ruky (obmedzená rýchlosť)
       const ox = st.tx, oz = st.tz;
+      const posit = F.S.R > 0 && c.wPos === 'PA';
+      if (posit && c.rotOn) st.aim.x = st.tx;                              // pri polohovadle ruka vedie len priečne
       if (moving) { const mx = diffX(F.S, st.aim.x, st.tx), mz = st.aim.z - st.tz, d = Math.hypot(mx, mz), lim = (st.arc ? c.handV : 250) * dt; if (d > lim) { st.tx += mx / d * lim; st.tz += mz / d * lim; } else { st.tx = st.aim.x; st.tz = st.aim.z; } st.tx = wrapX(F.S, st.tx); }
+      if (posit && c.rotOn && !c.unclamped) { st.tx = wrapX(F.S, st.tx + c.rotV * dt); st.aim.x = st.tx; }
+      // otočenie rúry: miesto zvárania je stále hore (stred rúry ostáva na mieste)
+      if (posit) { const a0 = st.tx / F.S.R, cc = (F.S.R - F.S.t) / 100; pivot.rotation.z = a0; pivot.position.set(-cc * Math.sin(a0), -cc + cc * Math.cos(a0), 0); }
+      else if (pivot.rotation.z) { pivot.rotation.z = 0; pivot.position.set(0, 0, -F.S.cz / 100); }
+      weldG.updateMatrixWorld(true);
+      secMark.visible = !!c.secOn && !c.unclamped; if (secMark.visible) placeSecMark();
       aimMark.visible = c.manual && moving && !c.unclamped;
-      jointLine.visible = c.manual && !c.unclamped && F.type !== 'N' && c.slag;
+      jointLine.visible = c.manual && !c.unclamped && F.type !== 'N';
       if (aimMark.visible) {
         const sa = surfAt(st.aim.x, st.aim.z); aimMark.position.set(...mapPoint(F.S, st.aim.x, (sa == null ? F.t : sa) + 0.6, st.aim.z, mp));
         aimMark.quaternion.setFromUnitVectors(ZAX, tmp.set(...normalAt(F.S, st.aim.x, mp)));
@@ -680,6 +782,9 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       const sRaw = surfAt(st.tx, st.tz), surf = sRaw == null ? F.t : sRaw;      // mimo dielu elektróda (drôt) visí v rovine jeho povrchu
       st.la = MIG ? syn.la : c.arcLen;
       const rpNow = MIG ? clamp(1.3 + 0.022 * I + 0.35 * (syn.la - 2), 2.5, 9) : clamp(1.1 * de + 0.025 * I, 2.5, 8);
+      // hĺbka natavenia základného materiálu (mm): rastie s prúdom, pri pomalom posuve a sprchovom prenose; pri nízkom prúde a dlhom oblúku klesá
+      const speedK = clamp(Math.sqrt(4 / Math.max(st.v, 1)), 0.6, 1.4);
+      st.penNow = clamp((MIG ? 0.011 * I * ({ short: 0.85, globular: 1, spray: 1.6, pulse: 1.25 }[syn.mode] || 1) : 0.013 * I * (c.etype === 'basic' ? 1.1 : 1) * (st.la > de + 1.5 ? 0.7 : 1)) * speedK * (I < lo ? 0.3 : 1), 0, 6);
 
       // zapálenie a udržanie oblúka
       if (MIG) {
@@ -693,7 +798,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           else if (!c.ground) { sayOnce('noP', true, L('Zemniaca svorka nie je pripojená – obvod nie je uzavretý.', 'The ground clamp is not attached – the circuit is open.')); st.latch = false; }
           else if (sRaw == null) sayOnce('noP', true, L('Horák je mimo zvarenca – drôt nemá o čo zapáliť oblúk.', 'The torch is off the part – the wire has nothing to strike on.'));
           else if (c.ctwd > 28) sayOnce('noP', true, L('Horák je príliš ďaleko – priblíž ho (koliesko pri držanom pravom tlačidle).', 'The torch is too far – bring it closer (wheel while holding the right button).'));
-          else { st.arc = true; st.strikeT = t; flags.noP = false; if (!c.helmet) st.flashes++; }
+          else { st.arc = true; st.strikeT = t; st.pass = (st.pass % 250) + 1; flags.noP = false; if (!c.helmet) st.flashes++; }
         }
         if (st.arc) {
           if (sRaw == null) { st.arc = false; st.latch = false; st.arcOff = t; say(L('Oblúk zhasol – horák zišiel z dielu.', 'The arc went out – the torch left the part.'), 'warn'); }
@@ -710,7 +815,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           else if (st.le < 30) sayOnce('noP', true, L('Elektróda je spotrebovaná – vymeň ju (tlačidlo v scéne alebo E).', 'The electrode is used up – replace it (button in the scene or E).'));
           else if (sRaw == null) sayOnce('noP', true, L('Elektróda je mimo zvarenca – oblúk nie je kde zapáliť.', 'The electrode is off the part – there is nothing to strike the arc on.'));
           else if (st.la > 5) sayOnce('noP', true, L('Elektróda je ďaleko – priblíž ju k zvarencu (koliesko pri držanom pravom tlačidle).', 'The electrode is too far – bring it closer (wheel while holding the right button).'));
-          else { st.arc = true; st.strikeT = t; flags.noP = false; if (!c.helmet) st.flashes++; }
+          else { st.arc = true; st.strikeT = t; st.pass = (st.pass % 250) + 1; flags.noP = false; if (!c.helmet) st.flashes++; }
         }
         if (st.arc) {
           if (st.la < 0.4) { st.arc = false; st.stuck = true; say(L('Elektróda sa prilepila – uvoľni tlačidlá a zdvihni ju.', 'The electrode stuck – release the buttons and lift it.'), 'danger'); }
@@ -745,7 +850,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           const eff = I < lo * 0.85 ? 0.55 : 1;
           const dV = 0.42 * I * eff * dt;
           st.phase += stepL + dt * 0.5;                                         // dráha v mm – určuje šupiny húsenice
-          if (deposit(st.tx, st.tz, dV, rpNow, st.phase) > 0) st.geomDirty = true;
+          if (deposit(st.tx, st.tz, dV, rpNow, st.phase) > 0) { st.geomDirty = true; if (!c.slag) push('slag', true); }
           if (I < lo) st.cold += dt; if (st.la > de + 1.5) st.longArc += dt; if (st.v > 9) st.fast += dt;
           if (vert && I > hi * 0.9) st.sag += dt;
           if (wrongDir) st.wrongDir += dt;
@@ -874,10 +979,24 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     };
 
     // ---------- hodnotenie zvaru ----------
+    const sectionAt = (frac) => {
+      const S = F.S, n = S.path.length, p = S.path[clamp(Math.round(frac * (n - 1)), 0, n - 1)], span = S.wTop + 6, nx = -p.tz, nz = p.tx, cols = [];
+      for (let u = -span; u <= span + 1e-9; u += RES) {
+        const x = p.x + nx * (u + S.so), z = p.z + nz * (u + S.so), i = colOf(Math.round((x + F.L / 2) / RES)), j = Math.round((z + W2) / RES);
+        if (i < 0 || j < 0 || j > NZ) { cols.push(null); continue; }
+        const k = idxOf(i, j), passes = [];
+        for (let q = 0; q < F.ln[k]; q++) passes.push({ id: F.lid[k * LAYS + q], th: F.lh[k * LAYS + q] });
+        cols.push({ u, h0: F.h0[k], h: F.h[k], dep: F.dep[k], fus: F.fus[k], heat: F.heat[k], por: F.por[k], inc: F.inc[k], passes });
+      }
+      return { cols, span, t: F.t, ref: S.ref, gref: S.gref, fillet: S.fillet, groove: S.groove, type: F.type, frac, p };
+    };
+    apiRef.current.section = (frac) => { const sec = sectionAt(frac); return { sec, m: sectionMetrics(sec) }; };
     const evalWeld = () => {
       const b = evalBead(F.S, F), th = F.t;
       if (!b) return null;
-      return { ...b, spat: st.spat, cold: st.cold, longArc: st.longArc, fast: st.fast, sag: st.sag, wrongDir: st.wrongDir, por: st.por,
+      // počet vrstiev nad sebou: najmenší z troch rezov (štvrtina, polovica, tri štvrtiny dĺžky)
+      const lay = [0.25, 0.5, 0.75].map((f) => sectionMetrics(sectionAt(f))).filter(Boolean).map((m) => m.layers);
+      return { ...b, layers: lay.length ? Math.min(...lay) : 0, inc: st.inc, spat: st.spat, cold: st.cold, longArc: st.longArc, fast: st.fast, sag: st.sag, wrongDir: st.wrongDir, por: st.por,
         rootRisk: (F.type === 'I' || F.S.sub === 'I') && th > 4, thinPrep: (F.type === 'V' || F.type === 'HV' || F.type === 'Y') && th < 4 };
     };
 
@@ -929,6 +1048,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
   const groove = ['V', 'HV', 'Y', 'U', 'J'].includes(ui.wType) ? Math.max(1, Math.round((ui.wT * ui.wT * 0.45) / ((MIG ? syn.dep : 0.42 * ui.current) / 3))) : 1;
   const thWarn = ui.wT < wt.t[0] || ui.wT > wt.t[1];
   const s = tele.stats;
+  const sec = ui.secOn && apiRef.current.section ? apiRef.current.section(ui.secPos / 100) : null;
   const defects = [];
   if (s) {
     if (s.cold > 0.8) defects.push(L('studený spoj (nízky prúd)', 'cold lap (low current)'));
@@ -941,6 +1061,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     if (s.sag > 0.8) defects.push(L('stekanie kúpeľa (vysoký prúd v polohe)', 'sagging pool (current too high for the position)'));
     if (s.fill != null && s.cov > 0.6 && s.fill < 0.9) defects.push(L('neúplne vyplnený úkos – pridaj ďalšie vrstvy', 'groove not completely filled – add more passes'));
     if (s.reinf > 3.2) defects.push(L('príliš veľké prevýšenie', 'excessive reinforcement'));
+    if (s.inc > 15) defects.push(L('troskové vtrúseniny medzi húsenicami – pred ďalšou otlč trosku', 'slag inclusions between passes – chip the slag before the next one'));
     if (s.rootRisk) defects.push(L('pri zvare I nad 4 mm hrozí neprevarený koreň', 'square butt over 4 mm risks lack of root fusion'));
   }
   const setupTask = (task) => {
@@ -1102,7 +1223,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           </div>
           <div className="text-sm font-semibold mb-1">{L('Poloha zvárania', 'Welding position')}</div>
           <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-            {[...WELD_POS.map(([k, code, sk, en]) => [k, ui.wType === 'RR' && k === 'PC' ? L('2G · rúra zvislo', '2G · pipe vertical') : code, L(sk, en)]),
+            {[...WELD_POS.map(([k, code, sk, en]) => [k, ui.wType === 'RR' && k === 'PC' ? L('2G · rúra zvislo', '2G · pipe vertical') : ui.wType === 'RR' && k === 'PA' ? L('1G · polohovadlo', '1G · positioner') : code, ui.wType === 'RR' && k === 'PA' ? L('rúra sa otáča, zvára sa zhora', 'the pipe turns, weld on top') : L(sk, en)]),
               ...WELD_POS_PIPE.map(([k, g, f, sk, en]) => [k, isFil ? f : g, L(sk, en)])].filter(([k]) => allowed.includes(k)).map(([k, code, text]) => (
               <button key={k} type="button" className={`tool-slot ${ui.wPos === k ? 'on' : ''}`} aria-pressed={ui.wPos === k} onClick={() => set('wPos', k)}>
                 <b>{k} · {code}</b>{text}
@@ -1110,6 +1231,13 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
             ))}
           </div>
           <p className="text-xs muted mb-3">{grpNow === 'plane' || ui.wType === 'K' ? '' : L(`Pre tento tvar sa dajú nastaviť polohy ${allowed.join(', ')}.`, `Positions available for this shape: ${allowed.join(', ')}.`)}{FILLETS.includes(ui.wType) && ui.wPos === 'PC' ? ` ${L('PC je poloha pre tupé zvary.', 'PC is a butt-weld position.')}` : ''}{!FILLETS.includes(ui.wType) && (ui.wPos === 'PB' || ui.wPos === 'PD') ? ` ${L('PB a PD sú polohy pre kútové zvary.', 'PB and PD are fillet-weld positions.')}` : ''}</p>
+          {ui.wType === 'RR' && ui.wPos === 'PA' && (
+            <div className="desc mb-3" style={{ marginTop: 0 }}>
+              <Toggle on={ui.rotOn} label={L('Polohovadlo otáča rúru', 'Positioner turns the pipe')} onClick={() => set('rotOn', !ui.rotOn)} />
+              <Slider id="wrv" label={L('Obvodová rýchlosť (= rýchlosť zvárania)', 'Surface speed (= travel speed)')} unit="mm/s" min={0.5} max={10} step={0.5} value={ui.rotV} digits={1} onChange={(v) => set('rotV', v)} />
+              <p className="text-xs muted">{L('Rúra sa otáča pod horákom, miesto zvárania je stále hore. Drž horák nad spojom a veď ho len priečne; vrstvy kladieš pri ďalších otáčkach.', 'The pipe turns under the torch and the weld spot stays on top. Hold the torch over the joint and only move across it; lay further passes on the next turns.')}</p>
+            </div>
+          )}
           {usesSize(ui.wType) && <SegRow label={ui.wType === 'JK' ? L('Jokel', 'Box section') : L('Rúra Ø', 'Pipe Ø')} value={ui.wD} options={sizeOptions(ui.wType).map((d) => [d, ui.wType === 'JK' ? `${d}×${d}` : fmtD(d)])} onChange={(v) => set('wD', v)} />}
           <Slider id="wt" label={ui.wType === 'RR' ? L('Hrúbka steny rúry', 'Pipe wall thickness') : L('Hrúbka plechu', 'Plate thickness')} unit="mm" min={1} max={30} step={1} value={ui.wT} onChange={(v) => set('wT', v)} />
           {ui.wType !== 'RR' && <Slider id="wl" label={ui.wType === 'RP' || ui.wType === 'JK' ? L('Dĺžka plechu', 'Plate length') : L('Dĺžka zvaru', 'Weld length')} unit="mm" min={80} max={250} step={10} value={ui.wL} onChange={(v) => set('wL', v)} />}
@@ -1141,10 +1269,30 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
             <div>{L('Zvarená dĺžka', 'Welded length')}: <b>{Math.round(s.cov * 100)} %</b></div>
             {s.fill != null && <div>{L('Vyplnenie úkosu', 'Groove filled')}: <b>{Math.round(s.fill * 100)} %</b></div>}
             <div>{L('Šírka húsenice', 'Bead width')}: <b>{fmt(s.width)} mm</b> · {L('prevýšenie', 'reinforcement')}: <b>{fmt(s.reinf)} mm</b></div>
+            <div>{L('Vrstvy nad sebou', 'Layers stacked')}: <b>{s.layers}</b>{s.layers >= 3 ? ` (${L('koreň, výplň, krycia', 'root, fill, cap')})` : s.layers === 2 ? ` (${L('koreň a krycia', 'root and cap')})` : ''}</div>
             <div>{L('Rozstrek', 'Spatter')}: <b>{s.spat}</b>{MIG && <> · {L('póry', 'porosity')}: <b>{fmt(s.por || 0)} s</b></>}</div>
             <div className="mt-1" style={{ color: defects.length ? 'var(--warn)' : 'var(--accent)' }}>{defects.length ? `${L('Chyby', 'Defects')}: ${defects.join(', ')}.` : L('Bez zjavných chýb.', 'No obvious defects.')}</div>
           </div>) : <p className="text-sm muted">{L('Zatiaľ nie je nič zvarené.', 'Nothing welded yet.')}</p>}
           {!MIG && <button type="button" className="btn w-full mt-2" disabled={!ui.slag} onClick={() => { if (apiRef.current.chip && apiRef.current.chip()) set('slag', false); }}>{L('Otĺcť trosku', 'Chip off the slag')}</button>}
+        </div>
+
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Rez zvarom a zvarová mierka', 'Weld section and gauge')}</h2>
+          <Toggle on={ui.secOn} label={L('Rez zvarom (makrovýbrus)', 'Weld section (macro etch)')} onClick={() => set('secOn', !ui.secOn)} />
+          {ui.secOn && (<>
+            <Slider id="wsp" label={L('Miesto rezu pozdĺž zvaru', 'Section position along the weld')} unit="%" min={0} max={100} step={1} value={ui.secPos} onChange={(v) => set('secPos', v)} />
+            {sec && sec.m ? (<>
+              <WeldSection sec={sec.sec} m={sec.m} />
+              <div className="text-sm tnum mt-2" style={{ lineHeight: 1.6 }}>
+                {sec.m.legs ? (<div>{L('Kútový zvar', 'Fillet')}: z₁ <b>{fmt(sec.m.legs.z1)}</b> · z₂ <b>{fmt(sec.m.legs.z2)}</b> · a <b>{fmt(sec.m.legs.a)} mm</b> <span className="muted">({L('odporúčané', 'recommended')} a ≈ {fmt(0.7 * ui.wT)} mm)</span></div>)
+                  : (<div>{L('Šírka', 'Width')} b <b>{fmt(sec.m.width)} mm</b> · {L('prevýšenie', 'reinforcement')} h <b>{fmt(sec.m.reinf)} mm</b></div>)}
+                <div>{L('Vrstvy v reze', 'Layers in the section')}: <b>{sec.m.layers}</b>{sec.m.rootFilled != null && <> · {L('koreň', 'root')}: <b style={{ color: sec.m.rootFilled ? 'var(--accent)' : 'var(--warn)' }}>{sec.m.rootFilled ? L('prevarený', 'fused') : L('neprevarený', 'not fused')}</b></>}</div>
+                {sec.m.wallFus != null && <div style={{ color: sec.m.lof ? 'var(--warn)' : undefined }}>{L('Natavenie bokov úkosu', 'Side-wall fusion')}: <b>{fmt(sec.m.wallFus)} mm</b>{sec.m.lof ? ` – ${L('studený spoj (neprievar) na boku', 'cold lap on the side wall')}` : ''}</div>}
+                {(sec.m.por > 0 || sec.m.inc > 0) && <div style={{ color: 'var(--warn)' }}>{sec.m.por > 0 ? L('póry v reze', 'pores in the section') : ''}{sec.m.por > 0 && sec.m.inc > 0 ? ' · ' : ''}{sec.m.inc > 0 ? L('troskové vtrúseniny', 'slag inclusions') : ''}</div>}
+              </div>
+              <p className="text-xs muted mt-1">{L('Tmavosivý je leptaný základný materiál, svetlé sú húsenice (každá iným odtieňom), prerušovaná čiara je hranica natavenia, olivová oblasť je tepelne ovplyvnená. Červená značka = neprievar. Oranžovo zvarová mierka. Miesto rezu ukazuje v scéne červená rovina.', 'Dark grey is the etched parent metal, the light areas are the passes (each in its own shade), the dashed line is the fusion boundary, the olive band is the heat-affected zone. Red mark = lack of fusion. The weld gauge is in orange. The red plane in the scene shows where the section is cut.')}</p>
+            </>) : <p className="text-sm muted mt-1">{L('V tomto mieste ešte nie je zvar.', 'There is no weld at this spot yet.')}</p>}
+          </>)}
         </div>
 
         <ExportSection machine={MIG ? 'mag' : 'zvaranie'} apiRef={apiRef} canSave={false} />

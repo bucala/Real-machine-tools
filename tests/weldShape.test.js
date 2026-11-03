@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RES, W2, diffX, evalBead, makeShape, mapPoint, nearestOnPath, normalAt, posAllowed, unmapPoint, weldPrep, weldProfile, wrapX } from '../src/machines/weldShape';
+import { RES, W2, diffX, evalBead, sectionMetrics, makeShape, mapPoint, nearestOnPath, normalAt, posAllowed, unmapPoint, weldPrep, weldProfile, wrapX } from '../src/machines/weldShape';
 
 const NZ = Math.round(2 * W2 / RES);
 // výšková mapa z tvaru ako v simulátore (stĺpce i = 0 … NX, riadky j = 0 … NZ)
@@ -129,8 +129,47 @@ describe('polotovary na plechu a kolmé plechy', () => {
 
 describe('polohy podľa tvaru', () => {
   it('rúry majú rúrové polohy, pôvodné spoje všetky polohy plechov', () => {
-    expect(posAllowed('RR')).toEqual(['PH', 'PJ', 'H-L045', 'PC']);
+    expect(posAllowed('RR')).toEqual(['PH', 'PJ', 'H-L045', 'PC', 'PA']);
     expect(posAllowed('RP')).toContain('PB'); expect(posAllowed('RP')).not.toContain('PA');
     expect(posAllowed('V')).toHaveLength(7);
+  });
+});
+
+describe('rez zvarom a zvarová mierka', () => {
+  const col = (u, h0, passes = [], extra = {}) => { const dep = passes.reduce((a, p) => a + p.th, 0); return { u, h0, h: h0 + dep, dep, fus: dep ? 1 : 0, heat: 0, por: 0, inc: 0, passes, ...extra }; };
+  it('tupý zvar: šírka, prevýšenie, vrstvy a koreň', () => {
+    const cols = [];
+    for (let u = -10; u <= 10; u += RES) {
+      const h0 = Math.abs(u) < 1 ? 0 : Math.min(8, Math.abs(u) * 0.9);
+      const passes = Math.abs(u) <= 6 ? [{ id: 1, th: Math.max(0, 3 - h0) }, { id: 2, th: Math.max(0, 6 - Math.max(h0, 3)) }, { id: 3, th: Math.max(0, 9.5 - Math.max(h0, 6)) }].filter((p) => p.th > 0) : [];
+      cols.push(col(u, h0, passes));
+    }
+    const m = sectionMetrics({ cols, ref: 8, gref: 8, fillet: false, groove: true });
+    expect(m.layers).toBe(3);
+    expect(m.reinf).toBeCloseTo(1.5, 6);
+    expect(m.width).toBeGreaterThan(10);
+    expect(m.rootFilled).toBe(true);
+    expect(m.lof).toBe(false);
+  });
+  it('studený spoj na boku a nevyplnený koreň sa odhalia', () => {
+    const cols = [];
+    for (let u = -6; u <= 6; u += RES) { const h0 = Math.abs(u) < 1 ? 0 : 4; cols.push(col(u, h0, Math.abs(u) >= 1 && Math.abs(u) < 3 ? [{ id: 1, th: 1 }] : [], { fus: 0.05 })); }
+    const m = sectionMetrics({ cols, ref: 8, gref: 8, fillet: false, groove: true });
+    expect(m.rootFilled).toBe(false); expect(m.lof).toBe(true);
+  });
+  it('kútový zvar: ramená z₁, z₂ a účinná hrúbka a', () => {
+    const cols = [];
+    for (let u = -12; u <= 12; u += RES) {
+      if (u < 0) { cols.push(col(u, 68)); continue; }                         // stena T-spoja
+      const th = Math.max(0, 6 - u);                                          // trojuholník s ramenami 6 mm
+      cols.push(col(u, 8, th > 0 ? [{ id: 1, th }] : []));
+    }
+    const m = sectionMetrics({ cols, ref: 8, gref: 8, fillet: true, groove: false });
+    expect(m.legs.z2).toBeCloseTo(6, 6);
+    expect(m.legs.z1).toBeCloseTo(6, 6);                                      // 12 buniek po 0,5 mm
+    expect(m.legs.a).toBeCloseTo(6 / Math.SQRT2, 6);                          // rovnaké ramená: a = 0,707 · z
+  });
+  it('bez zvaru nič nemeria', () => {
+    expect(sectionMetrics({ cols: [col(0, 8), col(0.5, 8)], ref: 8, gref: 8, fillet: false, groove: true })).toBeNull();
   });
 });
