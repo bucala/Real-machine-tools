@@ -74,3 +74,29 @@ export const weldChecks = {
     ...weldCommon(m),
   ],
 };
+
+// MIG/MAG: bez trosky, navyše sa hodnotí pórovitosť (slabá plynová ochrana)
+const migCommon = ({ stats }) => {
+  const s = stats || {};
+  return [
+    ...weldCommon({ stats, slag: false }).filter((c) => c.key !== 'slag'),
+    { key: 'por', ok: !!stats && (s.por || 0) <= 0.5, actual: stats ? `${f1(s.por || 0)} s` : '–' },
+  ];
+};
+export const migChecks = {
+  mvpa: (m) => [
+    { key: 'setup', ok: m.type === 'V' && m.t === 8 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
+    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    ...migCommon(m),
+  ],
+  mkpb: (m) => [
+    { key: 'setup', ok: m.type === 'K' && m.t === 8 && m.pos === 'PB', actual: `${m.type} ${m.t} mm ${m.pos}` },
+    { key: 'width', ok: !!m.stats && m.stats.width >= 6, actual: m.stats ? `${f1(m.stats.width)} mm` : '–' },
+    ...migCommon(m),
+  ],
+  mtenky: (m) => [
+    { key: 'setup', ok: m.type === 'I' && m.t === 2 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
+    { key: 'cur', ok: m.I != null && m.I <= 110, actual: m.I != null ? `${Math.round(m.I)} A` : '–' },
+    ...migCommon(m),
+  ],
+};
