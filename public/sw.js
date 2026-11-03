@@ -1,6 +1,6 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
 // Pri inštalácii uloží všetky súbory aplikácie, takže po prvej návšteve fungujú všetky stroje aj bez internetu.
-const CACHE = 'rmt-1df7807bf9a0';
+const CACHE = 'rmt-2772b60a51e2';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -23,17 +23,17 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/core3d-BhjZVNRP.js",
-  "/assets/drill-Bz6l7lkW.js",
-  "/assets/folder-DKsBszIj.js",
-  "/assets/grinder-DabKTIVd.js",
+  "/assets/core3d-q-IxlhnW.js",
+  "/assets/drill-CqLdyvLh.js",
+  "/assets/folder-BBKzsQb4.js",
+  "/assets/grinder-CKsRv0M-.js",
   "/assets/index-1XKyHpkZ.css",
-  "/assets/index-Dqp3Mdvk.js",
-  "/assets/lathe-B6mbrCui.js",
-  "/assets/mill-Bjw3ULwG.js",
-  "/assets/saw-Dh5N2Huv.js",
+  "/assets/index-CNlh_scj.js",
+  "/assets/lathe-Dq5O-pxj.js",
+  "/assets/mill-DGTByLbD.js",
+  "/assets/saw-DEVBl1XI.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/weld-ilGDmZeb.js"
+  "/assets/weld-gyN_CLyT.js"
 ];
 
 self.addEventListener('install', (e) => {

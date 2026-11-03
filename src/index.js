@@ -1,4 +1,4 @@
-// Verejné rozhranie pre použitie simulátorov v inej React aplikácii (vyžaduje three@0.128).
+// Verejné rozhranie pre použitie simulátorov v inej React aplikácii (vyžaduje three@0.186).
 export { default } from './App';
 export { LatheSimulator } from './machines/lathe';
 export { MillSimulator } from './machines/mill';

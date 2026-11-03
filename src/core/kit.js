@@ -1,5 +1,6 @@
 // Materiály, súprava tvarov (kolesá, páky, kľuky) a pracovná lampa.
 import * as THREE from 'three';
+import { LIGHT_K } from './stage';
 import { TAU } from './util';
 
 // ---------- materiály a súprava tvarov ----------
@@ -7,7 +8,7 @@ const std = (hex, roughness, metalness, o = {}) => new THREE.MeshStandardMateria
 const mkTex = (w, h, draw, rx, ry) => {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
   const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(rx, ry);
-  tx.encoding = THREE.sRGBEncoding; tx.anisotropy = 4; return tx;
+  tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx;
 };
 const baseMats = (g1, g2, g3) => ({
   green: std(g1, 0.6, 0.05), greenDark: std(g2, 0.65, 0.05), greenDeep: std(g3, 0.7, 0.05),
@@ -110,7 +111,8 @@ function createLamp(scene, parent, kit, M, { base, elbow, head, aim, angle = 0.5
   const glassMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0.55, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
   const glass = add(shade, new THREE.CircleGeometry(0.29, 32), glassMat, 0, -0.33, 0); glass.rotation.x = Math.PI / 2; glass.castShadow = false;
   // skutočné bodové svetlo s tieňmi
-  const spot = new THREE.SpotLight(0xffefd2, power, 0, angle, 0.45, 1);
+  // decay 0: bez útlmu so vzdialenosťou, ako pri distance = 0 v r128
+  const spot = new THREE.SpotLight(0xffefd2, power * LIGHT_K, 0, angle, 0.45, 0);
   spot.position.set(0, -0.15, 0); shade.add(spot); scene.add(spot.target);
   spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0006;
   spot.shadow.camera.near = 0.2; spot.shadow.camera.far = 40;
@@ -123,7 +125,7 @@ function createLamp(scene, parent, kit, M, { base, elbow, head, aim, angle = 0.5
   beam.renderOrder = 5; scene.add(beam);
   const wp = new THREE.Vector3(), dir = new THREE.Vector3(), down = new THREE.Vector3(0, -1, 0);
   const update = (on, target = aim) => {
-    spot.target.position.copy(target); spot.intensity = on ? power : 0;
+    spot.target.position.copy(target); spot.intensity = on ? power * LIGHT_K : 0;
     bulbMat.color.setHex(on ? 0xfff6dc : 0x6b6a64); glassMat.opacity = on ? 0.55 : 0.18;
     beam.visible = on;
     if (on) {

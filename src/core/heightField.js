@@ -50,19 +50,14 @@ function createHeightField({ NX, NZ, W, D, H, raw, cut, mat, init, base = 0 }) {
       na[v * 3] = nrm[0] / l; na[v * 3 + 1] = nrm[1] / l; na[v * 3 + 2] = nrm[2] / l;
     }
   };
-  // ak sa údaje ešte nenahrali do GPU, nový rozsah sa zlúči s predchádzajúcim
-  const setRange = (attr, off, cnt) => {
-    const r = attr.updateRange;
-    if (r.count !== -1) { const e = Math.max(r.offset + r.count, off + cnt); r.offset = Math.min(r.offset, off); r.count = e - r.offset; }
-    else { r.offset = off; r.count = cnt; }
-    attr.needsUpdate = true;
-  };
+  // rozsahy sa do nahratia do GPU hromadia (three.js ich pri nahratí zlúči a vymaže)
+  const setRange = (attr, off, cnt) => { attr.addUpdateRange(off, cnt); attr.needsUpdate = true; };
   const rebuild = (full = false) => {
     const normal = geo.attributes.normal;
     if (full || !dirty || !normal) {
       writeVerts(0, GX - 1, 0, GZ - 1); dirty = null;
-      ['position', 'color'].forEach((n) => { geo.attributes[n].updateRange.count = -1; geo.attributes[n].needsUpdate = true; });
-      if (normal) normal.updateRange.count = -1;
+      ['position', 'color'].forEach((n) => { geo.attributes[n].clearUpdateRanges(); geo.attributes[n].needsUpdate = true; });
+      if (normal) normal.clearUpdateRanges();
       geo.computeVertexNormals(); geo.computeBoundingSphere(); geo.computeBoundingBox();
       return;
     }

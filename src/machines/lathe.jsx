@@ -257,7 +257,7 @@ function LatheSimulator({ onBack }) {
     cylZ(car, 0.06, 0.06, -1.75, -0.6, 1.25, 9.8, M.steel, 12);
     box(car, 0.55, 1.95, 9.45, 10.15, -0.6, -0.35, M.panel);
     const droCanvas = document.createElement('canvas'); droCanvas.width = 256; droCanvas.height = 112;
-    const droTex = new THREE.CanvasTexture(droCanvas); droTex.encoding = THREE.sRGBEncoding;
+    const droTex = new THREE.CanvasTexture(droCanvas); droTex.colorSpace = THREE.SRGBColorSpace;
     add(car, new THREE.PlaneGeometry(1.25, 0.55), new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }), 1.25, 9.8, -0.344);
     let droKey = '';
     const drawDro = (x, z) => {

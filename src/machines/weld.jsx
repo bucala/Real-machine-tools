@@ -5,7 +5,7 @@ import { L, LL, REDUCED_MOTION } from '../core/i18n';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
-import { createStage } from '../core/stage';
+import { LIGHT_K, createStage } from '../core/stage';
 import { TAU, clamp, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
 import { HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
@@ -133,7 +133,7 @@ function WeldingSimulator({ onBack }) {
     const fp = face(wel, 0, 1.25, 1.25, 0);                                    // čelný panel (lokálna +Z von)
     box(fp, -2.2, 2.2, -1.1, 1.1, 0, 0.02, M.face);
     const panelCv = document.createElement('canvas'); panelCv.width = 880; panelCv.height = 440;
-    const panelTex = new THREE.CanvasTexture(panelCv); panelTex.encoding = THREE.sRGBEncoding; panelTex.anisotropy = 4;
+    const panelTex = new THREE.CanvasTexture(panelCv); panelTex.colorSpace = THREE.SRGBColorSpace; panelTex.anisotropy = 4;
     (() => {
       const g = panelCv.getContext('2d'), P = (x, y) => [(x + 2.2) * 200, (1.1 - y) * 200];
       g.fillStyle = '#e4dfc8'; g.fillRect(0, 0, 880, 440);
@@ -241,7 +241,7 @@ function WeldingSimulator({ onBack }) {
         F.glow[k * 3] = gl[0]; F.glow[k * 3 + 1] = gl[1]; F.glow[k * 3 + 2] = gl[2];
       }
       F.hot = hot;
-      ['color', 'glow', 'position'].forEach((n) => { F.geo.attributes[n].updateRange.count = -1; });
+      ['color', 'glow', 'position'].forEach((n) => { F.geo.attributes[n].clearUpdateRanges(); });
       F.geo.attributes.color.needsUpdate = true; F.geo.attributes.glow.needsUpdate = true;
       if (geomToo) { F.geo.attributes.position.needsUpdate = true; F.geo.computeVertexNormals(); F.geo.computeBoundingSphere(); F.geo.computeBoundingBox(); }
     };
@@ -254,9 +254,8 @@ function WeldingSimulator({ onBack }) {
         F.glow[k * 3] = gl[0]; F.glow[k * 3 + 1] = gl[1]; F.glow[k * 3 + 2] = gl[2];
       }
       F.hot = hot;
-      const a = F.geo.attributes.glow, r = a.updateRange, off = (j0 + 2) * GX * 3, cnt = (j1 - j0 + 1) * GX * 3;
-      if (r.count !== -1) { const e = Math.max(r.offset + r.count, off + cnt); r.offset = Math.min(r.offset, off); r.count = e - r.offset; } else { r.offset = off; r.count = cnt; }
-      a.needsUpdate = true;
+      const a = F.geo.attributes.glow;
+      a.addUpdateRange((j0 + 2) * GX * 3, (j1 - j0 + 1) * GX * 3); a.needsUpdate = true;   // rozsahy sa do nahratia hromadia
     };
     const onPart = (x, z) => Math.abs(x) <= F.L / 2 && Math.abs(z) <= W2;
     // výška povrchu dielu; mimo dielu null
@@ -325,7 +324,8 @@ function WeldingSimulator({ onBack }) {
     (() => { const g = haloCv.getContext('2d'), gr = g.createRadialGradient(64, 64, 2, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.15, 'rgba(210,230,255,.9)'); gr.addColorStop(0.45, 'rgba(140,180,255,.25)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); })();
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(haloCv), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, transparent: true }));
     halo.scale.set(0.9, 0.9, 1); scene.add(halo);
-    const arcLight = new THREE.PointLight(0xdbe8ff, 0, 9, 2); scene.add(arcLight);
+    // decay 0 + dosah 9: mäkký okraj ako v r128
+    const arcLight = new THREE.PointLight(0xdbe8ff, 0, 9, 0); scene.add(arcLight);
     const aimMark = new THREE.Mesh(new THREE.TorusGeometry(4, 0.5, 8, 32), new THREE.MeshBasicMaterial({ color: 0x46c8ff, toneMapped: false, transparent: true, opacity: 0.85, depthTest: false }));
     aimMark.rotation.x = -Math.PI / 2; aimMark.renderOrder = 8; aimMark.visible = false; pivot.add(aimMark);
     const jointGeo = new THREE.BufferGeometry();
@@ -575,7 +575,7 @@ function WeldingSimulator({ onBack }) {
       if (flickT > 0.09) { flickT = 0; flick = 0.85 + Math.random() * 0.3; }
       const fl = c.flashFx ? flick : 1;
       arcCore.visible = halo.visible = st.arc; arcCore.position.copy(arcPos); halo.position.copy(arcPos); halo.scale.setScalar(0.7 + 0.35 * fl);
-      arcLight.position.copy(arcPos).addScaledVector(nW, 0.15); arcLight.intensity = st.arc ? 5 * fl : 0;
+      arcLight.position.copy(arcPos).addScaledVector(nW, 0.15); arcLight.intensity = st.arc ? 5 * fl * LIGHT_K : 0;
       jaw.rotation.z = c.ground ? 0 : 0.5; jaw.position.y = clampAt.y + (c.ground ? 0 : 0.25);
       brLever.rotation.x = c.tripped ? 0.8 : 0;
       spatter.update(dt, () => -1); smoke.update(dt, () => 99);

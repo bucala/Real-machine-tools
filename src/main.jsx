@@ -1,4 +1,4 @@
-/* Interaktívne modely konvenčných obrábacích strojov (React + Three.js r128).
+/* Interaktívne modely konvenčných obrábacích strojov (React 19 + three.js r186).
    Mierka: 1 jednotka scény = 100 mm, obsluha stojí na strane +Z. */
 import { createRoot } from 'react-dom/client';
 import '@fontsource/barlow/400.css';

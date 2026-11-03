@@ -106,7 +106,7 @@ function MillSimulator({ onBack }) {
     cylY(col, 0.05, 0.05, 14.35, 15.2, 0.5, -2.2, M.steel, 10);
     box(col, -0.4, 1.4, 15.15, 16.05, -2.42, -2.12, M.panel);
     const droCanvas = document.createElement('canvas'); droCanvas.width = 256; droCanvas.height = 128;
-    const droTex = new THREE.CanvasTexture(droCanvas); droTex.encoding = THREE.sRGBEncoding;
+    const droTex = new THREE.CanvasTexture(droCanvas); droTex.colorSpace = THREE.SRGBColorSpace;
     add(col, new THREE.PlaneGeometry(1.6, 0.8), new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }), 0.5, 15.6, -2.115);
     let droKey = '';
     const drawDro = (x, y, z) => {

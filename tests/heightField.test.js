@@ -46,8 +46,10 @@ describe('čiastočná prestavba po reze', () => {
   it('do GPU sa posiela len dotknutý pás riadkov', () => {
     const hf = make();
     cutAt(hf, -0.1, 0.1, -0.05, 0.05, 0.2); hf.rebuild();
-    const r = hf.mesh.geometry.attributes.position.updateRange, total = hf.mesh.geometry.attributes.position.array.length;
-    expect(r.count).toBeGreaterThan(0);
-    expect(r.count).toBeLessThan(total / 3);
+    const rs = hf.mesh.geometry.attributes.position.updateRanges, total = hf.mesh.geometry.attributes.position.array.length;
+    const sent = rs.reduce((n, r) => n + r.count, 0);
+    expect(rs.length).toBeGreaterThan(0);
+    expect(sent).toBeGreaterThan(0);
+    expect(sent).toBeLessThan(total / 3);
   });
 });

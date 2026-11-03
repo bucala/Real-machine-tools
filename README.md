@@ -6,8 +6,8 @@
 
 [![Spustiť simulátor](https://img.shields.io/badge/%E2%96%B6%20Spusti%C5%A5-real--machine--tools-4f7f3b?style=for-the-badge)](https://real-machine-tools.marcel-bucala.workers.dev)
 
-![React 18](https://img.shields.io/badge/React-18.3-61dafb?logo=react&logoColor=white)
-![three.js r128](https://img.shields.io/badge/three.js-r128-000000?logo=threedotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19.3-61dafb?logo=react&logoColor=white)
+![three.js r186](https://img.shields.io/badge/three.js-r186-000000?logo=threedotjs&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwindcss&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)
@@ -173,7 +173,7 @@ flowchart LR
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |
 | [`public/`](public) | **zostavená aplikácia** (`npm run build`) – commituje sa, z nej nasadzuje Cloudflare |
 | [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, zvarová príprava, výšková mapa |
-| [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.128`) |
+| [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.186`) |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
 | [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
 

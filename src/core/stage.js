@@ -1,5 +1,11 @@
 // Kamera (orbit) a spoločná scéna: renderer, prostredie, svetlá, podlaha.
 import * as THREE from 'three';
+
+// Farby sa v kóde prevádzajú do lineárneho priestoru ručne (convertSRGBToLinear) – automatický prevod
+// three.js (od r152) by ich previedol druhýkrát, preto zostáva vypnutý ako v r128.
+THREE.ColorManagement.enabled = false;
+// Fyzikálne osvetlenie (od r155) nemá násobok π, ktorý mal pôvodný režim – intenzity sa preto násobia LIGHT_K.
+const LIGHT_K = Math.PI;
 import { clamp } from './util';
 
 // ---------- ovládanie kamery ----------
@@ -67,11 +73,11 @@ function createOrbit(camera, dom, onUser, enabled) {
 function createStage(mount) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.domElement.style.display = 'block';
   mount.appendChild(renderer.domElement);
 
@@ -91,14 +97,14 @@ function createStage(mount) {
   const envRT = pmrem.fromScene(envScene, 0.04);
   scene.environment = envRT.texture;
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x3f4a3d, 0.35));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.25);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3f4a3d, 0.35 * LIGHT_K));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.25 * LIGHT_K);
   sun.position.set(-8, 20, 14); sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 });
   sun.shadow.bias = -0.0005;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(12, 8, -10); scene.add(fill);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35 * LIGHT_K); fill.position.set(12, 8, -10); scene.add(fill);
 
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.95, metalness: 0 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -157,7 +163,7 @@ function createStage(mount) {
   };
   const camSig = (c) => { let a = 0; const e = c.matrixWorld.elements, p = c.projectionMatrix.elements; for (let i = 0; i < 16; i++) a += e[i] * (i + 1) + p[i] * (i + 17); return a; };
   const rawRender = renderer.render.bind(renderer);
-  scene.autoUpdate = false;                      // matice sa aktualizujú tu, raz za snímok
+  scene.matrixWorldAutoUpdate = false;           // matice sa aktualizujú tu, raz za snímok
   renderer.shadowMap.autoUpdate = false;
   renderer.render = (s, c) => {
     if (s !== scene) { rawRender(s, c); return; }
@@ -188,4 +194,4 @@ function createStage(mount) {
   return { renderer, scene, camera, dispose, stats };
 }
 
-export { createOrbit, createStage };
+export { LIGHT_K, createOrbit, createStage };
