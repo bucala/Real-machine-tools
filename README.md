@@ -165,7 +165,7 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   <tr>
     <td width="50%" valign="top">
       <h3>🧭 Radiálna vŕtačka</h3>
-      <sub>predloha TOS rad VR / VO · <code>#radialka</code></sub>
+      <sub>predloha TOS VO 50 · <code>#radialka</code></sub>
       <ul>
         <li>rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene – obrobok stojí</li>
         <li>upínanie stĺpa a vreteníka (bez neho sa nevŕta), automatický posuv 0,1 – 0,4 mm/ot s hĺbkovým dorazom</li>
