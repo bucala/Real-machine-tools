@@ -48,7 +48,7 @@ const MACHINES = [
     specs: [L('Kolesá Ø720 mm', 'Wheels Ø720 mm'), L('Pás 3 / 10 / 25 m/s', 'Blade 3 / 10 / 25 m/s'), L('Rez do 150 mm', 'Cut up to 150 mm')] }) },
   { id: 'zvaranie', Art: WelderArt, Comp: WeldingSimulator, t: () => ({
     meta: L('Zváranie', 'Welding'), name: L('Oblúková zváračka', 'Arc welder'), model: 'Elektrokov JS 90FN',
-    desc: L('Ručné zváranie obalenou elektródou: 10 druhov zvarov so zvarovou prípravou, 4 polohy, kukla proti zábleskom a hodnotenie húsenice.', 'Manual metal arc welding: 10 joint types with edge preparation, 4 positions, a helmet against the flash and bead assessment.'),
+    desc: L('Ručné zváranie obalenou elektródou: plechy v rovine aj kolmo, rúry a tvarové diely, polohy PA – PG aj rúrové, výmena elektródy, kukla proti zábleskom a hodnotenie húsenice.', 'Manual metal arc welding: flat and perpendicular plates, pipes and shaped parts, positions PA – PG and pipe positions, electrode change, a helmet against the flash and bead assessment.'),
     specs: [L('Prúd 55 – 155 A', 'Current 55 – 155 A'), L('380 / 220 V', '380 / 220 V'), L('Elektródy Ø2 – Ø4 mm', 'Electrodes Ø2 – Ø4 mm')],
     note: L('Obsahuje svetelné záblesky. Blikanie sa dá vypnúť v paneli (Efekty záblesku).', 'Contains light flashes. Flicker can be turned off in the panel (Flash effects).') }) },
   { id: 'mag', Art: MigArt, Comp: MigSimulator, t: () => ({
