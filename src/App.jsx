@@ -60,9 +60,9 @@ const MACHINES = [
     desc: L('Ručné ohýbanie plechu: upnutie kolesom cez dve skrutky, vykývnutie ohýbacej lišty a odpruženie plechu podľa hrúbky.', 'Manual sheet folding: clamping by handwheel through two screws, swinging the folding beam and springback according to thickness.'),
     specs: [L('Dĺžka ohybu 1 040 mm', 'Bending length 1,040 mm'), L('Plech do 2 mm', 'Sheet up to 2 mm'), L('Uhol ohybu do 130°', 'Bend angle up to 130°')] }) },
   { id: 'noznice', Art: ShearArt, Comp: ShearSimulator, t: () => ({
-    meta: L('Tabuľové nožnice', 'Guillotine shear'), name: L('Tabuľové nožnice', 'Guillotine shear'), model: L('mechanické, s pedálom', 'mechanical, pedal-operated'),
+    meta: L('Tabuľové nožnice', 'Guillotine shear'), name: L('Tabuľové nožnice', 'Guillotine shear'), model: 'BS 2000/8',
     desc: L('Strihanie plechov na pásy a prírezy: zadný doraz, bočný uholník, vôľa nožov podľa hrúbky, prítlaky, kryt prstov blokujúci pedál a kapacita stroja.', 'Shearing sheets into strips and blanks: back gauge, side square, blade clearance by thickness, hold-downs, a finger guard that blocks the pedal and the machine capacity.'),
-    specs: [L('Plech do 3 mm', 'Sheet up to 3 mm'), L('Dĺžka strihu 2 000 mm', 'Cut length 2,000 mm'), L('Zadný doraz do 750 mm', 'Back gauge up to 750 mm')] }) },
+    specs: [L('Plech do 8 mm', 'Sheet up to 8 mm'), L('Dĺžka strihu 2 000 mm', 'Cut length 2,000 mm'), L('Zadný doraz do 750 mm', 'Back gauge up to 750 mm')] }) },
   { id: 'profilova', Art: BenderArt, Comp: BenderSimulator, t: () => ({
     meta: L('Profilová ohýbačka', 'Section bender'), name: L('Zakružovačka profilov', 'Section and profile bender'), model: 'COMAC 3025 HV',
     desc: L('Zakružovanie plochých tyčí, rúr, jäklov a uholníkov tromi poháňanými valcami: prísuv stredného valca, odpruženie po ohybe, tvarové valce, bočné vodiace kladky a pracovná poloha vodorovná aj zvislá.', 'Rolling flat bars, tubes, square tubes and angles with three driven rolls: centre-roll feed, springback after bending, forming rolls, side guide rollers and horizontal or vertical working position.'),

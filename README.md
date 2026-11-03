@@ -151,11 +151,11 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
     </td>
     <td width="50%" valign="top">
       <h3>✂️ Tabuľové nožnice</h3>
-      <sub>mechanické, s nožným pedálom · <code>#noznice</code></sub>
+      <sub>mechanické BS 2000/8 · <code>#noznice</code></sub>
       <ul>
-        <li>zadný doraz, bočný uholník, vôľa nožov podľa hrúbky (ostrina), kapacita 3 mm</li>
-        <li>prítlaky, šikmý horný nôž, kryt prstov blokujúci pedál, pásy padajú do koša</li>
-        <li>úlohy 3 pásy 100 mm z 2 mm a prírezy 150 mm z 3 mm (<code>shearMath.js</code>)</li>
+        <li>zadný doraz, bočný uholník, vôľa nožov podľa hrúbky (ostrina), kapacita 8 mm</li>
+        <li>prítlaky, šikmý horný nôž, hrebeňový kryt prstov blokujúci pedál, pedálová tyč po celej šírke, pásy padajú do koša</li>
+        <li>úlohy 3 pásy 100 mm z 2 mm a prírezy 150 mm zo 6 mm (<code>shearMath.js</code>)</li>
       </ul>
     </td>
   </tr>

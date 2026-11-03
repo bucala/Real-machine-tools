@@ -84,7 +84,7 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Horizontálka TOS Varnsdorf | ✅ | `#horizontalka`: vreteník Y, vreteno W, sane Z, stôl X, otočný stôl B; vyvrtávanie s priehybom tyče, úlohy Ø80 H7 a súosé otvory (`horizMath.js`) |
 | Odvalovacia frézka | ✅ | `#odvalovacka`: výmenné kolesá delenia, sklon frézy, hĺbka 2,25 · m, Wk (`hobMath.js`) |
 | Zakružovačka plechu TOS XZC 3000/10 | ✅ | `#zakruzovacka`: trojvalcová pyramída, prísuv horného valca kolesom, odpruženie, predohnutie koncov podložným plechom, odklopné ložisko s kolíkom (`plateMath.js`) |
-| Tabuľové nožnice | ✅ | `#noznice`: zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
+| Tabuľové nožnice BS 2000/8 | ✅ | `#noznice`: model podľa BS 2000/8 (horný kryt výstredníka, hrebeňový kryt, pedálová tyč, pohon vľavo), plech do 8 mm, zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
 
 ## 2. Rozsah a metodika
 
