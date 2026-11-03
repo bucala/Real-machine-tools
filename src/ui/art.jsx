@@ -194,4 +194,42 @@ function ShaperArt() {
   );
 }
 
-export { BandSawArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, WelderArt };
+function SlotterArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="60" y="40" width="54" height="112" rx="3" />
+        <rect x="60" y="22" width="130" height="30" rx="3" />
+        <rect x="40" y="152" width="230" height="8" />
+        <rect x="120" y="136" width="120" height="16" />
+        <rect x="134" y="124" width="92" height="12" />
+      </g>
+      <circle cx="132" cy="37" r="11" fill="none" /><circle cx="132" cy="37" r="3" />
+      <rect x="170" y="44" width="16" height="48" fillOpacity=".4" />
+      <path d="M178 92v20" fill="none" strokeWidth="3" />
+      <rect x="160" y="112" width="40" height="12" fillOpacity=".55" />
+      <path d="M172 112v12M188 112v12" fill="none" strokeWidth="1.5" />
+      <path d="M180 62l-6 -4M180 70l6 4" fill="none" strokeWidth="1.5" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+function BenderArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <rect x="90" y="96" width="140" height="56" rx="3" />
+        <rect x="80" y="88" width="160" height="8" />
+        <rect x="40" y="152" width="240" height="8" />
+      </g>
+      <circle cx="122" cy="74" r="15" fillOpacity=".3" /><circle cx="198" cy="74" r="15" fillOpacity=".3" /><circle cx="160" cy="58" r="15" fillOpacity=".3" />
+      <circle cx="122" cy="74" r="3" /><circle cx="198" cy="74" r="3" /><circle cx="160" cy="58" r="3" />
+      <path d="M40 112C80 76 120 46 160 44S242 74 282 112" fill="none" strokeWidth="5" strokeLinecap="round" />
+      <rect x="196" y="110" width="26" height="30" rx="2" fillOpacity=".4" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
+export { BandSawArt, BenderArt, DrillArt, FolderArt, GrinderArt, LatheArt, MigArt, MillArt, ShaperArt, SlotterArt, WelderArt };

@@ -76,6 +76,8 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Obrážačka TOS | ✅ | 9. stroj `#obrazacka` za brúskou: kulisový mechanizmus s rýchlym spätným chodom, sklopná doska, západkový posuv, 4 nože, 3 úlohy (`shaperMath.js`) |
 | Rez zvarom, zvarová mierka, viacvrstvové zvary | ✅ | makrovýbrus v ľubovoľnom mieste, natavenie, vrstvy, vtrúseniny, mierka h / b / a (`sectionMetrics`), polohovadlo rúr, 2 nové úlohy |
 | Deliaci prístroj na fréze | ✅ | tyč r(x, θ), delenie n = 40 / z s kruhom dier, aretácia, koník, úlohy šesťhran a štvorhran (`millIndex.js`) |
+| Zvislá obrážačka TOS ST 350 | ✅ | 10. stroj `#zobrazacka` za priečnou obrážačkou: zvislé smykadlo s kulisou, krížový a otočný stôl s delením, prierez triesky, úlohy drážka 12 × 3,3 a štvorhran 25 × 25 (`slotterMath.js`) |
+| Profilová ohýbačka COMAC 3025 HV | ✅ | 11. stroj `#profilova` za ohýbačkou plechu: tri valce v pyramíde, pružno-plastický ohyb s odpružením, 5 profilov, tvarové valce, vodiace kladky, poloha H / V, 3 úlohy (`benderMath.js`) |
 
 ## 2. Rozsah a metodika
 

@@ -118,6 +118,35 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 <table>
   <tr>
     <td width="50%" valign="top">
+      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zobrazacka"><img src="docs/img/slotter.png" alt="Zvislá obrážačka – drážka v náboji"></a>
+      <h3>⬇️ Zvislá obrážačka</h3>
+      <sub>predloha TOS ST 350 · drážkovačka s krížovým otočným stolom</sub>
+      <ul>
+        <li>zvislé smykadlo s kulisovým pohonom v hlave („labutí krk“), pracovný zdvih dole, zdvih 20 – 350 mm, 12 – 71 zdvihov/min</li>
+        <li>krížový stôl X / Z, otočný stôl C (1 otáčka = 4°) s delením 2 – 8, trojčeľusťové skľučovadlo s otvorom pre výbeh noža</li>
+        <li>náboj ako vnútorný a vonkajší polomer pre každý uhol; nôž sa zastaví pri prekročení prierezu triesky, náraz do skľučovadla</li>
+        <li>západkový posuv v X, Z alebo C v hornej úvrati; stôl sa pri noži v obrobku do materiálu nepohne</li>
+        <li>2 úlohy: drážka pre pero 12 × 3,3 v otvore Ø40, štvorhranný otvor 25 × 25 z Ø24 (`slotterMath.js`)</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#profilova"><img src="docs/img/bender.png" alt="Profilová ohýbačka – oblúk z plochej tyče"></a>
+      <h3>➰ Profilová ohýbačka</h3>
+      <sub>predloha COMAC 3025 HV · tri poháňané valce v pyramíde</sub>
+      <ul>
+        <li>hydraulický prísuv stredného valca δ, polomer v zábere z kružnice cez tri dotyky</li>
+        <li>pružno-plastický ohyb s odpružením podľa profilu (medza klzu S235, tvarový súčiniteľ); rovné konce dĺžky polovice rozpätia</li>
+        <li>5 profilov: plochá tyč naplocho aj nastojato, rúra, jäkel, uholník; valce s nákružkami alebo drážkové pre rúru</li>
+        <li>bočné vodiace kladky – bez nich sa profil nastojato a uholník skrúti, rúra na rovných valcoch sa sploští</li>
+        <li>pracovná poloha H aj V (stroj sa sklopí), nožný pedál vpred / vzad, 3 úlohy: oblúk R 500, prstenec R 300 z rúry, oblúk R 800 nastojato (`benderMath.js`)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
       <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zvaranie"><img src="docs/img/weld-helmet.png" alt="Zváranie – pohľad cez kuklu"></a>
     </td>
     <td width="50%" valign="top">
@@ -182,7 +211,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #bruska · #obrazacka · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #ohybacka · #profilova · #bruska · #obrazacka · #zobrazacka · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -225,7 +254,7 @@ flowchart LR
 | [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
 | [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
 | [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
 | [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
 | [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |
