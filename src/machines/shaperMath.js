@@ -6,14 +6,15 @@ import { grooveInfo } from '../core/hfMath';
 // Kulisa siaha Lk nad otočný bod k smykadlu; smykadlo sa posunie o Lk · tg θ.
 export const SH_K = { d: 2.4, Lk: 6.7 };
 // polomer čapu pre zdvih S (jednotky scény) – najväčší výkyv kulisy je pri dotyčnici čapu
-export const crankR = (S) => { const a = S / 2; return SH_K.d * a / Math.sqrt(SH_K.Lk * SH_K.Lk + a * a); };
+// K = rozmery kulisy (predvolene vodorovná obrážačka; zvislá má kulisu inak rozmiestnenú)
+export const crankR = (S, K = SH_K) => { const a = S / 2; return K.d * a / Math.sqrt(K.Lk * K.Lk + a * a); };
 // uhol kulisy θ a posun smykadla x (od stredu zdvihu) pri uhle kolesa φ (φ = 0: čap hore)
-export const ramPos = (phi, r) => { const th = Math.atan2(r * Math.sin(phi), SH_K.d + r * Math.cos(phi)); return { th, x: SH_K.Lk * Math.tan(th) }; };
+export const ramPos = (phi, r, K = SH_K) => { const th = Math.atan2(r * Math.sin(phi), K.d + r * Math.cos(phi)); return { th, x: K.Lk * Math.tan(th) }; };
 // pracovný (dopredný) zdvih prebieha, kým je čap na hornom oblúku – je dlhší ako spätný (rýchly spätný chod)
-export const isForward = (phi, r) => Math.cos(phi) > -r / SH_K.d;
-export const fwdShare = (r) => (Math.PI + 2 * Math.asin(Math.min(1, r / SH_K.d))) / (2 * Math.PI);
+export const isForward = (phi, r, K = SH_K) => Math.cos(phi) > -r / K.d;
+export const fwdShare = (r, K = SH_K) => (Math.PI + 2 * Math.asin(Math.min(1, r / K.d))) / (2 * Math.PI);
 // priemerná rezná rýchlosť (m/min) pri zdvihu S (mm) a n zdvihoch za minútu
-export const cutSpeed = (S, n, r) => (S * n / 1000) / fwdShare(r);
+export const cutSpeed = (S, n, r, K = SH_K) => (S * n / 1000) / fwdShare(r, K);
 export const SHAPER_SPEEDS = [10, 14, 20, 28, 40, 56];               // zdvihy za minútu (6 stupňov prevodovky)
 
 // nože: w = šírka plôšky (mm), slope = sklon bokov (mm výšky na mm do strany), max = najväčší záber na zdvih (mm)
