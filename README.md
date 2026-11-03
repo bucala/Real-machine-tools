@@ -9,6 +9,7 @@
 ![React 18](https://img.shields.io/badge/React-18.3-61dafb?logo=react&logoColor=white)
 ![three.js r128](https://img.shields.io/badge/three.js-r128-000000?logo=threedotjs&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwindcss&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)
 ![Jazyk: SK / EN](https://img.shields.io/badge/jazyk-SK%20%2F%20EN-0b4ea2)
 [![License: MIT](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
@@ -162,35 +163,53 @@ flowchart LR
 
 | Cesta | Obsah |
 | --- | --- |
-| [`public/index.html`](public/index.html) | celá aplikácia v jednom súbore (React, three.js r128, Tailwind a Babel z CDN) |
-| [`src/machines.jsx`](src/machines.jsx) | zdrojový kód ako ES modul – `export default App` a jednotlivé simulátory, vyžaduje `three@0.128`; zmeny sa robia tu |
-| [`tools/sync-index.mjs`](tools/sync-index.mjs) | prenesie `src/machines.jsx` do `public/index.html`, s `--check` len overí zhodu |
+| [`index.html`](index.html), [`src/main.jsx`](src/main.jsx) | vstup aplikácie pre Vite |
+| [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
+| [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa, častice, jazyk |
+| [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`) a ilustrácie strojov v menu (`art.jsx`) |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia a panel; načítava sa až pri otvorení stroja |
+| [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
+| [`static/`](static) | súbory kopírované do buildu bez zmeny: ikona, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
+| [`public/`](public) | **zostavená aplikácia** (`npm run build`) – commituje sa, z nej nasadzuje Cloudflare |
+| [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, zvarová príprava, výšková mapa |
+| [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.128`) |
 | [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
-| [`docs/img`](docs/img) | snímky obrazovky pre toto README |
-| [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, návrhy opráv a vylepšení |
+| [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
 
-## Spustenie
+## Vývoj
 
-```bash
-npx serve public
-```
-
-Kód sa upravuje v `src/machines.jsx`, potom sa prenesie do `public/index.html`:
+Potrebný je Node.js 22.12 alebo novší. Závislosti sa nainštalujú raz:
 
 ```bash
-node tools/sync-index.mjs
+npm install
 ```
 
-Pred commitom sa dá overiť, že oba súbory sú zhodné:
+Vývojový server s okamžitým obnovením stránky:
 
 ```bash
-node tools/sync-index.mjs --check
+npm run dev
 ```
+
+Pred commitom: lint, testy, build a kontrola, že commitnutý `public/` zodpovedá zdrojom (to isté robí CI pri každom pull requeste):
+
+```bash
+npm run check
+```
+
+Ak kontrola hlási rozdiel v `public/`, stačí spustiť `npm run build` a výsledok commitnúť.
 
 ## Nasadenie
 
+`public/` je v repozitári už zostavený, takže nasadenie nepotrebuje build krok ani zmenu nastavení Cloudflare – funguje ručné nasadenie aj Workers Builds z Gitu:
+
 ```bash
 npx wrangler deploy
+```
+
+Alebo build a nasadenie naraz:
+
+```bash
+npm run deploy
 ```
 
 Živá verzia: **https://real-machine-tools.marcel-bucala.workers.dev**

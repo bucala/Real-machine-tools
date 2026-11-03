@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Testy
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Zostavený public/ je aktuálny
+        run: |
+          if ! git diff --quiet -- public || [ -n "$(git status --porcelain -- public)" ]; then
+            echo "::error::Priečinok public/ nezodpovedá zdrojom – spusti 'npm run build' a commitni výsledok."
+            git status --short -- public
+            exit 1
+          fi

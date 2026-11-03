@@ -1,0 +1,8 @@
+/* úvodná obrazovka počas načítania – použitá aj pri načítaní simulátora */
+html,body,#root{height:100%}
+body{margin:0;background:#111511}
+.boot{height:100%;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;box-sizing:border-box;text-align:center;color:#98a492;background:#111511;font:15px/1.45 "Barlow",system-ui,"Segoe UI",sans-serif}
+.boot b{color:#e5ebe1;font:700 22px/1.1 "Barlow Condensed","Barlow",system-ui,sans-serif;letter-spacing:.02em}
+.boot i{width:34px;height:34px;border-radius:50%;border:3px solid #2c3429;border-top-color:#7fb565;animation:boot-spin .9s linear infinite}
+@keyframes boot-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.boot i{animation-duration:3s}}

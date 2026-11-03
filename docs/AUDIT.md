@@ -35,6 +35,24 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | N5 – N7 prístupnosť | ✅ opravené | dotykové ciele ≥ 24 px, sekcie panelu `<h2>`, fokus na nadpis po prechode menu ↔ stroj |
 | N8 meta a ikona | ✅ čiastočne | ikona (SVG), `theme-color`, Open Graph; manifest a offline režim vo fáze 4 |
 
+### Stav opráv – fázy 2 a 3 (3. 11. 2026)
+
+| Zistenie | Stav | Čo sa zmenilo |
+|---|---|---|
+| V2 preklad v prehliadači, Tailwind Play CDN | ✅ opravené | build cez Vite 8; Babel ani Tailwind CDN sa už nenačítavajú, Tailwind sa generuje pri builde (6 kB gzip). Menu sa v teste načíta za 0,45 s namiesto 1,9 s |
+| V3 externé skripty, CSP | ✅ opravené | všetko vrátane písiem (`@fontsource`) sa servíruje z vlastnej domény; `static/_headers` nastavuje prísne CSP (`script-src 'self'`, `style-src 'self'`), `nosniff`, `Referrer-Policy`, `Permissions-Policy` a dlhú cache pre `assets/`. Aplikácia nič neposiela tretím stranám (ani Google Fonts) |
+| S1 duplicitný kód | ✅ opravené | jediný zdroj v `src/`, `public/` je výstup buildu; CI kontroluje, že commitnutý `public/` zodpovedá zdrojom |
+| S2 monolit, testy, nástroje | ✅ opravené | `src/machines.jsx` rozdelený na 19 modulov (`core/`, `ui/`, `machines/`, `App.jsx`) s importmi odvodenými z kódu; `package.json` s pevnými verziami, ESLint, 42 testov vo Vitest, GitHub Actions (lint, testy, build) |
+| S4 nepretržité renderovanie | ✅ opravené | `createStage` kreslí len pri zmene scény, kamery alebo pri vstupe používateľa, inak 4× za s; tiene sa prepočítajú len pri zmene scény. Stojaci sústruh: 16 vykreslení za 4 s namiesto 241 |
+| S5 prestavba výškových máp | ✅ čiastočne | chladnutie zvaru sa počíta len v obdĺžniku ohriatych buniek; úplná prestavba siete pri reze zostáva (beží len počas rezu, 10 – 16× za s) |
+| S6 panel 10× za sekundu | ✅ opravené | `useTele` nastaví stav len pri skutočnej zmene hodnôt – stojaci stroj panel neprekresľuje |
+| N1 alokácie v slučke | ✅ opravené | zváranie: pomocné vektory a kvaternión sa vytvárajú raz, kábel držiaka sa prestavuje najviac 20× za s; DRO sústruhu a frézy sa prekreslí len pri zmene údaja |
+| N2 častice | ✅ opravené | `createParticles` používa `InstancedMesh` – jedno vykreslenie na druh častíc namiesto stoviek; ležiace častice sa neposielajú znova do GPU |
+| N3 rozlíšenie výškovej mapy | ✅ opravené (fréza) | bunka ~1,2 mm podľa rozmeru obrobku (najviac 40 000 vrcholov) namiesto pevných 108 × 60 |
+| – | ✅ nové | testy odhalili chybu v `eachRect`: uzly presne na hrane obdĺžnika vypadávali kvôli zaokrúhleniu – opravené toleranciou |
+| – | ✅ nové | stroje sa načítavajú postupne (`React.lazy`): menu 58 kB gzip, 3D jadro s three.js 140 kB, každý stroj 6 – 20 kB; pri výpadku siete samostatná hláška |
+| S3 zastarané závislosti | ⏳ fáza 5 | three.js r128 a React 18 zostávajú; build už umožňuje prechod bez CDN obmedzení |
+
 ## 2. Rozsah a metodika
 
 - **Prehliadka kódu** – celé jadro (riadky 1 – 1 100), celý simulátor sústruhu, kľúčové časti frézy a zvárania, životný cyklus (`useEffect`, `requestAnimationFrame`, `dispose`, poslucháči udalostí) vo všetkých siedmich simulátoroch.

@@ -1,0 +1,15 @@
+/* Interaktívne modely konvenčných obrábacích strojov (React + Three.js r128).
+   Mierka: 1 jednotka scény = 100 mm, obsluha stojí na strane +Z. */
+import { createRoot } from 'react-dom/client';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow/700.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/share-tech-mono/400.css';
+import './tailwind.css';
+import './app.css';
+import App from './App';
+
+createRoot(document.getElementById('root')).render(<App />);
