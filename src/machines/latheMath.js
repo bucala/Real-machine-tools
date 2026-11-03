@@ -16,20 +16,20 @@ export function threadRadius(R, D, p, x, theta) {
 }
 
 // rozbor profilu: prof = polomery úsekov (jednotky scény, 1 = 100 mm), thr = hĺbka závitu, pit = stúpanie;
-// x0 = začiatok obrobku, dx = dĺžka úseku, jaw = čelo čeľustí (nula osi Z). Výsledok v mm od čeľustí.
-export function profileInfo(prof, thr, pit, { x0, dx, jaw }) {
+// x0 = začiatok obrobku, dx = dĺžka úseku, jaw = čelo čeľustí (nula osi Z), u = mm na jednotku. Výsledok v mm od čeľustí.
+export function profileInfo(prof, thr, pit, { x0, dx, jaw, u = 100 }) {
   const n = prof.length;
   let iEnd = n - 1; while (iEnd >= 0 && prof[iEnd] < 0.012) iEnd--;
   const iJ = Math.max(0, Math.ceil((jaw - x0) / dx - 1e-9));
-  const zOf = (i) => (x0 + i * dx - jaw) * 100;
+  const zOf = (i) => (x0 + i * dx - jaw) * u;
   const end = iEnd >= iJ ? zOf(iEnd + 1) : 0;
-  const idx = (z) => Math.floor(((z / 100) + jaw - x0) / dx);
-  const dAt = (z) => { const i = idx(z); return i >= iJ && i <= iEnd ? prof[i] * 200 : 0; };
+  const idx = (z) => Math.floor(((z / u) + jaw - x0) / dx);
+  const dAt = (z) => { const i = idx(z); return i >= iJ && i <= iEnd ? prof[i] * 2 * u : 0; };
   // osadenia: súvislé úseky s rovnakým priemerom (rozdiel do 0,02 mm), od čeľustí k voľnému koncu
   const steps = [];
   let s = iJ;
   for (let i = iJ + 1; i <= iEnd + 1; i++) {
-    if (i > iEnd || Math.abs(prof[i] - prof[s]) * 200 > 0.02) { steps.push({ d: prof[s] * 200, z0: zOf(s), z1: zOf(i), len: zOf(i) - zOf(s) }); s = i; }
+    if (i > iEnd || Math.abs(prof[i] - prof[s]) * 2 * u > 0.02) { steps.push({ d: prof[s] * 2 * u, z0: zOf(s), z1: zOf(i), len: zOf(i) - zOf(s) }); s = i; }
   }
   // závit: rozsah úsekov s drážkou, najväčšia hĺbka, stúpanie, vonkajší priemer
   let ta = -1, tb = -1, dep = 0, p = 0, crest = 0, mixed = false;
@@ -41,7 +41,7 @@ export function profileInfo(prof, thr, pit, { x0, dx, jaw }) {
       const pi = pit ? pit[i] : 0; if (p && pi && Math.abs(pi - p) > 1e-6) mixed = true; if (pi) p = pi;
     }
   }
-  const thread = ta >= 0 ? { z0: zOf(ta), z1: zOf(tb + 1), len: zOf(tb + 1) - zOf(ta), depth: dep * 100, pitch: Math.round(p * 1000) / 10, crest: crest * 200, mixed } : null;
+  const thread = ta >= 0 ? { z0: zOf(ta), z1: zOf(tb + 1), len: zOf(tb + 1) - zOf(ta), depth: dep * u, pitch: Math.round(p * u * 10) / 10, crest: crest * 2 * u, mixed } : null;
   return { end, steps, thread, dAt };
 }
 
