@@ -61,4 +61,8 @@ jobs:
         run: echo "::warning::Nasadenie preskočené – v Settings → Secrets and variables → Actions doplň CLOUDFLARE_API_TOKEN a CLOUDFLARE_ACCOUNT_ID."
       - name: Nasadenie (wrangler deploy)
         if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
-        run: npx wrangler deploy
+        # hodnoty bez medzier a zalomení riadkov (pri vkladaní tajomstva sa ľahko pridá Enter)
+        run: |
+          export CLOUDFLARE_ACCOUNT_ID="$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '[:space:]')"
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          npx wrangler deploy
