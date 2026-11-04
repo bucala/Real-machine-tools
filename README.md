@@ -271,6 +271,33 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   </tr>
 </table>
 
+### 🏭 Moderné stroje – CNC a 5-osé obrábanie (`#moderne`)
+
+Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup je baner v hlavnom menu.
+
+**Hermle C 32 U / C 42 U** (`#hermle`) – 5-osé obrábacie centrum s otočno-sklopným stolom A/C, základný stroj bez prídavných zariadení:
+
+- **Model.** C 32 U podľa katalógu (650 / 650 / 500 mm, stôl Ø650 × 540, A ±130°, 18 000 ot/min HSK-A63, 42 kW, 36 miest, TNC 640). C 42 U má orientačné údaje (800 / 800 / 550 mm, stôl Ø800).
+- **CNC program.** Interpreter ISO / Fanuc a Heidenhain Klartext (`src/machines/cnc/gcode.js`):
+  - ISO: G0–G3, G43, G43.4 (TCP), G68.2 + G53.1, cykly G81–G83, G93;
+  - Heidenhain: BLK FORM, TOOL CALL, L / CC / C / CR, M128, PLANE SPATIAL, CYCL DEF 200.
+- **Napojenie na CAM.**
+  - Načítanie súboru z postprocesora (Fusion 360, Mastercam, hyperMILL …).
+  - Nástroje sa dajú prevziať z komentárov typu `T3 D=10. CR=0. - flat end mill`.
+  - Uloženie programu.
+- **Kinematika a úber.**
+  - 5-osá kinematika stola A/C, inverzná úloha (`kin.js`).
+  - Skutočný úber materiálu vo voxelovom poli so znamienkovou vzdialenosťou a sieťou surface nets (`voxel.js`), vrátane naklonených a podrezaných plôch.
+  - Export obrobku do STL.
+- **Kontroly a alarmy** (`sim.js`):
+  - koncové spínače;
+  - rýchloposuv do materiálu, rez so stojacim vretenom;
+  - kolízia drieku alebo držiaka, náraz do stola alebo upínača;
+  - preťaženie vretena;
+  - bezpečnostný zámok dverí.
+- **Prevádzka.** Blok po bloku, korekcie posuvu a rýchloposuvu, rýchlosť simulácie, odhad času.
+- **Ukážky.** Štyri ukážkové programy: 3-osý, 3+2 (G68.2), simultánny 5-osý s TCP a Heidenhain s PLANE SPATIAL (`programs.js`).
+
 ### 🎓 Výučba
 
 | | |
@@ -294,7 +321,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]

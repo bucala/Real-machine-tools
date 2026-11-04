@@ -1,8 +1,8 @@
 // Hlavné menu, výber stroja a smerovanie podľa URL (#sustruh, #freza, …).
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, HermleArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -17,6 +17,7 @@ const BenderSimulator = lazy(() => import('./machines/bender'));
 const PlateRollSimulator = lazy(() => import('./machines/plate'));
 const ShearSimulator = lazy(() => import('./machines/shear'));
 const PressSimulator = lazy(() => import('./machines/press'));
+const HermleSimulator = lazy(() => import('./machines/hermle'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -109,6 +110,13 @@ const MACHINES = [
     note: L('Obsahuje svetelné záblesky. Blikanie sa dá vypnúť v paneli (Efekty záblesku).', 'Contains light flashes. Flicker can be turned off in the panel (Flash effects).') }) },
 ];
 const SOON = [];
+// moderné stroje: samostatné menu #moderne s vlastným vizuálom
+const MODERN = [
+  { id: 'hermle', Art: HermleArt, Comp: HermleSimulator, t: () => ({
+    meta: L('5-osé obrábacie centrá', '5-axis machining centres'), name: 'Hermle C 32 U / C 42 U', model: 'Hermle C 32 U / C 42 U',
+    desc: L('Obrábanie podľa CNC programu: ISO / G-kód aj Heidenhain Klartext, programy z CAM, 3-osé, 3+2 aj simultánne 5-osé obrábanie s TCP, skutočný úber materiálu, kolízie, zaťaženie vretena a export obrobku do STL.', 'Machining from a CNC program: ISO / G-code and Heidenhain conversational, programs from CAM, 3-axis, 3+2 and simultaneous 5-axis machining with TCP, real material removal, collisions, spindle load and part export to STL.'),
+    specs: [L('C 32: 650 / 650 / 500 mm, stôl Ø650', 'C 32: 650 / 650 / 500 mm, table Ø650'), L('C 42: 800 / 800 / 550 mm, stôl Ø800', 'C 42: 800 / 800 / 550 mm, table Ø800'), L('A ±130°, C 360° · TNC 640', 'A ±130°, C 360° · TNC 640')] }) },
+];
 
 // podpora WebGL – bez nej sa 3D scéna nedá vytvoriť
 let webglOk = null;
@@ -194,7 +202,17 @@ function Menu({ onOpen }) {
             <div style={{ color: 'var(--text)' }}><WebGLHelp /></div>
           </div>
         )}
-        <div className="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-3">
+        <button type="button" className="modern-banner mt-8" onClick={() => onOpen('moderne')}>
+          <span className="modern-banner-art"><HermleArt /></span>
+          <span className="modern-banner-body">
+            <span className="modern-kicker">{L('Nová kategória', 'New category')}</span>
+            <span className="modern-banner-title">{L('Moderné stroje – CNC a 5-osé obrábanie', 'Modern machines – CNC and 5-axis machining')}</span>
+            <span className="text-sm" style={{ opacity: 0.85 }}>{L('Hermle C 32 U a C 42 U: obrábanie podľa CNC programu z CAM, ISO aj Heidenhain, simultánne 5 osí a skutočný úber materiálu.', 'Hermle C 32 U and C 42 U: machining from a CAM CNC program, ISO and Heidenhain, simultaneous 5 axes and real material removal.')}</span>
+          </span>
+          <span className="modern-banner-cta">{L('Otvoriť →', 'Open →')}</span>
+        </button>
+        <h2 className="sec-title" style={{ fontSize: 15, marginTop: 34 }}>{L('Konvenčné stroje', 'Conventional machines')}</h2>
+        <div className="grid gap-5 mt-4 md:grid-cols-2 xl:grid-cols-3">
           {MACHINES.filter((m) => !m.hidden).map((m) => {
             const tx = m.t();
             return (
@@ -231,6 +249,47 @@ function Menu({ onOpen }) {
           })}
         </div>
         <p className="text-xs muted mt-8">{L('Mierka modelov 1 : 100 mm · ovládanie myšou alebo dotykom · kláves M prepína na ručné ovládanie prvkov stroja · po prvej návšteve fungujú simulátory aj bez internetu a dajú sa nainštalovať ako aplikácia.', 'Model scale 1 : 100 mm · mouse or touch control · the M key switches to manual control of the machine elements · after the first visit the simulators also work offline and can be installed as an app.')}</p>
+      </div>
+    </main>
+  );
+}
+
+function ModernMenu({ onOpen, onBack }) {
+  return (
+    <main className="menu modern-menu">
+      <div className="menu-inner">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <button type="button" className="modern-back" onClick={onBack}>← {L('Konvenčné stroje', 'Conventional machines')}</button>
+          <PrefBar />
+        </div>
+        <p className="modern-kicker mt-8">Real machine tools · {L('Moderné stroje', 'Modern machines')}</p>
+        <h1 className="menu-title modern-title" tabIndex={-1}>{L('CNC obrábanie a 5-osé centrá', 'CNC machining and 5-axis centres')}</h1>
+        <p className="menu-lead">{L('Stroje riadené programom. Program napíš, vlož z CAM systému alebo použi ukážku – simulátor ho prečíta ako riadiaci systém, prepočíta 5-osú kinematiku a odoberá materiál z polotovaru.', 'Program-controlled machines. Write a program, paste it from a CAM system or use a sample – the simulator reads it like the control, computes the 5-axis kinematics and removes material from the blank.')}</p>
+        <div className="grid gap-6 mt-8 lg:grid-cols-2">
+          {MODERN.map((m) => {
+            const tx = m.t();
+            return (
+              <button key={m.id} type="button" className="card modern-card" onClick={() => onOpen(m.id)}>
+                <div className="card-art"><m.Art /></div>
+                <div className="card-body">
+                  <span className="card-meta">{tx.meta}</span>
+                  <span className="card-name">{tx.name}</span>
+                  <span className="text-sm muted" style={{ lineHeight: 1.5 }}>{tx.desc}</span>
+                  <span className="spec">{tx.specs.map((sp) => <span key={sp}>{sp}</span>)}</span>
+                  <span className="card-cta">{L('Spustiť simulátor →', 'Open simulator →')}</span>
+                </div>
+              </button>
+            );
+          })}
+          <div className="card modern-card soon" aria-disabled="true">
+            <div className="card-body">
+              <span className="card-meta">{L('Pripravujeme', 'Coming soon')}</span>
+              <span className="card-name">{L('Ďalšie CNC stroje', 'More CNC machines')}</span>
+              <span className="text-sm muted" style={{ lineHeight: 1.5 }}>{L('CNC sústruh s poháňanými nástrojmi, drôtová rezačka…', 'CNC lathe with driven tools, wire EDM…')}</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-xs muted mt-8">{L('Simulácia je výučbová – rozmery a dynamika stroja vychádzajú z katalógových údajov, riadiaci systém je zjednodušený.', 'The simulation is for training – machine dimensions and dynamics follow catalogue data, the control is simplified.')}</p>
       </div>
     </main>
   );
@@ -277,11 +336,15 @@ function App() {
   };
   // #stroj alebo #stroj/uloha=… (odkaz učiteľa na konkrétnu úlohu)
   const [mid, query = ''] = route.split('/');
-  const m = MACHINES.find((x) => x.id === mid);
+  const mm = MODERN.find((x) => x.id === mid), m = mm || MACHINES.find((x) => x.id === mid);
+  const modern = mid === 'moderne' || !!mm;
+  // moderné stroje majú vlastný vizuál – nastaví sa pred vytvorením 3D scény (useLayoutEffect beží skôr)
+  useLayoutEffect(() => { try { if (modern) document.documentElement.dataset.mode = 'modern'; else delete document.documentElement.dataset.mode; } catch (err) { /* ignorované */ } }, [modern]);
   const params = Object.fromEntries(new URLSearchParams(query));
   return (
     <PrefsCtx.Provider value={{ prefs, setPref }}>
-      {m ? <SimBoundary key={m.id} onBack={() => go('')}><Suspense fallback={<SimLoading />}><m.Comp lang={prefs.lang} params={params} onBack={() => go('')} /></Suspense></SimBoundary> : <Menu onOpen={go} />}
+      {m ? <SimBoundary key={m.id} onBack={() => go(mm ? 'moderne' : '')}><Suspense fallback={<SimLoading />}><m.Comp lang={prefs.lang} params={params} onBack={() => go(mm ? 'moderne' : '')} /></Suspense></SimBoundary>
+        : mid === 'moderne' ? <ModernMenu onOpen={go} onBack={() => go('')} /> : <Menu onOpen={go} />}
     </PrefsCtx.Provider>
   );
 }
