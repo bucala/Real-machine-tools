@@ -275,9 +275,14 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 
 Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup je baner v hlavnom menu.
 
-**Hermle C 32 U / C 42 U** (`#hermle`) – 5-osé obrábacie centrum s otočno-sklopným stolom A/C, základný stroj bez prídavných zariadení:
+**Hermle C 32 U / C 42 U** (`#hermle`) – 5-osé obrábacie centrum s otočno-sklopným stolom A/C, s voliteľným príslušenstvom, ktoré je pri otvorení modelu vypnuté:
 
 - **Model.** C 32 U podľa katalógu (650 / 650 / 500 mm, stôl Ø650 × 540, A ±130°, 18 000 ot/min HSK-A63, 42 kW, 36 miest, TNC 640). C 42 U má orientačné údaje (800 / 800 / 550 mm, stôl Ø800).
+- **HMI panel.** Dvojčlánkové rameno je uchytené pri prednom pravom rohu. Polohy *Obsluha / Bok / Zásobník* a plynulý uhol 0–180° premiestnia panel; zároveň sa automaticky natočí k operátorovi. Posuvník *Korekcia natočenia HMI* pridáva vlastné natočenie o 360°. V ručnom režime potiahni panel; **Shift + potiahnutie** mení iba korekciu natočenia. Tlačidlo *Pohľad na HMI* ukáže aj spodné uchytenie.
+- **Zásobník a nástroje.** Pick-up prstenec má centrálny hriadeľ napojený na kompaktný mechanizmus nad ním. Pohon zostáva v pôdoryse lôžka. Výmena prebieha po fázach odloženia, indexovania a upnutia. Vreteno, zásobník a obrázkové náhľady používajú rovnaké rozmery nástrojov v mm (Ø, R, L, rezná dĺžka, vyloženie a priemer držiaka HSK-A63).
+- **Katalógové zostavy.** Základ so zásuvkou na triesky; dopravník s vozíkom; dopravník + ICS 40; dopravník + ICS 80; dopravník + ICS 80 + dochladzovanie. Zostavy sa nahrádzajú, aby nevznikali neplatné kombinácie. Dopravník sa počas cyklu pohybuje, filtrácia a chladenie externých jednotiek sú znázornené vizuálne.
+- **Rozmerový layout.** Exteriér C42 vychádza z brožúry *Hermle C42*: šírka kabíny 2450 mm, celková hĺbka vrátane zadnej servisnej/elektrickej časti 4000 mm, dosah dopravníka 1710 mm, pôdorys ICS 1110 × 1630 mm a dochladzovania 740 × 950 mm. Dopravník s vozíkom je pri prednej ľavej strane, ICS a dochladzovanie tvoria samostatnú vetvu vzadu vľavo. C32 používa zodpovedajúce pomerné zmenšenie príslušenstva. Tvarovanie krytov a neokótované vnútorné diely sú schematické; nejde o výrobný CAD ani o overenie montážnych kolízií. Kinematické údaje C42 uvedené vyššie zostávajú orientačné.
+- **Kamera a rozhranie.** Ťahanie otáča kameru, koliesko približuje a odďaľuje, Shift/pravé tlačidlo posúva cieľ. Hermle má rozsah vzdialenosti kamery 4–180 scénových jednotiek (1 jednotka = 100 mm), takže sa dá zobraziť celá zostava. Pohľady *Zhora*, *Zásobník*, *Pohľad na vybavenie* a *Pohľad na HMI* vrátia kameru do pripravenej polohy. Na desktope zostáva scéna vo výške okna, samostatne sa posúva iba pravý panel. Dotykové gestá a koliesko nad scénou neposúvajú stránku; na mobile zostáva rozhranie zvislo posúvateľné mimo scény.
 - **CNC program.** Interpreter ISO / Fanuc a Heidenhain Klartext (`src/machines/cnc/gcode.js`):
   - ISO: G0–G3, G43, G43.4 (TCP), G68.2 + G53.1, cykly G81–G83, G93;
   - Heidenhain: BLK FORM, TOOL CALL, L / CC / C / CR, M128, PLANE SPATIAL, CYCL DEF 200.

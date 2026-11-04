@@ -4,10 +4,10 @@ import { createOrbit } from './stage';
 import { clamp } from './util';
 
 // ---------- výber a zvýraznenie dielov, popisy, predvolené pohľady ----------
-function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views, enabled, onPick, blockPick, onHL }) {
+function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views, enabled, onPick, blockPick, onHL, orbitOptions }) {
   const tween = { active: false };
   let now = 0;
-  const orbit = createOrbit(camera, dom, () => { tween.active = false; }, enabled);
+  const orbit = createOrbit(camera, dom, () => { tween.active = false; }, enabled, orbitOptions);
   const viewFactor = () => clamp(1.65 / camera.aspect, 1, 2.3);
   const goView = (name, instant) => {
     const [p, tg, fixed] = views[name]();
