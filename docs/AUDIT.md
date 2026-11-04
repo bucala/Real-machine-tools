@@ -88,6 +88,7 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Zakružovačka plechu TOS XZC 3000/10 | ✅ | `#zakruzovacka`: trojvalcová pyramída, prísuv horného valca kolesom, odpruženie, predohnutie koncov podložným plechom, odklopné ložisko s kolíkom (`plateMath.js`) |
 | Tabuľové nožnice BS 2000/8 | ✅ | `#noznice`: model podľa BS 2000/8 (horný kryt výstredníka, hrebeňový kryt, pedálová tyč, pohon vľavo), plech do 8 mm, zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
 | Výstredníkový lis TOMA LEN 40C | ✅ | `#lis`: C-stojan 400 kN, zotrvačník a spojka, jednotlivý / trvalý zdvih, prestavenie baranidla a zanorenie razníka, sila strihu a preťaženie, zlomený razník, úlohy dierovanie a podložky (`pressMath.js`) |
+| Moderné stroje: Hermle C 32 U / C 42 U | ✅ | `#moderne`, `#hermle`: interpreter ISO a Heidenhain, 5-osá kinematika A/C s TCP a naklonenou rovinou, voxelový úber, kolízie a alarmy, import z CAM, export STL; C 42 U s orientačnými údajmi (`src/machines/cnc/*`, `tests/cnc.test.js`) |
 
 ## 2. Rozsah a metodika
 

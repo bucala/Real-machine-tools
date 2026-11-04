@@ -320,6 +320,28 @@ function PressArt() {
   );
 }
 
+function HermleArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".13">
+        <path d="M56 160V30h208v130z" />
+        <rect x="128" y="14" width="64" height="16" />
+      </g>
+      <path d="M96 44h128" fill="none" strokeWidth="6" opacity=".55" />
+      <rect x="148" y="36" width="24" height="56" fillOpacity=".3" />
+      <path d="M154 92h12l-2 10h-8z" fillOpacity=".5" />
+      <path d="M160 102v14" fill="none" strokeWidth="3" />
+      <path d="M100 128c0-14 28-22 60-22s60 8 60 22" fill="none" strokeWidth="3" />
+      <path d="M112 126h96" fill="none" strokeWidth="5" />
+      <rect x="144" y="116" width="32" height="10" fillOpacity=".45" />
+      <circle cx="92" cy="128" r="10" fillOpacity=".25" /><circle cx="228" cy="128" r="10" fillOpacity=".25" />
+      <path d="M68 52v84M252 52v84" fill="none" strokeWidth="3" stroke="#e1252f" />
+      <path d="M128 140a32 8 0 0 0 64 0" fill="none" strokeDasharray="4 3" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
 function HobberArt() {
   return (
     <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
@@ -358,4 +380,4 @@ function ShearArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HermleArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };

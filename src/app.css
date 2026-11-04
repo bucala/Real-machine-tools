@@ -132,3 +132,58 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .pop-in{animation:pop-in .32s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes pop-in{from{opacity:0;transform:translateY(14px) scale(.9)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.pop-in{animation:none}}
+/* ---------- moderné stroje: vlastný vizuál (grafit, sklo, červený akcent) ---------- */
+html[data-mode="modern"]{
+  --bg:#0b0e12; --panel:#11161c; --panel-2:#182029; --border:#26313d; --text:#eaf0f6; --muted:#90a0b1;
+  --accent:#ff3b46; --accent-soft:#3a1a1f; --on-accent:#ffffff; --run:#1fae5a; --stop:#c9303a; --on-run:#ffffff;
+  --danger:#ff6b63; --danger-soft:#3a1b1b; --warn:#ffb84d; --warn-soft:#3a2c14; --info:#6cb8ff; --info-soft:#132a40;
+  --scene-bg:#1b2028; --floor:#2a3038; --grid-1:#46505c; --grid-2:#333b45; color-scheme:dark;
+  --dro-bg:#070b10; --dro-ink:#7fd1ff; --dro-glow:rgba(127,209,255,.4); --hl:#ff8a1f; --chrome:rgba(12,16,22,.82);
+  --f-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-head:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+html[data-mode="modern"] .app-title,html[data-mode="modern"] .card-name,html[data-mode="modern"] .menu-title{font-weight:650;letter-spacing:-.01em}
+html[data-mode="modern"] .panel{background:linear-gradient(180deg,#121820,#0e1318)}
+html[data-mode="modern"] .sec-title{letter-spacing:.14em;font-size:11.5px}
+html[data-mode="modern"] .btn{border-radius:9px;background:rgba(255,255,255,.04)}
+html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{background:var(--accent)}
+.modern-menu{background:radial-gradient(1200px 520px at 80% -10%,rgba(255,59,70,.18),transparent 60%),radial-gradient(900px 600px at -10% 10%,rgba(108,184,255,.12),transparent 60%),var(--bg)}
+.modern-kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.modern-title{background:linear-gradient(90deg,#ffffff,#b9c7d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.modern-back{border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer}
+.modern-back:hover{border-color:var(--accent)}
+.modern-card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border-color:rgba(255,255,255,.1);border-radius:18px;backdrop-filter:blur(6px)}
+.modern-card .card-art{background:linear-gradient(160deg,#1f2630,#141a21);color:#dbe4ee}
+.modern-banner{display:grid;grid-template-columns:minmax(0,180px) 1fr auto;align-items:center;gap:18px;width:100%;text-align:left;padding:16px 20px;border-radius:16px;cursor:pointer;color:#eaf0f6;
+  background:linear-gradient(120deg,#0f141b 0%,#1a222d 55%,#2a1418 100%);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px -28px rgba(0,0,0,.8);transition:transform .15s,border-color .15s}
+.modern-banner:hover{transform:translateY(-2px);border-color:#ff3b46}
+.modern-banner:focus-visible{outline:2px solid #ff3b46;outline-offset:2px}
+.modern-banner .modern-kicker{color:#ff5a63}
+.modern-banner-art{color:#dbe4ee;display:block} .modern-banner-art svg{width:100%;height:auto;display:block}
+.modern-banner-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.modern-banner-title{font-size:clamp(18px,2.4vw,24px);font-weight:700;line-height:1.15}
+.modern-banner-cta{font-weight:700;color:#ff5a63;white-space:nowrap}
+@media (max-width:640px){.modern-banner{grid-template-columns:1fr}.modern-banner-art{max-width:220px}}
+/* ---------- CNC panel ---------- */
+.modern-app .panel{width:auto}
+@media (min-width:768px){.modern-app .panel{width:440px}}
+.cnc-dro{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--dro-bg);border-radius:12px;padding:10px 12px;font-family:var(--f-mono);color:var(--dro-ink);box-shadow:inset 0 0 0 1px rgba(127,209,255,.14)}
+.cnc-dro-h{display:block;font-family:var(--f-ui);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#7f93a8;margin-bottom:2px}
+.cnc-dro-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;line-height:1.45}
+.cnc-dro-row b{font-size:17px;font-weight:500;color:#eaf6ff;text-shadow:0 0 6px var(--dro-glow);font-variant-numeric:tabular-nums}
+.cnc-bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.cnc-bars>div{background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:5px 8px;display:flex;flex-direction:column;gap:1px}
+.cnc-bars span{color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase} .cnc-bars b{font-variant-numeric:tabular-nums}
+.cnc-load{grid-column:1 / -1;position:relative;overflow:hidden}
+.cnc-load i{position:absolute;left:0;bottom:0;height:3px;transition:width .2s}
+.cnc-run{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px}
+.cnc-run .btn-run{font-size:14px;padding:11px 8px}
+.cnc-listing{background:#070b10;border:1px solid var(--border);border-radius:9px;font-family:var(--f-mono);font-size:12px;line-height:1.55;padding:6px 0;overflow:hidden}
+.cnc-listing div{white-space:pre;overflow:hidden;text-overflow:ellipsis;padding:0 10px;color:#b8c7d8}
+.cnc-listing div span{display:inline-block;width:3.2em;color:#56677a;text-align:right;margin-right:8px}
+.cnc-listing div.cur{background:#ffd34d;color:#10202f} .cnc-listing div.cur span{color:#47391a}
+.cnc-edit{width:100%;border:1px solid var(--border);background:#070b10;color:#d7e3ef;border-radius:9px;padding:8px 10px;font-family:var(--f-mono);font-size:12px;line-height:1.5;resize:vertical;white-space:pre;overflow:auto}
+.cnc-tools{border-collapse:collapse} .cnc-tools th{text-align:left;color:var(--muted);font-weight:600;padding:2px 3px}
+.cnc-tools td{padding:2px 3px;border-top:1px solid var(--border)} .cnc-tools td:nth-child(2){max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnc-tools tr.cur td{background:var(--accent-soft)}
+.cnc-tools input{width:52px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:1px 4px;font-size:11.5px}
