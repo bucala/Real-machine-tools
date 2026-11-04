@@ -187,3 +187,5 @@ html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{backgrou
 .cnc-tools td{padding:2px 3px;border-top:1px solid var(--border)} .cnc-tools td:nth-child(2){max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cnc-tools tr.cur td{background:var(--accent-soft)}
 .cnc-tools input{width:52px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:1px 4px;font-size:11.5px}
+
+.cnc-tools-illustrated{min-width:580px}.cnc-tools-illustrated td:nth-child(2){min-width:125px;white-space:normal}.cnc-tools-illustrated svg{display:block;margin:auto}.cnc-tools-illustrated select{font-size:11px;width:120px}

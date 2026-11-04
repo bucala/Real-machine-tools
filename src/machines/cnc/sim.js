@@ -44,9 +44,17 @@ export function createExecutor({ moves, tools, o54, stock, fixture = { r: 45, h:
     }
     return r.ops;
   };
-  const toolChangePose = (u, mv) => {      // výmena: čelo hore a k zásobníku, výmena, ostáva v polohe výmeny
-    const tgt = [0, MC.tcY, NOSE_MAX - (u < 0.5 ? (tool(mv.from) ? tool(mv.from).l : 0) : (tool(mv.to) ? tool(mv.to).l : 0))];
-    const k = Math.min(1, u * 2.2), m = add(mul(mv.q0, 1 - k), mul(tgt, k));
+  const toolChangePose = (u, mv) => {
+    // Retract before traversing; deposit, index while empty, pick up, retract.
+    const oldL = tool(mv.from)?.l || 0, newL = tool(mv.to)?.l || 0;
+    const seat = NOSE_MAX - 80, safe = NOSE_MAX;
+    const startNose = mv.q0[2] + oldL;
+    let nose, x, y;
+    if (u < .18) { const k = u / .18; nose = startNose + (safe - startNose) * k; x = mv.q0[0]; y = mv.q0[1]; }
+    else if (u < .3) { const k = (u - .18) / .12; nose = safe; x = mv.q0[0] * (1 - k); y = mv.q0[1] + (MC.tcY - mv.q0[1]) * k; }
+    else { x = 0; y = MC.tcY; nose = u < .4 ? safe - (safe - seat) * (u - .3) / .1 : u < .7 ? seat : seat + (safe - seat) * Math.min(1, (u - .7) / .3); }
+    const length = u < .4 ? oldL : u < .7 ? 0 : newL;
+    const m = [x, y, nose - length];
     return { m, a: mv.a0, c: mv.c0, pT: toTable(m, mv.a0, mv.c0, hA), vT: toolAxisT(mv.a0, mv.c0) };
   };
   const step = 0.4 * stock.res;
@@ -68,7 +76,8 @@ export function createExecutor({ moves, tools, o54, stock, fixture = { r: 45, h:
       const left = (S.dur - S.tau) / k, use = Math.min(dt, left);
       const u0 = S.tau / S.dur, u1 = Math.min(1, (S.tau + use * k) / S.dur);
       if (mv.kind === 'tc') {
-        if (u0 < 0.5 && u1 >= 0.5) { S.T = mv.to; S.dir = 0; }
+        S.tcPhase = u1; S.dir = 0;
+        S.T = u1 < .4 ? mv.from : u1 < .7 ? 0 : mv.to;
         S.pose = toolChangePose(u1, mv);
       } else if (mv.kind === 'dwell') { /* stojí */ } else {
         const pa = poseAt(mv, u0, o54, hA), pb = poseAt(mv, u1, o54, hA), t = tool(S.T), lc = t ? t.lc : 0;

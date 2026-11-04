@@ -12,6 +12,8 @@ import { programTime } from './cnc/motion';
 import { SAMPLES } from './cnc/programs';
 import { createExecutor } from './cnc/sim';
 import { MATERIALS, defaultTools } from './cnc/tooling';
+import { createToolModel } from './cnc/toolModel';
+import { CncToolPreview } from '../ui/cncToolPreview';
 import { createStock } from './cnc/voxel';
 
 // =====================================================================
@@ -27,7 +29,7 @@ const hermleParts = () => mkParts([
   ['osi', 'Osi X Y Z', 'X Y Z axes', 'Upravený portál – osi nad pracovným priestorom', 'Modified gantry – axes above the working area', 'Všetky tri lineárne osi nesie nástroj: priečnik Y jazdí po dvoch vedeniach na stenách lôžka, sane X po priečniku a smykadlo Z zvisle. Dráhy 650 × 650 × 500 mm, rýchloposuv 45 / 45 / 40 m/min.', 'The tool carries all three linear axes: the Y cross-beam runs on two guideways on the bed walls, the X slide on the cross-beam and the Z ram vertically. Travels 650 × 650 × 500 mm, rapid traverse 45 / 45 / 40 m/min.'],
   ['vreteno', 'Vreteno', 'Spindle', 'Motorové vreteno HSK-A63', 'HSK-A63 motor spindle', '18 000 ot/min, 42 kW / 148 Nm (20 % ED). Nástroj sa upína do kužeľa HSK-A63.', '18,000 rpm, 42 kW / 148 Nm (20 % duty). The tool is clamped in an HSK-A63 taper.'],
   ['stol', 'Stôl A / C', 'A / C table', 'Otočno-sklopný stôl Ø650 × 540 mm', 'Swivelling rotary table Ø650 × 540 mm', 'Os A sklápa stôl ±130° okolo osi X, os C ho otáča o 360°. Os A leží v obrobku (stôl tvaru U) – pri sklopení sa obrobok málo vychýli.', 'The A axis swivels the table ±130° about X, the C axis rotates it 360°. The A axis lies within the workpiece (U-shaped table) – the workpiece moves little when swivelled.'],
-  ['zasobnik', 'Zásobník', 'Magazine', 'Pick-up zásobník 36 miest', '36-pocket pick-up magazine', 'Zásobník je integrovaný v lôžku za pracovným priestorom. Vreteno si nástroj vezme samo, výmena trvá asi 4,5 s.', 'The magazine is integrated in the bed behind the working area. The spindle picks the tool itself, a change takes about 4.5 s.'],
+  ['zasobnik', 'Zásobník', 'Magazine', 'Pick-up zásobník 36 / 42 miest', '36 / 42-pocket pick-up magazine', 'Zásobník je integrovaný v lôžku za pracovným priestorom. Vreteno si nástroj vezme samo, výmena trvá asi 4,5 s.', 'The magazine is integrated in the bed behind the working area. The spindle picks the tool itself, a change takes about 4.5 s.'],
   ['panel', 'Ovládací panel', 'Control panel', 'Riadiaci systém Heidenhain TNC 640', 'Heidenhain TNC 640 control', 'Otočný ovládací panel s 19" dotykovou obrazovkou. Simulátor číta programy ISO (G-kód) aj Heidenhain Klartext.', 'Swivelling control panel with a 19" touch screen. The simulator reads ISO (G-code) and Heidenhain conversational programs.'],
   ['obrobok', 'Obrobok', 'Workpiece', 'Polotovar na upínači', 'Blank on the fixture', 'Polotovar na nulovom upínacom systéme. Nulový bod G54 je v strede hornej plochy.', 'The blank on the zero-point clamping system. Datum G54 is at the centre of the top face.'],
 ]);
@@ -37,7 +39,7 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart
 function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
   const MC = MODELS[model] || MODELS.c32;
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
-  const init = { door: true, cabin: true, speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
+  const init = { door: true, cabin: true, panelAngle: 0, speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
   const { ctl, ui, set, selected, selectPart, apiRef } = useMachine(init);
   const samples = SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
@@ -55,7 +57,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       cab: std(0xe6e8ea, 0.55, 0.1), cab2: std(0xc9cdd1, 0.5, 0.15), dark: std(0x2c3035, 0.7, 0.15), anth: std(0x3a3f45, 0.6, 0.2),
       steel: std(0xb9bec4, 0.28, 0.85), steelD: std(0x6d737a, 0.35, 0.8), inox: std(0xc4c8cc, 0.32, 0.75), table: std(0xd3d6d9, 0.38, 0.55),
       red: std(0xd8202a, 0.4, 0.2), black: std(0x141618, 0.6, 0.2), glass: new THREE.MeshStandardMaterial({ color: 0xbfd6e6, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }),
-      tool: std(0x7b8087, 0.3, 0.9), coat: std(0xb08a3c, 0.3, 0.85), holder: std(0x9aa0a6, 0.25, 0.9),
+      tool: std(0x7b8087, 0.3, 0.9), coat: std(0xb08a3c, 0.3, 0.85), holder: std(0x9aa0a6, 0.25, 0.9), flute: new THREE.LineBasicMaterial({ color: 0x4d4431 }),
     };
     const root = new THREE.Group(); scene.add(root);
     const G = {};
@@ -73,15 +75,15 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     // ---------------- lôžko z minerálneho liatia a steny s vedeniami Y ----------------
     const bed = sc(grp('lozko'));
     [[-8.6, -9.6], [8.6, -9.6], [-8.6, 7.4], [8.6, 7.4]].forEach(([x, z]) => box(bed, x - 0.9, x + 0.9, 0, 0.7, z - 0.9, z + 0.9, M.black));
-    box(bed, -10, 10, 0.7, 6.2, -11, 8.0, M.dark);
+    box(bed, -10, 10, 0.7, 6.2, -12.5, 8.0, M.dark);
     [-1, 1].forEach((s) => {
       box(bed, s * 6.9, s * 9.6, 6.2, 20.8, -11, 3.2, M.anth);                                    // stena lôžka
       box(bed, s * 7.6, s * 8.6, 20.8, 21.2, -11, 3.2, M.steelD);                                  // vedenie Y
       cylX(bed, 2.1, s * 6.4, s * 6.9, PY0, 0, M.table, 48);                                      // príruba osi A
       cylX(bed, 1.2, s * 9.6, s * 10.6, PY0, 0, M.steelD, 32);                                    // pohon osi A (tandem)
     });
-    box(bed, -6.9, 6.9, 6.2, 7.2, -11, 3.2, M.inox);                                               // dno pracovného priestoru (nerez)
-    box(bed, -6.9, 6.9, 7.2, 19, -11, -10.5, M.inox);                                              // zadná stena
+    box(bed, -6.9, 6.9, 6.2, 7.2, -12.5, 3.2, M.inox);                                               // dno pracovného priestoru (nerez)
+    box(bed, -6.9, 6.9, 7.2, 19, -12.4, -12.2, M.inox);                                              // zadná stena
     box(bed, -6.9, 6.9, 7.2, 13.9, -3.55, -3.4, M.inox);                                           // deliaca stena pred zásobníkom
     // ---------------- otočno-sklopný stôl A / C ----------------
     const tab = grp('stol');
@@ -126,39 +128,45 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const sp = grp('vreteno', zG);
     cylY(sp, 0.78, 0.78, 0.05, 0.9 * K, 0, 0, M.steel, 40);
     cylY(sp, 0.55, 0.78, 0, 0.05, 0, 0, M.steelD, 40);
+    for (const y of [.2, .45, .7]) cylY(sp, .8, .8, y, y + .035, 0, 0, M.steelD);
+    for (const x of [-.98, .98]) {
+      cylY(sp, .12, .12, .55, 1.3, x, 0, M.red, 16);
+      cylY(sp, .19, .19, 1.3, 1.5, x, 0, M.steelD, 16);
+      box(sp, x - .18, x + .18, 1.5, 1.75, -.18, .18, M.anth);
+    }
     const toolG = new THREE.Group(); sp.add(toolG);
-    const buildTool = (t) => {
-      while (toolG.children.length) { const o = toolG.children.pop(); o.geometry.dispose(); }
-      if (!t) return;
-      const add = (geo, m, y) => { const me = new THREE.Mesh(geo, m); me.position.y = y; me.castShadow = true; toolG.add(me); return me; };
-      const R = t.d / 2 * U, l = t.l * U, s = t.s * U, lc = t.lc * U, dh = t.dh / 2 * U, rs = Math.min(t.d, 20) / 2 * U;
-      add(new THREE.CylinderGeometry(0.32, 0.36, 0.3, 32), M.steelD, -0.15);
-      add(new THREE.CylinderGeometry(dh, Math.min(dh * 1.25, 0.42), l - s - 0.3, 32), M.holder, -0.3 - (l - s - 0.3) / 2);
-      if (s - lc > 0.001) add(new THREE.CylinderGeometry(rs, rs, s - lc, 24), M.tool, -(l - s) - (s - lc) / 2);
-      if (t.kind === 'cone') {
-        const hc = R / Math.tan((t.tip || 118) * Math.PI / 360);
-        add(new THREE.CylinderGeometry(R, R, lc - hc, 24), M.coat, -l + hc + (lc - hc) / 2);
-        add(new THREE.ConeGeometry(R, hc, 24), M.coat, -l + hc / 2).rotation.x = Math.PI;
-      } else {
-        const crr = Math.min(t.cr || 0, t.d / 2) * U;
-        add(new THREE.CylinderGeometry(R, R, lc - crr, 28), M.coat, -l + crr + (lc - crr) / 2);
-        if (crr >= R - 1e-6) add(new THREE.SphereGeometry(R, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.coat, -l + R);
-        else if (crr > 0) { const to = add(new THREE.TorusGeometry(R - crr, crr, 10, 28), M.coat, -l + crr); to.rotation.x = Math.PI / 2; add(new THREE.CylinderGeometry(R - crr, R - crr, 0.002, 28), M.coat, -l + 0.001); }
-        else add(new THREE.CylinderGeometry(R, R, 0.002, 28), M.coat, -l + 0.001);
-      }
-    };
-    // ---------------- pick-up zásobník za pracovným priestorom ----------------
-    const mag = grp('zasobnik');
-    const magG = new THREE.Group(); magG.position.set(0, 15.6 * K, -5.6 * K); magG.scale.setScalar(K); mag.add(magG);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.09, 8, 72), M.steelD); ring.rotation.x = Math.PI / 2; magG.add(ring);
+    const clearTool = (g) => { while (g.children.length) { const o = g.children[0]; g.remove(o); o.traverse((n) => n.geometry?.dispose()); } };
+    const buildTool = (t) => { clearTool(toolG); if (t) toolG.add(createToolModel(t, M)); };
+    // Pick-up ring on a stationary bearing housing bolted to the mineral-cast bed.
+    const mag = grp('zasobnik'), magS = sc(mag);
+    const magZ = -MC.tcY * U / K - 4.0, magY = (PY + (MC.nose[1] - 80) * U) / K;
+    box(magS, -5.3, 5.3, 6.2, 8, magZ - 4.5, magZ + 3.5, M.anth);
+    [-1, 1].forEach((s) => {
+      box(magS, s * 3.6 - .35, s * 3.6 + .35, 8, magY - .5, magZ - 2, magZ + 2, M.dark);
+      for (const z of [-1.6, 1.6]) cylY(magS, .12, .12, magY - .48, magY - .35, s * 3.6, magZ + z, M.steel);
+    });
+    cylY(magS, 3.6, 3.6, magY - .5, magY - .2, 0, magZ, M.steelD, 72);
+    cylY(magS, .65, .65, magY - .2, magY + .45, 0, magZ, M.steel, 40);
+    box(magS, -4.7, -3.8, magY - .8, magY + .4, magZ - .8, magZ + .8, M.dark); // index motor
+    const magG = new THREE.Group(); magG.position.set(0, magY, magZ); magS.add(magG);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4, .12, 10, 96), M.steel); ring.rotation.x = Math.PI / 2; magG.add(ring);
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4; cylY(magS, .1, .1, magY - .18, magY - .1, Math.sin(a) * 3.4, magZ + Math.cos(a) * 3.4, M.steel);
+    }
+    for (let i = 0; i < 3; i++) {
+      const spoke = new THREE.Group(); magG.add(spoke); spoke.rotation.y = i * Math.PI * 2 / 3;
+      box(spoke, -.15, .15, -.18, -.05, .55, 3.9, M.steelD);
+    }
     const pockets = [];
     for (let i = 0; i < MC.mag; i++) {
-      const a = i / MC.mag * Math.PI * 2, g = new THREE.Group(); g.position.set(Math.sin(a) * 2.4, 0, Math.cos(a) * 2.4); magG.add(g);
-      const fork = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.5), M.red); g.add(fork);
-      const h = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.19, 0.7, 16), M.holder); h.position.y = -0.4; g.add(h);
-      const tt = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 10), M.coat); tt.position.y = -1.05; g.add(tt);
-      pockets.push(g);
+      const a = i / MC.mag * Math.PI * 2, g = new THREE.Group(); g.position.set(Math.sin(a) * 4, 0, Math.cos(a) * 4); g.rotation.y = a; magG.add(g);
+      // Open fork engages the HSK flange groove; no fabricated tools in empty pockets.
+      for (const x of [-.28, .28]) box(g, x - .045, x + .045, -.14, -.08, -.25, .28, M.red);
+      box(g, -.32, .32, -.14, -.08, -.32, -.24, M.red);
+      const holder = new THREE.Group(); holder.scale.setScalar(1 / K); g.add(holder);
+      pockets.push(holder);
     }
+    const loadMagazine = (tls) => pockets.forEach((g, i) => { clearTool(g); const tl = tls.find((x) => x.t === i + 1); if (tl) g.add(createToolModel(tl, M)); });
     // ---------------- kabína: čelo podľa predlohy (široký spodný a podľa modelu užší horný otvor) ----------------
     const cab = grp('kabina'), cabS = sc(cab), uw = MC.upperW;
     [-1, 1].forEach((s) => {                                                                       // bočné panely s oknom
@@ -174,29 +182,46 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     [-1, 1].forEach((s) => box(cabS, s * 4.4, s * 11.4, 6.4, 26, 8.2, 8.6, M.cab));                // čelné panely
     if (uw < 4.39) [-1, 1].forEach((s) => box(cabS, s * uw, s * 4.4, 14.2, 23.6, 8.2, 8.6, M.cab)); // užší horný otvor (C 32)
     box(cabS, -4.4, 4.4, 23.6, 26, 8.2, 8.6, M.cab);                                               // nadpražie
-    box(cabS, -9.0, -6.6, 9.5, 19.5, 8.6, 8.64, M.win); box(cabS, 6.0, 8.4, 9.5, 19.5, 8.6, 8.64, M.win);   // úzke tmavé okná
+    box(cabS, -9.0, -6.6, 9.5, 19.5, 8.6, 8.64, M.cab2); box(cabS, 6.0, 8.4, 9.5, 19.5, 8.6, 8.64, M.cab2);   // zapustené sivé čelné plechy
     box(cabS, 8.75, 9.0, 9.5, 19.5, 8.6, 8.66, M.red);                                             // červený pás
     const label = tex(512, 128, (g, w, h) => { g.fillStyle = '#e6e8ea'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d8202a'; g.lineWidth = 16; g.beginPath(); g.arc(70, 64, 40, 0.5, Math.PI * 2 - 0.5); g.stroke(); g.fillStyle = '#5d6369'; g.font = 'bold 62px sans-serif'; g.textBaseline = 'middle'; g.fillText('HERMLE', 128, 66); });
     const lab = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), new THREE.MeshStandardMaterial({ map: label.tx, roughness: 0.6 })); lab.position.set(-8.9, 21.4, 8.63); cabS.add(lab);
     const name = tex(128, 512, (g, w, h) => { g.fillStyle = '#e6e8ea'; g.fillRect(0, 0, w, h); g.save(); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2); g.fillStyle = '#6b7178'; g.font = '78px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(MC.name, 0, 0); g.restore(); });
     const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 2.8), new THREE.MeshStandardMaterial({ map: name.tx, roughness: 0.6 })); nm.position.set(9.6, 18.0, 8.63); cabS.add(nm);
-    // posuvné dvere za čelom: v otvorenej polohe zostanú v otvore len červené rukoväte (ako na predlohe)
+    // Separate sliding leaves on upper and lower rails; handles stay on their own outer frame edges.
+    for (const y of [6.35, 23.65]) box(cabS, -8.8, 8.8, y - .12, y + .12, 7.75, 8.1, M.steelD);
     const doors = [-1, 1].map((s) => {
       const d = new THREE.Group(); cabS.add(d);
       box(d, -2.2, 2.2, 0, 1.0, -0.08, 0.08, M.cab); box(d, -2.2, 2.2, 16.2, 17.2, -0.08, 0.08, M.cab);
       box(d, -2.2, -1.85, 1.0, 16.2, -0.08, 0.08, M.cab); box(d, 1.85, 2.2, 1.0, 16.2, -0.08, 0.08, M.cab);
       const win = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 15.2), M.glass); win.position.set(0, 8.6, 0); d.add(win);
-      const hx = -s * 1.95, hc = new THREE.CatmullRomCurve3([v3(hx, 2.6, 0.1), v3(hx - s * 0.25, 4.0, 0.5), v3(hx - s * 0.25, 7.4, 0.5), v3(hx, 8.8, 0.1)]);
-      d.add(new THREE.Mesh(new THREE.TubeGeometry(hc, 24, 0.1, 10, false), M.red));
+      const hx = -s * 1.7;
+      const pts = [v3(hx, 3.6, .12), v3(hx + s * .38, 4.2, .5), v3(hx + s * .38, 6.4, .5), v3(hx, 7.0, .12)];
+      for (let j = 1; j < pts.length; j++) {
+        const delta = pts[j].clone().sub(pts[j - 1]);
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, delta.length(), 12), M.red);
+        bar.position.copy(pts[j]).add(pts[j - 1]).multiplyScalar(.5); bar.quaternion.setFromUnitVectors(v3(0, 1, 0), delta.normalize()); d.add(bar);
+      }
+      for (const y of [3.6, 7]) box(d, hx - .16, hx + .16, y - .16, y + .16, .08, .21, M.steelD);
+      box(d, s < 0 ? 2.12 : -2.2, s < 0 ? 2.2 : -2.12, 0, 17.2, -.1, .11, M.black); // meeting seal
       d.userData.s = s; return d;
     });
     [-1, 1].forEach((s) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(14, 12), M.glass); w.rotation.y = Math.PI / 2; w.position.set(s * 11.4, 15, -2); cabS.add(w); });
     // ---------------- ovládací panel TNC 640 (Hermle) na otočnom ramene ----------------
     const pan = grp('panel');
-    const panG = new THREE.Group(); panG.position.set(13.3 * K, 0, 9.0 * K); panG.rotation.y = -0.42; panG.scale.setScalar(K); pan.add(panG);
-    const col = new THREE.CatmullRomCurve3([v3(0.9, 0, -1.2), v3(1.2, 3.5, -1.0), v3(0.5, 7.6, -0.7), v3(0, 10.0, -0.5)]);
-    panG.add(new THREE.Mesh(new THREE.TubeGeometry(col, 24, 0.34, 12, false), M.anth));
-    box(panG, -2.4, 2.4, 10.0, 12.1, -1.2, 1.2, M.brush);                                          // pult s klávesnicou (brúsená nerez)
+    const panBase = sc(pan);
+    cylY(panBase, .6, .6, 0, 8.8, 12.6, -2.5, M.anth, 32);
+    cylY(panBase, .78, .78, 8.5, 9.2, 12.6, -2.5, M.steelD, 32);
+    const armPivot = new THREE.Group(); armPivot.position.set(12.6, 8.9, -2.5); panBase.add(armPivot);
+    box(armPivot, -.3, .3, -.3, .3, 0, 8.9, M.anth);
+    box(armPivot, -.3, 1.1, -.3, .3, 8.6, 9.2, M.anth);
+    cylY(armPivot, .48, .48, -.45, .45, 1.1, 8.9, M.steelD);
+    const panG = new THREE.Group(); panG.position.set(1.1, -8.9, 8.9); armPivot.add(panG); panG.rotation.y = -.42;
+    box(panG, -.3, .3, 8.6, 10.2, -.8, -.3, M.anth);
+    const deskShape = new THREE.Shape(); deskShape.moveTo(-1.2, 10.8); deskShape.lineTo(1.2, 10.8); deskShape.lineTo(1.2, 11.65); deskShape.lineTo(-1.2, 12.45); deskShape.closePath();
+    const desk = new THREE.Mesh(new THREE.ExtrudeGeometry(deskShape, { depth: 4.8, bevelEnabled: false }), M.brush);
+    // Shape x is console depth, extrusion is console width.
+    desk.rotation.y = -Math.PI / 2; desk.position.x = 2.4; panG.add(desk);                                          // pult s klávesnicou (brúsená nerez)
     box(panG, -2.3, 2.3, 9.4, 10.0, -1.0, 1.0, M.cab2);                                            // zásuvka
     box(panG, -2.4, 2.4, 12.2, 17.7, -0.55, 0.0, M.brush);                                         // obrazovková jednotka
     [-1, 1].forEach((s) => {                                                                       // červený rúrkový rám
@@ -215,7 +240,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       g.strokeStyle = '#d8202a'; g.lineWidth = 5; g.beginPath(); g.arc(292, 200, 11, 0.5, Math.PI * 2 - 0.5); g.stroke();
       g.fillStyle = '#4d535a'; g.font = 'bold 15px sans-serif'; g.fillText('HERMLE', 308, 205);
     });
-    const kp = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.1), new THREE.MeshStandardMaterial({ map: keys.tx, roughness: 0.55 })); kp.rotation.x = -Math.PI / 2 + 0.32; kp.position.set(0, 12.12, 0.0); panG.add(kp);
+    const kp = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.1), new THREE.MeshStandardMaterial({ map: keys.tx, roughness: 0.55 })); kp.rotation.x = -Math.PI / 2 + 0.32; kp.position.set(0, 12.08, 0.0); panG.add(kp);
     [[-1.65, 0.55], [1.5, 0.62]].forEach(([x, z]) => { const kn = cylY(panG, 0.18, 0.18, 12.1, 12.32, x, z, M.black, 20); kn.rotation.x = 0.32; });   // korekcie posuvu a otáčok
     const eb = cylY(panG, 0.34, 0.34, 11.72, 11.8, -1.9, 0.85, M.yellow, 24); eb.rotation.x = 0.32; const es = cylY(panG, 0.22, 0.18, 11.8, 12.0, -1.9, 0.85, M.red, 24); es.rotation.x = 0.32;   // NOT-STOP
     box(panG, 2.45, 2.85, 10.2, 11.7, 0.2, 0.9, M.black); cylX(panG, 0.26, 2.85, 2.98, 10.6, 0.55, M.black, 20); cylX(panG, 0.12, 2.85, 2.95, 11.35, 0.55, M.red, 16);   // ručné koliesko HR
@@ -272,7 +297,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       applyChunks(stock.takeDirty());
     };
     const load = (txt, tls) => {
-      toolsNow = tls;
+      toolsNow = tls; loadMagazine(tls);
       prog = interpret(txt, { o54: [0, 0, 0], tools: tls, mach: MC });                        // najprv kvôli BLK FORM
       buildStock();
       prog = interpret(txt, { o54, tools: tls, mach: MC });
@@ -316,13 +341,14 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const toolTip = () => { const p = ex ? ex.S.pose.m : [0, MC.tcY, MC.nose[1]]; return v3(p[0] * U, PY + p[2] * U, -p[1] * U); };
     const anchors = {
       kabina: () => v3(-9.5 * K, 25 * K, 8.7 * K), lozko: () => v3(9.6 * K, 4 * K, 8.5 * K), osi: () => v3(8.8 * K, 23.1 * K, -1.7 * K + yG.position.z), vreteno: () => v3(xG.position.x + 1.3 * K, zG.position.y + 1.5 * K, yG.position.z + 1.3 * K),
-      stol: () => v3(-6.3 * K, PY - 2.5 * K, 2.0 * K), zasobnik: () => v3(2.4 * K, 15.6 * K, -3.2 * K), panel: () => new THREE.Vector3(0, 17.8, 0).applyMatrix4(panG.matrixWorld), obrobok: () => toolTip().clone().setY(PY + 0.3),
+      stol: () => v3(-6.3 * K, PY - 2.5 * K, 2.0 * K), zasobnik: () => v3(4 * K, magY * K, magZ * K), panel: () => new THREE.Vector3(0, 17.8, 0).applyMatrix4(panG.matrixWorld), obrobok: () => toolTip().clone().setY(PY + 0.3),
     };
     const views = {
-      celok: () => [[30 * K, 25 * K, 42 * K], [0, 12.5 * K, 0]],
+      celok: () => [[34 * K, 28 * K, 48 * K], [0, 14 * K, 0]],
       priestor: () => [[3.8 * K, PY + 4.1 * K, 7.0 * K], [0, PY - 0.2 * K, -0.4 * K], true],
       obrobok: () => [[1.5, PY + 1.0, 2.3], [0, PY - MC.hA * U + 0.75, 0], true],
       nastroj: () => { const t = toolTip(); return [[t.x + 1.9, t.y + 1.1, t.z + 2.6], [t.x, t.y - 0.15, t.z], true]; },
+      zasobnik: () => [[12 * K, 24 * K, -17 * K], [0, magY * K, magZ * K], true],
       zhora: () => [[0.01, 27 * K, 2.5 * K], [0, PY, 0], true],
     };
     const insp = createInspector({
@@ -337,17 +363,20 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const drops = createParticles(scene, new THREE.SphereGeometry(0.025, 5, 4), new THREE.MeshStandardMaterial({ color: 0xdfeaf2, roughness: 0.1, transparent: true, opacity: 0.7 }), 160, false);
 
     // ---------------- hlavná slučka ----------------
-    let raf, last = performance.now(), teleT = 0, scrT = 0, doorK = c.door ? 1 : 0, magA = 0, spinA = 0, t = 0;
+    let raf, last = performance.now(), teleT = 0, scrT = 0, doorK = c.door ? 1 : 0, magA = 0, panelA = 0, spinA = 0, t = 0;
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
       // dvere: otvorenie počas chodu zastaví posuv (bezpečnostný zámok)
       if (c.door && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
       doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
-      doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.02); });
+      doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.82); });
       const xc = xG.position.x / K;
       covers.forEach((me, i) => { const x0 = i ? xc + 1.95 : -6.9, x1 = i ? 6.9 : xc - 1.95, w = Math.max(0.05, x1 - x0); me.scale.x = w; me.position.x = (x0 + x1) / 2; me.material.map.repeat.set(w / 2.2, 1); });
       cab.visible = c.cabin;
+      panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
+      armPivot.rotation.y = panelA;
+      panG.rotation.y = -.42 - panelA * .35;
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
         const sp2 = c.fast ? 400 : c.speed, budget = c.fast ? 2.5e7 : 4e6;
@@ -365,7 +394,11 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       aG.rotation.x = p.a * Math.PI / 180; cG.rotation.y = p.c * Math.PI / 180;
       const spinOn = S && S.dir && S.spin > 0 && !S.alarm && (c.running || false);
       spinA += spinOn ? dt * Math.min(60, S.spin / 60 * 2 * Math.PI) * 0.15 * (S.dir || 1) : 0; toolG.rotation.y = spinA;
-      magA += ((T ? -(T - 1) / MC.mag * Math.PI * 2 : 0) - magA) * Math.min(1, dt * 3); magG.rotation.y = magA;
+      const change = S && prog?.moves[S.idx]?.kind === 'tc' ? prog.moves[S.idx] : null;
+      const indexedT = change ? (S.tcPhase < .4 ? change.from : change.to) : T;
+      const targetA = indexedT ? -(indexedT - 1) / MC.mag * Math.PI * 2 : magA;
+      const deltaA = Math.atan2(Math.sin(targetA - magA), Math.cos(targetA - magA));
+      magA += deltaA * Math.min(1, dt * 10 * (c.running ? c.speed : 1)); magG.rotation.y = magA;
       // triesky a emulzia pri reze
       const tipW = toolTip();
       if (S && S.cutting && c.running) {
@@ -410,7 +443,26 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const defs = check.toolDefs || []; if (!defs.length) return;
     setTools((ts) => { const out = ts.filter((x) => !defs.some((d) => d.t === x.t)); return [...out, ...defs].sort((a, b) => a.t - b.t); });
   };
-  const setTool = (t, k, v) => setTools((ts) => ts.map((x) => (x.t === t ? { ...x, [k]: v } : x)));
+  const setTool = (t, k, v) => setTools((ts) => ts.map((x) => {
+    if (x.t !== t) return x;
+    const n = { ...x, [k]: v };
+    n.d = Math.min(80, Math.max(.5, n.d)); n.l = Math.min(300, Math.max(40, n.l));
+    const minCut = n.kind === 'cone' ? n.d / 2 / Math.tan((n.tip || 118) * Math.PI / 360) : Math.min(n.cr || 0, n.d / 2);
+    n.l = Math.max(n.l, minCut + 25);
+    n.s = Math.min(n.l - 25, Math.max(minCut, 1, n.s)); n.lc = Math.min(n.s, Math.max(minCut, .5, n.lc));
+    n.dh = Math.min(80, Math.max(20, n.dh));
+    n.cr = Math.min(n.d / 2, Math.max(0, n.cr));
+    if (k === 'd' && x.cr === x.d / 2) n.cr = n.d / 2;
+    return n;
+  }));
+  const setToolShape = (t, shape) => setTools((ts) => ts.map((x) => x.t !== t ? x : {
+    ...x, kind: shape === 'drill' || shape === 'chamfer' ? 'cone' : 'mill',
+    tip: shape === 'chamfer' ? 90 : 118, cr: shape === 'ball' ? x.d / 2 : shape === 'bull' ? Math.min(2, x.d / 4) : 0,
+    lc: Math.max(x.lc, shape === 'ball' || shape === 'chamfer' ? x.d / 2 : 0),
+    s: Math.max(x.s, shape === 'ball' || shape === 'chamfer' ? x.d / 2 : 0),
+    l: Math.max(x.l, shape === 'ball' || shape === 'chamfer' ? x.d / 2 + 25 : 40),
+    name: shape === 'drill' ? L('Vrták', 'Drill') : shape === 'chamfer' ? L('Skosovacia fréza', 'Chamfer mill') : shape === 'ball' ? L('Guľová fréza', 'Ball mill') : shape === 'bull' ? L('Toroidná fréza', 'Bull nose') : L('Stopková / čelná fréza', 'End / face mill'),
+  }));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
   const status = tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
@@ -475,6 +527,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
             <SegRow label={L('Korekcia posuvu', 'Feed override')} value={ui.fo} options={[[50, '50 %'], [100, '100 %'], [120, '120 %'], [150, '150 %']]} onChange={(v) => set('fo', v)} />
             <SegRow label={L('Rýchloposuv', 'Rapid')} value={ui.ro} options={[[5, '5 %'], [25, '25 %'], [50, '50 %'], [100, '100 %']]} onChange={(v) => set('ro', v)} />
             <Toggle on={ui.single} label={L('Blok po bloku', 'Single block')} onClick={() => set('single', !ui.single)} />
+            <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [55, L('Bok', 'Side')], [110, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
         </div>
@@ -518,15 +571,17 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Nástroje', 'Tools')}</h2>
           {check.toolDefs && check.toolDefs.length > 0 && <button type="button" className="btn w-full mb-2" onClick={takeCamTools}>{L(`Prevziať ${check.toolDefs.length} nástrojov z komentárov programu (CAM)`, `Take over ${check.toolDefs.length} tools from the program comments (CAM)`)}</button>}
-          <table className="cnc-tools text-xs tnum w-full">
-            <thead><tr><th>T</th><th>{L('Nástroj', 'Tool')}</th><th>Ø</th><th>R</th><th>L</th><th>{L('rez.', 'flute')}</th></tr></thead>
+          <div style={{ overflowX: 'auto' }}><table className="cnc-tools cnc-tools-illustrated text-xs tnum w-full">
+            <thead><tr><th>T</th><th>{L('Nástroj / tvar', 'Tool / shape')}</th><th>Ø</th><th>R</th><th>L</th><th>{L('rez.', 'flute')}</th><th>S</th><th>ØH</th></tr></thead>
             <tbody>{tools.map((x) => (
-              <tr key={x.t} className={x.t === tele.T ? 'cur' : ''}><td>{x.t}</td><td title={x.name}>{x.name}</td>
-                {['d', 'cr', 'l', 'lc'].map((k) => <td key={k}><input type="number" step="0.1" value={x[k]} aria-label={`T${x.t} ${k}`} onChange={(e) => setTool(x.t, k, Math.max(k === 'cr' ? 0 : 0.5, Number(e.target.value) || 0))} /></td>)}
+              <tr key={x.t} className={x.t === tele.T ? 'cur' : ''}><td>{x.t}</td><td title={x.name}><CncToolPreview tool={x} /><span>{x.name.replace(/ Ø.*$/, '')}</span><select className="sel" aria-label={`T${x.t} ${L('typ', 'type')}`} value={x.kind === 'cone' ? x.tip === 90 ? 'chamfer' : 'drill' : x.cr === x.d / 2 ? 'ball' : x.cr > 0 ? 'bull' : 'flat'} onChange={(e) => setToolShape(x.t, e.target.value)}>
+                  <option value="flat">{L('Plochá', 'Flat')}</option><option value="ball">{L('Guľová', 'Ball')}</option><option value="bull">{L('Toroidná', 'Bull nose')}</option><option value="drill">{L('Vrták', 'Drill')}</option><option value="chamfer">{L('Skosenie 90°', 'Chamfer 90°')}</option>
+                </select></td>
+                {['d', 'cr', 'l', 'lc', 's', 'dh'].map((k) => <td key={k}><input type="number" step="0.1" value={x[k]} aria-label={`T${x.t} ${k}`} onChange={(e) => setTool(x.t, k, Math.max(k === 'cr' ? 0 : 0.5, Number(e.target.value) || 0))} /></td>)}
               </tr>
             ))}</tbody>
-          </table>
-          <p className="text-xs muted mt-2">{L('L = dĺžka od čela vretena po špičku (korekcia dĺžky G43 / TOOL CALL), R = polomer rohu (R = Ø/2 guľová fréza).', 'L = length from the spindle nose to the tip (length offset G43 / TOOL CALL), R = corner radius (R = Ø/2 ball mill).')}</p>
+          </table></div>
+          <p className="text-xs muted mt-2">{L('L = dĺžka od čela vretena po špičku (korekcia dĺžky G43 / TOOL CALL), R = polomer rohu (R = Ø/2 guľová fréza), S = vyloženie, ØH = priemer držiaka. Náhľady aj 3D model používajú rovnaké rozmery v mm, upnutie HSK-A63.', 'L = length from the spindle nose to the tip (length offset G43 / TOOL CALL), R = corner radius (R = Ø/2 ball mill), S = stick-out, ØH = holder diameter. Previews and 3D models share the same millimetre dimensions and HSK-A63 interface.')}</p>
         </div>
 
         <div className="sec">
@@ -555,7 +610,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           </div>
         </div>
 
-        <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')]]} />
+        <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')], ['zasobnik', L('Zásobník', 'Magazine')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
       </aside>
