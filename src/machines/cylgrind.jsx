@@ -9,6 +9,7 @@ import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { ShaftDrawing } from '../ui/sketch';
 import { CYL_TRAVERSE, CYL_WORK_SPEEDS, WHEEL, createShaft, cylChecks, dAt, grindPass, shaftInfo } from './cylMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -26,25 +27,16 @@ const cylParts = () => mkParts([
   ['chladenie', 'Chladenie', 'Coolant', 'Chladiaca emulzia', 'Coolant', 'Dýza nad kotúčom leje emulziu do miesta brúsenia. Bez chladenia sa povrch ľahko prepáli.', 'The nozzle above the wheel floods the grinding zone with coolant. Without it the surface burns easily.'],
   ['ovladanie', 'Ovládanie', 'Controls', 'Ovládací panel', 'Control panel', 'Hlavný vypínač, chod kotúča, otáčanie obrobku a chladenie.', 'Main switch, wheel drive, work rotation and coolant.'],
 ]);
-const ShaftSketch = ({ d, tol, len }) => (
-  <svg viewBox="0 0 300 100" width="100%" role="img" aria-label={`Ø${d} ${tol}`} style={{ display: 'block' }}>
-    <line x1="10" y1="50" x2="290" y2="50" stroke="currentColor" strokeDasharray="8 3 2 3" strokeWidth="0.8" opacity="0.6" />
-    <rect x="30" y="30" width="240" height="40" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.4" />
-    <rect x="60" y="30" width="180" height="40" fill="none" stroke="currentColor" strokeWidth="2.4" />
-    <text x="100" y="22" fontSize="11" fill="currentColor" fontFamily="var(--f-mono)">{`Ø${d} ${tol}`}</text>
-    <text x="120" y="88" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{`≥ ${len}`}</text>
-  </svg>
-);
 const CYL_TASKS = [
   { id: 'h6', title: () => L('Hriadeľ Ø40 h6', 'Shaft Ø40 h6'),
     desc: () => L('Kalený hriadeľ Ø40,3 × 200 mm medzi hrotmi. Obrús ho pozdĺžnym brúsením na Ø40 h6 (40,000 – 39,984 mm) na dĺžke aspoň 160 mm, kužeľovitosť najviac 0,005 mm, bez prepálenia. Dorazy nastav tak, aby kotúč na koncoch prebiehal asi o tretinu šírky. Hrubuj prísuvom 0,01 – 0,02 mm na obrat, nakoniec 0,005 mm a nechaj vyiskriť (niekoľko prechodov bez prísuvu).', 'A hardened shaft Ø40.3 × 200 mm between centres. Traverse-grind it to Ø40 h6 (40.000 – 39.984 mm) over at least 160 mm, taper at most 0.005 mm, no burns. Set the dogs so that the wheel overruns the ends by about a third of its width. Rough with 0.01 – 0.02 mm infeed per reversal, finish with 0.005 mm and spark out (a few passes without infeed).'),
     setup: { bD: 40.3, bL: 200, dT: 40.32, dogL: 15, dogR: 185, nw: 112, tv: 1, cool: true },
-    drawing: () => <ShaftSketch d={40} tol="h6" len={160} />,
+    drawing: () => <ShaftDrawing d={40} tol="h6" len={160} bL={200} />,
     labels: { size: () => L('Priemer Ø40 h6 (40,000 – 39,984)', 'Diameter Ø40 h6 (40.000 – 39.984)'), len: () => L('Obrúsená dĺžka ≥ 160 mm bez medzier', 'Ground length ≥ 160 mm without gaps'), taper: () => L('Kužeľovitosť ≤ 0,005 mm', 'Taper ≤ 0.005 mm'), burn: () => L('Bez prepálenia', 'No burns') } },
   { id: 'h5', title: () => L('Čap Ø25 h5', 'Journal Ø25 h5'),
     desc: () => L('Hriadeľ Ø25,2 × 150 mm. Obrús Ø25 h5 (25,000 – 24,991 mm) na dĺžke aspoň 120 mm s kužeľovitosťou do 0,004 mm. Malý priemer – vyššie otáčky obrobku (vw 10 – 20 m/min), jemný posledný prísuv a dôkladné vyiskrovanie.', 'Shaft Ø25.2 × 150 mm. Grind Ø25 h5 (25.000 – 24.991 mm) over at least 120 mm with taper up to 0.004 mm. Small diameter – higher work speed (vw 10 – 20 m/min), a fine last infeed and thorough spark-out.'),
     setup: { bD: 25.2, bL: 150, dT: 25.22, dogL: 12, dogR: 138, nw: 224, tv: 1, cool: true },
-    drawing: () => <ShaftSketch d={25} tol="h5" len={120} />,
+    drawing: () => <ShaftDrawing d={25} tol="h5" len={120} bL={150} />,
     labels: { size: () => L('Priemer Ø25 h5 (25,000 – 24,991)', 'Diameter Ø25 h5 (25.000 – 24.991)'), len: () => L('Obrúsená dĺžka ≥ 120 mm bez medzier', 'Ground length ≥ 120 mm without gaps'), taper: () => L('Kužeľovitosť ≤ 0,004 mm', 'Taper ≤ 0.004 mm'), burn: () => L('Bez prepálenia', 'No burns') } },
 ].map((t) => ({ ...t, checks: (m) => cylChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const CYL_SAFETY = () => [

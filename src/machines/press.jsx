@@ -9,6 +9,7 @@ import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { PressDrawing } from '../ui/sketch';
 import { PRESS, PRESS_PUNCHES, PRESS_STROKES, addHole, penetration, pressChecks, punchForce, strokeResult } from './pressMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -29,24 +30,16 @@ const pressParts = () => mkParts([
   ['pedal', 'Pedál', 'Pedal', 'Nožný pedál', 'Foot pedal', 'Stlačenie zapne spojku: v režime jednotlivý zdvih urobí lis jeden zdvih a zastaví v hornej úvrati.', 'Pressing it engages the clutch: in single-stroke mode the press makes one stroke and stops at top dead centre.'],
   ['pas', 'Pás', 'Strip', 'Oceľový pás', 'Steel strip', 'Pás S235 sa posúva medzi vodiacimi lištami. Poloha razníka sa meria od ľavého konca pásu.', 'The S235 strip slides between guide rails. The punch position is measured from the left end of the strip.'],
 ]);
-const StripSketch = ({ holes, d, label, note }) => (
-  <svg viewBox="0 0 300 80" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-    <rect x="10" y="20" width="280" height="36" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="1.4" />
-    {holes.map((x, i) => <circle key={i} cx={10 + x} cy="38" r={d} fill="none" stroke="currentColor" strokeWidth="1.4" />)}
-    <text x="10" y="14" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{label}</text>
-    <text x="10" y="72" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{note}</text>
-  </svg>
-);
 const PRESS_TASKS = [
   { id: 'dierovanie', title: () => L('Päť dier Ø20 v rozstupe 50 mm', 'Five Ø20 holes at 50 mm pitch'),
     desc: () => L('Pás 4 × 60 × 400 mm. Razníkom Ø20 vydieruj päť dier: prvú 50 mm od ľavého konca, ďalšie po 50 mm (±0,5 mm), všetky naskrz. Baranidlo prestavuj po malých krokoch – najprv skúšobný zdvih nad pásom, potom nižšie, kým razník neprestrihne (zanorenie 0,5 – 6 mm). Príliš nízko = zlomený razník.', 'Strip 4 × 60 × 400 mm. Punch five holes with the Ø20 punch: the first 50 mm from the left end, the rest every 50 mm (±0.5 mm), all through. Adjust the ram in small steps – a trial stroke above the strip first, then lower until the punch cuts through (entry 0.5 – 6 mm). Too low = broken punch.'),
     setup: { t: 4, W: 60, len: 400, d: 20, feed: 0, adj: 30 },
-    drawing: () => <StripSketch holes={[35, 70, 105, 140, 175]} d={7} label={L('5 × Ø20, rozstup 50', '5 × Ø20, pitch 50')} note={L('pás 4 × 60 × 400', 'strip 4 × 60 × 400')} />,
+    drawing: () => <PressDrawing L={400} W={60} t={4} d={20} xs={[50, 100, 150, 200, 250]} first="50" pitch="4 × 50" callout="5 × Ø20" />,
     labels: { count: () => L('Päť dier Ø20 naskrz', 'Five Ø20 through holes'), edge: () => L('Prvá diera 50 ±0,5 mm od konca', 'First hole 50 ±0.5 mm from the end'), pitch: () => L('Rozstup 50 ±0,5 mm', 'Pitch 50 ±0.5 mm'), tool: () => L('Bez nárazu razníka', 'No punch crash') } },
   { id: 'podlozky', title: () => L('Štyri podložky Ø50 zo 6 mm', 'Four Ø50 washers from 6 mm'),
     desc: () => L('Pás 6 × 80 × 300 mm, vystrihni aspoň štyri výstrižky Ø50. Mostík medzi výstrižkami musí byť aspoň hrúbka plechu (6 mm) – inak sa okraj roztrhne. Najprv si spočítaj silu: F = π · d · t · 0,8 · Rm; lis má 400 kN. Hrubší plech by lis preťažil.', 'Strip 6 × 80 × 300 mm, blank at least four Ø50 discs. The web between the blanks must be at least the sheet thickness (6 mm) – otherwise the edge tears. Work out the force first: F = π · d · t · 0.8 · Rm; the press has 400 kN. A thicker sheet would overload the press.'),
     setup: { t: 6, W: 80, len: 300, d: 50, feed: 0, adj: 30 },
-    drawing: () => <StripSketch holes={[40, 98, 156, 214]} d={16} label={L('4 × Ø50, mostík ≥ 6', '4 × Ø50, web ≥ 6')} note={L('pás 6 × 80 × 300', 'strip 6 × 80 × 300')} />,
+    drawing: () => <PressDrawing L={300} W={80} t={6} d={50} xs={[35, 91, 147, 203]} web="≥ 6" callout="4 × Ø50" />,
     labels: { count: () => L('Aspoň štyri výstrižky Ø50', 'At least four Ø50 blanks'), web: () => L('Mostík ≥ 6 mm', 'Web ≥ 6 mm'), load: () => L('Bez preťaženia lisu', 'No press overload') } },
 ].map((t) => ({ ...t, checks: (m) => pressChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const PRESS_SAFETY = () => [

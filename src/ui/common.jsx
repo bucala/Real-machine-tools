@@ -45,9 +45,10 @@ function useMachine(init) {
   return { ctl, ui, setUi, set, selected, selectPart, apiRef };
 }
 
+const pl = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v) : undefined);   // popis pre protokol
 function Slider({ id, label, value, min, max, step, unit, onChange, actual, disabled, digits = 0 }) {
   return (
-    <div className="mb-3">
+    <div className="mb-3" data-param={pl(label)} data-val={`${Number(value).toFixed(digits)} ${unit || ''}`.trim()}>
       <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm">
         <span className="font-semibold">{label}</span>
         <span className="tnum muted text-xs">
@@ -65,7 +66,7 @@ function Slider({ id, label, value, min, max, step, unit, onChange, actual, disa
 function StepSelect({ id, label, values, value, unit, onChange, locked, lockNote, fmt = (v) => String(v) }) {
   const cur = values[logNear(values, value)];
   return (
-    <div className="mb-3">
+    <div className="mb-3" data-param={pl(label)} data-val={`${fmt(cur)} ${unit || ''}`.trim()}>
       <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm mb-1">
         <span className="font-semibold">{label}</span>
         <span className="ink font-semibold text-sm tnum">{fmt(cur)} {unit}</span>
@@ -79,9 +80,10 @@ function StepSelect({ id, label, values, value, unit, onChange, locked, lockNote
 }
 const GEAR_LOCK = () => L('Otáčky sa preraďujú len pri stojacom vretene – najprv ho zastav.', 'Speeds can only be changed with the spindle stopped – stop it first.');
 
-function Toggle({ on, onClick, label }) {
+function Toggle({ on, onClick, label, noParam }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center justify-between w-full text-sm py-1 gap-3 text-left" aria-pressed={on}>
+    <button type="button" onClick={onClick} className="flex items-center justify-between w-full text-sm py-1 gap-3 text-left" aria-pressed={on}
+      data-param={noParam ? undefined : pl(label)} data-val={on ? L('áno', 'yes') : L('nie', 'no')}>
       <span className="font-semibold">{label}</span>
       <span className={`sw ${on ? 'on' : ''}`}><i /></span>
     </button>
@@ -140,7 +142,7 @@ const HELP_MANUAL = () => [
   ['M / Esc', L('pohľad je zamknutý – kameru vráti M alebo Esc', 'the view is locked – M or Esc returns to the camera')],
 ];
 const HELP_TIPS = () => [
-  L('Úlohu vyber v paneli – zadanie, výkres a kontrola požiadaviek sa priebežne vyhodnocujú; odkaz na úlohu sa dá poslať žiakom.', 'Pick a task in the panel – the brief, drawing and requirement checks are evaluated live; the task link can be sent to students.'),
+  L('Úlohu vyber v paneli – zadanie, výkres a kontrola požiadaviek sa priebežne vyhodnocujú; „Vyexportovať protokol“ stiahne protokol s nastavením stroja, nameranými hodnotami, odchýlkami a hodnotením.', 'Pick a task in the panel – the brief, drawing and requirement checks are evaluated live; “Export report” downloads a report with the machine settings, measured values, deviations and assessment.'),
   L('Pri stojacom stroji sa nástroj do materiálu nezareže – reže sa len za chodu.', 'With the machine stopped the tool does not cut into the material – it cuts only while running.'),
   L('Pohľady v paneli (Celok, Detail …) vrátia kameru do pripravenej polohy.', 'The views in the panel (Overview, Detail …) return the camera to a preset position.'),
   L('Obrobok sa dá uložiť v prehliadači a neskôr znova upnúť, alebo stiahnuť ako STL.', 'The workpiece can be saved in the browser and clamped again later, or downloaded as STL.'),
@@ -259,7 +261,7 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
       </div>
       <div className={`msg msg-${status.kind}`} role="status" aria-live={status.kind === 'run' || status.kind === 'idle' ? 'off' : 'polite'}><span className="lamp" />{status.text}</div>
       <div className="mt-2">
-        <Toggle on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
+        <Toggle noParam on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
       </div>
     </div>
   );
@@ -314,9 +316,10 @@ function BlankSection({ title, children, onApply, applyLabel, note }) {
   );
 }
 
-function SegRow({ label, value, options, onChange }) {
+function SegRow({ label, value, options, onChange, noParam }) {
+  const cur = options.find(([v]) => v === value);
   return (
-    <div className="flex items-center justify-between text-sm gap-2 mb-3">
+    <div className="flex items-center justify-between text-sm gap-2 mb-3" data-param={noParam ? undefined : pl(label)} data-val={cur ? pl(cur[1]) : undefined}>
       <span className="font-semibold">{label}</span>
       <Seg label={label} value={value} options={options} onChange={onChange} />
     </div>

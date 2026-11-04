@@ -10,6 +10,7 @@ import { TAU, approach, clamp } from '../core/util';
 import { exportStl } from '../core/export';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { ArcDrawing, RingDrawing } from '../ui/sketch';
 import { BlankSection, DirRun, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { BEND_A, BEND_SPEEDS, PROFILES, bendChecks, bendInfo, createBar, kFinal, kLoaded, kYield, passBar, rollForce } from './benderMath';
 
@@ -43,32 +44,21 @@ const benderParts = () => mkParts([
   ['profil', 'Profil', 'Profile', 'Ohýbaný profil', 'Profile being bent', 'Oceľový profil S235. Ohýba sa len úsek, ktorý leží na oboch krajných valcoch – asi 200 mm na každom konci zostane rovných.', 'S235 steel profile. Only the part lying on both outer rolls is bent – about 200 mm at each end stays straight.'],
 ]);
 
-const ArcSketch = ({ R, label, note, ring }) => {
-  const k = 60 / R, cx = 150, cy = ring ? 54 : 100 + R * k * 0.25;
-  const arc = ring ? `M${cx + 40} ${cy}a40 40 0 1 1 -1 -6` : `M${cx - 120} ${cy - 60}A${R * k * 2.2} ${R * k * 2.2} 0 0 1 ${cx + 120} ${cy - 60}`;
-  return (
-    <svg viewBox="0 0 300 110" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-      <path d={arc} fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" opacity="0.6" />
-      <text x="10" y="18" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{label}</text>
-      <text x="10" y="32" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{note}</text>
-    </svg>
-  );
-};
 const BENDER_TASKS = [
   { id: 'oblukNap', title: () => L('Oblúk R 500 z plochej tyče naplocho', 'Arc R 500 from flat bar, easy way'),
     desc: () => L('Plochá tyč 40 × 10 mm, dĺžka 1 500 mm, valce s nákružkami. Ohni ju naplocho na polomer R 500 ±10 mm. Profil po prejdení valcami odpruží – začni menším prísuvom stredného valca, zmeraj polomer a pri ďalšom prechode prisuň viac (menší prísuv už profil nezmení). Polomer má byť rovnaký po celej ohnutej dĺžke (aspoň 1 000 mm).', 'Flat bar 40 × 10 mm, 1,500 mm long, flanged rolls. Bend it the easy way to R 500 ±10 mm. The profile springs back after the rolls – start with a smaller centre-roll feed, measure the radius and feed more on the next pass (a smaller feed no longer changes the profile). The radius must be even along the bent length (at least 1,000 mm).'),
     setup: { prof: 'ploNap', len: 1500, rolls: 'plocha', guides: false, hv: 'h', dT: 0 },
-    drawing: () => <ArcSketch R={500} label={L('R 500 ±10', 'R 500 ±10')} note={L('plochá 40 × 10 naplocho', 'flat 40 × 10 easy way')} />,
+    drawing: () => <ArcDrawing R={500} text="R 500 ±10" notes={[L('plochá 40 × 10 naplocho', 'flat 40 × 10 easy way'), L('ohnutá dĺžka ≥ 1 000 mm', 'bent length ≥ 1,000 mm')]} />,
     labels: { radius: () => L('Polomer R 500 ±10 mm', 'Radius R 500 ±10 mm'), even: () => L('Rovnomerný polomer (odchýlka ≤ 10 mm)', 'Even radius (deviation ≤ 10 mm)'), bent: () => L('Ohnutá dĺžka aspoň 1 000 mm', 'Bent length at least 1,000 mm'), defect: () => L('Bez skrútenia a zvlnenia', 'No twist or ripples') } },
   { id: 'prstenec', title: () => L('Prstenec R 300 z rúry', 'Ring R 300 from tube'),
     desc: () => L('Rúra Ø33,7 × 3 mm, dĺžka 2 300 mm. Nasaď drážkové valce pre rúru – na rovných valcoch by sa rúra sploštila. Zakruž ju na prstenec R 300 ±8 mm s uhlom aspoň 345°. Rovné konce (asi 200 mm) sa po ohnutí odrežú.', 'Tube Ø33.7 × 3 mm, 2,300 mm long. Fit the grooved tube rolls – on plain rolls the tube would flatten. Roll it into a ring R 300 ±8 mm of at least 345°. The straight ends (about 200 mm) are cut off afterwards.'),
     setup: { prof: 'rura', len: 2300, rolls: 'rura', guides: false, hv: 'v', dT: 0 },
-    drawing: () => <ArcSketch R={300} ring label={L('R 300 ±8, ≥ 345°', 'R 300 ±8, ≥ 345°')} note={L('rúra Ø33,7 × 3', 'tube Ø33.7 × 3')} />,
+    drawing: () => <RingDrawing text="R 300 ±8" gap={18} notes={[L('rúra Ø33,7 × 3', 'tube Ø33.7 × 3'), L('uhol ≥ 345°', 'angle ≥ 345°')]} />,
     labels: { radius: () => L('Polomer R 300 ±8 mm', 'Radius R 300 ±8 mm'), even: () => L('Rovnomerný polomer (odchýlka ≤ 8 mm)', 'Even radius (deviation ≤ 8 mm)'), angle: () => L('Uhol prstenca aspoň 345°', 'Ring angle at least 345°'), defect: () => L('Rúra nesploštená (drážkové valce)', 'Tube not flattened (grooved rolls)') } },
   { id: 'oblukNas', title: () => L('Oblúk R 800 z plochej tyče nastojato', 'Arc R 800 from flat bar, hard way'),
     desc: () => L('Plochá tyč 40 × 10 mm nastojato, dĺžka 1 600 mm. Pri ohybe nastojato má profil sklon vybočiť a skrútiť sa – priklop bočné vodiace kladky. Ohni oblúk R 800 ±15 mm na dĺžke aspoň 1 000 mm.', 'Flat bar 40 × 10 mm on edge, 1,600 mm long. Bent the hard way the profile tends to buckle and twist – swing in the side guide rollers. Bend an arc R 800 ±15 mm over at least 1,000 mm.'),
     setup: { prof: 'ploNas', len: 1600, rolls: 'plocha', guides: false, hv: 'h', dT: 0 },
-    drawing: () => <ArcSketch R={800} label={L('R 800 ±15', 'R 800 ±15')} note={L('plochá 40 × 10 nastojato', 'flat 40 × 10 hard way')} />,
+    drawing: () => <ArcDrawing R={800} text="R 800 ±15" notes={[L('plochá 40 × 10 nastojato', 'flat 40 × 10 hard way'), L('ohnutá dĺžka ≥ 1 000 mm', 'bent length ≥ 1,000 mm')]} />,
     labels: { radius: () => L('Polomer R 800 ±15 mm', 'Radius R 800 ±15 mm'), even: () => L('Rovnomerný polomer (odchýlka ≤ 15 mm)', 'Even radius (deviation ≤ 15 mm)'), bent: () => L('Ohnutá dĺžka aspoň 1 000 mm', 'Bent length at least 1,000 mm'), defect: () => L('Bez skrútenia (vodiace kladky)', 'No twist (guide rollers)') } },
 ].map((t) => ({ ...t, checks: (m) => bendChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const BENDER_SAFETY = () => [

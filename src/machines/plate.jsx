@@ -8,6 +8,7 @@ import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { ArcDrawing, RingDrawing } from '../ui/sketch';
 import { kFinal, kYield, rollForce } from './benderMath';
 import { PLATE_A, PLATE_DMAX, PLATE_LMAX, PLATE_TMAX, bendInfo, createSheet, kPyr, passPyramid, plateChecks, plateProfile } from './plateMath';
 import { BlankSection, DirRun, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
@@ -28,23 +29,16 @@ const plateParts = () => mkParts([
   ['ovladanie', 'Ovládanie', 'Controls', 'Ovládací stĺpik', 'Control column', 'Hlavný vypínač, chod vpred a vzad, stop a núdzový STOP.', 'Main switch, forward and reverse, stop and the emergency stop.'],
   ['plech', 'Plech', 'Sheet', 'Plech', 'Sheet', 'Oceľový plech S235 do hrúbky 10 mm a šírky 3 000 mm.', 'S235 steel sheet up to 10 mm thick and 3,000 mm wide.'],
 ]);
-const RingSketch = ({ label, note, ring }) => (
-  <svg viewBox="0 0 300 110" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-    {ring ? <circle cx="150" cy="56" r="40" fill="none" stroke="currentColor" strokeWidth="5" opacity="0.6" /> : <path d="M40 90A150 150 0 0 1 260 90" fill="none" stroke="currentColor" strokeWidth="5" opacity="0.6" />}
-    <text x="10" y="18" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{label}</text>
-    <text x="10" y="32" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{note}</text>
-  </svg>
-);
 const PLATE_TASKS = [
   { id: 'plast', title: () => L('Plášť Ø1000 z plechu 6 mm', 'Shell Ø1000 from 6 mm sheet'),
     desc: () => L('Plech 6 × 1500 × 3140 mm (obvod Ø1000). Zakruž plášť R 500 ±6 mm s uhlom aspoň 340° a rovnými koncami najviac 50 mm. Na trojvalcovej pyramíde zostanú konce rovné v dĺžke polovice rozostupu spodných valcov – predohni ich s podložným plechom. Prísuv horného valca zväčšuj po krokoch (odpruženie), nakoniec odklop ložisko a plášť vysuň.', 'Sheet 6 × 1500 × 3140 mm (circumference of Ø1000). Roll a shell R 500 ±6 mm of at least 340° with flat ends of at most 50 mm. On a three-roll pyramid the ends stay flat for half the lower-roll spacing – pre-bend them with a backing plate. Increase the top-roll infeed in steps (springback), finally open the drop-end bearing and slide the shell off.'),
     setup: { t: 6, b: 1500, len: 3140, backing: false },
-    drawing: () => <RingSketch ring label={L('Ø1000, R 500 ±6', 'Ø1000, R 500 ±6')} note={L('plech 6 × 1500 × 3140', 'sheet 6 × 1500 × 3140')} />,
+    drawing: () => <RingDrawing dia text="Ø1000 (R 500 ±6)" notes={[L('plech 6 × 1500 × 3140', 'sheet 6 × 1500 × 3140'), L('uhol ≥ 340°, konce ≤ 50', 'angle ≥ 340°, ends ≤ 50')]} />,
     labels: { radius: () => L('Polomer R 500 ±6 mm', 'Radius R 500 ±6 mm'), even: () => L('Rovnomerný polomer (±6 mm)', 'Even radius (±6 mm)'), angle: () => L('Uhol aspoň 340°', 'Angle at least 340°'), ends: () => L('Rovné konce ≤ 50 mm (predohnuté)', 'Flat ends ≤ 50 mm (pre-bent)') } },
   { id: 'oblukP', title: () => L('Oblúk R 800 z plechu 10 mm', 'Arc R 800 from 10 mm sheet'),
     desc: () => L('Plech 10 × 2000 × 2000 mm – plná kapacita stroja. Ohni oblúk R 800 ±10 mm na dĺžke aspoň 1 500 mm. Hrubý plech odpruží menej ako tenký, ale potrebuje veľkú silu – prisúvaj opatrne.', 'Sheet 10 × 2000 × 2000 mm – the full machine capacity. Roll an arc R 800 ±10 mm over at least 1,500 mm. A thick sheet springs back less than a thin one but needs a large force – feed carefully.'),
     setup: { t: 10, b: 2000, len: 2000, backing: false },
-    drawing: () => <RingSketch label={L('R 800 ±10', 'R 800 ±10')} note={L('plech 10 × 2000 × 2000', 'sheet 10 × 2000 × 2000')} />,
+    drawing: () => <ArcDrawing R={800} text="R 800 ±10" notes={[L('plech 10 × 2000 × 2000', 'sheet 10 × 2000 × 2000'), L('ohnutá dĺžka ≥ 1 500 mm', 'bent length ≥ 1,500 mm')]} />,
     labels: { radius: () => L('Polomer R 800 ±10 mm', 'Radius R 800 ±10 mm'), even: () => L('Rovnomerný polomer (±10 mm)', 'Even radius (±10 mm)'), bent: () => L('Ohnutá dĺžka ≥ 1 500 mm', 'Bent length ≥ 1,500 mm') } },
 ].map((t) => ({ ...t, checks: (m) => plateChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const PLATE_SAFETY = () => [

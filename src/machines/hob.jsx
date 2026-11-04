@@ -9,6 +9,7 @@ import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { GearDrawing } from '../ui/sketch';
 import { HOB, HOB_FEEDS, HOB_Z, createGear, fullDepth, gearInfo, hobAngle, hobChecks, hobCut, indexGears, tipD } from './hobMath';
 import { HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -26,18 +27,11 @@ const hobParts = () => mkParts([
   ['obrobok', 'Obrobok', 'Workpiece', 'Polotovar kolesa', 'Gear blank', 'Oceľový polotovar s hlavovým priemerom da = m (z + 2), šírka 20 mm.', 'Steel blank with tip diameter da = m (z + 2), face width 20 mm.'],
   ['ovladanie', 'Ovládanie', 'Controls', 'Ovládací panel', 'Control panel', 'Hlavný vypínač, chod frézy a stola, automatický posuv.', 'Main switch, hob and table drive, automatic feed.'],
 ]);
-const GearSketch = ({ z }) => (
-  <svg viewBox="0 0 300 100" width="100%" role="img" aria-label={`z ${z}`} style={{ display: 'block' }}>
-    <circle cx="150" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="5 3" />
-    {Array.from({ length: z }, (_, k) => { const a = k / z * TAU; return <rect key={k} x={150 + Math.cos(a) * 40 - 2.5} y={50 + Math.sin(a) * 40 - 2.5} width="5" height="5" fill="currentColor" opacity="0.6" transform={`rotate(${a * 180 / Math.PI} ${150 + Math.cos(a) * 40} ${50 + Math.sin(a) * 40})`} />; })}
-    <text x="10" y="20" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{`m 2 · z ${z} · b 20`}</text>
-  </svg>
-);
 const HOB_TASKS = [30, 24].map((z) => ({
   id: `z${z}`, title: () => L(`Čelné koleso z ${z}, m 2`, `Spur gear z ${z}, m 2`),
   desc: () => L(`Polotovar Ø${tipD(M2, z)} × 20 mm. Odvaluj priame čelné koleso m 2, z ${z}. Nastav výmenné kolesá delenia na z ${z}, sklon frézy na stúpací uhol (${hobAngle(M2).toFixed(2).replace('.', ',')}°), prisuň stojan na plnú hĺbku zuba 2,25 · m = 4,5 mm a zapni zvislý posuv cez celú šírku kolesa. Kontroluje sa rozmer cez zuby W${Math.max(2, Math.round(z / 9 + 0.5))} (±0,05 mm).`, `Blank Ø${tipD(M2, z)} × 20 mm. Hob a spur gear m 2, z ${z}. Set the index change gears to z ${z}, the hob swivel to the lead angle (${hobAngle(M2).toFixed(2)}°), feed the column to the full tooth depth 2.25 · m = 4.5 mm and switch on the vertical feed across the whole face width. The span over teeth W${Math.max(2, Math.round(z / 9 + 0.5))} is checked (±0.05 mm).`),
   setup: { zT: z, zSel: 20, ang: 0, d: 0, y: 60 },
-  drawing: () => <GearSketch z={z} />,
+  drawing: () => <GearDrawing z={z} da={tipD(M2, z)} />,
   labels: { z: () => L(`Počet zubov z ${z} (jedno delenie)`, `Number of teeth z ${z} (one index setting)`), wk: () => L('Rozmer cez zuby Wk ±0,05 mm', 'Span over teeth Wk ±0.05 mm'), face: () => L('Ozubenie po celej šírke', 'Teeth along the whole face width'), angle: () => L('Sklon frézy ±0,3° od stúpacieho uhla', 'Hob swivel within ±0.3° of the lead angle') },
   checks: (m) => hobChecks.gear(m).map((c) => ({ ...c, label: { z: () => L(`Počet zubov z ${z}`, `Teeth z ${z}`), wk: () => L('Rozmer cez zuby Wk ±0,05 mm', 'Span over teeth Wk ±0.05 mm'), face: () => L('Ozubenie po celej šírke', 'Teeth along the whole face width'), angle: () => L('Sklon frézy ±0,3°', 'Hob swivel ±0.3°') }[c.key]() })),
 }));

@@ -11,6 +11,7 @@ import { createWorkInspect } from '../core/workInspect';
 import { exportStl } from '../core/export';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { HubDrawing } from '../ui/sketch';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { crankR, cutSpeed, fwdShare, isForward, ramPos } from './shaperMath';
 import { SLOTTER_SPEEDS, SLOTTER_TOOLS, SL_K, createRing, keywayInfo, ringCut, slotterChecks, squareInfo, toolRect } from './slotterMath';
@@ -49,25 +50,16 @@ const slotterParts = () => mkParts([
 ]);
 
 // pohľad zhora na náboj s tvarom otvoru (mm)
-const HubSketch = ({ path, label, note }) => (
-  <svg viewBox="0 0 300 110" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-    <path d={`M195 55m-45 0a45 45 0 1 0 90 0a45 45 0 1 0 -90 0z ${path}`} fill="currentColor" fillOpacity="0.18" fillRule="evenodd" stroke="currentColor" strokeWidth="1.4" />
-    <text x="12" y="30" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{label}</text>
-    <text x="12" y="46" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{note}</text>
-  </svg>
-);
-const KW = (() => { const k = 0.9, r = 20 * k, h = 6 * k, d = 23.3 * k, s = Math.sqrt(r * r - h * h); return `M${195 + s} ${55 - h}H${195 + d}V${55 + h}H${195 + s}A${r} ${r} 0 1 1 ${195 + s} ${55 - h}z`; })();
-const SQ = (() => { const a = 12.5 * 0.9; return `M${195 - a} ${55 - a}h${2 * a}v${2 * a}h${-2 * a}z`; })();
 const SLOTTER_TASKS = [
   { id: 'drazka', title: () => L('Drážka pre pero 12 × 3,3 v náboji', 'Keyway 12 × 3.3 in a hub'),
     desc: () => L('Náboj Ø100 × 50 mm s otvorom Ø40. Drážkovacím nožom 12 mm vyobrážaj drážku pre pero 12 × 8 (STN/DIN 6885, hĺbka v náboji t2 = 3,3 ±0,1 mm). Nastav zdvih asi o 40 mm dlhší ako náboj tak, aby nôž hore vyšiel nad obrobok a dole vybehol do otvoru skľučovadla. Nôž prisúvaj stolom k stojanu (os X) automatickým posuvom 0,2 – 0,5 mm na zdvih.', 'Hub Ø100 × 50 mm with a Ø40 bore. With the 12 mm keyway tool shape a keyway for a 12 × 8 key (DIN 6885, hub depth t2 = 3.3 ±0.1 mm). Set the stroke about 40 mm longer than the hub so that the tool clears the top and overruns into the chuck hole. Feed the table towards the column (X axis) automatically by 0.2 – 0.5 mm per stroke.'),
     setup: { dOut: 100, dIn: 40, H: 50, tool: 'drazk12', S: 90, pos: 0, tx: 0, tz: 0, cA: 0, autoF: false, fAx: 'x', fdir: -1, feed: 0.3 },
-    drawing: () => <HubSketch path={KW} label={L('Ø40, drážka 12 × 3,3', 'Ø40, keyway 12 × 3.3')} note={L('t2 = 3,3 ±0,1', 't2 = 3.3 ±0.1')} />,
+    drawing: () => <HubDrawing kind="drazka" />,
     labels: { width: () => L('Šírka drážky 12 ±0,25 mm', 'Keyway width 12 ±0.25 mm'), depth: () => L('Hĺbka od otvoru 3,3 ±0,1 mm', 'Depth from the bore 3.3 ±0.1 mm'), one: () => L('Jedna súvislá drážka', 'One continuous keyway') } },
   { id: 'stvorec', title: () => L('Štvorhranný otvor 25 × 25', 'Square hole 25 × 25'),
     desc: () => L('Náboj Ø100 × 50 mm s otvorom Ø24. Plochým nožom 16 mm vyobrážaj štvorhranný otvor 25 × 25 mm (steny 12,5 mm od stredu, ostré rohy). Pri každej stene najprv prisuň nôž stolom X na mieru steny, potom posúvaj stôl priečne (Z) od stredu k rohom – pri rohoch s menším posuvom. Ďalšiu stenu dostaneš pootočením otočného stola o 90° (delenie z = 4).', 'Hub Ø100 × 50 mm with a Ø24 bore. With the 16 mm flat tool shape a square hole 25 × 25 mm (walls 12.5 mm from the centre, sharp corners). For each wall first feed the tool to the wall with table X, then traverse the table across (Z) from the centre to the corners – with a smaller feed near the corners. The next wall is reached by indexing the rotary table by 90° (z = 4).'),
     setup: { dOut: 100, dIn: 24, H: 50, tool: 'plochy', S: 90, pos: 0, tx: 0, tz: 0, cA: 0, autoF: false, fAx: 'x', fdir: -1, feed: 0.5, div: 4 },
-    drawing: () => <HubSketch path={SQ} label={L('otvor 25 × 25 z Ø24', 'hole 25 × 25 from Ø24')} note={L('steny ±0,2 mm', 'walls ±0.2 mm')} />,
+    drawing: () => <HubDrawing kind="stvorec" />,
     labels: { walls: () => L('Steny štvorca 25 × 25 ±0,2 mm', 'Square walls 25 × 25 ±0.2 mm'), corners: () => L('Vyobrážané rohy (≥ 17,4 mm od stredu)', 'Corners shaped out (≥ 17.4 mm from the centre)') } },
 ].map((t) => ({ ...t, checks: (m) => slotterChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const SLOTTER_SAFETY = () => [

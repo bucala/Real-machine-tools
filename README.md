@@ -276,7 +276,8 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
 | | |
 | --- | --- |
 | **Úlohy s kontrolou** | každý stroj má úlohy podľa výkresu (napr. osadenie Ø40 × 50, zápich, závit M30 × 1,5, drážka 20 × 5, dve diery Ø10 naskrz, ohyb 90°, prebrúsenie o 0,1 mm, tupý zvar V); požiadavky sa kontrolujú priebežne z modelu, vyhodnotenie dá percentá a známku, počíta sa čas aj varovania |
-| **Odkaz pre žiakov** | tlačidlo skopíruje odkaz, ktorý otvorí stroj rovno s úlohou, napr. `…/#sustruh/uloha=zavit` |
+| **Výkresy s kótami** | každá úloha má náčrt s kótovacími a pomocnými čiarami, šípkami a toleranciami (`src/ui/sketch.jsx`); texty kót sa neprekrývajú s čiarami ani navzájom – overené automatickou kontrolou v prehliadači |
+| **Protokol z cvičenia** | tlačidlo *Vyexportovať protokol* stiahne HTML protokol (tlač alebo PDF): zadanie, výkres, nastavenie stroja a polotovaru, údaje stroja, požiadavky s predpísanou a dosiahnutou hodnotou a odchýlkou, snímka dosiahnutého tvaru, hodnotenie, meno žiaka a odkaz na úlohu, napr. `…/#sustruh/uloha=zavit` (`src/ui/protocol.js`) |
 | **Kontrola BOZP** | pri úlohe sa stroj spustí až po potvrdení kontrolného zoznamu (kľúč zo skľučovadla, okuliare, upnutie, kukla …) |
 | **Meranie** | sústruh: posuvné meradlo s krúžkom na obrobku a tabuľka osadení a závitu; fréza: hĺbkomer; vŕtačka: zoznam dier s rozostupom; brúska: úbytok a rovinnosť |
 | **Rezné podmienky** | kalkulačka n = 1000 · vc / (π · D) podľa materiálu a nástroja (HSS / SK), najbližší stupeň prevodovky jedným klikom |

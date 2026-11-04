@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { L, RPM } from '../core/i18n';
 import { logNear } from '../core/util';
 import { Seg, SegRow } from './common';
+import { buildProtocol, score } from './protocol';
 
 const fmt = (v, d = 1) => L(v.toFixed(d).replace('.', ','), v.toFixed(d));
 
@@ -83,11 +84,17 @@ function SafetyGate({ active, ui, set, runKey, items, onConfirm }) {
 
 // ---------- úlohy s kontrolou ----------
 // task = { id, title(), desc(), drawing?(), setup?, checks(m) → [{ label, ok, actual }] }; measure() vráti údaje stroja
-const grade = (pct) => (pct >= 90 ? 1 : pct >= 75 ? 2 : pct >= 50 ? 3 : pct >= 30 ? 4 : 5);
+const STUDENT_KEY = 'rmt-student';
+const snapUrl = (api) => new Promise((res) => {
+  if (!api.snapshot) { res(null); return; }
+  try { api.snapshot((b) => { if (!b) { res(null); return; } const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); }); } catch (err) { res(null); }
+});
 function TaskSection({ machine, tasks, apiRef, params, status, onSetup, safety }) {
   const first = params && params.uloha && tasks.find((t) => t.id === params.uloha) ? params.uloha : '';
   const [id, setId] = useState(first), [t0, setT0] = useState(() => (first ? Date.now() : 0)), [now, setNow] = useState(0);
-  const [m, setM] = useState(null), [result, setResult] = useState(null), [warns, setWarns] = useState(0), [copied, setCopied] = useState('');
+  const [m, setM] = useState(null), [result, setResult] = useState(null), [warns, setWarns] = useState(0), [note, setNote] = useState('');
+  const [student, setStudent] = useState(() => { try { return localStorage.getItem(STUDENT_KEY) || ''; } catch (err) { return ''; } });
+  const rootRef = useRef(null), drawRef = useRef(null);
   const [bozp, setBozp] = useState(!!first);
   const task = tasks.find((t) => t.id === id);
   // živé meranie a čas
@@ -105,19 +112,29 @@ function TaskSection({ machine, tasks, apiRef, params, status, onSetup, safety }
   }, [status && status.text]);
   const start = (nid) => { setId(nid); setT0(nid ? Date.now() : 0); setResult(null); setWarns(0); setBozp(!!nid); };
   const checks = task && m ? task.checks(m) : [];
-  const okN = checks.filter((c) => c.ok).length;
   const secs = t0 ? Math.max(0, Math.round(((result ? result.at : now) - t0) / 1000)) : 0;
-  const evaluate = () => {
-    const pct = checks.length ? Math.max(0, (okN / checks.length) * 100 - Math.min(20, warns * 2)) : 0;
-    setResult({ at: Date.now(), pct, grade: grade(pct), ok: okN, total: checks.length, warns });
-  };
-  const share = () => {
-    const url = `${window.location.origin}${window.location.pathname}#${machine}/uloha=${id}`;
-    const done = () => { setCopied(url); setTimeout(() => setCopied(''), 6000); };
-    try { navigator.clipboard.writeText(url).then(done, done); } catch (err) { done(); }
+  const evaluate = () => { setResult({ at: Date.now(), ...score(checks, warns) }); };
+  const onStudent = (v) => { setStudent(v); try { localStorage.setItem(STUDENT_KEY, v); } catch (err) { /* ignorované */ } };
+  // protokol: zadanie, výkres, nastavenie z panela (data-param), údaje stroja, merania s odchýlkami, snímka a hodnotenie
+  const exportProtocol = async () => {
+    const root = rootRef.current, aside = (root && root.closest('aside')) || document;
+    const txt = (sel) => { const e = aside.querySelector(sel); return e ? e.textContent.trim() : ''; };
+    const params = Array.from(aside.querySelectorAll('[data-param]')).filter((e) => !root.contains(e) && e.dataset.val)
+      .map((e) => { const sec = e.closest('.sec'), h = sec && sec.querySelector('h2'); return { sec: h ? h.textContent.trim() : '', l: e.dataset.param, v: e.dataset.val }; });
+    const dro = Array.from(aside.querySelectorAll('.dro-row')).map((r) => [r.firstChild ? r.firstChild.textContent : '', r.lastChild ? r.lastChild.textContent : '']);
+    const sv = drawRef.current && drawRef.current.querySelector('svg');
+    const shot = await snapUrl(apiRef.current);
+    let mm = m; try { mm = apiRef.current.measure ? apiRef.current.measure() : m; } catch (err) { /* ignorované */ }
+    const now = new Date(), url = `${window.location.origin}${window.location.pathname}#${machine}/uloha=${id}`;
+    const html = buildProtocol({ machine, title: txt('h1.app-title'), sub: txt('h1.app-title + p'), kicker: txt('.sec .sec-title'), task: task.title(), desc: task.desc(),
+      svg: sv ? sv.outerHTML : '', shot, params, dro, checks: mm ? task.checks(mm) : checks, warns, secs, student: student.trim(), url, date: now.toLocaleString(L('sk-SK', 'en-GB')) });
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    download(new Blob([html], { type: 'text/html;charset=utf-8' }), `protokol-${machine}-${id}-${stamp}.html`);
+    setNote(L('Protokol sa sťahuje – otvor ho v prehliadači, dá sa vytlačiť alebo uložiť ako PDF.', 'The report is downloading – open it in a browser to print it or save it as PDF.'));
+    setTimeout(() => setNote(''), 7000);
   };
   return (
-    <div className="sec">
+    <div className="sec" ref={rootRef}>
       <h2 className="sec-title mb-2">{L('Úlohy', 'Exercises')}</h2>
       <label className="sr-only" htmlFor={`task-${machine}`}>{L('Úloha', 'Exercise')}</label>
       <select id={`task-${machine}`} className="sel mb-2" value={id} onChange={(e) => start(e.target.value)}>
@@ -127,7 +144,7 @@ function TaskSection({ machine, tasks, apiRef, params, status, onSetup, safety }
       {task && (<>
         <div className="desc" style={{ marginTop: 4 }}>
           <div className="text-sm" style={{ lineHeight: 1.45 }}>{task.desc()}</div>
-          {task.drawing && <div style={{ marginTop: 8, color: 'var(--text)' }}>{task.drawing()}</div>}
+          {task.drawing && <div ref={drawRef} style={{ marginTop: 8, color: 'var(--text)' }}>{task.drawing()}</div>}
         </div>
         {task.setup && onSetup && <button type="button" className="btn w-full mt-2" onClick={() => onSetup(task)}>{L('Pripraviť predpísaný polotovar a nástroj', 'Prepare the specified blank and tool')}</button>}
         <ul className="text-sm mt-3" style={{ lineHeight: 1.5, listStyle: 'none', padding: 0 }}>
@@ -138,12 +155,14 @@ function TaskSection({ machine, tasks, apiRef, params, status, onSetup, safety }
           ))}
         </ul>
         <div className="text-xs muted mt-2 tnum">{L('Čas', 'Time')} {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')} · {L('varovania a kolízie', 'warnings and collisions')}: {warns}</div>
-        {safety && <div className="mt-2"><SegRow label={L('Kontrola BOZP pred spustením', 'Safety check before start')} value={bozp} options={[[true, L('Áno', 'Yes')], [false, L('Nie', 'No')]]} onChange={setBozp} /></div>}
+        {safety && <div className="mt-2"><SegRow noParam label={L('Kontrola BOZP pred spustením', 'Safety check before start')} value={bozp} options={[[true, L('Áno', 'Yes')], [false, L('Nie', 'No')]]} onChange={setBozp} /></div>}
         <div className="flex gap-2 mt-1">
           <button type="button" className="btn active" style={{ flex: 1 }} onClick={evaluate}>{L('Vyhodnotiť', 'Evaluate')}</button>
-          <button type="button" className="btn" onClick={share} title={L('Skopíruje odkaz, ktorý otvorí túto úlohu', 'Copies a link that opens this exercise')}>{L('Odkaz pre žiakov', 'Link for students')}</button>
+          <button type="button" className="btn" onClick={exportProtocol} title={L('Stiahne protokol: zadanie, výkres, nastavenie stroja, namerané hodnoty a odchýlky, snímka a hodnotenie', 'Downloads a report: brief, drawing, machine settings, measured values and deviations, snapshot and assessment')}>{L('Vyexportovať protokol', 'Export report')}</button>
         </div>
-        {copied && <p className="text-xs mt-1 muted" style={{ wordBreak: 'break-all' }}>{L('Skopírované:', 'Copied:')} {copied}</p>}
+        <label className="sr-only" htmlFor={`student-${machine}`}>{L('Meno žiaka do protokolu', 'Student name for the report')}</label>
+        <input id={`student-${machine}`} className="sel mt-2" type="text" value={student} placeholder={L('Meno žiaka (do protokolu)', 'Student name (for the report)')} onChange={(e) => onStudent(e.target.value)} />
+        {note && <p className="text-xs mt-1 muted" role="status">{note}</p>}
         {result && (
           <div className={`msg ${result.grade <= 2 ? 'msg-run' : result.grade <= 3 ? 'msg-warn' : 'msg-danger'}`} role="status">
             <span className="lamp" />

@@ -10,6 +10,7 @@ import { TAU, approach, clamp } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
 import { createSound } from '../core/sound';
 import { CutCalc, ExportSection, TaskSection } from '../ui/tools';
+import { RadialFlangeDrawing, RadialRectDrawing } from '../ui/sketch';
 import { RADIAL_FEEDS, RADIAL_SIZES, RADIAL_SPEEDS, RD, radialChecks, spindleXZ } from './radialMath';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -31,24 +32,16 @@ const radialParts = () => mkParts([
   ['rozvadzac', 'Rozvádzač', 'Control box', 'Elektrický rozvádzač', 'Electrical box', 'Rozvádzač so šrafovaným vrchom je na plášti stĺpa a otáča sa s ramenom. Hlavný vypínač je na dvierkach, ovládanie chodu a zdvihu ramena na vreteníku.', 'The electrical box with a hatched top sits on the column sleeve and swings with the arm. The main switch is on its door, the drive and arm elevation buttons are on the drill head.'],
 ]);
 
-const HoleSketch = ({ holes, label, dims, circle }) => (
-  <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-    <rect x="75" y="8" width="150" height="104" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    {circle && <circle cx="150" cy="60" r={circle} fill="none" stroke="currentColor" strokeWidth="0.6" strokeDasharray="6 3 2 3" />}
-    {holes.map(([x, y, r], i) => <g key={i}><circle cx={150 + x} cy={60 + y} r={r} fill="none" stroke="currentColor" strokeWidth="1.4" /><path d={`M${144 + x} ${60 + y}h12M${150 + x} ${54 + y}v12`} stroke="currentColor" strokeWidth="0.6" /></g>)}
-    {dims.map(([t, x, y], i) => <text key={i} x={x} y={y} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{t}</text>)}
-  </svg>
-);
 const RADIAL_TASKS = [
   { id: 'roztec', title: () => L('Štyri diery Ø16 v rozteči 300 × 200', 'Four Ø16 holes at 300 × 200 pitch'),
     desc: () => L('Oceľová doska 400 × 300 × 30 mm. Vyvŕtaj štyri diery Ø16 naskrz v rohoch obdĺžnika 300 × 200 mm súmerne k stredu dosky (±0,5 mm). Doska stojí – vreteno nastavíš natočením ramena a posunom vreteníka podľa displeja X / Y. Pred vŕtaním upni stĺp aj vreteník.', 'Steel plate 400 × 300 × 30 mm. Drill four Ø16 through holes at the corners of a 300 × 200 mm rectangle, symmetric to the plate centre (±0.5 mm). The plate stays put – set the spindle by swinging the arm and moving the head according to the X / Y display. Clamp the column and the head before drilling.'),
     setup: { bL: 400, bW: 300, bT: 30, bit: 16, rpm: 500 },
-    drawing: () => <HoleSketch holes={[[-56, -37, 4], [56, -37, 4], [56, 37, 4], [-56, 37, 4]]} label="4 × Ø16" dims={[['4 × Ø16 naskrz', 108, 64], ['300', 140, 118], ['200', 228, 64]]} />,
+    drawing: () => <RadialRectDrawing />,
     labels: { count: () => L('Práve štyri diery', 'Exactly four holes'), d: () => L('Priemer Ø16', 'Diameter Ø16'), through: () => L('Všetky naskrz', 'All through'), pos: () => L('Rozteč 300 × 200 ±0,5 mm', 'Pitch 300 × 200 ±0.5 mm') } },
   { id: 'priruba', title: () => L('Príruba: 6 dier Ø20 na kružnici Ø300', 'Flange: 6 holes Ø20 on a Ø300 circle'),
     desc: () => L('Oceľová doska 400 × 400 × 25 mm. Vyvŕtaj šesť dier Ø20 naskrz na rozstupovej kružnici Ø300 so stredom v strede dosky, po 60° (polomer ±0,5 mm, uhol ±0,3°). Súradnice dier: x = 150 · cos φ, y = 150 · sin φ. Veľký vrták – nízke otáčky a menší posuv.', 'Steel plate 400 × 400 × 25 mm. Drill six Ø20 through holes on a Ø300 pitch circle centred on the plate, 60° apart (radius ±0.5 mm, angle ±0.3°). Hole coordinates: x = 150 · cos φ, y = 150 · sin φ. Large drill – low speed and a smaller feed.'),
     setup: { bL: 400, bW: 400, bT: 25, bit: 20, rpm: 355 },
-    drawing: () => <HoleSketch circle={40} holes={Array.from({ length: 6 }, (_, k) => [40 * Math.cos(k * Math.PI / 3), 40 * Math.sin(k * Math.PI / 3), 4.5])} label="6 × Ø20" dims={[['6 × Ø20, Ø300', 228, 20], ['60°', 196, 60]]} />,
+    drawing: () => <RadialFlangeDrawing />,
     labels: { count: () => L('Práve šesť dier', 'Exactly six holes'), d: () => L('Priemer Ø20', 'Diameter Ø20'), through: () => L('Všetky naskrz', 'All through'), circle: () => L('Rozstupová kružnica Ø300 ±0,5 mm', 'Pitch circle Ø300 ±0.5 mm'), pitch: () => L('Rozostup 60° ±0,3°', 'Spacing 60° ±0.3°') } },
 ].map((t) => ({ ...t, checks: (m) => radialChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const RADIAL_SAFETY = () => [

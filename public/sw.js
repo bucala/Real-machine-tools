@@ -1,6 +1,6 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
 // Pri inštalácii uloží všetky súbory aplikácie, takže po prvej návšteve fungujú všetky stroje aj bez internetu.
-const CACHE = 'rmt-9f44da30e1d6';
+const CACHE = 'rmt-612876f0db43';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -23,32 +23,33 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/bender-DMRCQfOJ.js",
+  "/assets/bender-De9KYmA1.js",
   "/assets/benderMath-d1cNdKwu.js",
   "/assets/core3d-69u6qx6Z.js",
-  "/assets/cylgrind-BhizqMVv.js",
-  "/assets/drill-C5DlWqns.js",
-  "/assets/folder-B_MXYvhq.js",
-  "/assets/grinder-_nJ0JlBs.js",
+  "/assets/cylgrind-CtSO0dhd.js",
+  "/assets/drill-BUv2Pdbj.js",
+  "/assets/folder-Bbf6qOQ5.js",
+  "/assets/grinder-B8TczkJg.js",
   "/assets/hfMath-B0JgUNbA.js",
-  "/assets/hob-C3VkP1s7.js",
-  "/assets/horiz-CU84BFtK.js",
-  "/assets/index-CJ3vjvgB.css",
-  "/assets/index-ChRJAScA.js",
-  "/assets/lathe-ik1k0ceG.js",
-  "/assets/mill-tYLUwU3R.js",
-  "/assets/plate-DvkEmzPZ.js",
-  "/assets/press-C67WUIzW.js",
-  "/assets/radial-C3N6qKR2.js",
-  "/assets/saw-CG8a8pD7.js",
-  "/assets/shaper-CLgxXeR4.js",
+  "/assets/hob-CceNuhWs.js",
+  "/assets/horiz-E15NbugR.js",
+  "/assets/index-BL11zscf.js",
+  "/assets/index-G0cxInxM.css",
+  "/assets/lathe-BiWoK0zA.js",
+  "/assets/mill-DekbkHQs.js",
+  "/assets/plate-52ojfK-G.js",
+  "/assets/press-BaME_DSX.js",
+  "/assets/radial-Dncx8B0v.js",
+  "/assets/saw-BFyhaAp1.js",
+  "/assets/shaper-6kHi1702.js",
   "/assets/shaperMath-BfNySK0Q.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/shear-dpX61c_g.js",
+  "/assets/shear-B7piFavA.js",
   "/assets/shopMath-B3CAL8Sc.js",
-  "/assets/slotter-DbLX-XiQ.js",
-  "/assets/tools-DLCCww9B.js",
-  "/assets/weld-DTHRlxam.js"
+  "/assets/sketch-B_dk-Md-.js",
+  "/assets/slotter-BuR5JLBW.js",
+  "/assets/tools-D0mljoqv.js",
+  "/assets/weld-B-fq-yyK.js"
 ];
 
 self.addEventListener('install', (e) => {
