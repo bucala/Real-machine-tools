@@ -5,7 +5,7 @@ import { createInspector } from '../core/inspector';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { createSound } from '../core/sound';
-import { HelpFooter, PartsSection, SceneView, SegRow, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
+import { HelpFooter, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { interpret } from './cnc/gcode';
 import { MODELS } from './cnc/kin';
 import { programTime } from './cnc/motion';
@@ -40,7 +40,7 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart
 function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
   const MC = MODELS[model] || MODELS.c32;
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
-  const init = { door: true, cabin: true, panelAngle: 0, chipConveyor: false, coolantUnit: false, speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
+  const init = { door: true, cabin: true, panelAngle: 0, panelYaw: 0, accessorySetup: 'none', speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
   const { ctl, ui, set, selected, selectPart, apiRef } = useMachine(init);
   const samples = SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
@@ -168,6 +168,31 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       const holder = new THREE.Group(); holder.scale.setScalar(1 / K); g.add(holder);
       pockets.push(holder);
     }
+    // Longitudinal drive bridge above the magazine: twin guides, lead screw,
+    // end bearing plates and motor. The saddle follows the existing Y cross-beam.
+    const driveY = 20.5;
+    for (const x of [-2.4, 2.4]) box(magS, x - .65, x + .65, driveY - .65, driveY - .2, -12, 3.3, M.dark);
+    const rodZ = (x, y, z0, z1, r, mat) => {
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z1 - z0, 24), mat);
+      rod.rotation.x = Math.PI / 2; rod.position.set(x, y, (z0 + z1) / 2); rod.castShadow = true; magS.add(rod); return rod;
+    };
+    for (const x of [-2.4, 2.4]) {
+      box(magS, x - .25, x + .25, driveY - .2, driveY, -11.5, 3.2, M.steelD);
+      rodZ(x, driveY + .25, -11.4, 3.1, .15, M.red);
+    }
+    rodZ(1.7, driveY + .35, -11.4, 3.1, .2, M.red);
+    for (const z of [-11.7, 3.2]) {
+      for (const x of [-2.4, 2.4]) box(magS, x - .65, x + .65, driveY - .3, driveY + .9, z - .22, z + .22, M.inox);
+      for (const x of [-2.4, 1.7, 2.4]) { const bearing = rodZ(x, driveY + .3, z - .25, z + .25, .32, M.steel); bearing.userData.part = 'osi'; }
+    }
+    box(magS, 1.1, 2.3, driveY - .2, driveY + 1.1, -13.4, -12, M.black);
+    rodZ(1.7, driveY + .35, -12, -11.4, .27, M.steelD);
+    const saddle = sc(yG);
+    box(saddle, -3.05, 3.05, driveY, driveY + .85, -2.1, -1.55, M.cab2);
+    for (const x of [-2.4, 2.4]) box(saddle, x - .35, x + .35, driveY - .1, driveY + .6, -.8, .8, M.red);
+    // Cable carrier returning to the rear motor, visible with the cabin removed.
+    const carrierCurve = new THREE.CatmullRomCurve3([v3(2.3, driveY + .2, -12), v3(2.3, driveY + 1.6, -10.8), v3(2.3, driveY + 1.6, -7.5), v3(2.3, driveY + .8, -6.5)]);
+    magS.add(new THREE.Mesh(new THREE.TubeGeometry(carrierCurve, 24, .22, 4, false), M.black));
     const loadMagazine = (tls) => pockets.forEach((g, i) => { clearTool(g); const tl = tls.find((x) => x.t === i + 1); if (tl) g.add(createToolModel(tl, M)); });
     // ---------------- kabína: čelo podľa predlohy (široký spodný a podľa modelu užší horný otvor) ----------------
     const cab = grp('kabina'), cabS = sc(cab), uw = MC.upperW;
@@ -212,14 +237,17 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     // ---------------- ovládací panel TNC 640 (Hermle) na otočnom ramene ----------------
     const pan = grp('panel');
     const panBase = sc(pan);
-    cylY(panBase, .6, .6, 0, 8.8, 12.6, -2.5, M.anth, 32);
-    cylY(panBase, .78, .78, 8.5, 9.2, 12.6, -2.5, M.steelD, 32);
-    const armPivot = new THREE.Group(); armPivot.position.set(12.6, 8.9, -2.5); panBase.add(armPivot);
-    box(armPivot, -.3, .3, -.3, .3, 0, 8.9, M.anth);
-    box(armPivot, -.3, 1.1, -.3, .3, 8.6, 9.2, M.anth);
-    cylY(armPivot, .48, .48, -.45, .45, 1.1, 8.9, M.steelD);
-    const panG = new THREE.Group(); panG.position.set(1.1, -8.9, 8.9); armPivot.add(panG); panG.rotation.y = -.42;
-    box(panG, -.3, .3, 8.6, 10.2, -.8, -.3, M.anth);
+    // Low machine-mounted swing arm; the terminal support moves with the arm.
+    box(panBase, 11.25, 14.6, 2.9, 4.3, -.95, -.05, M.anth);
+    cylY(panBase, .72, .72, 2.7, 4.8, 14.6, -.5, M.steelD);
+    const armPivot = new THREE.Group(); armPivot.position.set(14.6, 0, -.5); panBase.add(armPivot);
+    box(armPivot, -.42, .42, 3.2, 3.85, 0, 8.8, M.anth);
+    box(armPivot, -.48, .48, 3.85, 3.96, .5, 8.3, M.steelD);
+    cylY(armPivot, .63, .63, 2.9, 4.25, 0, 8.8, M.steelD);
+    cylY(armPivot, .46, .46, 1, 10.55, 0, 8.8, M.anth);
+    cylY(armPivot, .6, .6, 10, 10.55, 0, 8.8, M.steelD);
+    const panG = new THREE.Group(); panG.position.set(0, 0, 8.8); armPivot.add(panG);
+    box(panG, -.4, .4, 10.1, 10.85, -.5, .3, M.anth);
     const deskShape = new THREE.Shape(); deskShape.moveTo(-1.2, 10.8); deskShape.lineTo(1.2, 10.8); deskShape.lineTo(1.2, 11.65); deskShape.lineTo(-1.2, 12.45); deskShape.closePath();
     const desk = new THREE.Mesh(new THREE.ExtrudeGeometry(deskShape, { depth: 4.8, bevelEnabled: false }), M.brush);
     // Shape x is console depth, extrusion is console width.
@@ -346,12 +374,17 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       stol: () => v3(-6.3 * K, PY - 2.5 * K, 2.0 * K), zasobnik: () => v3(4 * K, magY * K, magZ * K), panel: () => new THREE.Vector3(0, 17.8, 0).applyMatrix4(panG.matrixWorld), obrobok: () => toolTip().clone().setY(PY + 0.3),
     };
     const views = {
-      celok: () => c.chipConveyor || c.coolantUnit ? [[-36 * K, 30 * K, 55 * K], [-9 * K, 12 * K, 0]] : [[34 * K, 28 * K, 48 * K], [0, 14 * K, 0]],
-      vybavenie: () => [[-36 * K, 19 * K, 24 * K], [-20 * K, 6 * K, -3 * K]],
+      celok: () => c.accessorySetup !== 'none' ? [[-36 * K, 30 * K, 55 * K], [-9 * K, 12 * K, 0]] : [[34 * K, 28 * K, 48 * K], [0, 14 * K, 0]],
+      vybavenie: () => [[-44 * K, 22 * K, 34 * K], [-26 * K, 7 * K, -4 * K]],
+      panel: () => {
+        const a = (c.panelAngle || 0) * Math.PI / 180, p = v3((14.6 + 8.8 * Math.sin(a)) * K, 9 * K, (-.5 + 8.8 * Math.cos(a)) * K);
+        const offset = v3(9 * K, 5 * K, 20 * K).applyAxisAngle(v3(0, 1, 0), (c.panelYaw || 0) * Math.PI / 180);
+        return [p.clone().add(offset).toArray(), p.toArray()];
+      },
       priestor: () => [[3.8 * K, PY + 4.1 * K, 7.0 * K], [0, PY - 0.2 * K, -0.4 * K], true],
       obrobok: () => [[1.5, PY + 1.0, 2.3], [0, PY - MC.hA * U + 0.75, 0], true],
       nastroj: () => { const t = toolTip(); return [[t.x + 1.9, t.y + 1.1, t.z + 2.6], [t.x, t.y - 0.15, t.z], true]; },
-      zasobnik: () => [[12 * K, 24 * K, -17 * K], [0, magY * K, magZ * K], true],
+      zasobnik: () => [[18 * K, 32 * K, -24 * K], [0, 18 * K, -6.5 * K], true],
       zhora: () => [[0.01, 27 * K, 2.5 * K], [0, PY, 0], true],
     };
     const insp = createInspector({
@@ -365,8 +398,27 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const chips = createParticles(scene, new THREE.BoxGeometry(0.04, 0.012, 0.07), std(0xc9ced3, 0.3, 0.85), 220);
     const drops = createParticles(scene, new THREE.SphereGeometry(0.025, 5, 4), new THREE.MeshStandardMaterial({ color: 0xdfeaf2, roughness: 0.1, transparent: true, opacity: 0.7 }), 160, false);
 
+    const panelRay = new THREE.Raycaster(); let panelDrag = null;
+    const panelDown = (e) => {
+      if (!c.manual || e.button !== 0) return;
+      const rect = dom.getBoundingClientRect(); camera.updateMatrixWorld(); scene.updateMatrixWorld();
+      panelRay.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
+      if (!panelRay.intersectObjects(panG.children, true).length) return;
+      panelDrag = { id: e.pointerId, x: e.clientX, key: e.shiftKey ? 'panelYaw' : 'panelAngle', start: e.shiftKey ? c.panelYaw : c.panelAngle };
+      dom.setPointerCapture(e.pointerId); e.stopImmediatePropagation(); e.preventDefault();
+    };
+    const panelMove = (e) => {
+      if (!panelDrag || panelDrag.id !== e.pointerId) return;
+      const v = panelDrag.start + (e.clientX - panelDrag.x) * .5;
+      set(panelDrag.key, panelDrag.key === 'panelAngle' ? Math.max(0, Math.min(180, v)) : ((v + 180) % 360 + 360) % 360 - 180);
+      e.stopImmediatePropagation(); e.preventDefault();
+    };
+    const panelUp = (e) => { if (panelDrag?.id === e.pointerId) { panelDrag = null; e.stopImmediatePropagation(); if (dom.hasPointerCapture(e.pointerId)) dom.releasePointerCapture(e.pointerId); } };
+    dom.addEventListener('pointerdown', panelDown, true); dom.addEventListener('pointermove', panelMove, true);
+    dom.addEventListener('pointerup', panelUp, true); dom.addEventListener('pointercancel', panelUp, true);
+
     // ---------------- hlavná slučka ----------------
-    let raf, last = performance.now(), teleT = 0, scrT = 0, doorK = c.door ? 1 : 0, magA = 0, panelA = 0, spinA = 0, t = 0;
+    let raf, last = performance.now(), teleT = 0, scrT = 0, doorK = c.door ? 1 : 0, magA = 0, panelA = 0, panelYaw = 0, spinA = 0, t = 0;
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
@@ -380,7 +432,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       accessories.update(c, dt);
       panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
       armPivot.rotation.y = panelA;
-      panG.rotation.y = -.42 - panelA * .35;
+      panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
+      panG.rotation.y = panelYaw - panelA;
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
         const sp2 = c.fast ? 400 : c.speed, budget = c.fast ? 2.5e7 : 4e6;
@@ -430,8 +483,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
-    return () => { cancelAnimationFrame(raf); snd.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, root, camera, armPivot, panG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    return () => { cancelAnimationFrame(raf); dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   // program, nástroje alebo polotovar sa zmenili → znova interpretovať (pri zastavenom stroji)
@@ -531,16 +584,26 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
             <SegRow label={L('Korekcia posuvu', 'Feed override')} value={ui.fo} options={[[50, '50 %'], [100, '100 %'], [120, '120 %'], [150, '150 %']]} onChange={(v) => set('fo', v)} />
             <SegRow label={L('Rýchloposuv', 'Rapid')} value={ui.ro} options={[[5, '5 %'], [25, '25 %'], [50, '50 %'], [100, '100 %']]} onChange={(v) => set('ro', v)} />
             <Toggle on={ui.single} label={L('Blok po bloku', 'Single block')} onClick={() => set('single', !ui.single)} />
-            <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [55, L('Bok', 'Side')], [110, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
+            <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [90, L('Bok', 'Side')], [180, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
+            <Slider id="hermle-arm-angle" label={L('Uhol ramena HMI', 'HMI arm angle')} min={0} max={180} step={0.1} digits={1} value={ui.panelAngle} unit="°" onChange={(v) => set('panelAngle', v)} />
+            <Slider id="hermle-panel-yaw" label={L('Natočenie HMI panela', 'HMI panel rotation')} min={-180} max={180} step={0.1} digits={1} value={ui.panelYaw} unit="°" onChange={(v) => set('panelYaw', v)} />
+            <button type="button" className="btn mb-2" onClick={() => apiRef.current.view?.('panel')}>{L('Pohľad na HMI', 'HMI view')}</button>
+            <p className="text-xs muted mb-2">{L('Plynulé otáčanie ramena 0–180° a nezávislé natočenie panela o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel.', 'Continuous 0–180° arm swing and independent 360° panel rotation. In manual mode, drag the panel; Shift + drag rotates only the panel.')}</p>
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
         </div>
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2>
-          <Toggle on={ui.chipConveyor} label={L('Dopravník triesok s vozíkom', 'Chip conveyor with cart')} onClick={() => { set('chipConveyor', !ui.chipConveyor); apiRef.current.view?.('celok'); }} />
-          <Toggle on={ui.coolantUnit} label={L('Externá chladiaca a filtračná jednotka', 'External coolant and filtration unit')} onClick={() => { set('coolantUnit', !ui.coolantUnit); apiRef.current.view?.('celok'); }} />
-          <p className="text-xs muted mt-2">{L('Predvolene vypnuté. Zariadenia sa doplnia na ľavú stranu stroja podľa referenčného usporiadania. Dopravník sa počas cyklu pohybuje; chladiaca jednotka je vizuálny model bez samostatnej simulácie filtrácie.', 'Off by default. Equipment is added to the left of the machine following the reference arrangement. The conveyor moves during a cycle; the coolant unit is a visual model without a separate filtration simulation.')}</p>
+          <label className="text-sm font-semibold" htmlFor="hermle-accessories">{L('Katalógová zostava', 'Catalogue configuration')}</label>
+          <select id="hermle-accessories" className="sel mt-2" value={ui.accessorySetup} onChange={(e) => { set('accessorySetup', e.target.value); apiRef.current.view?.('celok'); }}>
+            <option value="none">{L('Základ – zásuvka na triesky', 'Basic – chip drawer')}</option>
+            <option value="conveyor">{L('Dopravník triesok s vozíkom', 'Chip conveyor with cart')}</option>
+            <option value="ics40">{L('Dopravník + vnútorné chladenie ICS 40', 'Conveyor + internal coolant ICS 40')}</option>
+            <option value="ics80">{L('Dopravník + vnútorné chladenie ICS 80', 'Conveyor + internal coolant ICS 80')}</option>
+            <option value="ics80cooler">{L('Dopravník + ICS 80 + dochladzovacia jednotka', 'Conveyor + ICS 80 + recooling unit')}</option>
+          </select>
+          <p className="text-xs muted mt-2">{L('Prídavné vybavenie je predvolene vypnuté. Zostavy podľa katalógu sa navzájom nahrádzajú; chladiace jednotky sú znázornené vizuálne.', 'Optional equipment is off by default. Catalogue configurations replace one another; coolant units are represented visually.')}</p>
           <button type="button" className="btn mt-2" onClick={() => apiRef.current.view && apiRef.current.view('vybavenie')}>{L('Pohľad na vybavenie', 'Equipment view')}</button>
         </div>
 
