@@ -13,10 +13,11 @@ describe('Hermle front HMI and layout', () => {
       expect(front.yaw*180/Math.PI).toBeCloseTo(-25);
       for(const angle of [0,37.5,90,135,180]) {
         const p=hmiPose(angle,0,half,K);
-        const elbow=[p.base[0]+8.8*K*Math.sin(p.angle),p.base[1]+8.8*K*Math.cos(p.angle)];
-        expect(Math.hypot(elbow[0]-p.base[0],elbow[1]-p.base[1])).toBeCloseTo(8.8*K);
-        expect(Math.hypot(elbow[0]-p.column[0],elbow[1]-p.column[1])).toBeCloseTo(4.3*K);
+        const elbow=[p.base[0]+4.6*K*Math.sin(p.angle),p.base[1]+4.6*K*Math.cos(p.angle)];
+        expect(Math.hypot(elbow[0]-p.base[0],elbow[1]-p.base[1])).toBeCloseTo(4.6*K);
+        expect(Math.hypot(elbow[0]-p.column[0],elbow[1]-p.column[1])).toBeCloseTo(6.8*K);
         expect(p.column[0]).toBeGreaterThanOrEqual(half);
+        expect(elbow[0]-.7*K).toBeGreaterThan(half);
       }
       expect(hmiPose(180,0,half,K).yaw*180/Math.PI).toBeCloseTo(90);
     }

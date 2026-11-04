@@ -12,6 +12,7 @@ import { programTime } from './cnc/motion';
 import { SAMPLES } from './cnc/programs';
 import { createExecutor } from './cnc/sim';
 import { MATERIALS, defaultTools } from './cnc/tooling';
+import { createHmiPanel } from './cnc/hmiPanel';
 import { cabinHalfWidth, hmiPose } from './cnc/hermleLayout';
 import { createAccessories } from './cnc/accessories';
 import { createToolModel } from './cnc/toolModel';
@@ -258,54 +259,30 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     box(panBase, bodyHalf/K-.1,hmiBase.base[0]/K,2.9,4.3,7.05,7.95,M.anth);
     cylY(panBase,.65,.65,2.7,4.7,hmiBase.base[0]/K,7.5,M.steelD);
     const armPivot = new THREE.Group(); armPivot.position.set(hmiBase.base[0]/K,0,7.5); panBase.add(armPivot);
-    box(armPivot,-.4,.4,3.2,3.85,0,8.8,M.anth);
-    const armElbow = new THREE.Group(); armElbow.position.z=8.8; armPivot.add(armElbow);
-    cylY(armElbow,.62,.62,2.95,4.1,0,0,M.steelD);
-    box(armElbow,-.37,.37,3.25,3.8,0,4.3,M.anth);
-    cylY(armElbow,.5,.5,1,10.55,0,4.3,M.anth);
-    cylY(armElbow,.65,.65,3,4.15,0,4.3,M.steelD);
-    const panG = new THREE.Group(); panG.position.set(0,0,4.3); armElbow.add(panG);
-    box(panG,-.4,.4,10.1,10.85,-.5,.3,M.anth);
-    const deskShape = new THREE.Shape(); deskShape.moveTo(-1.2, 10.8); deskShape.lineTo(1.2, 10.8); deskShape.lineTo(1.2, 11.65); deskShape.lineTo(-1.2, 12.45); deskShape.closePath();
-    const desk = new THREE.Mesh(new THREE.ExtrudeGeometry(deskShape, { depth: 4.8, bevelEnabled: false }), M.brush);
-    // Shape x is console depth, extrusion is console width.
-    desk.rotation.y = -Math.PI / 2; desk.position.x = 2.4; panG.add(desk);                                          // pult s klávesnicou (brúsená nerez)
-    box(panG, -2.3, 2.3, 9.4, 10.0, -1.0, 1.0, M.cab2);                                            // zásuvka
-    box(panG, -2.4, 2.4, 12.2, 17.7, -0.55, 0.0, M.brush);                                         // obrazovková jednotka
-    [-1, 1].forEach((s) => {                                                                       // červený rúrkový rám
-      const rc = new THREE.CatmullRomCurve3([v3(s * 2.55, 9.9, 1.3), v3(s * 2.75, 11.6, 0.9), v3(s * 2.62, 14.6, 0.35), v3(s * 2.55, 17.9, 0.2)]);
-      panG.add(new THREE.Mesh(new THREE.TubeGeometry(rc, 24, 0.11, 10, false), M.red));
-    });
-    const keys = tex(512, 230, (g, w, h) => {
-      g.fillStyle = '#c4c8cc'; g.fillRect(0, 0, w, h);
-      const key = (x, y, ww, col2) => { g.fillStyle = col2; g.fillRect(x, y, ww, 13); };
-      for (let r = 0; r < 4; r++) for (let k = 0; k < 13; k++) key(30 + k * 18 + (r % 2) * 5, 18 + r * 18, 14, '#2a2f36');   // QWERTY
-      key(70, 90, 150, '#2a2f36');
-      ['#f0902a', '#f0902a', '#f0902a', '#f0902a', '#f0902a'].forEach((cc, i) => key(300, 14 + i * 18, 16, cc));                  // osi X Y Z IV V
-      for (let r = 0; r < 5; r++) for (let k = 0; k < 3; k++) key(326 + k * 20, 14 + r * 18, 16, r === 4 ? '#2a2f36' : '#eef0f2');   // číslice
-      for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) key(130 + k * 22, 130 + r * 20, 18, '#e6e8ea');                     // funkcie
-      for (let k = 0; k < 4; k++) key(20 + k * 22, 150, 18, '#2a2f36');
-      g.strokeStyle = '#d8202a'; g.lineWidth = 5; g.beginPath(); g.arc(292, 200, 11, 0.5, Math.PI * 2 - 0.5); g.stroke();
-      g.fillStyle = '#4d535a'; g.font = 'bold 15px sans-serif'; g.fillText('HERMLE', 308, 205);
-    });
-    const kp = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.1), new THREE.MeshStandardMaterial({ map: keys.tx, roughness: 0.55 })); kp.rotation.x = -Math.PI / 2 + 0.32; kp.position.set(0, 12.08, 0.0); panG.add(kp);
-    [[-1.65, 0.55], [1.5, 0.62]].forEach(([x, z]) => { const kn = cylY(panG, 0.18, 0.18, 12.1, 12.32, x, z, M.black, 20); kn.rotation.x = 0.32; });   // korekcie posuvu a otáčok
-    const eb = cylY(panG, 0.34, 0.34, 11.72, 11.8, -1.9, 0.85, M.yellow, 24); eb.rotation.x = 0.32; const es = cylY(panG, 0.22, 0.18, 11.8, 12.0, -1.9, 0.85, M.red, 24); es.rotation.x = 0.32;   // NOT-STOP
-    box(panG, 2.45, 2.85, 10.2, 11.7, 0.2, 0.9, M.black); cylX(panG, 0.26, 2.85, 2.98, 10.6, 0.55, M.black, 20); cylX(panG, 0.12, 2.85, 2.95, 11.35, 0.55, M.red, 16);   // ručné koliesko HR
-    const bezel = tex(256, 300, (g, w, h) => { g.fillStyle = '#bfc3c7'; g.fillRect(0, 0, w, h); g.fillStyle = '#9aa1a8'; for (let i = 0; i < 8; i++) { g.fillRect(8, 26 + i * 26, 16, 16); g.fillRect(w - 24, 26 + i * 26, 16, 16); } for (let k = 0; k < 9; k++) g.fillRect(34 + k * 22, h - 26, 16, 16); });
-    const bz = new THREE.Mesh(new THREE.PlaneGeometry(4.7, 5.4), new THREE.MeshStandardMaterial({ map: bezel.tx, roughness: 0.55 })); bz.position.set(0, 14.95, 0.01); panG.add(bz);
+    // Offset links and forked elbow: the folded arm has clearance between its two members.
+    box(armPivot,-.48,.48,3.2,4.05,0,4.6,M.anth);
+    box(armPivot,-.52,.52,4.05,4.16,.4,4.2,M.steelD);
+    const armElbow = new THREE.Group(); armElbow.position.z=4.6; armPivot.add(armElbow);
+    cylY(armElbow,.68,.68,3.85,4.95,0,0,M.steelD);
+    box(armElbow,-.42,.42,4.35,5.05,0,6.8,M.anth);
+    const brace=new THREE.Mesh(new THREE.BoxGeometry(.7,3.95,.7),M.anth);
+    brace.position.set(0,6.8,6.02);brace.rotation.x=.42;armElbow.add(brace);
+    cylY(armElbow,.38,.38,2.4,9.45,0,6.8,M.anth);
+    cylY(armElbow,.55,.55,4.25,5.2,0,6.8,M.steelD);
+    const panG = new THREE.Group(); panG.position.set(0,0,6.8); armElbow.add(panG);
+    const { display: sm } = createHmiPanel(panG,M,tex);
     let scr = null;
     const screen = tex(640, 460, (g, w, h) => {
-      g.fillStyle = '#0d1a2a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1f6fbf'; g.fillRect(0, 0, w, 34);
+      g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
       g.fillStyle = '#fff'; g.font = 'bold 18px monospace'; g.fillText(`HEIDENHAIN · ${scr ? scr.title : 'TNC 640'}`, 12, 23);
       if (!scr) return;
       g.font = '17px monospace';
-      scr.lines.forEach((ln, i) => { if (ln.cur) { g.fillStyle = '#ffd34d'; g.fillRect(8, 48 + i * 24, 384, 22); g.fillStyle = '#10202f'; } else g.fillStyle = '#b8c7d8'; g.fillText(ln.t.slice(0, 36), 12, 64 + i * 24); });
-      g.fillStyle = '#16304a'; g.fillRect(404, 44, 228, 340); g.font = '18px monospace';
-      scr.pos.forEach(([k, v], i) => { g.fillStyle = '#7fd1ff'; g.fillText(k, 414, 74 + i * 38); g.fillStyle = '#ffffff'; g.fillText(v, 446, 74 + i * 38); });
+      scr.lines.forEach((ln, i) => { if (ln.cur) { g.fillStyle = '#ffd34d'; g.fillRect(8, 48 + i * 24, 384, 22); g.fillStyle = '#10202f'; } else g.fillStyle = '#27333e'; g.fillText(ln.t.slice(0, 36), 12, 64 + i * 24); });
+      g.fillStyle = '#d7dfe5'; g.fillRect(404, 44, 228, 340); g.font = '18px monospace';
+      scr.pos.forEach(([k, v], i) => { g.fillStyle = '#334b5f'; g.fillText(k, 414, 74 + i * 38); g.fillStyle = '#172b3b'; g.fillText(v, 446, 74 + i * 38); });
       g.fillStyle = scr.alarm ? '#ff5a4f' : '#59d17b'; g.fillRect(0, h - 40, w, 40); g.fillStyle = '#0d1a2a'; g.font = 'bold 17px sans-serif'; g.fillText(scr.status.slice(0, 64), 12, h - 14);
     });
-    const sm = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 2.8), new THREE.MeshBasicMaterial({ map: screen.tx, toneMapped: false })); sm.position.set(0, 15.25, 0.03); panG.add(sm);
+    sm.material.map=screen.tx;sm.material.needsUpdate=true;
     // Cabinet seams, ventilation grille and levelling pads from the brochure views.
     for (const x of [-10.9,10.9]) for(const y of [7,23.2]) {
       const screw=new THREE.Mesh(new THREE.CircleGeometry(.07,12),M.steelD);screw.position.set(x,y,8.68);cabS.add(screw);
@@ -368,6 +345,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       buildStock();
       prog = interpret(txt, { o54, tools: tls, mach: MC });
       ex = createExecutor({ moves: prog.moves, tools: tls, o54, stock, fixture: FIX, kc: (MATERIALS[c.mat] || MATERIALS.al).kc, mach: MC });
+      scr = { title: L('Pripravený', 'Ready'), lines: prog.lines.slice(0,13).map((t,i)=>({t,cur:i===0})),
+        pos: [['X',fmt(ex.S.pose.m[0])],['Y',fmt(ex.S.pose.m[1])],['Z','0.000'],['A','0.000'],['C','0.000'],['T','0'],['S','0'],['F','100']],
+        status: L('Pripravený', 'Ready'), alarm: false };
+      screen.redraw();
       maxLoad = 0; msg = null; curT = -1;
       return { errors: prog.errors, warns: prog.warns, time: programTime(prog.moves, o54, MC), dialect: prog.dialect, toolDefs: prog.toolDefs, stock: prog.stock, n: prog.moves.length };
     };
@@ -468,10 +449,11 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       cab.visible = c.cabin;
       accessories.update(c, dt);
       panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
-      armPivot.rotation.y = panelA;
-      armElbow.rotation.y = Math.PI - panelA;
+      const armPose = hmiPose(panelA*180/Math.PI,0,bodyHalf,K);
+      armPivot.rotation.y = armPose.angle;
+      armElbow.rotation.y = armPose.elbow;
       panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
-      panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - Math.PI;
+      panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - armPose.angle - armPose.elbow;
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
         const sp2 = c.fast ? 400 : c.speed, budget = c.fast ? 2.5e7 : 4e6;
