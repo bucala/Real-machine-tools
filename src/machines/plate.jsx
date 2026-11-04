@@ -65,7 +65,6 @@ function PlateRollSimulator({ onBack, params }) {
       ...baseMats(0xa9cd7f, 0x93b96a, 0x6f9150),
       top: std(0x9d8a80, 0.55, 0.45), low: std(0x7e8285, 0.45, 0.6), front: std(0xb3a79c, 0.55, 0.45), bronze: std(0x8a6a3a, 0.35, 0.8),
       sheet: new THREE.MeshStandardMaterial({ color: 0x9ea4a9, roughness: 0.45, metalness: 0.7, side: THREE.DoubleSide, flatShading: true }),
-      floor: std(0x6c6f71, 0.9, 0.2), groove: std(0x4c4f51, 0.9, 0.1),
     };
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, handwheel } = kit;
@@ -74,10 +73,6 @@ function PlateRollSimulator({ onBack, params }) {
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    // ---------- podlaha z rebrovaných plechov ----------
-    const fl = new THREE.Group(); root.add(fl);
-    box(fl, -9, 9, 0.01, 0.03, -HW - 6, HW + 6, M.floor);
-    for (let x = -8.5; x <= 8.5; x += 0.5) box(fl, x - 0.01, x + 0.01, 0.03, 0.036, -HW - 6, HW + 6, M.groove);
     // ---------- stojany (tvar podľa koncového pohľadu: široký spodok, vidlica hore) ----------
     const fork = [[3.2, Y0 - 0.3], [2.9, Y0 + 4.2], [1.55, Y0 + 4.2], [1.55, Y0 - 1.0], [-1.55, Y0 - 1.0], [-1.55, Y0 + 4.2], [-2.9, Y0 + 4.2], [-3.2, Y0 - 0.3]];
     const lower = [[-4.0, 0], [4.0, 0], [4.0, 1.4], [3.4, 2.2], [3.2, Y0 - 0.3]];

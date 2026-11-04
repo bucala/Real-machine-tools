@@ -245,12 +245,12 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
 
 // chod tam a späť (vzad / stop / vpred) v rovnakom štýle ako hlavné tlačidlo Štart / Stop
 function DirRun({ value, onChange, labels }) {
-  const [lb, ls, lf] = labels || [L('◀ Vzad', '◀ Reverse'), L('■ Stop', '■ Stop'), L('Vpred ▶', 'Forward ▶')];
+  const [lb, ls, lf] = labels || [L('Vzad', 'Reverse'), L('Stop', 'Stop'), L('Vpred', 'Forward')];
   return (
     <div className="run-row" role="group" aria-label={L('Smer chodu', 'Drive direction')}>
-      <button type="button" className={`btn-run start ${value === -1 ? 'is-on' : 'is-off'}`} aria-pressed={value === -1} onClick={() => onChange(value === -1 ? 0 : -1)}>{lb}</button>
-      <button type="button" className={`btn-run stop ${value ? 'is-on' : 'is-off'}`} onClick={() => onChange(0)}>{ls}</button>
-      <button type="button" className={`btn-run start ${value === 1 ? 'is-on' : 'is-off'}`} aria-pressed={value === 1} onClick={() => onChange(value === 1 ? 0 : 1)}>{lf}</button>
+      <button type="button" className={`btn-run start ${value === -1 ? 'is-on' : ''}`} aria-pressed={value === -1} onClick={() => onChange(value === -1 ? 0 : -1)}><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><path d="M10 1 2 6l8 5z" /></svg>{lb}</button>
+      <button type="button" className={`btn-run stop ${value === 0 ? 'is-on' : ''}`} aria-pressed={value === 0} onClick={() => onChange(0)}><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><rect x="1" y="1" width="10" height="10" /></svg>{ls}</button>
+      <button type="button" className={`btn-run start ${value === 1 ? 'is-on' : ''}`} aria-pressed={value === 1} onClick={() => onChange(value === 1 ? 0 : 1)}>{lf}<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><path d="m2 1 8 5-8 5z" /></svg></button>
     </div>
   );
 }

@@ -368,7 +368,7 @@ flowchart LR
 
 ### Prehliadka a CAD export aktuálneho obrobku
 
-Všetkých 19 simulátorov má tlačidlo **Pozrieť obrobok**. Prehliadka umožňuje diel vybrať, otáčať a priblížiť; **Upnúť späť** obnoví jeho uloženie a režim ovládania. Pri strojoch, ktoré vyžadujú zastavenie alebo odsunutie nástroja, sa najprv zobrazí príslušný pokyn. Pri zakružovačke sa pred vybratím otvorí odklopné ložisko. Nožnice ukážu posledný odstrihnutý pás, ak je dostupný, inak plech na stole. Nastavenia sú počas prehliadky zablokované. V zakružovačke je miestna podlaha oddelená od podlahy a mriežky scény, takže sa neprekrývajú a neblikajú.
+Všetkých 19 simulátorov má tlačidlo **Pozrieť obrobok**. Prehliadka umožňuje diel vybrať, otáčať a priblížiť; **Upnúť späť** obnoví jeho uloženie a režim ovládania. Pri strojoch, ktoré vyžadujú zastavenie alebo odsunutie nástroja, sa najprv zobrazí príslušný pokyn. Pri zakružovačke sa pred vybratím otvorí odklopné ložisko. Nožnice ukážu posledný odstrihnutý pás, ak je dostupný, inak plech na stole. Nastavenia sú počas prehliadky zablokované. Zakružovačka používa spoločnú podlahu s mriežkou ako ostatné stroje; samostatná svetlá podkladová doska je odstránená. Tlačidlá chodu vpred/vzad a Stop používajú rovnaké plné zelené a červené tlačidlá ako ostatné pohony.
 
 **Stiahnuť STP** exportuje geometrický stav obrobku v okamihu exportu po zastavení, vrátane dovtedy vykonaných operácií; obrábanie sa nemusí dokončiť. Export neobnovuje polotovar ani neresetuje program. Hermle pred exportom dokončí aktualizáciu geometrie z aktuálnych voxelov. Otvory vŕtačiek, radiálnej vŕtačky a lisu sa pri exporte odčítajú z materiálu; horizontálka rekonštruuje aj rozdielne priemery po hĺbke rozpracovaného otvoru.
 
