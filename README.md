@@ -272,7 +272,7 @@ Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup j
 - **CNC program.** Interpreter ISO / Fanuc a Heidenhain Klartext (`src/machines/cnc/gcode.js`):
   - ISO: G0–G3, G43, G43.4 (TCP), G68.2 + G53.1, cykly G81–G83, G93;
   - Heidenhain: BLK FORM, TOOL CALL, L / CC / C / CR, M128, PLANE SPATIAL, CYCL DEF 200.
-- **PowerMill a ďalšie CAM.** Načítanie `.nc` / `.h` z kompatibilného postprocesora (PowerMill, Fusion 360, Mastercam, hyperMILL …), kontrola programu a simulácia. Karta *PowerMill / CAM* vysvetľuje nastavenie A/C, mm, G54 a exportuje komentáre s geometriou osadených nástrojov. Voliteľný [lokálny most pre Windows](integrations/powermill/README.md) sa pripojí k otvorenému PowerMillu cez COM: prevezme nástroje a už vygenerovaný NC výstup a umožní vytvoriť novú kópiu vybraného nástroja. Na karte stiahni most, spusti ho a vlož párovací token. Skutočný COM prenos treba overiť na konkrétnej inštalácii; tu je otestovaný protokol s náhradným COM objektom. Natívne projekty a databázy sa neimportujú. [Postup a formát metadát →](docs/cam/powermill-exchange.md)
+- **PowerMill a ďalšie CAM.** Načítanie `.nc` / `.h` z kompatibilného postprocesora (PowerMill, Fusion 360, Mastercam, hyperMILL …), kontrola programu a simulácia. Karta *PowerMill / CAM* vysvetľuje nastavenie A/C, mm, G54 a exportuje komentáre s geometriou osadených nástrojov. Natívne projekty a databázy sa neimportujú. [Postup a formát metadát →](docs/cam/powermill-exchange.md)
 - **Skrinka a knižnica nástrojov.** Samostatné podokno s vyhľadávaním, náhľadom, editorom tvaru a rozmerov, duplikovaním, ukladaním a mazaním. Skrinka sa uchováva v prehliadači a umožňuje import/export JSON a CSV (mm). Uloženie v skrinke nemení stroj; nástroj sa samostatne osadí na vybrané T v 36/42-miestnom zásobníku. Osadenie obnoví simuláciu od polotovaru a počas chodu či prehliadky obrobku je zablokované.
 - **Detekcia nástrojov z NC.** Rozpoznáva odkazy T a explicitné rozmery v komentároch vrátane viacriadkových hlavičiek CAM. Zobrazí chýbajúce údaje a rozpory, vyžaduje ich kontrolu v editore a nič automaticky neprepíše. Registre `H` a `D` nie sú geometria nástroja. [Podporované polia, jednotky a zálohovanie →](docs/cam/powermill-exchange.md)
 - **Kinematika a úber.**
@@ -375,7 +375,7 @@ STEP AP214 používa rovinné plochy podľa rozlíšenia geometrie simulátora. 
 
 ## Vývoj
 
-Potrebný je Node.js 22.12 alebo novší. Testy lokálneho mosta PowerMill vyžadujú aj Python 3.11+ (`python3`); samotná webová aplikácia ho nepotrebuje. Živé prepojenie vyžaduje Windows s PowerMillom podľa [návodu mosta](integrations/powermill/README.md). Závislosti frontendu sa nainštalujú raz:
+Potrebný je Node.js 22.12 alebo novší. Závislosti sa nainštalujú raz:
 
 ```bash
 npm install

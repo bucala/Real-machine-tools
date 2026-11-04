@@ -72,8 +72,8 @@ Import záznamy pridáva: zhodné ID a geometriu preskočí, pri rozdielnej geom
 
 ## Rozsah prepojenia
 
-Súborová výmena funguje bez ďalšej inštalácie. Voliteľné **živé prepojenie** používa [lokálny Windows most](../../integrations/powermill/README.md) na počítači s otvoreným PowerMillom a prehliadačom: stav, prevzatie nástrojov a existujúceho NC výstupu aj vytvorenie novej kópie nástroja. Most je na stiahnutie priamo v karte *PowerMill / CAM* a páruje sa tokenom.
+Prepojenie funguje cez súbory bez ďalšej inštalácie. V PowerMill vytvor NC výstup kompatibilným postprocesorom a načítaj ho do simulátora cez kartu *PowerMill / CAM*.
 
-Natívne projekty `.pmlprj`, databázy a kompletná simulácia PowerMillu sa neimportujú. JSON/CSV je formát tejto aplikácie; pre natívny import súborov do PowerMill potrebuješ mapovanie alebo importér, prípadne použi živé vytvorenie nástroja cez most. Komentáre postprocesorov sa líšia, preto aplikácia nepredpokladá, že každý PowerMill NC program obsahuje geometriu. Presná zostava držiaka a gauge length vyžadujú manuálnu kontrolu podľa návodu mosta.
+Natívne projekty `.pmlprj`, databázy a kompletná simulácia PowerMillu sa neimportujú. JSON/CSV je formát tejto aplikácie; pre natívny import súborov do PowerMill potrebuješ mapovanie alebo importér. Komentáre postprocesorov sa líšia, preto aplikácia nepredpokladá, že každý PowerMill NC program obsahuje geometriu. Rozmery držiaka a dĺžku od čela vretena po špičku vždy skontroluj v editore.
 
 [Autodesk PowerMill](https://www.autodesk.com/products/powermill/product-details#all-features) · [README – CNC](../../README.md#-moderné-stroje--cnc-a-5-osé-obrábanie-moderne)
