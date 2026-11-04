@@ -19,16 +19,16 @@ import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneVi
 // mierka 1 = 100 mm. Stĺp v (RD.CX, RD.CZ); rameno sa otáča okolo stĺpa (α) a posúva po ňom zvisle (H = spodok ramena);
 // vreteník jazdí po ramene (R = vyloženie od osi stĺpa), vreteno je pred ramenom (RD.SZO).
 const RA = { PX: 5.1, PZ: 0, CUBE: 4.7, PAR: 0.2, NOSE: -2.8, HMIN: 11.2, HMAX: 16.5, RMIN: 3.2, RMAX: 12.4, QMAX: 3.0 };
-const drillLen = (d) => 0.6 + 1.1 + d / 40;           // kužeľ + vrták (dlhší pri väčšom priemere)
+const drillLen = (d) => 0.6 + 1.1 + d / 50;           // kužeľ + vrták (dlhší pri väčšom priemere)
 const radialParts = () => mkParts([
   ['podstavec', 'Základová doska', 'Base', 'Základová doska', 'Base plate', 'Masívna liatinová doska s T-drážkami nesie stĺp a upínaciu kocku. Veľké obrobky sa upínajú priamo na ňu.', 'A massive cast-iron plate with T-slots carries the column and the box table. Large work is clamped directly on it.'],
   ['stlp', 'Stĺp', 'Column', 'Stĺp s otočným plášťom', 'Column with rotating sleeve', 'Na pevnom vnútornom stĺpe sa otáča plášť s ramenom. Upínacia páka plášť zovrie – pri vŕtaní musí byť stĺp upnutý, inak sa rameno pootočí.', 'A sleeve with the arm turns on the fixed inner column. The clamp lever locks the sleeve – while drilling the column must be clamped, otherwise the arm swings.'],
   ['rameno', 'Rameno', 'Arm', 'Rameno', 'Radial arm', 'Rameno sa otáča okolo stĺpa a motorom sa zdvíha po ňom (tlačidlá ▲ ▼ na vreteníku, len pri uvoľnenom stĺpe). Na jeho prednej strane sú vedenia vreteníka.', 'The arm swings around the column and is raised along it by a motor (▲ ▼ buttons on the head, only with the column unclamped). Its front carries the ways of the drill head.'],
   ['vretennik', 'Vreteník', 'Drill head', 'Vreteník', 'Drill head', 'Vreteník s motorom a prevodovkou jazdí po ramene ručným kolesom. Má 12 otáčok 32 – 1400 ot/min, automatický posuv 0,1 – 0,4 mm/ot a vlastnú upínaciu páku.', 'The head with motor and gearbox travels along the arm by the handwheel. It has 12 speeds 32 – 1400 rpm, automatic feed 0.1 – 0.4 mm/rev and its own clamp lever.'],
-  ['vreteno', 'Vreteno a vrták', 'Spindle & drill', 'Vreteno s vrtákom', 'Spindle with drill', 'Pinola sa vysúva trojramennou kľukou alebo automatickým posuvom až o 300 mm. Vrták Ø10 – Ø40 je upnutý v Morseovom kuželi.', 'The quill extends by up to 300 mm with the three-spoke capstan or the power feed. The Ø10 – Ø40 drill is held in a Morse taper.'],
+  ['vreteno', 'Vreteno a vrták', 'Spindle & drill', 'Vreteno s vrtákom', 'Spindle with drill', 'Pinola sa vysúva trojramennou kľukou alebo automatickým posuvom až o 300 mm. Vrták Ø10 – Ø50 je upnutý v Morseovom kuželi.', 'The quill extends by up to 300 mm with the three-spoke capstan or the power feed. The Ø10 – Ø50 drill is held in a Morse taper.'],
   ['stol', 'Upínacia kocka', 'Box table', 'Upínacia kocka', 'Box table', 'Liatinová kocka s T-drážkami na základovej doske. Obrobok leží na podložkách, aby sa dalo vŕtať naskrz.', 'A cast-iron box table with T-slots on the base. The work lies on parallels so that holes can be drilled through.'],
   ['obrobok', 'Obrobok', 'Workpiece', 'Doska na podložkách', 'Plate on parallels', 'Oceľová doska – pri vŕtaní stojí. Polohu diery určuje natočenie ramena a vyloženie vreteníka; displej ukazuje polohu vretena od stredu dosky.', 'A steel plate – it stays put while drilling. The hole position is set by the arm angle and the head reach; the display shows the spindle position from the plate centre.'],
-  ['rozvadzac', 'Rozvádzač', 'Control box', 'Elektrický rozvádzač', 'Electrical box', 'Hlavný vypínač stroja. Ovládanie chodu a zdvihu ramena je na vreteníku.', 'Main switch of the machine. The drive and arm elevation buttons are on the drill head.'],
+  ['rozvadzac', 'Rozvádzač', 'Control box', 'Elektrický rozvádzač', 'Electrical box', 'Rozvádzač so šrafovaným vrchom je na plášti stĺpa a otáča sa s ramenom. Hlavný vypínač je na dvierkach, ovládanie chodu a zdvihu ramena na vreteníku.', 'The electrical box with a hatched top sits on the column sleeve and swings with the arm. The main switch is on its door, the drive and arm elevation buttons are on the drill head.'],
 ]);
 
 const HoleSketch = ({ holes, label, dims, circle }) => (
@@ -73,7 +73,7 @@ function RadialSimulator({ onBack, params }) {
     const snd = createSound('drill');
     const dom = renderer.domElement;
     const M = {
-      ...baseMats(0x6f9680, 0x5b806b, 0x41604f),
+      ...baseMats(0x7fab88, 0x6a9573, 0x4a6c54),
       col: std(0x8b9095, 0.35, 0.7), plate: std(0x737980, 0.42, 0.62), hole: std(0x0b0c0d, 0.9, 0.1), bit: std(0x2f3236, 0.32, 0.8),
       chip: std(0xa6adb4, 0.3, 0.85), lampShade: std(0x5b806b, 0.5, 0.2),
     };
@@ -84,44 +84,86 @@ function RadialSimulator({ onBack, params }) {
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
+    // nápisy a šrafovanie (štítok VO50, logo TOS, výstražné pruhy na rozvádzači)
+    const texMat = (w, h, draw, rough = 0.6) => {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+      return new THREE.MeshStandardMaterial({ map: tx, roughness: rough, metalness: 0.15 });
+    };
+    const decal = (parent, mat, w, h, x, y, z, ry = 0, rx = 0) => { const m = add(parent, new THREE.PlaneGeometry(w, h), mat, x, y, z); m.rotation.set(rx, ry, 0); return m; };
+    const hatch = texMat(128, 32, (g, w, h) => { g.fillStyle = '#e3b51b'; g.fillRect(0, 0, w, h); g.fillStyle = '#16181a'; for (let x = -h; x < w + h; x += 24) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 12, h); g.lineTo(x + 12 + h, 0); g.lineTo(x + h, 0); g.fill(); } });
+    const nameplate = texMat(160, 64, (g, w, h) => { g.fillStyle = '#d9dcd6'; g.fillRect(0, 0, w, h); g.strokeStyle = '#2b2e2c'; g.lineWidth = 4; g.strokeRect(3, 3, w - 6, h - 6); g.fillStyle = '#1d2a22'; g.font = 'bold 40px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('VO50', w / 2, h / 2 + 2); }, 0.4);
+    const logo = texMat(96, 64, (g, w, h) => { g.fillStyle = '#5b806b'; g.fillRect(0, 0, w, h); g.fillStyle = '#eef0ea'; g.beginPath(); g.ellipse(w / 2, h / 2, w / 2 - 4, h / 2 - 4, 0, 0, TAU); g.fill(); g.fillStyle = '#23372b'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TOS', w / 2, h / 2 + 1); }, 0.5);
+
     // ---------- základová doska a upínacia kocka ----------
     const base = grp('podstavec');
-    box(base, -7.2, 9.6, 0, 0.7, -3.3, 3.3, M.greenDark);
-    [-2.0, -0.7, 0.6, 1.9].forEach((z) => box(base, 0.5, 9.4, 0.69, 0.705, z - 0.08, z + 0.08, M.black));
+    box(base, -7.4, 10.4, 0, 0.62, -3.5, 3.5, M.greenDark);                        // dlhá liatinová doska
+    box(base, -7.5, 10.5, 0.62, 0.72, -3.6, -3.35, M.greenDark); box(base, -7.5, 10.5, 0.62, 0.72, 3.35, 3.6, M.greenDark);   // okraje žliabku
+    box(base, 10.25, 10.5, 0.62, 0.72, -3.35, 3.35, M.greenDark);
+    [-2.2, -1.1, 0, 1.1, 2.2].forEach((z) => box(base, 1.2, 10.1, 0.699, 0.705, z - 0.09, z + 0.09, M.black));   // T-drážky
+    [-1, 1].forEach((s) => box(base, -7.6, 10.6, 0, 0.12, s * 3.6 - 0.1, s * 3.6 + 0.1, M.greenDark));
     const cube = grp('stol');
     box(cube, PX - 2.3, PX + 2.3, 0.7, CUBE, PZ - 2.25, PZ + 2.25, M.green);
     [-1.4, -0.45, 0.5, 1.45].forEach((z) => box(cube, PX - 2.3, PX + 2.3, CUBE - 0.02, CUBE + 0.003, PZ + z - 0.07, PZ + z + 0.07, M.black));
     box(cube, PX - 2.31, PX + 2.31, 1.2, 4.2, PZ + 2.25, PZ + 2.26, M.greenDark);
-    // ---------- stĺp ----------
+    [-1.4, 0, 1.4].forEach((y) => box(cube, PX - 2.31, PX + 2.31, CUBE - 1.2 + y * 0.6, CUBE - 1.12 + y * 0.6, PZ + 2.26, PZ + 2.3, M.black));   // drážky na boku kocky
+    box(cube, PX + 2.3, PX + 2.32, 1.2, 4.2, PZ - 1.8, PZ + 1.8, M.greenDark);
+    // ---------- stĺp s veľkou prírubou ----------
     const colG = grp('stlp');
-    cylY(colG, 1.15, 1.25, 0.7, 1.25, CX, CZ, M.green, 40);
-    cylY(colG, 0.62, 0.62, 1.25, 18.2, CX, CZ, M.col, 32);
-    // ---------- rozvádzač ----------
-    const cab = grp('rozvadzac');
-    box(cab, -7.0, -5.9, 0.7, 3.6, 1.7, 2.7, M.green);
-    box(cab, -6.85, -6.05, 2.4, 3.3, 2.7, 2.72, M.panel);
-    const mainSw = new THREE.Group(); mainSw.position.set(-6.45, 2.85, 2.73); cab.add(mainSw);
-    cylZ(mainSw, 0.18, 0.18, 0, 0.06, 0, 0, M.black, 24); box(mainSw, -0.045, 0.045, -0.22, 0.22, 0.06, 0.16, M.red);
+    cylY(colG, 1.95, 1.95, 0.7, 1.0, CX, CZ, M.green, 48);                          // príruba stĺpa
+    cylY(colG, 1.45, 1.75, 1.0, 1.45, CX, CZ, M.green, 48);
+    for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + 0.2; cylY(colG, 0.13, 0.13, 1.0, 1.12, CX + Math.cos(a) * 1.75, CZ + Math.sin(a) * 1.75, M.steelDark, 6); }
+    cylY(colG, 0.62, 0.62, 1.45, 18.2, CX, CZ, M.col, 32);
     // ---------- otočný plášť s ramenom ----------
     const armRot = new THREE.Group(); armRot.position.set(CX, 0, CZ); root.add(armRot);
     const sleeve = grp('stlp', armRot);
-    cylY(sleeve, 0.86, 0.86, 1.3, 17.6, 0, 0, M.green, 40);
-    box(sleeve, -0.7, 0.7, 17.6, 18.8, -0.7, 0.7, M.green);                         // motor zdvihu ramena
-    cylY(sleeve, 0.35, 0.35, 18.8, 19.3, 0, 0, M.greenDark, 20);
-    box(sleeve, 0.84, 0.88, 2.0, 17.4, -0.12, 0.12, M.steelDark);                   // skrutka zdvihu
-    const colLockG = new THREE.Group(); colLockG.position.set(0.0, 1.9, 0.86); sleeve.add(colLockG);
+    cylY(sleeve, 1.05, 1.05, 1.45, 1.85, 0, 0, M.greenDark, 40);                      // spodný krúžok plášťa
+    cylY(sleeve, 0.9, 0.9, 1.85, 17.6, 0, 0, M.green, 40);
+    // horná skriňa: prevodovka zdvihu ramena s motorom
+    box(sleeve, -1.05, 1.05, 17.6, 19.1, -1.05, 1.05, M.green);
+    box(sleeve, -1.12, 1.12, 19.1, 19.3, -1.12, 1.12, M.greenDark);
+    cylX(sleeve, 0.6, 0.6, -2.4, -1.05, 18.35, 0, M.green, 28);                      // motor zdvihu (vodorovne, vzadu)
+    cylX(sleeve, 0.65, 0.65, -2.55, -2.4, 18.35, 0, M.greenDark, 28);
+    for (let k = 0; k < 6; k++) cylX(sleeve, 0.62, 0.62, -2.3 + k * 0.2, -2.24 + k * 0.2, 18.35, 0, M.greenDark, 28);   // rebrá chladenia
+    box(sleeve, -1.9, -1.4, 18.95, 19.25, -0.3, 0.3, M.greenDark);                    // svorkovnica
+    box(sleeve, 0.86, 0.94, 2.0, 17.4, -0.14, 0.14, M.steelDark);                     // skrutka zdvihu
+    const colLockG = new THREE.Group(); colLockG.position.set(0.0, 2.2, 0.9); sleeve.add(colLockG);
     const levCol = pivotLever(colLockG, 0, 0, 0.02, 0.55, 1.2);                     // upnutie stĺpa
+    // ---------- rozvádzač na boku plášťa (otáča sa s ramenom), šrafovaný vrch ----------
+    const cab = grp('rozvadzac', armRot);
+    box(cab, -2.35, -0.9, 3.0, 7.6, -0.95, 0.95, M.green);
+    box(cab, -2.4, -0.85, 7.6, 7.75, -1.0, 1.0, M.greenDark);
+    decal(cab, hatch, 1.45, 0.42, -1.625, 7.35, 0.952);                              // výstražné šrafovanie hore
+    decal(cab, hatch, 1.9, 0.42, -2.352, 7.35, 0, -Math.PI / 2);
+    box(cab, -2.2, -1.05, 3.3, 6.9, 0.95, 0.98, M.greenDark);                        // dvierka
+    box(cab, -1.28, -1.18, 4.6, 5.3, 0.98, 1.02, M.steelDark);                       // kľučka
+    box(cab, -2.05, -1.5, 5.8, 6.5, 0.98, 1.0, M.panel);
+    const mainSw = new THREE.Group(); mainSw.position.set(-1.78, 6.15, 1.0); cab.add(mainSw);
+    cylZ(mainSw, 0.18, 0.18, 0, 0.06, 0, 0, M.black, 24); box(mainSw, -0.045, 0.045, -0.22, 0.22, 0.06, 0.16, M.red);
+    // ---------- skriňové rameno ----------
     const armY = grp('rameno', armRot);
-    box(armY, -1.15, 1.15, -0.45, 1.95, -1.15, 1.15, M.green);                       // objímka na plášti
-    box(armY, 1.15, 13.2, 0, 1.5, -0.65, 0.65, M.green);
-    box(armY, 1.15, 13.2, 0.05, 0.3, 0.65, 0.76, M.ways); box(armY, 1.15, 13.2, 1.2, 1.45, 0.65, 0.76, M.ways);
-    box(armY, 13.2, 13.35, -0.05, 1.55, -0.7, 0.7, M.greenDark);
-    // ---------- vreteník ----------
+    box(armY, -1.3, 1.3, -0.7, 2.3, -1.3, 1.3, M.green);                             // objímka na plášti
+    box(armY, -1.36, 1.36, 2.3, 2.45, -1.36, 1.36, M.greenDark);
+    [-1, 1].forEach((s) => box(armY, 1.3, 1.8, -0.5, 2.1, s * 0.55 - 0.08, s * 0.55 + 0.08, M.green));   // rebrá objímky
+    box(armY, 1.3, 13.2, 0, 1.6, -0.7, 0.65, M.green);                               // skriňa ramena
+    const armTop = new THREE.Shape(); armTop.moveTo(1.3, 1.6); armTop.lineTo(13.2, 1.6); armTop.lineTo(13.2, 1.75); armTop.lineTo(1.8, 2.25); armTop.lineTo(1.3, 2.25); armTop.lineTo(1.3, 1.6);
+    const atg = new THREE.ExtrudeGeometry(armTop, { depth: 1.2, bevelEnabled: false }); atg.translate(0, 0, -0.65); add(armY, atg, M.green);   // zošikmený chrbát ramena
+    box(armY, 1.3, 13.2, 0.05, 0.32, 0.65, 0.76, M.ways); box(armY, 1.3, 13.2, 1.18, 1.45, 0.65, 0.76, M.ways);
+    box(armY, 1.3, 13.2, 0.6, 0.85, 0.65, 0.7, M.steelDark);                          // ozubená tyč posuvu vreteníka
+    box(armY, 13.2, 13.4, -0.08, 1.8, -0.75, 0.75, M.greenDark);
+    // ---------- vreteník VO 50 ----------
     const head = grp('vretennik', armY);
-    box(head, -1.0, 1.0, -2.3, 1.95, 0.76, 2.45, M.green);
-    cylY(head, 0.55, 0.55, 1.95, 3.3, 0, 1.6, M.green, 28);                          // motor
-    cylY(head, 0.6, 0.6, 3.3, 3.45, 0, 1.6, M.greenDark, 28);
-    cylY(head, 0.36, 0.36, -2.8, -2.3, 0, SZO, M.green, 28);                         // puzdro pinoly
+    box(head, -1.05, 1.05, -2.0, 0.6, 0.76, 2.45, M.green);                          // spodná skriňa (posuvy)
+    box(head, -0.95, 0.95, 0.6, 2.25, 0.76, 2.3, M.green);                           // horná skriňa (prevodovka)
+    box(head, -1.0, 1.0, 2.25, 2.4, 0.76, 2.35, M.greenDark);
+    box(head, -1.0, 1.0, -2.3, -2.0, 0.9, 2.2, M.greenDark);                         // spodok vreteníka
+    cylY(head, 0.62, 0.62, 2.4, 3.6, 0, 1.55, M.green, 28);                           // motor vretena
+    cylY(head, 0.66, 0.66, 3.6, 3.75, 0, 1.55, M.greenDark, 28);
+    for (let k = 0; k < 5; k++) cylY(head, 0.645, 0.645, 2.6 + k * 0.2, 2.66 + k * 0.2, 0, 1.55, M.greenDark, 28);
+    box(head, 0.45, 0.9, 2.6, 3.1, 1.55, 2.05, M.greenDark);                          // svorkovnica motora
+    cylY(head, 0.38, 0.38, -2.8, -2.3, 0, SZO, M.green, 28);                         // puzdro pinoly
+    decal(head, nameplate, 1.05, 0.42, 0.0, 1.75, 2.302);                            // štítok VO50
+    decal(head, logo, 0.62, 0.42, -0.55, -1.45, 2.452);                               // logo TOS
     box(head, -0.85, -0.05, -0.6, 0.9, 2.45, 2.48, M.panel);                          // ovládací panel
     const pbtn = (x, y, m) => { const g = new THREE.Group(); g.position.set(x, y, 2.48); head.add(g); cylZ(g, 0.09, 0.09, 0, 0.07, 0, 0, m, 18); hitProxy(g, 0.14, 0, 0, 0.05); return g; };
     const bStart = pbtn(-0.65, 0.6, M.btnGreen), bStop = pbtn(-0.25, 0.6, M.red), bUp = pbtn(-0.65, 0.05, M.steel), bDown = pbtn(-0.25, 0.05, M.steel);
@@ -129,12 +171,15 @@ function RadialSimulator({ onBack, params }) {
     box(head, -0.8, -0.1, -0.45, -0.25, 2.48, 2.49, M.yellow);
     const eStop = new THREE.Group(); eStop.position.set(-0.45, -0.35, 2.49); head.add(eStop);
     cylZ(eStop, 0.07, 0.07, 0, 0.06, 0, 0, M.steelDark, 16); cylZ(eStop, 0.15, 0.14, 0.06, 0.13, 0, 0, M.red, 24); hitProxy(eStop, 0.2, 0, 0, 0.08);
+    // páky voľby otáčok a posuvov na čele hornej skrine
+    [-0.6, -0.2, 0.2, 0.6].forEach((x) => { cylZ(head, 0.1, 0.1, 2.3, 2.38, x, 1.15, M.steelDark, 14); cylZ(head, 0.03, 0.03, 2.38, 2.62, x, 1.15, M.steel, 8); ball(head, 0.07, x, 1.15, 2.64, M.black); });
     cylZ(head, 0.16, 0.13, 2.45, 2.6, 0.5, 0.6, M.black, 20);
     const levFeed = pivotLever(head, 0.5, 0.6, 2.6, 0.38, 1.25);                     // páka automatického posuvu
-    const capF = new THREE.Group(); capF.position.set(1.0, -0.9, 1.6); capF.rotation.y = Math.PI / 2; head.add(capF);
+    // trojramenná kľuka pinoly na čele vreteníka
+    const capF = new THREE.Group(); capF.position.set(0.45, -1.0, 2.45); head.add(capF);
     const capstan = new THREE.Group(); capF.add(capstan);
-    cylZ(capstan, 0.24, 0.24, 0, 0.26, 0, 0, M.steelDark, 24);
-    for (let k = 0; k < 3; k++) { const arm = new THREE.Group(); arm.rotation.z = k * TAU / 3 + Math.PI / 2; capstan.add(arm); cylX(arm, 0.05, 0.04, 0.2, 1.15, 0, 0.16, M.steel, 10); ball(arm, 0.12, 1.2, 0, 0.16, M.black); }
+    cylZ(capstan, 0.26, 0.26, 0, 0.3, 0, 0, M.steelDark, 24); cylZ(capstan, 0.12, 0.12, 0.3, 0.4, 0, 0, M.steel, 16);
+    for (let k = 0; k < 3; k++) { const arm = new THREE.Group(); arm.rotation.z = k * TAU / 3 + Math.PI / 2; capstan.add(arm); cylX(arm, 0.05, 0.04, 0.2, 0.95, 0, 0.18, M.steel, 10); ball(arm, 0.12, 1.0, 0, 0.18, M.black); }
     const wR = handwheel(head, 0.42, -1.12, -0.6, 1.6, '-x', 0.24);                 // koleso posuvu vreteníka po ramene
     const levHead = pivotLever(head, -1.02, 1.3, 1.0, 0.42, 1.2);                     // upnutie vreteníka
     levHead.rotation.y = -Math.PI / 2;
@@ -198,9 +243,9 @@ function RadialSimulator({ onBack, params }) {
 
     // ---------- pohľady ----------
     const anchors = {
-      podstavec: () => v3(8.6, 0.8, 3.0), stlp: () => v3(CX + 0.9, 8.0, CZ + 0.9), stol: () => v3(PX + 2.3, 3.0, PZ + 2.3),
+      podstavec: () => v3(9.4, 0.8, 3.4), stlp: () => v3(CX + 0.95, 10.0, CZ + 0.95), stol: () => v3(PX + 2.3, 3.0, PZ + 2.3),
       rameno: () => { const p = spindleXZ(st.a, 9); return v3(p.x, st.H + 1.7, p.z - SZO * 0.3); }, vretennik: () => { const p = sp(); return v3(p.x, st.H + 3.5, p.z); },
-      vreteno: () => { const p = sp(); return v3(p.x + 0.35, tipY() + 0.6, p.z + 0.3); }, obrobok: () => v3(PX - wk.PW / 2 + 0.3, topY() + 0.05, PZ + wk.PD / 2), rozvadzac: () => v3(-6.45, 3.7, 2.7),
+      vreteno: () => { const p = sp(); return v3(p.x + 0.35, tipY() + 0.6, p.z + 0.3); }, obrobok: () => v3(PX - wk.PW / 2 + 0.3, topY() + 0.05, PZ + wk.PD / 2), rozvadzac: () => v3(CX - 1.6 * Math.cos(st.a * Math.PI / 180), 7.9, CZ + 1.6 * Math.sin(st.a * Math.PI / 180)),
     };
     const views = {
       celok: () => [[13, 17, 24], [1, 8, 0]],
@@ -403,7 +448,7 @@ function RadialSimulator({ onBack, params }) {
           L('Automatický posuv sa vypne na hĺbkovom doraze.', 'The power feed switches off at the depth stop.')]} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · radiálna vŕtačka', 'Simulator · radial drill')} title={L('Radiálna vŕtačka', 'Radial drilling machine')}
-          sub={L('Predloha: radiálne vŕtačky TOS (rad VR / VO) – otočné rameno na stĺpe, vreteník posuvný po ramene, vŕtanie do Ø40 mm.', 'Modelled after TOS radial drills (VR / VO series) – an arm swinging on the column, a head travelling along the arm, drilling up to Ø40 mm.')}
+          sub={L('Predloha: TOS VO 50 – otočné rameno na stĺpe s veľkou prírubou, vreteník posuvný po ramene, rozvádzač na plášti stĺpa, vŕtanie do Ø50 mm.', 'Modelled after the TOS VO 50 – an arm swinging on a column with a large base flange, a head travelling along the arm, the electrical box on the column sleeve, drilling up to Ø50 mm.')}
           rows={[['X mm', tele.X.toFixed(1)], ['Y mm', tele.Y.toFixed(1)], [L('Hĺbka', 'Depth'), tele.depth.toFixed(1)]]}
           foot={[`α ${tele.a.toFixed(2)}° · R ${tele.R.toFixed(1)}`, `n ${Math.round(tele.rpm)} · vc ${tele.vc.toFixed(0)} m/min`]} status={statusMsg} />
 

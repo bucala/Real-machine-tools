@@ -141,22 +141,36 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   <tr>
     <td width="50%" valign="top">
       <h3>🌀 Zakružovačka plechu</h3>
-      <sub>tri valce so zovretím · <code>#zakruzovacka</code></sub>
+      <sub>TOS XZC 3000/10 · trojvalcová pyramída · <code>#zakruzovacka</code></sub>
       <ul>
-        <li>horný a spodný valec ťahajú plech, zadný valec ohýba; odpruženie podľa hrúbky</li>
-        <li>začiatok zostane rovný po zadný valec – predohne sa otočením plechu</li>
-        <li>úlohy plášť Ø500 z 3 mm a oblúk R 400 zo 4 mm (<code>plateMath.js</code>)</li>
+        <li>dva poháňané spodné valce, horný valec prisúva ručné koleso na stĺpiku; odpruženie podľa hrúbky</li>
+        <li>konce zostanú rovné na polovicu rozostupu valcov – predohnú sa podložným plechom</li>
+        <li>hotový plášť sa vysunie po vytiahnutí kolíka cez odklopné ložisko</li>
+        <li>úlohy plášť Ø1000 zo 6 mm a oblúk R 800 z 10 mm (<code>plateMath.js</code>)</li>
       </ul>
     </td>
     <td width="50%" valign="top">
       <h3>✂️ Tabuľové nožnice</h3>
-      <sub>mechanické, s nožným pedálom · <code>#noznice</code></sub>
+      <sub>mechanické BS 2000/8 · <code>#noznice</code></sub>
       <ul>
-        <li>zadný doraz, bočný uholník, vôľa nožov podľa hrúbky (ostrina), kapacita 3 mm</li>
-        <li>prítlaky, šikmý horný nôž, kryt prstov blokujúci pedál, pásy padajú do koša</li>
-        <li>úlohy 3 pásy 100 mm z 2 mm a prírezy 150 mm z 3 mm (<code>shearMath.js</code>)</li>
+        <li>zadný doraz, bočný uholník, vôľa nožov podľa hrúbky (ostrina), kapacita 8 mm</li>
+        <li>prítlaky, šikmý horný nôž, hrebeňový kryt prstov blokujúci pedál, pedálová tyč po celej šírke, pásy padajú do koša</li>
+        <li>úlohy 3 pásy 100 mm z 2 mm a prírezy 150 mm zo 6 mm (<code>shearMath.js</code>)</li>
       </ul>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔨 Výstredníkový lis</h3>
+      <sub>TOMA LEN 40C · C-stojan 400 kN · <code>#lis</code></sub>
+      <ul>
+        <li>zotrvačník s jednootáčkovou spojkou, jednotlivý zdvih pedálom alebo trvalý chod, kryt nástroja</li>
+        <li>sila strihu F = π · d · t · 0,8 · Rm, preťaženie zasekne lis v dolnej úvrati</li>
+        <li>prestavenie baranidla: vzduch – vtlačené – prestrihnuté – zlomený razník</li>
+        <li>úlohy 5 dier Ø20 v rozstupe 50 mm a podložky Ø50 zo 6 mm s mostíkom (<code>pressMath.js</code>)</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>
 
@@ -164,7 +178,7 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
   <tr>
     <td width="50%" valign="top">
       <h3>🧭 Radiálna vŕtačka</h3>
-      <sub>predloha TOS rad VR / VO · <code>#radialka</code></sub>
+      <sub>predloha TOS VO 50 · <code>#radialka</code></sub>
       <ul>
         <li>rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene – obrobok stojí</li>
         <li>upínanie stĺpa a vreteníka (bez neho sa nevŕta), automatický posuv 0,1 – 0,4 mm/ot s hĺbkovým dorazom</li>
@@ -279,7 +293,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #profilova · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -322,7 +336,7 @@ flowchart LR
 | [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
 | [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
 | [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `radialMath.js`, `cylMath.js`, `horizMath.js`, `plateMath.js`, `hobMath.js`, `shearMath.js` (radiálna vŕtačka, brúska na guľato, horizontálka, zakružovačka, odvalovacia frézka, nožnice), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `radialMath.js`, `cylMath.js`, `horizMath.js`, `plateMath.js`, `hobMath.js`, `shearMath.js`, `pressMath.js` (radiálna vŕtačka, brúska na guľato, horizontálka, zakružovačka, odvalovacia frézka, nožnice, výstredníkový lis), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
 | [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
 | [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |

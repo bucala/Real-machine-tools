@@ -79,12 +79,13 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Zvislá obrážačka TOS ST 350 | ✅ | `#zobrazacka` za brúskou: zvislé smykadlo s kulisou, krížový a otočný stôl s delením, prierez triesky, úlohy drážka 12 × 3,3 a štvorhran 25 × 25 (`slotterMath.js`) |
 | Profilová ohýbačka COMAC 3025 HV | ✅ | 11. stroj `#profilova` za ohýbačkou plechu: tri valce v pyramíde, pružno-plastický ohyb s odpružením, 5 profilov, tvarové valce, vodiace kladky, poloha H / V, 3 úlohy (`benderMath.js`) |
 | Sústruh: veľkosti a vybavenie | ✅ | TOS SN 32 / 40 / 50 / 55 (mierka stroja, mm obrobku zachované, `profileInfo(u)`), kryt skľučovadla s mikrospínačom, chladenie, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda |
-| Radiálna vŕtačka | ✅ | `#radialka`: otočné rameno, vreteník na ramene, upínanie stĺpa a vreteníka, automatický posuv s dorazom, úlohy rozteč a príruba (`radialMath.js`) |
+| Radiálna vŕtačka TOS VO 50 | ✅ | `#radialka`: model podľa VO 50 (základová doska, príruba stĺpa, horná skriňa, rozvádzač na plášti, skriňové rameno), otočné rameno, vreteník na ramene, upínanie stĺpa a vreteníka, automatický posuv s dorazom, úlohy rozteč a príruba (`radialMath.js`) |
 | Hrotová brúska na guľato | ✅ | `#gulato`: hydraulický stôl s dorazmi, prísuv 0,005 mm, odtláčanie a vyiskrovanie, prepal, úlohy h6 a h5 (`cylMath.js`) |
 | Horizontálka TOS Varnsdorf | ✅ | `#horizontalka`: vreteník Y, vreteno W, sane Z, stôl X, otočný stôl B; vyvrtávanie s priehybom tyče, úlohy Ø80 H7 a súosé otvory (`horizMath.js`) |
 | Odvalovacia frézka | ✅ | `#odvalovacka`: výmenné kolesá delenia, sklon frézy, hĺbka 2,25 · m, Wk (`hobMath.js`) |
-| Zakružovačka plechu | ✅ | `#zakruzovacka`: tri valce so zovretím, odpruženie, predohnutie otočením plechu (`plateMath.js`) |
-| Tabuľové nožnice | ✅ | `#noznice`: zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
+| Zakružovačka plechu TOS XZC 3000/10 | ✅ | `#zakruzovacka`: trojvalcová pyramída, prísuv horného valca kolesom, odpruženie, predohnutie koncov podložným plechom, odklopné ložisko s kolíkom (`plateMath.js`) |
+| Tabuľové nožnice BS 2000/8 | ✅ | `#noznice`: model podľa BS 2000/8 (horný kryt výstredníka, hrebeňový kryt, pedálová tyč, pohon vľavo), plech do 8 mm, zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
+| Výstredníkový lis TOMA LEN 40C | ✅ | `#lis`: C-stojan 400 kN, zotrvačník a spojka, jednotlivý / trvalý zdvih, prestavenie baranidla a zanorenie razníka, sila strihu a preťaženie, zlomený razník, úlohy dierovanie a podložky (`pressMath.js`) |
 
 ## 2. Rozsah a metodika
 

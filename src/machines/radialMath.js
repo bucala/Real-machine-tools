@@ -5,7 +5,7 @@
 export const RD = { CX: -5.2, CZ: -1.45, SZO: 1.45 };          // os stĺpa, vyosenie vretena pred osou ramena
 export const RADIAL_SPEEDS = [32, 45, 63, 90, 125, 180, 250, 355, 500, 710, 1000, 1400];
 export const RADIAL_FEEDS = [0.1, 0.16, 0.25, 0.4];           // mm/ot
-export const RADIAL_SIZES = [10, 13, 16, 20, 25, 32, 40];
+export const RADIAL_SIZES = [10, 13, 16, 20, 25, 32, 40, 50];
 
 // os vretena v pôdoryse pre natočenie ramena a (°) a vyloženie R (od osi stĺpa)
 export function spindleXZ(a, R, K = RD) {

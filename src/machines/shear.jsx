@@ -18,13 +18,14 @@ import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow,
 // Plech leží na stole vo výške YT; jeho zadná hrana je o p za strihovou čiarou – pri strihu sa odstrihne pás šírky p.
 const YT = 8.5, LEN = 22, HW = LEN / 2;
 const shearParts = () => mkParts([
-  ['ramy', 'Stojany', 'Frames', 'Stojany a stôl', 'Frames and table', 'Zvárané stojany nesú stôl so spodným nožom a vedenia nožového trámu. Vpredu sú podperné ramená s mierkou.', 'Welded frames carry the table with the lower blade and the guides of the blade beam. Front support arms with a scale are at the front.'],
+  ['ramy', 'Stojany', 'Frames', 'Stojany a stôl', 'Frames and table', 'Liatinové bočné stojany spája horný kryt výstredníkovej hriadele a stôl so spodným nožom. Vpredu sú tri podperné ramená, pravé s mierkou.', 'Cast side frames are joined by the top housing of the eccentric shaft and by the table with the lower blade. Three front support arms are at the front, the right one with a scale.'],
   ['tram', 'Nožový trám', 'Blade beam', 'Nožový trám so šikmým nožom', 'Blade beam with raked blade', 'Horný nôž je uložený šikmo (uhol strihu) – plech sa strihá postupne od jedného konca, preto stačí menšia sila. Trám poháňa výstredník cez jednootáčkovú spojku.', 'The upper blade is raked – the sheet is cut progressively from one end, so less force is needed. The beam is driven by an eccentric through a single-revolution clutch.'],
   ['pritlaky', 'Prítlaky', 'Hold-downs', 'Prítlaky plechu', 'Sheet hold-downs', 'Pred nožom zovrú plech k stolu, aby sa pri strihu nepreklopil. Prsty pod prítlakmi = úraz – preto je pred nimi kryt prstov.', 'In front of the blade they clamp the sheet to the table so that it does not tip during the cut. Fingers under the hold-downs = injury – hence the finger guard in front of them.'],
-  ['kryt', 'Kryt prstov', 'Finger guard', 'Ochranný kryt prstov', 'Finger guard', 'Sklopná mreža pred prítlakmi a nožom. Pri zdvihnutom kryte pedál nespustí strih.', 'A hinged grid in front of the hold-downs and the blade. With the guard raised the pedal does not start a cut.'],
+  ['kryt', 'Kryt prstov', 'Finger guard', 'Ochranný kryt prstov', 'Finger guard', 'Oranžový hrebeň z tyčiek pred prítlakmi a nožom – plech prejde pod ním, prsty nie. Pri zdvihnutom kryte pedál nespustí strih.', 'An orange comb of bars in front of the hold-downs and the blade – the sheet passes under it, fingers do not. With the guard raised the pedal does not start a cut.'],
   ['doraz', 'Zadný doraz', 'Back gauge', 'Zadný doraz', 'Back gauge', 'Lišta za nožom nastavená na šírku pásu. Plech sa zasúva, kým sa jej nedotkne.', 'A bar behind the blade set to the strip width. The sheet is pushed in until it touches it.'],
   ['uholnik', 'Uholník', 'Side square', 'Bočný uholník', 'Side square', 'Pravítko kolmé na nôž vľavo na stole. Plech priložený k uholníku sa odstrihne pravouhlo.', 'A rule square to the blade on the left of the table. A sheet laid against it is cut square.'],
-  ['pedal', 'Pedál', 'Pedal', 'Nožný pedál', 'Foot pedal', 'Stlačenie spustí jeden strih (jedna otáčka výstredníka).', 'Pressing it triggers one cut (one revolution of the eccentric).'],
+  ['pedal', 'Pedál', 'Pedal', 'Pedálová tyč', 'Foot treadle', 'Tyč po celej šírke stroja – dá sa stlačiť z ktoréhokoľvek miesta. Stlačenie zapne jednootáčkovú spojku: jeden strih, jedna otáčka výstredníka.', 'A bar across the full width of the machine – it can be pressed from anywhere. Pressing it engages the single-revolution clutch: one cut, one revolution of the eccentric.'],
+  ['pohon', 'Pohon', 'Drive', 'Motor so zotrvačníkom', 'Motor with flywheel', 'Elektromotor 7,5 kW vľavo roztáča cez prevod zotrvačník; pri strihu odovzdá energiu výstredníkovej hriadeli v hornom kryte. Na podstavci je hlavný vypínač a prepínač.', 'The 7.5 kW motor on the left spins the flywheel through a drive; during the cut it gives its energy to the eccentric shaft in the top housing. The main switch and the selector are on the pedestal.'],
   ['plech', 'Plech', 'Sheet', 'Plech', 'Sheet', 'Oceľový plech S235 na stole. Odstrihnuté pásy padajú za nožom do zberného koša.', 'S235 steel sheet on the table. The cut strips fall behind the blade into the bin.'],
 ]);
 const StripSketch = ({ w, n, t }) => (
@@ -39,16 +40,16 @@ const SHEAR_TASKS = [
     setup: { t: 2, L: 1000, D: 500, gauge: 300, gap: 0.3 },
     drawing: () => <StripSketch w={100} n={3} t={2} />,
     labels: { count: () => L('Tri pásy 100 ±0,3 mm', 'Three strips 100 ±0.3 mm'), square: () => L('Pravouhlé (klin ≤ 0,3 mm)', 'Square (taper ≤ 0.3 mm)'), burr: () => L('Bez ostriny (správna vôľa nožov)', 'No burr (correct blade clearance)') } },
-  { id: 'hrube', title: () => L('Prírezy 150 mm z plechu 3 mm', '150 mm blanks from 3 mm sheet'),
-    desc: () => L('Plech 3 × 1000 × 500 mm – na hranici kapacity nožníc. Nastrihaj dva pásy 150 ±0,3 mm bez ostriny. Hrubší plech potrebuje väčšiu vôľu nožov (≈ 0,21 mm).', 'Sheet 3 × 1000 × 500 mm – at the capacity limit of the shear. Cut two strips 150 ±0.3 mm without burr. A thicker sheet needs a larger blade clearance (≈ 0.21 mm).'),
-    setup: { t: 3, L: 1000, D: 500, gauge: 300, gap: 0.14 },
+  { id: 'hrube', title: () => L('Prírezy 150 mm z plechu 6 mm', '150 mm blanks from 6 mm sheet'),
+    desc: () => L('Plech 6 × 1500 × 500 mm. Nastrihaj dva pásy 150 ±0,3 mm bez ostriny. Hrubší plech potrebuje väčšiu vôľu nožov (≈ 0,42 mm) – s vôľou pre tenký plech bude mať strih ostrinu.', 'Sheet 6 × 1500 × 500 mm. Cut two strips 150 ±0.3 mm without burr. A thicker sheet needs a larger blade clearance (≈ 0.42 mm) – with the clearance for thin sheet the cut has a burr.'),
+    setup: { t: 6, L: 1500, D: 500, gauge: 300, gap: 0.14 },
     drawing: () => <StripSketch w={150} n={2} t={3} />,
-    labels: { size: () => L('Dva pásy 150 ±0,3 mm (3 mm)', 'Two strips 150 ±0.3 mm (3 mm)'), burr: () => L('Bez ostriny', 'No burr') } },
+    labels: { size: () => L('Dva pásy 150 ±0,3 mm (6 mm)', 'Two strips 150 ±0.3 mm (6 mm)'), burr: () => L('Bez ostriny', 'No burr') } },
 ].map((t) => ({ ...t, checks: (m) => shearChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const SHEAR_SAFETY = () => [
   L('Kryt prstov je sklopený, ruky nedávam pod prítlaky ani za kryt.', 'The finger guard is down, I do not put my hands under the hold-downs or behind the guard.'),
   L('Za nožnicami nikto nestojí – odstrihnuté pásy padajú dozadu.', 'Nobody stands behind the shear – the cut strips fall to the back.'),
-  L('Plech nie je hrubší ako 3 mm (S235), mám rukavice proti porezaniu.', 'The sheet is not thicker than 3 mm (S235), I wear cut-resistant gloves.'),
+  L('Plech nie je hrubší ako 8 mm (S235), mám rukavice proti porezaniu.', 'The sheet is not thicker than 8 mm (S235), I wear cut-resistant gloves.'),
 ];
 
 function ShearSimulator({ onBack, params }) {
@@ -63,51 +64,108 @@ function ShearSimulator({ onBack, params }) {
     const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
     const snd = createSound('bender');
     const dom = renderer.domElement;
-    const M = { ...baseMats(0x5f86a8, 0x4e7392, 0x395569), sheet: std(0xa2a8ad, 0.4, 0.75), blade: std(0xd7dbde, 0.2, 0.9), grid: std(0xffc21a, 0.6, 0.2) };
+    const M = { ...baseMats(0x8cb37b, 0x759b65, 0x587a4b), sheet: std(0xa2a8ad, 0.4, 0.75), blade: std(0xd7dbde, 0.2, 0.9), grid: std(0xe2781e, 0.6, 0.2), plateG: std(0x6d7174, 0.55, 0.5) };
     const kit = makeKit(M);
-    const { box, cylY, cylZ, hitProxy } = kit;
+    const { add, box, cylX, cylY, cylZ, hitProxy, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    const texMat = (w, h, draw) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return new THREE.MeshStandardMaterial({ map: tx, roughness: 0.5, metalness: 0.2 }); };
+    const plateTex = texMat(160, 110, (g, w, h) => { g.fillStyle = '#c9c7b8'; g.fillRect(0, 0, w, h); g.fillStyle = '#1f2321'; g.font = 'bold 18px sans-serif'; g.textAlign = 'center'; g.fillText('BS 2000/8', w / 2, 30); g.font = '13px sans-serif'; g.fillText('2000 × 8 mm', w / 2, 54); g.fillText('7,5 kW', w / 2, 74); g.fillText('1951', w / 2, 94); g.strokeStyle = '#1f2321'; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4); });
+    const FZ = HW + 0.25, FT = 1.1;                                                     // vnútorná hrana a hrúbka bočného stojana
 
-    // ---------- stojany a stôl ----------
+    // ---------- stojany, horný kryt výstredníkovej hriadele, stôl ----------
     const fr = grp('ramy');
-    [-1, 1].forEach((s) => { box(fr, -2.0, 3.2, 0, 12.5, s * HW, s * HW + s * 0.9, M.green); });
-    box(fr, -2.2, 0.0, YT - 1.6, YT, -HW, HW, M.green);                               // stôl pred nožom
-    box(fr, -0.15, 0.0, YT - 0.6, YT + 0.001, -HW, HW, M.blade);                       // spodný nôž
-    box(fr, 0.0, 3.0, YT - 2.6, YT - 2.2, -HW, HW, M.greenDark);                       // spodná priečka
-    box(fr, -2.0, 3.2, 0, 0.4, -HW - 0.9, HW + 0.9, M.greenDeep);
-    [-7, 7].forEach((z) => { box(fr, -7.5, -2.2, YT - 0.12, YT, z - 0.3, z + 0.3, M.greenDark); for (let k = 1; k < 25; k++) box(fr, -2.2 - k * 0.2, -2.18 - k * 0.2, YT, YT + 0.005, z - 0.15, z - 0.05, M.white); });   // podperné ramená s mierkou
-    box(fr, 2.5, 5.5, 0, 1.6, -HW, HW, M.greenDark);                                  // zberný kôš
+    [-1, 1].forEach((s) => {
+      const z0 = s > 0 ? FZ : -FZ - FT, z1 = z0 + FT;
+      box(fr, -1.9, 3.4, 0, 12.4, z0, z1, M.green);                                   // bočný stojan
+      box(fr, -2.05, -1.9, 0.3, 12.2, z0 + 0.1, z1 - 0.1, M.greenDark);                  // predná lišta stojana
+      [2.2, 5.0, 10.3, 11.6].forEach((y) => cylX(fr, 0.12, 0.12, -2.15, -2.05, y, (z0 + z1) / 2, M.steelDark, 8));   // skrutky
+      box(fr, -2.0, 3.5, 0, 0.35, z0 - 0.2, z1 + 0.2, M.greenDeep);                    // pätka
+    });
+    box(fr, -1.0, 2.0, 10.9, 12.0, -FZ, FZ, M.green);                                  // horný kryt výstredníkovej hriadele
+    const capG = new THREE.CylinderGeometry(1.5, 1.5, FZ * 2, 40, 1, false, -Math.PI / 2, Math.PI); capG.rotateX(Math.PI / 2); capG.rotateZ(-Math.PI / 2); capG.scale(1, 0.55, 1);
+    add(fr, capG, M.green, 0.5, 12.0, 0);
+    box(fr, -1.05, 2.05, 10.85, 10.95, -FZ, FZ, M.greenDark);
+    box(fr, -2.2, 0.0, YT - 1.6, YT, -FZ, FZ, M.green);                                // stôl pred nožom
+    for (let k = 0; k < 7; k++) { const z = -FZ + 0.3 + k * (FZ * 2 - 0.6) / 7; box(fr, -2.15, -0.25, YT, YT + 0.04, z + 0.06, z + (FZ * 2 - 0.6) / 7 - 0.06, M.plateG); }   // oceľové platne stola
+    box(fr, -0.15, 0.0, YT - 0.6, YT + 0.001, -FZ, FZ, M.blade);                         // spodný nôž
+    box(fr, -1.2, 0.0, 1.2, YT - 1.6, -FZ, FZ, M.greenDeep);                            // spodná stena
+    box(fr, -2.3, -1.2, 0.35, 1.2, -FZ, FZ, M.greenDark);                              // spodný trám
+    box(fr, 0.0, 3.0, YT - 2.6, YT - 2.2, -FZ, FZ, M.greenDark);                        // zadná priečka
+    // podperné ramená stola s mierkou (zošikmené konzoly)
+    [-FZ + 0.75, 0, 6.5].forEach((z, i) => {
+      const sh = new THREE.Shape(); sh.moveTo(-2.2, YT); sh.lineTo(-8.2, YT); sh.lineTo(-8.2, YT - 0.35); sh.lineTo(-2.2, YT - 1.6); sh.lineTo(-2.2, YT);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.5, bevelEnabled: false }); g.translate(0, 0, z - 0.25); add(fr, g, M.green);
+      box(fr, -8.2, -2.2, YT, YT + 0.08, z - 0.3, z + 0.3, M.greenDark);
+      if (i === 2) for (let k = 1; k < 30; k++) box(fr, -2.2 - k * 0.2, -2.18 - k * 0.2, YT + 0.08, YT + 0.085, z - 0.28, z - (k % 5 ? 0.18 : 0.08), M.white);
+    });
+    box(fr, 2.6, 5.6, 0, 1.6, -FZ, FZ, M.greenDark);                                    // zberný kôš
+    // štítok stroja na ľavom stojane
+    add(fr, new THREE.PlaneGeometry(1.2, 0.82), plateTex, -2.07, 9.6, -FZ - FT / 2).rotation.y = -Math.PI / 2;
+    // ---------- pohon vľavo: motor, prevod, rozvádzač ----------
+    const drv = grp('pohon');
+    const ZD = -FZ - FT;
+    box(drv, -2.6, 2.8, 0, 6.6, ZD - 4.4, ZD, M.green);                                 // podstavec pohonu
+    box(drv, -2.7, 2.9, 6.6, 6.8, ZD - 4.5, ZD + 0.05, M.greenDark);
+    box(drv, -2.62, -2.6, 0.6, 5.6, ZD - 3.9, ZD - 2.2, M.greenDark);                   // dvierka
+    cylX(drv, 1.05, 1.05, -1.2, 1.8, 7.9, ZD - 2.2, M.green, 32);                        // elektromotor 7,5 kW
+    cylX(drv, 1.1, 1.1, 1.8, 2.1, 7.9, ZD - 2.2, M.greenDark, 32);
+    for (let k = 0; k < 8; k++) cylX(drv, 1.08, 1.08, -1.0 + k * 0.33, -0.92 + k * 0.33, 7.9, ZD - 2.2, M.greenDark, 32);
+    box(drv, -0.4, 0.4, 8.9, 9.4, ZD - 2.6, ZD - 1.8, M.greenDark);                     // svorkovnica
+    box(drv, -1.6, -1.2, 6.8, 7.4, ZD - 3.2, ZD - 1.2, M.greenDark);                    // pätky motora
+    box(drv, -2.2, 3.0, 6.8, 11.6, ZD - 1.0, ZD, M.green);                              // kryt prevodu na zotrvačník
+    box(drv, -2.2, 3.0, 11.6, 11.8, ZD - 1.05, ZD + 0.05, M.greenDark);
+    box(drv, -2.62, -2.6, 3.4, 4.4, ZD - 1.6, ZD - 0.4, M.black);
+    cylX(drv, 0.22, 0.22, -2.75, -2.62, 3.9, ZD - 1.0, M.steel, 20);                     // otočný prepínač
+    handwheel(drv, 0.3, -2.75, 5.0, ZD - 3.2, '-x', 0.08);                 // ručné koliesko spojky
+    const mainSw = new THREE.Group(); mainSw.position.set(-2.6, 4.9, ZD - 1.0); mainSw.rotation.y = -Math.PI / 2; drv.add(mainSw);
+    box(mainSw, -0.4, 0.4, -0.4, 0.4, -0.05, 0.02, M.yellow);
+    cylZ(mainSw, 0.24, 0.24, 0, 0.06, 0, 0, M.black, 24); box(mainSw, -0.05, 0.05, -0.3, 0.3, 0.06, 0.18, M.red);
+    // predný stolík s náradím
+    box(drv, -5.6, -2.6, 0, 5.4, ZD - 3.6, ZD - 0.4, M.green);
+    const tray = new THREE.Shape(); tray.moveTo(-5.7, 5.4); tray.lineTo(-2.6, 5.4); tray.lineTo(-2.6, 6.0); tray.lineTo(-5.7, 5.7); tray.lineTo(-5.7, 5.4);
+    const tg = new THREE.ExtrudeGeometry(tray, { depth: 3.4, bevelEnabled: false }); tg.translate(0, 0, ZD - 3.7); add(drv, tg, M.greenDark);
+    // pravý stojan: prevodovka na konci hriadele
+    box(fr, -0.8, 2.4, 10.0, 12.6, FZ + FT, FZ + FT + 1.0, M.green);
+    cylZ(fr, 0.6, 0.6, FZ + FT + 1.0, FZ + FT + 1.3, 0.8, 11.3, M.greenDark, 28);
     // bočný uholník
     const sq = grp('uholnik');
-    box(sq, -7.5, -0.05, YT, YT + 0.25, -HW + 0.4, -HW + 0.55, M.steelDark);
-    // ---------- nožový trám, prítlaky, kryt ----------
+    box(sq, -8.2, -0.05, YT + 0.08, YT + 0.34, -FZ + 0.4, -FZ + 0.55, M.steelDark);
+    // ---------- nožový trám, prítlaky, hrebeňový kryt prstov ----------
     const beam = grp('tram');
-    box(beam, -0.4, 0.45, YT + 0.7, YT + 2.6, -HW, HW, M.green);
-    const upper = box(beam, -0.05, 0.12, YT + 0.12, YT + 0.8, -HW, HW, M.blade);
-    beam.rotation.x = 0;                                                               // uhol strihu sa naznačí natočením trámu
+    box(beam, -0.5, 0.45, YT + 0.7, YT + 2.3, -FZ, FZ, M.green);
+    box(beam, -0.55, 0.5, YT + 2.3, YT + 2.45, -FZ, FZ, M.greenDark);
+    [-FZ + 0.8, FZ - 0.8].forEach((z) => box(beam, -0.6, 0.5, YT + 0.9, YT + 2.2, z - 0.35, z + 0.35, M.greenDark));   // úchyty ojníc
+    const upper = box(beam, -0.05, 0.12, YT + 0.12, YT + 0.8, -FZ, FZ, M.blade);
     const hold = grp('pritlaky');
     const holdPins = [];
-    for (let z = -HW + 1; z <= HW - 1; z += 1.5) { const g = new THREE.Group(); g.position.set(-0.75, 0, z); hold.add(g); cylY(g, 0.12, 0.12, YT + 0.02, YT + 1.6, 0, 0, M.steelDark, 14); holdPins.push(g); }
-    box(hold, -1.0, -0.5, YT + 1.6, YT + 2.0, -HW, HW, M.greenDark);
+    for (let z = -FZ + 1; z <= FZ - 1; z += 1.5) { const g = new THREE.Group(); g.position.set(-0.75, 0, z); hold.add(g); cylY(g, 0.12, 0.12, YT + 0.04, YT + 1.6, 0, 0, M.steelDark, 14); holdPins.push(g); }
+    box(hold, -1.25, -0.5, YT + 1.6, YT + 2.15, -FZ, FZ, M.green);                     // prítlačný trám
+    for (let z = -FZ + 0.8; z < FZ; z += 1.5) cylX(hold, 0.1, 0.1, -1.32, -1.25, YT + 1.88, z, M.steelDark, 8);
     const guardG = grp('kryt');
-    const guardPiv = new THREE.Group(); guardPiv.position.set(-1.15, YT + 2.1, 0); guardG.add(guardPiv);
-    box(guardPiv, -0.05, 0.0, -1.9, 0.0, -HW + 0.3, HW - 0.3, M.grid);
-    for (let z = -HW + 0.6; z < HW - 0.3; z += 0.6) box(guardPiv, -0.07, 0.01, -1.9, 0, z - 0.03, z + 0.03, M.black);
-    hitProxy(guardPiv, 0.8, -0.05, -1.0, 0);
+    const guardPiv = new THREE.Group(); guardPiv.position.set(-1.35, YT + 2.95, 0); guardG.add(guardPiv);
+    [[-FZ + 0.5, -FZ + 5.2], [-FZ + 5.6, FZ - 2.8], [FZ - 2.4, FZ - 0.5]].forEach(([z0, z1]) => {
+      box(guardPiv, -0.12, 0.0, -0.15, 0.0, z0, z1, M.grid);                           // horná lišta sekcie
+      box(guardPiv, -0.12, 0.0, -2.45, -2.33, z0, z1, M.grid);
+      for (let z = z0 + 0.08; z < z1; z += 0.22) box(guardPiv, -0.1, -0.02, -2.4, -0.1, z - 0.035, z + 0.035, M.grid);   // zvislé tyčky hrebeňa
+    });
+    hitProxy(guardPiv, 0.8, -0.05, -1.2, 0);
     // ---------- zadný doraz ----------
     const gaugeG = grp('doraz');
-    box(gaugeG, 0, 0.18, YT, YT + 0.5, -HW + 0.5, HW - 0.5, M.steelDark);
+    box(gaugeG, 0, 0.18, YT, YT + 0.5, -FZ + 0.5, FZ - 0.5, M.steelDark);
     [-6, 6].forEach((z) => box(gaugeG, 0.18, 3.0, YT + 0.3, YT + 0.45, z - 0.1, z + 0.1, M.steel));
-    // ---------- pedál a ovládanie ----------
+    // ---------- pedálová tyč po celej šírke ----------
     const ped = grp('pedal');
-    box(ped, -3.6, -2.4, 0, 0.25, -1.2, 1.2, M.yellow);
-    const pedal = new THREE.Group(); pedal.position.set(-3.0, 0.3, 0); ped.add(pedal);
-    box(pedal, -0.4, 0.4, 0, 0.14, -0.9, 0.9, M.black); hitProxy(pedal, 0.7, 0, 0.1, 0);
-    const mainSw = new THREE.Group(); mainSw.position.set(-2.02, 9.8, HW + 0.45); mainSw.rotation.y = -Math.PI / 2; fr.add(mainSw);
-    cylZ(mainSw, 0.2, 0.2, 0, 0.06, 0, 0, M.black, 24); box(mainSw, -0.05, 0.05, -0.24, 0.24, 0.06, 0.16, M.red);
+    [-1, 1].forEach((s) => box(ped, -2.4, -1.9, 0.35, 1.3, s * (FZ - 0.3) - 0.2, s * (FZ - 0.3) + 0.2, M.greenDark));   // ložiská pedálovej hriadele
+    cylZ(ped, 0.14, 0.14, -FZ, FZ, -2.15, 0.85, M.green, 14);                            // hriadeľ pedálu
+    const pedal = new THREE.Group(); pedal.position.set(-2.15, 0.85, 0); ped.add(pedal);
+    [-1, 1].forEach((s) => box(pedal, -1.6, 0, -0.08, 0.08, s * (FZ - 0.9) - 0.1, s * (FZ - 0.9) + 0.1, M.green));
+    cylZ(pedal, 0.11, 0.11, -FZ + 0.4, FZ - 0.4, -1.6, -0.3, M.green, 14);              // pedálová tyč
+    cylZ(pedal, 0.11, 0.11, -FZ + 0.4, FZ - 0.4, -1.0, 0.5, M.green, 14);               // horná tyč (zábrana)
+    [-1, 1].forEach((s) => cylY(pedal, 0.08, 0.08, -0.3, 0.5, -1.3 + s * 0.3, s * (FZ - 0.9), M.green, 10));
+    for (let z = -FZ + 1.2; z < FZ - 0.8; z += 1.4) hitProxy(pedal, 0.45, -1.6, -0.3, z);
     // ---------- plech ----------
     const shG = grp('plech');
     const sheetM = box(shG, 0, 1, 0, 1, 0, 1, M.sheet);
@@ -126,11 +184,11 @@ function ShearSimulator({ onBack, params }) {
 
     // ---------- pohľady ----------
     const anchors = {
-      ramy: () => v3(-2.0, 12.6, HW + 0.5), tram: () => v3(0.2, YT + 2.7 - st.stroke * 0.6, HW - 2), pritlaky: () => v3(-0.75, YT + 2.1, -HW + 3), kryt: () => v3(-1.2, YT + 0.5, HW - 3),
-      doraz: () => v3(st.g / 100, YT + 0.6, 0), uholnik: () => v3(-3, YT + 0.3, -HW + 0.5), pedal: () => v3(-3.0, 0.6, 1.0), plech: () => v3(st.p / 100 - 1, YT + 0.1, 0),
+      ramy: () => v3(-1.9, 12.5, FZ + FT / 2), pohon: () => v3(0.3, 9.1, -FZ - FT - 2.2), tram: () => v3(0.2, YT + 2.7 - st.stroke * 0.6, HW - 2), pritlaky: () => v3(-1.3, YT + 1.9, -FZ + 3), kryt: () => v3(-1.45, YT + 2.9, FZ - 3),
+      doraz: () => v3(st.g / 100, YT + 0.6, 0), uholnik: () => v3(-4, YT + 0.35, -FZ + 0.5), pedal: () => v3(-3.75, 0.7, 2.0), plech: () => v3(st.p / 100 - 1, YT + 0.1, 0),
     };
     const views = {
-      celok: () => [[-16, 16, 18], [0, 6, 0]],
+      celok: () => [[-30, 19, -17], [-0.5, 5.5, -2.5]],
       noz: () => [[-4, YT + 2.5, 6], [0, YT, 3], true],
       zhora: () => [[-2, 26, 0.5], [-1, YT, 0], true],
       zboku: () => [[-1, YT + 1, 22], [-1, YT, 0], true],
@@ -180,7 +238,7 @@ function ShearSimulator({ onBack, params }) {
         if (st.phase === 1 && st.stroke >= 1) {
           st.phase = 2;
           const r = cutStrip(st.sheet, st.p, { t: st.t, gap: c.gap, square: c.square });
-          if (r.error === 'capacity') say(L(`Plech ${st.t} mm je nad kapacitu nožníc (3 mm) – spojka preklzla, strih sa nevykonal.`, `The ${st.t} mm sheet exceeds the shear capacity (3 mm) – the clutch slipped, no cut.`), 'danger');
+          if (r.error === 'capacity') say(L(`Plech ${st.t} mm je nad kapacitu nožníc (${SHEAR.maxT} mm) – trám sa zastavil na plechu, strih sa nevykonal.`, `The ${st.t} mm sheet exceeds the shear capacity (${SHEAR.maxT} mm) – the beam stalled on the sheet, no cut.`), 'danger');
           else if (r.strip) {
             const s = { ...r.strip, w: Math.round(r.strip.w * 100) / 100 }; st.strips.push(s);
             const m = new THREE.Mesh(new THREE.BoxGeometry(s.w / 100, st.t / 100, st.sheet.L / 100), M.sheet); m.position.set(s.w / 200, YT + st.t / 200, sheetM.position.z); root.add(m);
@@ -201,7 +259,7 @@ function ShearSimulator({ onBack, params }) {
       hold.position.y = -Math.min(1, k * 2.5) * 0.2;
       guardPiv.rotation.z = c.guard ? 0 : -1.3;
       gaugeG.position.x = st.g / 100;
-      pedal.rotation.z = st.phase === 1 ? -0.2 : 0;
+      pedal.rotation.z = st.phase === 1 ? 0.22 : 0;
       upper.visible = true;
       layout();
       ctrl.update(dt); insp.update(t, c);
@@ -235,7 +293,7 @@ function ShearSimulator({ onBack, params }) {
           L('Pri zdvihnutom kryte prstov pedál nespustí strih.', 'With the finger guard raised the pedal does not start a cut.')]} />
       <aside className="panel">
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · tabuľové nožnice', 'Simulator · guillotine shear')} title={L('Tabuľové nožnice', 'Guillotine shear')}
-          sub={L('Mechanické tabuľové nožnice na plech do 3 mm a dĺžky strihu 2 000 mm: šikmý horný nôž, prítlaky, kryt prstov, zadný doraz a nožný pedál.', 'Mechanical guillotine shear for sheet up to 3 mm and a 2,000 mm cut: raked upper blade, hold-downs, finger guard, back gauge and foot pedal.')}
+          sub={L('Predloha: mechanické tabuľové nožnice BS 2000/8 (1951) – plech do 8 mm, dĺžka strihu 2 000 mm, motor 7,5 kW so zotrvačníkom a jednootáčkovou spojkou; šikmý horný nôž, prítlaky, hrebeňový kryt prstov, zadný doraz a pedálová tyč po celej šírke.', 'Modelled after the BS 2000/8 mechanical guillotine shear (1951) – sheet up to 8 mm, 2,000 mm cut, 7.5 kW motor with flywheel and single-revolution clutch; raked upper blade, hold-downs, comb finger guard, back gauge and a full-width foot treadle.')}
           rows={[[L('Doraz mm', 'Gauge mm'), String(ui.gauge)], [L('Za nožom', 'Past blade'), tele.p.toFixed(1)], [L('Pásy', 'Strips'), String(tele.strips)]]}
           foot={[`${ui.t} × ${ui.L} mm`, `${L('vôľa', 'clearance')} ${ui.gap.toFixed(2)} mm`]} status={statusMsg} />
 
@@ -255,7 +313,7 @@ function ShearSimulator({ onBack, params }) {
           <h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2>
           <Slider id="sg" label={L('Zadný doraz (šírka pásu)', 'Back gauge (strip width)')} unit="mm" min={5} max={750} step={0.1} value={ui.gauge} digits={1} onChange={(v) => set('gauge', v)} />
           <div className="flex flex-wrap gap-2 mb-2">{[-10, -1, -0.1, 0.1, 1, 10].map((x) => <button key={x} type="button" className="btn" onClick={() => set('gauge', clamp(Math.round((ui.gauge + x) * 10) / 10, 5, 750))}>{x > 0 ? '+' : ''}{x}</button>)}</div>
-          <Slider id="sv" label={L('Vôľa nožov', 'Blade clearance')} unit="mm" min={0.03} max={0.5} step={0.01} value={ui.gap} digits={2} onChange={(v) => set('gap', v)} />
+          <Slider id="sv" label={L('Vôľa nožov', 'Blade clearance')} unit="mm" min={0.03} max={0.8} step={0.01} value={ui.gap} digits={2} onChange={(v) => set('gap', v)} />
           <p className="text-xs muted">{L(`Pre plech ${ui.t} mm je vhodná vôľa približne ${gapIdeal(ui.t).toFixed(2).replace('.', ',')} mm.`, `For ${ui.t} mm sheet the recommended clearance is about ${gapIdeal(ui.t).toFixed(2)} mm.`)}</p>
         </div>
 
@@ -278,7 +336,7 @@ function ShearSimulator({ onBack, params }) {
         </div>
 
         <BlankSection onApply={() => apiRef.current.newBlank && apiRef.current.newBlank()} applyLabel={L('Položiť nový plech', 'Put down a new sheet')} note={L('Oceľ S235.', 'S235 steel.')}>
-          <SegRow label={L('Hrúbka mm', 'Thickness mm')} value={ui.t} options={[1, 2, 3, 4].map((x) => [x, String(x)])} onChange={(v) => set('t', v)} />
+          <SegRow label={L('Hrúbka mm', 'Thickness mm')} value={ui.t} options={[1, 2, 3, 4, 6, 8, 10].map((x) => [x, String(x)])} onChange={(v) => set('t', v)} />
           <Slider id="sl" label={L('Dĺžka (pozdĺž noža)', 'Length (along the blade)')} unit="mm" min={200} max={2000} step={50} value={ui.L} onChange={(v) => set('L', v)} />
           <Slider id="sd" label={L('Hĺbka', 'Depth')} unit="mm" min={100} max={1000} step={10} value={ui.D} onChange={(v) => set('D', v)} />
         </BlankSection>

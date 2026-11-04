@@ -290,13 +290,31 @@ function PlateRollArt() {
   return (
     <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
       <g fillOpacity=".16">
-        <rect x="60" y="60" width="36" height="92" />
-        <rect x="224" y="60" width="36" height="92" />
-        <rect x="50" y="140" width="220" height="12" />
+        <path d="M96 156h128v-22l-10-12-4-58-6-30h-24v48h-40v-48h-24l-6 30-4 58-10 12z" />
+        <rect x="40" y="156" width="240" height="6" />
       </g>
-      <path d="M96 76h128M96 104h128M96 120h128" fill="none" strokeWidth="9" opacity=".5" />
-      <path d="M30 92h130" fill="none" strokeWidth="3" />
-      <path d="M160 92c40 0 58-26 40-50s-60-14-60 10" fill="none" strokeWidth="3" />
+      <circle cx="160" cy="60" r="56" fill="none" strokeWidth="4" opacity=".55" />
+      <circle cx="160" cy="98" r="15" fillOpacity=".3" />
+      <circle cx="136" cy="128" r="12" fillOpacity=".3" />
+      <circle cx="184" cy="128" r="12" fillOpacity=".3" />
+      <path d="M244 40v80M232 40h24" fill="none" strokeWidth="3" />
+      <path d="M20 162h280" fill="none" />
+    </svg>
+  );
+}
+
+function PressArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <path d="M110 160V96h30v-8h-24V20h86v68h-14v8h20v64z" />
+        <rect x="100" y="96" width="112" height="14" />
+        <rect x="140" y="58" width="34" height="26" />
+        <rect x="244" y="104" width="34" height="56" />
+      </g>
+      <circle cx="206" cy="48" r="34" fill="none" strokeWidth="3" />
+      <circle cx="206" cy="48" r="8" fillOpacity=".4" />
+      <path d="M157 84v8M126 104h60" fill="none" strokeWidth="3" />
       <path d="M20 160h280" fill="none" />
     </svg>
   );
@@ -340,4 +358,4 @@ function ShearArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
