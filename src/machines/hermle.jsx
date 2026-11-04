@@ -12,6 +12,7 @@ import { programTime } from './cnc/motion';
 import { SAMPLES } from './cnc/programs';
 import { createExecutor } from './cnc/sim';
 import { MATERIALS, defaultTools } from './cnc/tooling';
+import { createAccessories } from './cnc/accessories';
 import { createToolModel } from './cnc/toolModel';
 import { CncToolPreview } from '../ui/cncToolPreview';
 import { createStock } from './cnc/voxel';
@@ -20,7 +21,7 @@ import { createStock } from './cnc/voxel';
 // 5-OSÉ OBRÁBACIE CENTRUM HERMLE C 32 – CNC program, 5-osá kinematika a úber materiálu
 // =====================================================================
 // mierka scény 1 = 100 mm. Scéna: x = X stroja, y hore, z = −Y stroja (k obsluhe). Otočný bod (os A ∩ os C) je
-// v (0, PY, 0); plocha stola pri A = 0 je 100 mm pod ním (výška nakladania 950 mm). Základný stroj bez prídavných zariadení.
+// v (0, PY, 0); plocha stola pri A = 0 je 100 mm pod ním (výška nakladania 950 mm). Prídavné zariadenia sa zapínajú samostatne nižšie.
 const PY0 = 10.5, U = 0.01;
 const FIX = { r: 35, h: 50 };                         // nulový upínací systém pod polotovarom
 const hermleParts = () => mkParts([
@@ -39,7 +40,7 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart
 function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
   const MC = MODELS[model] || MODELS.c32;
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
-  const init = { door: true, cabin: true, panelAngle: 0, speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
+  const init = { door: true, cabin: true, panelAngle: 0, chipConveyor: false, coolantUnit: false, speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
   const { ctl, ui, set, selected, selectPart, apiRef } = useMachine(init);
   const samples = SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
@@ -85,6 +86,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     box(bed, -6.9, 6.9, 6.2, 7.2, -12.5, 3.2, M.inox);                                               // dno pracovného priestoru (nerez)
     box(bed, -6.9, 6.9, 7.2, 19, -12.4, -12.2, M.inox);                                              // zadná stena
     box(bed, -6.9, 6.9, 7.2, 13.9, -3.55, -3.4, M.inox);                                           // deliaca stena pred zásobníkom
+    const accessories = createAccessories(root, M, K);
     // ---------------- otočno-sklopný stôl A / C ----------------
     const tab = grp('stol');
     const aG = new THREE.Group(); aG.position.set(0, PY, 0); tab.add(aG);
@@ -344,7 +346,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       stol: () => v3(-6.3 * K, PY - 2.5 * K, 2.0 * K), zasobnik: () => v3(4 * K, magY * K, magZ * K), panel: () => new THREE.Vector3(0, 17.8, 0).applyMatrix4(panG.matrixWorld), obrobok: () => toolTip().clone().setY(PY + 0.3),
     };
     const views = {
-      celok: () => [[34 * K, 28 * K, 48 * K], [0, 14 * K, 0]],
+      celok: () => c.chipConveyor || c.coolantUnit ? [[-36 * K, 30 * K, 55 * K], [-9 * K, 12 * K, 0]] : [[34 * K, 28 * K, 48 * K], [0, 14 * K, 0]],
+      vybavenie: () => [[-36 * K, 19 * K, 24 * K], [-20 * K, 6 * K, -3 * K]],
       priestor: () => [[3.8 * K, PY + 4.1 * K, 7.0 * K], [0, PY - 0.2 * K, -0.4 * K], true],
       obrobok: () => [[1.5, PY + 1.0, 2.3], [0, PY - MC.hA * U + 0.75, 0], true],
       nastroj: () => { const t = toolTip(); return [[t.x + 1.9, t.y + 1.1, t.z + 2.6], [t.x, t.y - 0.15, t.z], true]; },
@@ -374,6 +377,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       const xc = xG.position.x / K;
       covers.forEach((me, i) => { const x0 = i ? xc + 1.95 : -6.9, x1 = i ? 6.9 : xc - 1.95, w = Math.max(0.05, x1 - x0); me.scale.x = w; me.position.x = (x0 + x1) / 2; me.material.map.repeat.set(w / 2.2, 1); });
       cab.visible = c.cabin;
+      accessories.update(c, dt);
       panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
       armPivot.rotation.y = panelA;
       panG.rotation.y = -.42 - panelA * .35;
@@ -426,7 +430,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
     return () => { cancelAnimationFrame(raf); snd.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
@@ -489,7 +493,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           <p className="sec-title" style={{ letterSpacing: '.14em' }}>{L('Moderné stroje · 5-osé CNC', 'Modern machines · 5-axis CNC')}</p>
           <h1 className="app-title mt-2" tabIndex={-1}>Hermle {MC.name}</h1>
           <div className="mt-2"><SegRow label={L('Model', 'Model')} value={model} options={Object.values(MODELS).map((x) => [x.id, x.name])} onChange={(v) => { if (!tele.run) setModel(v); }} /></div>
-          <p className="text-xs muted">{L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Základný stroj bez prídavných zariadení.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Basic machine without optional equipment.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p>
+          <p className="text-xs muted">{L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Prídavné zariadenia sa zapínajú samostatne nižšie.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Optional equipment can be enabled separately below.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p>
           <div className="cnc-dro mt-3">
             <div className="cnc-dro-col">
               <span className="cnc-dro-h">{L('Stroj', 'Machine')}</span>
@@ -530,6 +534,14 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
             <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [55, L('Bok', 'Side')], [110, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
+        </div>
+
+        <div className="sec">
+          <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2>
+          <Toggle on={ui.chipConveyor} label={L('Dopravník triesok s vozíkom', 'Chip conveyor with cart')} onClick={() => { set('chipConveyor', !ui.chipConveyor); apiRef.current.view?.('celok'); }} />
+          <Toggle on={ui.coolantUnit} label={L('Externá chladiaca a filtračná jednotka', 'External coolant and filtration unit')} onClick={() => { set('coolantUnit', !ui.coolantUnit); apiRef.current.view?.('celok'); }} />
+          <p className="text-xs muted mt-2">{L('Predvolene vypnuté. Zariadenia sa doplnia na ľavú stranu stroja podľa referenčného usporiadania. Dopravník sa počas cyklu pohybuje; chladiaca jednotka je vizuálny model bez samostatnej simulácie filtrácie.', 'Off by default. Equipment is added to the left of the machine following the reference arrangement. The conveyor moves during a cycle; the coolant unit is a visual model without a separate filtration simulation.')}</p>
+          <button type="button" className="btn mt-2" onClick={() => apiRef.current.view && apiRef.current.view('vybavenie')}>{L('Pohľad na vybavenie', 'Equipment view')}</button>
         </div>
 
         <div className="sec">

@@ -1,6 +1,6 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
 // Pri inštalácii uloží všetky súbory aplikácie, takže po prvej návšteve fungujú všetky stroje aj bez internetu.
-const CACHE = 'rmt-cdd209621b6f';
+const CACHE = 'rmt-f909177c1b2c';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -23,34 +23,34 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/bender-CWlJynWf.js",
+  "/assets/bender-GYjqIy8L.js",
   "/assets/benderMath-d1cNdKwu.js",
   "/assets/core3d-B6yKqxQJ.js",
-  "/assets/cylgrind-CuKH7UAw.js",
-  "/assets/drill-DGhtJjkS.js",
-  "/assets/folder-D_3uBcOA.js",
-  "/assets/grinder-CjChXn3s.js",
-  "/assets/hermle-BfV7rtmk.js",
+  "/assets/cylgrind-D4C-oXaY.js",
+  "/assets/drill-CY8ba8Ub.js",
+  "/assets/folder-Cz-u4PqG.js",
+  "/assets/grinder-DyWBa_6V.js",
+  "/assets/hermle-CFZr0tdQ.js",
   "/assets/hfMath-B0JgUNbA.js",
-  "/assets/hob-DNlJNlMt.js",
-  "/assets/horiz-D3batT4a.js",
-  "/assets/index-COj49J1i.js",
+  "/assets/hob-DgMH9EBb.js",
+  "/assets/horiz-Dh2VohZF.js",
+  "/assets/index-CxcOo0qY.js",
   "/assets/index-XJtUQYys.css",
-  "/assets/lathe-MLVA214s.js",
-  "/assets/mill-CxrVhwZd.js",
-  "/assets/plate-D71I6zmC.js",
-  "/assets/press-Cfx5yjLY.js",
-  "/assets/radial-DeOOFQx8.js",
-  "/assets/saw-B5c84l-W.js",
-  "/assets/shaper-DIv7yP91.js",
+  "/assets/lathe-bmzwuw-_.js",
+  "/assets/mill-BgX6FpqW.js",
+  "/assets/plate-BiWMCdpt.js",
+  "/assets/press-DRs1HtPo.js",
+  "/assets/radial-DlHChNwb.js",
+  "/assets/saw-Bf4fafeF.js",
+  "/assets/shaper-Cbzd8Vmr.js",
   "/assets/shaperMath-BfNySK0Q.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/shear-BQ5vTI6z.js",
+  "/assets/shear-DlyUgE-D.js",
   "/assets/shopMath-B3CAL8Sc.js",
-  "/assets/sketch-CKZILaW_.js",
-  "/assets/slotter-CyDECgcT.js",
-  "/assets/tools-BJKrRbEd.js",
-  "/assets/weld-42ylZgit.js"
+  "/assets/sketch-CG5IKFwE.js",
+  "/assets/slotter-cF0c7oY8.js",
+  "/assets/tools-BVlVACEv.js",
+  "/assets/weld-0_eHtwd4.js"
 ];
 
 self.addEventListener('install', (e) => {
