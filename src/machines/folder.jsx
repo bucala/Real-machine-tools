@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
@@ -163,7 +164,7 @@ function FolderSimulator({ onBack, params }) {
     apiRef.current.view = (n) => insp.goView(n, false);
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => sheetG, getSpot: () => v3(0, TT + 2.5, 6.0), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => sheetG, getSpot: () => v3(0, TT + 2.5, 6.0), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (st.B > 0.5) { say(L('Najprv sklop ohýbaciu lištu dole.', 'Lower the folding beam first.')); return; }
@@ -182,6 +183,10 @@ function FolderSimulator({ onBack, params }) {
     apiRef.current.measure = () => ({ perm: st.P, flange: st.L, th: st.th });
     apiRef.current.exportStl = () => exportStl(sheetG);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(sheetG);
+    };
 
     ctrl.reg({ type: 'wheel', minR: 0.5, inc: -1, label: LL('Koleso upínania', 'Clamping handwheel'), hint: LL('V smere hodinových ručičiek lišta klesá a upne plech. 1 otáčka = 5 mm.', 'Clockwise lowers the beam and clamps the sheet. 1 turn = 5 mm.'),
       turn: (d) => push('gap', clamp(clamp(c.gap + d * 5 / TAU, st.gap - 4, st.gap + 4), 0, 40)),
@@ -269,7 +274,7 @@ function FolderSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · ohýbačka', 'Simulator · folder')} title={L('Výkyvná ohýbačka plechu', 'Manual swing-beam folder')}
           sub={L('Predloha: FASTI 204-10-2, dĺžka ohybu 1 040 mm, plech do 2 mm. Mierka 1 : 100 mm.', 'Modelled after the FASTI 204-10-2, 1,040 mm bending length, sheet up to 2 mm. Scale 1 : 100 mm.')}
           rows={[[L('Lišta', 'Beam'), `${tele.beam.toFixed(1)}°`], [L('Plech', 'Sheet'), `${tele.sheet.toFixed(1)}°`], [L('Medzera', 'Gap'), tele.gap.toFixed(2)]]}
@@ -308,7 +313,7 @@ function FolderSimulator({ onBack, params }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail ohybu', 'Bend detail')], ['bok', L('Z boku', 'Side')], ['spredu', L('Spredu', 'Front')], ['zadu', L('Zozadu', 'Rear')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

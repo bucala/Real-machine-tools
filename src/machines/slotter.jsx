@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -285,7 +286,11 @@ function SlotterSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(mesh);
     apiRef.current.snapshot = snapshot;
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => mesh, getSpot: () => v3(2.6, 6.4, 3.2), onState: (v) => push('unclamped', v) });
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(mesh);
+    };
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => mesh, getSpot: () => v3(2.6, 6.4, 3.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && (c.run || running())) { say(L('Obrobok sa vyberá len pri stojacom stroji.', 'The workpiece can only be removed with the machine stopped.')); return; }
       if (wi.phase() === 'in' && inWork(st.tip)) { say(L('Najprv vytiahni nôž z obrobku – pootoč kolesom kulisy hore alebo spusti stroj a zastav ho v hornej polohe.', 'Pull the tool out of the work first – stop the ram in its upper position.')); return; }
@@ -420,6 +425,7 @@ function SlotterSimulator({ onBack, params }) {
       chips.update(dt, (q) => (Math.hypot(q.x - st.tx, q.z - st.tz) < 0.9 ? WB - 0.2 : Math.abs(q.x - st.tx) < 1.8 && Math.abs(q.z - st.tz) < 1.6 ? 3.9 : 1.1));
       lamp.update(c.light);
 
+      crS.rotation.z=-c.S/20;
       ctrl.update(dt);
       insp.update(t, c);
       if (t - teleT > 0.1) {
@@ -468,7 +474,7 @@ function SlotterSimulator({ onBack, params }) {
         tips={[L('Posuv stola sa robí v hornej úvrati – keď je nôž nad obrobkom. S nožom v obrobku sa stôl do materiálu nepohne.', 'The table is fed at the top of the stroke – with the tool above the work. With the tool in the work the table will not move into the material.'),
           L('Zdvih nastav tak, aby nôž vyšiel nad obrobok a dole vybehol do otvoru skľučovadla.', 'Set the stroke so that the tool clears the top of the work and overruns into the chuck hole.'),
           L('Ďalšiu stenu štvorhranu dostaneš pootočením otočného stola o 90° (delenie z = 4).', 'The next wall of a square is reached by indexing the rotary table by 90° (z = 4).')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zvislá obrážačka', 'Simulator · slotting machine')} title={L('Zvislá obrážačka', 'Slotting machine')}
           sub={L('Predloha: TOS ST 350 – drážkovačka so zvislým smykadlom, kulisovým pohonom a krížovým otočným stolom. Obrába drážky pre perá a tvarové otvory v nábojoch.', 'Modelled after a TOS ST 350 slotter – vertical ram, slotted-link drive and a compound rotary table. It cuts keyways and shaped holes in hubs.')}
           rows={[[L('Zdvih mm', 'Stroke mm'), String(ui.S)], ['X mm', tele.tx.toFixed(2)], ['Z mm', tele.tz.toFixed(2)], ['C °', tele.ca.toFixed(2)]]}
@@ -553,7 +559,7 @@ function SlotterSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Detail noža', 'Tool detail')], ['zhora', L('Otvor zhora', 'Bore from above')], ['kulisa', L('Kulisa', 'Slotted link')], ['panel', L('Rozvádzač', 'Control box')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

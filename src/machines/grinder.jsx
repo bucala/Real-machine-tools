@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { createHeightField } from '../core/heightField';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -216,10 +217,14 @@ function GrinderSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(hf.mesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(hf.mesh);
+    };
 
     // ---------- polotovar ----------
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(3.0, 9.6, 4.6),
-      onState: (v) => { push('unclamped', v); push('magnet', !v); } });
+      onState: (v) => { push('unclamped', v); push('manual',c.manual); push('magnet', !v); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.wheel || st.wr > 1) { say(L('Obrobok sa snímá len pri stojacom kotúči.', 'The workpiece can only be removed with the wheel stopped.')); return; }
@@ -421,7 +426,7 @@ function GrinderSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · brúska', 'Simulator · grinder')} title={L('Rovinná brúska', 'Surface grinder')}
           sub={L('Predloha: BPH 300 s vodorovným vretenom a magnetickou doskou. Kotúč Ø300 × 40 mm.', 'Modelled after the BPH 300 with a horizontal spindle and a magnetic chuck. Wheel Ø300 × 40 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(3)]]}
@@ -493,7 +498,7 @@ function GrinderSimulator({ onBack, params }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail kotúča', 'Wheel detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

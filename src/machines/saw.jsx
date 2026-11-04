@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, mkTex, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -221,9 +222,13 @@ function BandSawSimulator({ onBack, params }) {
     apiRef.current.measure = () => ({ split: st.split, speed: SAW_SPEEDS[c.speed], recommended: SAW_REC[wk.mat], tension: st.tension, gapMax: st.gapMax || 0, offcut: wk.cx * 100 });
     apiRef.current.exportStl = () => exportStl(pieceG);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(pieceG);
+    };
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => pieceG, getSpot: () => v3(3.4, TT + 1.6, 5.0), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => pieceG, getSpot: () => v3(3.4, TT + 1.6, 5.0), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && zb() < 0.12 && st.cutMax > 0 && !st.split) { say(L('Obrobok je na páse – najprv ho stiahni späť (posuv) alebo dorež.', 'The workpiece is on the blade – pull it back (feed) or finish the cut first.')); return; }
       if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb polotovaru.', 'Wait until the workpiece movement finishes.'), 'info');
@@ -327,7 +332,7 @@ function BandSawSimulator({ onBack, params }) {
       if (st.split) st.sepX = approach(st.sepX, 0.08, 0.3 * dt);
 
       // pohyb skupín
-      pieceG.position.z = zb(); leftG.position.x = -st.sepX;
+      if(!c.unclamped)pieceG.position.z = zb(); leftG.position.x = -st.sepX;
       if (st.cutT === t || st.split) layout();
       post.position.y = TT + st.g;
       dust.update(dt, (p) => (Math.abs(p.x) < 3.3 && Math.abs(p.z) < 3.0 && p.y > TT - 0.2 ? TT : 0.02));
@@ -375,7 +380,7 @@ function BandSawSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · pásová píla', 'Simulator · band saw')} title={L('Strojná pásová píla', 'Vertical band saw')}
           sub={L('Predloha: TOS PPN s kolesami Ø720 mm. Mierka 1 : 100 mm.', 'Modelled after the TOS PPN with Ø720 mm wheels. Scale 1 : 100 mm.')}
           rows={[[L('Posuv', 'Feed'), tele.feed.toFixed(1)], [L('Rez', 'Cut'), tele.cut.toFixed(1)], [L('Vodidlo', 'Guide'), (tele.guide || ui.guide).toFixed(1)]]}
@@ -422,7 +427,7 @@ function BandSawSimulator({ onBack, params }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Z boku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

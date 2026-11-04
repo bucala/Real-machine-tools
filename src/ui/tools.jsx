@@ -183,6 +183,20 @@ function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 const SAVE_KEY = (m) => `rmt-save-${m}`;
+function StepDownloadButton({ machine, apiRef }) {
+  const [busy, setBusy] = useState(false), [note, setNote] = useState('');
+  const save = async () => {
+    if (busy) return;
+    setBusy(true); setNote('');
+    try {
+      const blob = await apiRef.current.exportStep?.();
+      if (blob) download(blob, `${machine}-obrobok.stp`);
+      else setNote(L('Nie je dostupný obrobok na export.', 'No workpiece is available to export.'));
+    } catch (error) { setNote(error.message || L('Export sa nepodaril.', 'Export failed.')); }
+    finally { setBusy(false); }
+  };
+  return <><button type="button" className="btn" disabled={busy} onClick={save}>{busy ? L('Pripravujem STP…', 'Preparing STP…') : L('Stiahnuť STP', 'Download STP')}</button>{note && <p className="text-xs muted col-span-2" role="status">{note}</p>}</>;
+}
 function ExportSection({ machine, apiRef, canSave = true, canStl = true }) {
   const [note, setNote] = useState(''), [has, setHas] = useState(() => { try { return !!localStorage.getItem(SAVE_KEY(machine)); } catch (err) { return false; } });
   const say = (t) => { setNote(t); setTimeout(() => setNote(''), 5000); };
@@ -205,6 +219,7 @@ function ExportSection({ machine, apiRef, canSave = true, canStl = true }) {
         {canSave && <button type="button" className="btn" onClick={save}>{L('Uložiť obrobok', 'Save workpiece')}</button>}
         {canSave && <button type="button" className="btn" onClick={load} disabled={!has}>{L('Načítať uložený', 'Load saved')}</button>}
         {canStl && <button type="button" className="btn" onClick={stl}>{L('Stiahnuť STL', 'Download STL')}</button>}
+        <StepDownloadButton machine={machine} apiRef={apiRef} />
         <button type="button" className="btn" onClick={png}>{L('Snímka PNG', 'PNG snapshot')}</button>
       </div>
       {note && <p className="text-xs mt-2 muted" role="status">{note}</p>}
@@ -216,4 +231,4 @@ function ExportSection({ machine, apiRef, canSave = true, canStl = true }) {
 const toB64 = (arr) => { const u = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
 const fromB64 = (b64, Type) => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Type(u.buffer); };
 
-export { CutCalc, ExportSection, SafetyGate, TaskSection, VC, fromB64, nFromVc, toB64, vcFromN };
+export { CutCalc, ExportSection, SafetyGate, StepDownloadButton, TaskSection, VC, fromB64, nFromVc, toB64, vcFromN };

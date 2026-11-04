@@ -85,7 +85,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   };
   const mDown = (e) => {
     ctlUsed = false;
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     trackPtr(e);
     const h = ctlAt(e.clientX, e.clientY);
     if (!h) return;
@@ -98,7 +98,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     else beginRot(h.k, h.point);
   };
   const mMove = (e) => {
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     trackPtr(e);
     const k = drag.ctl;
     if (!k || e.pointerId !== drag.id) return;
@@ -126,7 +126,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   };
   const mLeave = () => { ptr.in = false; if (!drag.ctl) hover = null; };
   const mWheel = (e) => {
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     e.preventDefault();
     const h = ctlAt(e.clientX, e.clientY);
     if (!h || h.k.type === 'button') return;
@@ -158,7 +158,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
       const g = !c.manual ? 0 : k === drag.ctl ? 0.9 : k === hover ? 0.6 : intro;
       if (g !== k.glow) { setGlow(k, g); k.glow = g; }
     }
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     const k = drag.ctl || (ptr.in ? hover : null);
     const cur = drag.ctl ? (k.type === 'button' ? 'pointer' : 'grabbing') : k ? (k.type === 'button' ? 'pointer' : 'grab') : 'default';
     if (dom.style.cursor !== cur) dom.style.cursor = cur;
@@ -175,7 +175,9 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     dom.removeEventListener('pointerup', mUp); dom.removeEventListener('pointercancel', mUp);
     dom.removeEventListener('pointerleave', mLeave); dom.removeEventListener('wheel', mWheel);
   };
-  return { reg, push, pend, update, pickAt, hitAt: (x,y) => ctlAt(x,y)?.k || null, isUsed: () => ctlUsed, invalidate: () => ctrls.forEach((k) => { k.glow = -1; }), dispose };
+  const api = { reg, push, pend, update, pickAt, hitAt: (x,y) => ctlAt(x,y)?.k || null, isUsed: () => ctlUsed, invalidate: () => ctrls.forEach((k) => { k.glow = -1; }), dispose, entries: () => ctrls };
+  try { if (/[?&]debug/.test(window.location.search) && window.__stage) window.__stage.controls = { ...api, c, root, camera }; } catch (err) { /* test without window */ }
+  return api;
 }
 
 export { createControls };

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -178,7 +179,7 @@ function DrillSimulator({ onBack, params }) {
     let holes = [];
     const showHole = (h) => { h.m.scale.set(h.r, Math.min(h.depth, wk.PT) + 0.004, h.r); };
     const addHole = (x, z, r) => {
-      const m = new THREE.Mesh(holeGeo, M.hole); m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m);
+      const m = new THREE.Mesh(holeGeo, M.hole); m.userData.stepSubtract=true; m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m);
       const h = { x, z, r, depth: 0, m, through: false }; holes.push(h); return h;
     };
     const makePlate = () => {
@@ -248,7 +249,7 @@ function DrillSimulator({ onBack, params }) {
     const inPlate = () => tipK() - st.q - st.T < PAR + wk.PT + 0.04 && floorInfo().onPlate;
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(2.6, 9.0, 4.6), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(2.6, 9.0, 4.6), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Doska sa berie zo stola len pri stojacom vretene.', 'The plate can only be taken off with the spindle stopped.')); return; }
@@ -275,6 +276,10 @@ function DrillSimulator({ onBack, params }) {
       return true;
     };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(plateW);
+    };
 
     // ---------- ručné ovládanie prvkov ----------
     const spdIdx = () => logNear(DRILL_SPEEDS, c.rpm);
@@ -427,7 +432,7 @@ function DrillSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · vŕtačka', 'Simulator · drill')} title={L('Stĺpová vŕtačka', 'Pillar drill')}
           sub={L('Predloha: TOS SV16, vŕtanie do Ø16 mm v oceli. Mierka 1 : 100 mm.', 'Modelled after the TOS SV16, drilling up to Ø16 mm in steel. Scale 1 : 100 mm.')}
           rows={[[L('Hĺbka', 'Depth'), tele.depth.toFixed(2)], [L('Pinola', 'Quill'), tele.quill.toFixed(2)], [L('Stôl', 'Table'), tele.table.toFixed(2)]]}
@@ -493,7 +498,7 @@ function DrillSimulator({ onBack, params }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Kľuka pinoly', 'Capstan')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

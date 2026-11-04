@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { createHeightField } from '../core/heightField';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -266,8 +267,12 @@ function ShaperSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(hf.mesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(hf.mesh);
+    };
     const running = () => st.w > 0.05;
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(2.6, 8.4, 4.2), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(2.6, 8.4, 4.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && (c.run || running())) { say(L('Obrobok sa vyberá len pri stojacom stroji.', 'The workpiece can only be removed with the machine stopped.')); return; }
       if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb polotovaru.', 'Wait until the workpiece movement finishes.'), 'info');
@@ -397,6 +402,7 @@ function ShaperSimulator({ onBack, params }) {
       chips.update(dt, (q) => { if (Math.abs(q.x - VX) < 1.2 && Math.abs(q.z - st.tz) < 0.9) return Math.abs(q.z - st.tz) < wk.W / 2 && Math.abs(q.x - VX) < wk.L / 2 ? workBottom() + wk.H : TT + 0.35; return Math.abs(q.z - st.tz) < 1.0 && q.x > 0.15 && q.x < 3.1 ? TT : 0.5; });
       lamp.update(c.light);
 
+      crS.rotation.z=-c.S/20;
       ctrl.update(dt);
       insp.update(t, c);
       if (t - teleT > 0.1) {
@@ -441,7 +447,7 @@ function ShaperSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · obrážačka', 'Simulator · shaper')} title={L('Priečna obrážačka', 'Shaping machine')}
           sub={L('Predloha: kulisová obrážačka TOS so zdvihom do 500 mm. Smykadlo poháňa kulisa, stôl sa posúva západkou.', 'Modelled after a TOS slotted-link shaper with strokes up to 500 mm. The ram is driven by the slotted link, the table by a ratchet.')}
           rows={[[L('Zdvih mm', 'Stroke mm'), String(ui.S)], [L('Prísuv mm', 'Feed mm'), tele.d.toFixed(2)], [L('Stôl Z', 'Table Z'), tele.tz.toFixed(1)]]}
@@ -514,7 +520,7 @@ function ShaperSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Detail noža', 'Tool detail')], ['kulisa', L('Kulisa', 'Slotted link')], ['zhora', L('Zhora', 'Top')], ['panel', L('Rozvádzač', 'Control box')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

@@ -216,7 +216,7 @@ html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{backgrou
 .hmi-key{position:absolute;transform:translate(-50%,-50%);box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #777f85;border-radius:3px;background:#e0e4e6;color:#263038;font-size:clamp(9px,1vw,13px);box-shadow:0 2px #6f787f;line-height:1;cursor:pointer;font-family:var(--f-ui)}
 button.hmi-key{min-height:24px;font-weight:700}button.hmi-key:active{box-shadow:none;filter:brightness(.85)}button.hmi-key[aria-pressed=true]{outline:2px solid #25895b;background:#bfdec9}
 .hmi-key-dark{background:#343a40;color:#f0f2f4}.hmi-key-orange{background:#dfa07a}.hmi-key-static{cursor:default;opacity:.72}
-.hmi-deck-brand{position:absolute;left:55%;top:72%;font-size:13px;letter-spacing:.12em;color:#626c73;font-weight:700}
+.hmi-deck-brand{position:absolute;transform:translate(-50%,-50%);font-size:13px;letter-spacing:.12em;color:#626c73;font-weight:700}
 .hmi-control-position,.hmi-override-position{position:absolute;transform:translate(-50%,-50%)}
 .hmi-machine-button{border:3px solid #687276;border-radius:50%;width:38px;height:38px;box-shadow:0 3px #5a646b;color:white;cursor:pointer;font-weight:750;font-size:17px;display:inline-flex;align-items:center;justify-content:center}
 .hmi-start{background:#238e63}.hmi-hold{background:#d3453e}.hmi-emergency{background:#d62e2c;border:9px solid #e8ba30;width:64px;height:64px;font-size:10px}.hmi-emergency[aria-pressed=true]{box-shadow:inset 0 3px 7px #7d1516,0 0 0 2px #ea5752}
@@ -234,3 +234,5 @@ button.hmi-key{min-height:24px;font-weight:700}button.hmi-key:active{box-shadow:
   .hmi-compact-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center}.hmi-compact-buttons>span{display:flex;justify-content:center}.hmi-compact-buttons .hmi-key{position:static;transform:none;min-height:44px;padding:6px;text-align:center;font-size:11px}.hmi-compact-buttons .hmi-machine-button{min-width:44px;min-height:44px}.hmi-compact-buttons .hmi-emergency{width:54px;height:54px}
   .hmi-override{font-size:12px}.hmi-override input[type=range]{height:38px}.hmi-override input[type=number]{width:62px;height:38px;font-size:16px}
 }
+
+.machine-settings{border:0;padding:0;margin:0;min-width:0}.machine-settings:disabled .sec{opacity:.5}

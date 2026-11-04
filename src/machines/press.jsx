@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -177,7 +179,7 @@ function PressSimulator({ onBack, params }) {
     const showHoles = () => {
       while (holeGrp.children.length) holeGrp.remove(holeGrp.children[0]);
       const T = st.sheet.t / 100;
-      st.holes.forEach((h) => { const m = new THREE.Mesh(holeGeo, h.through ? M.hole : M.dent); m.position.set(h.x / 100, YD + T + 0.003, ZT); m.scale.set(h.d / 200, h.through ? T + 0.006 : Math.max(0.004, h.depth / 100), h.d / 200); holeGrp.add(m); });
+      st.holes.forEach((h) => { const m = new THREE.Mesh(holeGeo, h.through ? M.hole : M.dent); m.userData.stepSubtract=true; m.position.set(h.x / 100, YD + T + 0.003, ZT); m.scale.set(h.d / 200, h.through ? T + 0.006 : Math.max(0.004, h.depth / 100), h.d / 200); holeGrp.add(m); });
     };
     const makeStrip = () => {
       if (stripM) { pasG.remove(stripM); stripM.geometry.dispose(); }
@@ -210,14 +212,23 @@ function PressSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
-    apiRef.current.view = (n) => insp.goView(n, false);
     apiRef.current.measure = () => ({ holes: st.holes.map((h) => ({ ...h })), crashes: st.crashes, overloads: st.overloads, t: st.sheet.t });
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work || st.run)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(pasG);
+    };
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(pasG),getSpot:()=>v3(4, YD+3, 8),
+      canInspect:()=>!atTop() ? L('Najprv zastav lis v hornej úvrati.', 'Stop the press at top dead centre first.') : null,
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (!atTop()) { say(L('Najprv zastav lis v hornej úvrati.', 'Stop the press at top dead centre first.')); return false; }
       st.sheet = { t: c.t, W: clamp(c.W, 30, 200), L: clamp(c.len, 100, 1000) }; st.holes = []; st.crashes = 0; st.overloads = 0; push('feed', 0); st.x = 0; makeStrip();
       say(L(`Vložený pás ${c.t} × ${st.sheet.W} × ${st.sheet.L} mm.`, `Strip ${c.t} × ${st.sheet.W} × ${st.sheet.L} mm loaded.`), 'info'); return true;
@@ -250,7 +261,7 @@ function PressSimulator({ onBack, params }) {
     ctrl.reg({ type: 'button', label: LL('Motor ZAP', 'Motor ON'), hint: LL('Rozbehne zotrvačník.', 'Runs up the flywheel.'), action: needPower(() => push('motor', true)) }, bOn);
     ctrl.reg({ type: 'button', label: LL('Motor VYP', 'Motor OFF'), hint: LL('Vypne motor, zotrvačník dobieha.', 'Switches the motor off, the flywheel runs down.'), action: () => { push('motor', false); stopPress(); } }, bOff);
     ctrl.reg({ type: 'button', label: LL('STOP zdvihu', 'Stroke STOP'), hint: LL('Ukončí trvalý chod v hornej úvrati.', 'Ends continuous running at top dead centre.'), action: stopPress }, bStop);
-    ctrl.reg({ type: 'button', label: LL('Kryt nástroja', 'Tool guard'), hint: LL('Klik kryt sklopí alebo zdvihne.', 'Click to lower or raise the guard.'), action: () => push('guard', !c.guard) }, guardPiv);
+    ctrl.reg({ type: 'button', still:true, label: LL('Kryt nástroja', 'Tool guard'), hint: LL('Klik kryt sklopí alebo zdvihne.', 'Click to lower or raise the guard.'), action: () => push('guard', !c.guard) }, guardPiv);
     ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.2, label: LL('Hlavný vypínač', 'Main switch'), hint: LL('0 = vypnuté, I = zapnuté.', '0 = off, I = on.'),
       getIdx: () => (c.power ? 1 : 0), onSet: (i) => { push('power', i === 1); if (!i) { push('motor', false); stopPress(); } }, read: () => (c.power ? 'I' : '0') }, mainSw);
     ctrl.reg({ type: 'lever', angles: [0.6, -0.6], minR: 0.15, label: LL('Volič režimu', 'Mode selector'), hint: LL('Vľavo jednotlivý zdvih, vpravo trvalý chod.', 'Left single stroke, right continuous.'),
@@ -265,6 +276,9 @@ function PressSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       if (!c.power && c.motor) push('motor', false);
       st.fw = approach(st.fw, c.motor && c.power ? 1 : 0, (c.motor ? 0.35 : 0.12) * dt);
       fwA += st.fw * 6 * dt; hub.rotation.x = fwA;
@@ -332,7 +346,7 @@ function PressSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__press = { st, c, pedal: pedalPress }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); holeGeo.dispose(); try { if (window.__press && window.__press.st === st) delete window.__press; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); holeGeo.dispose(); try { if (window.__press && window.__press.st === st) delete window.__press; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = pressParts();
@@ -351,11 +365,11 @@ function PressSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Sila strihu F = π · d · t · 0,8 · Rm – pred zdvihom ju porovnaj s 400 kN lisu.', 'Cutting force F = π · d · t · 0.8 · Rm – compare it with the 400 kN of the press before the stroke.'),
           L('Baranidlo spúšťaj po malých krokoch skúšobnými zdvihmi; razník má zájsť 0,5 – 6 mm pod čelo matrice.', 'Lower the ram in small steps with trial strokes; the punch should go 0.5 – 6 mm below the die face.'),
           L('Mostík medzi výstrižkami aspoň hrúbka plechu, inak sa okraj roztrhne.', 'The web between blanks is at least the sheet thickness, otherwise the edge tears.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · výstredníkový lis', 'Simulator · eccentric press')} title={L('Výstredníkový lis', 'Eccentric press')}
           sub={L('Predloha: TOMA LEN 40C – lis s C-stojanom, 400 kN, zotrvačník s jednootáčkovou spojkou, zdvih 10 – 80 mm, pedál a kryt nástroja. Rozmery sú orientačné.', 'Modelled after the TOMA LEN 40C – C-frame press, 400 kN, flywheel with a single-revolution clutch, 10 – 80 mm stroke, foot pedal and tool guard. Dimensions are approximate.')}
           rows={[[L('Zdvih mm', 'Stroke mm'), String(ui.stroke)], [L('Sila kN', 'Force kN'), F.toFixed(0)], [L('Diery', 'Holes'), String(tele.holes)]]}
@@ -414,7 +428,7 @@ function PressSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['nastroj', L('Nástroj', 'Tool')], ['bok', L('Zboku', 'Side')], ['rozvadzac', L('Rozvádzač', 'Cabinet')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

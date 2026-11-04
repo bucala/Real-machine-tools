@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { createHeightField } from '../core/heightField';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -520,9 +521,13 @@ function MillSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(isDiv() ? barMesh : hf.mesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(isDiv() ? barG : hf.mesh);
+    };
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => (isDiv() ? barG : hf.mesh), getSpot: () => v3(3.2, 8.4, 4.6), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => (isDiv() ? barG : hf.mesh), getSpot: () => v3(3.2, 8.4, 4.6), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Polotovar sa odopína len pri stojacom vretene.', 'The workpiece can only be unclamped with the spindle stopped.')); return; }
@@ -733,7 +738,7 @@ function MillSimulator({ onBack, params }) {
       // delenie: vreteno sa pootočí na cieľový uhol, kľuka sa točí 40× rýchlejšie; potom sa aretácia zaistí
       if (isDiv()) {
         if (st.phi !== st.phiT) { st.phi = approach(st.phi, st.phiT, TAU / Math.max(2, c.divZ) / 1.4 * dt); if (st.phi === st.phiT && st.indexing) { st.indexing = false; push('divLock', true); say(L('Pootočené o dielik – aretácia vretena zaistená.', 'Indexed one division – spindle lock engaged.'), 'info'); } }
-        barG.rotation.x = st.phi; spinG.rotation.x = st.phi; crankI.rotation.z = -st.phi * DIV_RATIO;
+        if(!c.unclamped)barG.rotation.x = st.phi; spinG.rotation.x = st.phi; crankI.rotation.z = -st.phi * DIV_RATIO;
         tailG.position.x = approach(tailG.position.x, tailX(), 3 * dt);
       }
 
@@ -815,7 +820,7 @@ function MillSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · fréza', 'Simulator · milling machine')} title={L('Univerzálna konzolová fréza', 'Universal knee-type milling machine')}
           sub={L('Predloha: TOS FA 3 B so sklopnou vertikálnou hlavou. Mierka 1 : 100 mm.', 'Modelled after the TOS FA 3 B with a swivelling vertical head. Scale 1 : 100 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
@@ -925,7 +930,7 @@ function MillSimulator({ onBack, params }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail frézy', 'Cutter detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Rozvádzač', 'Cabinet')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

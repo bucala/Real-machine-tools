@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // Shared 3D / full-screen control positions on the 6.04 × 4.7 keyboard plate.
 export const HMI_CONTROL_LAYOUT={
   width:6.04,depth:4.7,
+  brand:{x:-2.35,z:3.35},
   buttons:{emergency:{x:-2.62,z:4.1},hold:{x:.72,z:3.7},start:{x:.72,z:4.3}},
   dials:{feed:{x:1.35,z:3.7},rapid:{x:1.35,z:4.3}},
 };
@@ -58,7 +59,8 @@ export function createHmiPanel(parent, M, tex) {
     const labels=tex(960,720,(g,w,h)=>{
       g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font='15px sans-serif';
       for(const k of keys){g.fillStyle=k.mat==='dark'?'#e8ecee':'#262b30';g.fillText(k.label,(k.x/6.04+.5)*w,k.z/depth*h);}
-      g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText('HERMLE',w*.57,h*.77);
+      const brand=HMI_CONTROL_LAYOUT.brand;
+      g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText('HERMLE',(brand.x/HMI_CONTROL_LAYOUT.width+.5)*w,brand.z/HMI_CONTROL_LAYOUT.depth*h);
     });
     const plane=new THREE.Mesh(new THREE.PlaneGeometry(6.04,depth),new THREE.MeshBasicMaterial({map:labels.tx,transparent:true,depthWrite:false,toneMapped:false}));plane.userData.controlPassThrough=true;plane.rotation.x=-Math.PI/2;plane.position.set(0,.175,depth/2);deck.add(plane);
   }

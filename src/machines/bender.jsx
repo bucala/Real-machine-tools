@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
@@ -260,6 +261,10 @@ function BenderSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(barMesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(barG);
+    };
     apiRef.current.newBlank = () => {
       if (c.unclamped) { say(L('Najprv vlož profil späť do valcov.', 'Put the profile back into the rolls first.')); return false; }
       if (c.drive) { say(L('Najprv zastav valce.', 'Stop the rolls first.')); return false; }
@@ -274,7 +279,7 @@ function BenderSimulator({ onBack, params }) {
       c.rolls = id; buildRolls(); st.dirty = true; return true;
     };
     // vybratie profilu zo stroja: valce stoja a stredný valec je odsunutý
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => barG, getSpot: () => v3(0, 9, 9), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => barG, getSpot: () => v3(0, 9, 9), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.drive) { say(L('Profil sa vyberá pri stojacich valcoch.', 'The profile is taken out with the rolls stopped.')); return; }
@@ -400,11 +405,11 @@ function BenderSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
-        workLabels={[L('Vybrať profil', 'Take out the profile'), L('Vložiť do valcov', 'Back into the rolls')]}
+        workLabels={[L('Pozrieť obrobok', 'Inspect workpiece'), L('Upnúť späť', 'Clamp back')]}
         tips={[L('Odpruženie: nastav menší polomer, ako má vyjsť – začni menším prísuvom, zmeraj a prisúvaj po krokoch.', 'Springback: set a smaller radius than wanted – start with a small feed, measure and feed in steps.'),
           L('Profil sa vyberá len pri odsunutom strednom valci (prísuv 0).', 'The profile can be taken out only with the centre roll retracted (feed 0).'),
           L('Rovné konce (asi 200 mm) sa na troch valcoch neohnú – po ohnutí sa odrežú.', 'The straight ends (about 200 mm) cannot be bent on three rolls – they are cut off afterwards.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · profilová ohýbačka', 'Simulator · section bender')} title={L('Profilová ohýbačka', 'Section bending machine')}
           sub={L('Predloha: COMAC 3025 HV – tri poháňané valce v pyramíde, hydraulický prísuv stredného valca, bočné vodiace kladky, pracovná poloha vodorovná (H) aj zvislá (V).', 'Modelled after a COMAC 3025 HV – three driven rolls in a pyramid, hydraulic centre-roll feed, side guide rollers, horizontal (H) and vertical (V) working position.')}
           rows={[[L('Prísuv mm', 'Feed mm'), tele.d.toFixed(1)], [L('Profil mm', 'Profile mm'), tele.s.toFixed(0)], [L('Sila kN', 'Force kN'), tele.F.toFixed(1)]]}
@@ -471,7 +476,7 @@ function BenderSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['valce', L('Valce', 'Rolls')], ['profil', L('Profil zhora', 'Profile from above')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

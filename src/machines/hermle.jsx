@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
 import { createControls } from '../core/controls';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
@@ -19,6 +20,7 @@ import { cabinHalfWidth, hmiPose } from './cnc/hermleLayout';
 import { createAccessories } from './cnc/accessories';
 import { createToolModel } from './cnc/toolModel';
 import { HmiFullscreen } from '../ui/hmiFullscreen';
+import { StepDownloadButton } from '../ui/tools';
 import { CncToolPreview } from '../ui/cncToolPreview';
 import { createStock } from './cnc/voxel';
 
@@ -314,7 +316,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const lamp = new THREE.PointLight(0xffffff, 18, 18 * K, 1.6); lamp.position.set(0, 19 * K, 3 * K); scene.add(lamp);
 
     // ---------------- polotovar (voxely) ----------------
-    const stockG = grp('obrobok', cG); stockG.rotation.x = -Math.PI / 2; stockG.scale.setScalar(U);
+    const stockG = grp('obrobok', cG); stockG.userData.stepJoin=true; stockG.rotation.x = -Math.PI / 2; stockG.scale.setScalar(U);
     const meshes = new Map();
     let stock = null, mat = null;
     const clearStock = () => { meshes.forEach((me) => { stockG.remove(me); me.geometry.dispose(); }); meshes.clear(); };
@@ -383,6 +385,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     apiRef.current.reset = () => { if(c.unclamped)return;set('running',false);c.fast=false;setCheck(load(loadedText,loadedTools)); };
     apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      if(stock)applyChunks(stock.takeDirty());return exportStep(stockG);
+    };
     apiRef.current.stl = () => {
       const parts = [];
       meshes.forEach((me) => parts.push(me.geometry));
@@ -785,6 +791,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             <button type="button" className="btn" onClick={() => { const b = apiRef.current.stl && apiRef.current.stl(); if (b) save(b, 'hermle-c32-obrobok.stl'); }}>{L('Stiahnuť STL obrobku', 'Download part STL')}</button>
+            <StepDownloadButton machine={`hermle-${model}`} apiRef={apiRef} />
             <button type="button" className="btn" onClick={() => apiRef.current.snapshot && apiRef.current.snapshot((b) => b && save(b, 'hermle-c32.png'))}>{L('Snímka PNG', 'PNG snapshot')}</button>
           </div>
         </div>

@@ -100,8 +100,21 @@ function Seg({ value, options, onChange, label }) {
   );
 }
 
+function SoundToggle({ className = 'btn' }) {
+  const { prefs, setPref } = React.useContext(PrefsCtx);
+  return (
+      <button type="button" className={`${className} ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
+        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
+        onClick={() => setPref('sound', !prefs.sound)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
+          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+        </svg>
+      </button>
+  );
+}
+
 // prepínač vzhľadu (skin) a jazyka
-function PrefBar() {
+function PrefBar({ sound = true }) {
   const { prefs, setPref } = React.useContext(PrefsCtx);
   const skins = [['green', '#4f7f3b', L('Zelený', 'Green')], ['dark', '#2b3138', L('Tmavý', 'Dark')], ['light', '#e9ece5', L('Svetlý', 'Light')]];
   return (
@@ -113,13 +126,7 @@ function PrefBar() {
         ))}
       </div>
       <Seg label={L('Jazyk', 'Language')} value={prefs.lang} options={[['sk', 'SK'], ['en', 'EN']]} onChange={(v) => setPref('lang', v)} />
-      <button type="button" className={`btn ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
-        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
-        onClick={() => setPref('sound', !prefs.sound)}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
-          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
-        </svg>
-      </button>
+      {sound && <SoundToggle />}
     </div>
   );
 }
@@ -172,7 +179,7 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
       {manualHint ? <p>{manualHint}</p> : <HelpRows rows={HELP_MANUAL()} />}
       {canUnclamp && (<>
         <h3>{L('Polotovar', 'Workpiece')}</h3>
-        <p>{L(`Tlačidlo „${workLabels ? workLabels[0] : 'Odopnúť polotovar'}“ vyberie obrobok zo stroja – ťahaním ho otáčaš, kolieskom približuješ, „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na miesto.`, `“${workLabels ? workLabels[0] : 'Unclamp workpiece'}” takes the work out of the machine – drag to rotate it, scroll to zoom, “${workLabels ? workLabels[1] : 'Clamp back'}” puts it back.`)}</p>
+        <p>{L(`Tlačidlo „${workLabels ? workLabels[0] : 'Pozrieť obrobok'}“ vyberie obrobok zo stroja – ťahaním ho otáčaš, kolieskom približuješ, „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na miesto.`, `“${workLabels ? workLabels[0] : 'Inspect workpiece'}” takes the work out of the machine – drag to rotate it, scroll to zoom, “${workLabels ? workLabels[1] : 'Clamp back'}” puts it back.`)}</p>
       </>)}
       <h3>{L('Tipy', 'Tips')}</h3>
       <ul>{[...(tips || []), ...HELP_TIPS()].map((x) => <li key={x}>{x}</li>)}</ul>
@@ -188,7 +195,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
     <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
       onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
-      {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Odopnúť polotovar', 'Unclamp workpiece')}
+      {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Pozrieť obrobok', 'Inspect workpiece')}
     </button>
   );
   return (
@@ -210,6 +217,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
             {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
             <button type="button" className={`scene-btn help-btn ${help ? 'on' : ''}`} aria-pressed={help} aria-label={L('Pomocník: ovládanie a tipy', 'Help: controls and tips')}
               title={L('Ovládanie a tipy', 'Controls and tips')} onClick={() => setHelp((v) => !v)}>i</button>
+            <SoundToggle className="scene-btn" />
           </div>
           {help && <SceneHelp onClose={closeHelp} hint={hint} manualLabel={manualLabel} manualHint={manualHint} tips={tips} canUnclamp={canUnclamp} workLabels={workLabels} />}
         </div>
@@ -252,7 +260,7 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
     <div className="sec">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
-        <PrefBar />
+        <PrefBar sound={false} />
       </div>
       <h1 className="app-title mt-3" tabIndex={-1}>{title}</h1>
       <p className="text-xs muted mt-1">{sub}</p>
@@ -336,4 +344,4 @@ function HelpFooter() {
   );
 }
 
-export { BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
+export { BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, SoundToggle, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };

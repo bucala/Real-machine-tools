@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, REDUCED_MOTION } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -632,6 +633,10 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     apiRef.current.measure = () => ({ stats: evalWeld(), type: F.type, t: F.t, D: F.S.R ? c.wD : undefined, pos: c.wPos, slag: c.slag, ...(MIG ? { I: st.Imax || migI() } : {}) });
     apiRef.current.exportStl = () => exportStl(weldG);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work || st.arc)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(weldG);
+    };
     apiRef.current.newParts = () => { if (st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; } if (c.unclamped) { say(L('Najprv polož zvarenec späť.', 'Put the weldment back first.')); return; } newParts(); insp.goView('detail', false); say(L('Pripravené nové diely.', 'New parts are prepared.'), 'info'); };
     // výmena elektródy s animáciou: držiak sa zdvihne, ohorok vypadne, nová elektróda sa zasunie do čeľustí
     apiRef.current.newElectrode = () => {
@@ -641,7 +646,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       say(L('Výmena elektródy…', 'Changing the electrode…'), 'info');
     };
     apiRef.current.chip = () => { if (F.hot > 0.15) { say(L('Zvar je ešte horúci – počkaj, kým vychladne.', 'The weld is still hot – wait until it cools down.')); return false; } c.slag = false; F.sl.fill(0); F.dirty = true; say(L('Troska je otlčená – vidno kresbu húsenice.', 'The slag is chipped off – the bead ripples are visible.'), 'info'); return true; };
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => weldG, getSpot: () => v3(2.4, TT + 2.6, 4.2), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => weldG, getSpot: () => v3(2.4, TT + 2.6, 4.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; }
       if (wi.phase() === 'in' && F.hot > 0.3) { say(L('Zvarenec je rozžhavený – nechaj ho chvíľu vychladnúť.', 'The weldment is red-hot – let it cool for a moment.')); return; }
@@ -1121,7 +1126,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
-        workLabels={[L('Prezrieť si zvarenec', 'Inspect the weldment'), L('Vrátiť na stôl', 'Back to the table')]} overlay={overlay}
+        workLabels={[L('Pozrieť obrobok', 'Inspect workpiece'), L('Upnúť späť', 'Clamp back')]} overlay={overlay}
         manualLabel={L('Zváranie', 'Welding')}
         tools={<>
           <button type="button" className={`scene-btn ${ui.helmet ? 'on' : ''}`} aria-pressed={ui.helmet} onClick={() => set('helmet', !ui.helmet)} title="H">
@@ -1135,7 +1140,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         </>}
         hint={L('Ťahaj: otáčanie · pravé tlačidlo: posun · koliesko: zoom · M: režim Zváranie · H: kukla', 'Drag: orbit · right button: pan · wheel: zoom · M: welding mode · H: helmet')}
         manualHint={MIG ? <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď horák, ľavé tlačidlo pri držanom pravom je spúšťač (2T / 4T), samotné ľavé tlačidlo nakláňa horák, koliesko s pravým mení výlet drôtu. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the torch, the left button with the right held is the trigger (2T / 4T), the left button alone tilts the torch, the wheel with the right button sets the stick-out. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</> : <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď elektródu, ľavým pri držanom pravom zapáliš oblúk, samotné ľavé tlačidlo nakláňa elektródu, koliesko s pravým mení dĺžku oblúka. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the electrode, press the left one as well to strike the arc, the left button alone tilts the electrode, the wheel with the right button sets the arc length. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</>} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         {MIG ? (
           <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zváranie MIG/MAG', 'Simulator · MIG/MAG welding')} title={L('Zváranie v ochrannom plyne', 'Gas metal arc welder')}
             sub={L('Predloha: invertorový zdroj Fronius TransPuls Synergic TPS 450 s podávačom drôtu VR 4000 a chladiacim modulom FK.', 'Modelled after the Fronius TransPuls Synergic TPS 450 inverter source with a VR 4000 wire feeder and an FK cooling unit.')}
@@ -1318,7 +1323,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         <ViewSection apiRef={apiRef} views={[['detail', L('Detail spoja', 'Joint detail')], ['zhora', L('Zhora', 'Top')], ['celok', L('Celok', 'Overview')], ['zvaracka', MIG ? L('Zdroj TPS 450', 'TPS 450 source') : L('Zváračka', 'Welder')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

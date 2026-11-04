@@ -19,6 +19,13 @@ function setup(canDetach) {
 }
 
 describe('Workpiece inspection shared with the lathe', () => {
+  it('fits a large sheet instead of placing the camera inside it', () => {
+    const s=setup();s.work.scale.setScalar(1);s.camera.aspect=.6;
+    s.wi.toggle();s.wi.update(.5);
+    const bounds=new THREE.Box3().setFromObject(s.work),radius=bounds.getSize(new THREE.Vector3()).length()/2;
+    expect(s.flights[0].p.distanceTo(s.flights[0].t)).toBeGreaterThan(radius/Math.sin(s.camera.fov*Math.PI/360));
+    s.wi.dispose();
+  });
   it('waits for the CNC doors before detaching or moving the camera', () => {
     let ready = false;
     const s = setup(() => ready);

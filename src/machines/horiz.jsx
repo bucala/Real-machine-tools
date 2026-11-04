@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -193,24 +195,48 @@ function HorizSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
-    apiRef.current.view = (n) => insp.goView(n, false);
     const holeData = () => holes.map((h) => ({ ...holeInfo(h), face: h.face, r: h.r, ca: h.ca, cy: h.cy, bored: h.bored, ecc: h.ecc }));
     apiRef.current.measure = () => ({ holes: holes.map((h) => ({ face: h.face, r: h.r, ca: h.ca, cy: h.cy, bored: h.bored, ecc: h.ecc, core: h.core })), info: holeData() });
     apiRef.current.save = () => ({ v: 1, holes: holes.map((h) => ({ face: h.face, r: Array.from(h.r), ca: h.ca, cy: h.cy, bored: h.bored, ecc: h.ecc })) });
     apiRef.current.load = (r) => {
-      if (!r || r.v !== 1 || barIn()) return false;
+      if (!r || r.v !== 1 || barIn() || c.unclamped) return false;
       makeWork(); r.holes.forEach((s, i) => { const h = holes[i]; if (!h) return; h.r.set(s.r); h.ca = s.ca; h.cy = s.cy; h.bored = s.bored; h.ecc = s.ecc; }); refreshHoles(); return true;
     };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      const result=stepWork();try{return await exportStep(result);}finally{result.traverse(o=>o.geometry?.dispose());}
+    };
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(work),getSpot:()=>v3(3, TTOP+4, 9),
+      canInspect:()=>c.running || st.rpm>1 ? L('Najprv zastav vreteno.', 'Stop the spindle first.') : barIn() ? L('Najprv vysuň vyvrtávaciu tyč z obrobku.', 'Withdraw the boring bar from the work first.') : null,
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (barIn()) { say(L('Najprv vysuň tyč a odsuň sane od obrobku.', 'Withdraw the bar and move the saddle back first.')); return false; }
       makeWork(); say(L('Na otočnom stole je nový odliatok s predliatymi otvormi Ø60.', 'A new casting with cored Ø60 holes is on the rotary table.'), 'info'); return true;
     };
 
+    // Rebuild the casting and its depth-dependent bores for CAD export.
+    const stepWork=()=>{
+      const out=new THREE.Group();work.updateWorldMatrix(true,true);out.matrixAutoUpdate=false;out.matrix.copy(work.matrixWorld);
+      const part=(geometry,position,subtract=false)=>{const mesh=new THREE.Mesh(geometry);mesh.position.copy(position);mesh.userData.stepSubtract=subtract;out.add(mesh);return mesh;};
+      part(new THREE.BoxGeometry(BD,BH,BW),v3(0,T+BH/2,0));
+      part(new THREE.BoxGeometry(BD-2*w,BH-2*w,BW-2*w),v3(0,T+BH/2,0),true);
+      for(const h of holes){
+        const f=faceLocal(h.face),profile=[new THREE.Vector2(0,-.002)];
+        for(let i=0;i<h.r.length;i++){profile.push(new THREE.Vector2(h.r[i]/100,i/100-(i===0?.002:0)));profile.push(new THREE.Vector2(h.r[i]/100,(i+1)/100+(i===h.r.length-1?.002:0)));}
+        profile.push(new THREE.Vector2(0,h.r.length/100+.002));
+        const center=f.d.clone().multiplyScalar(f.half).addScaledVector(f.e,h.ca/100);center.y=T+h.cy/100;
+        const cut=part(new THREE.LatheGeometry(profile,48),center,true);cut.quaternion.setFromUnitVectors(v3(0,1,0),f.d.clone().negate());
+      }
+      return out;
+    };
     // ---------- ovládanie ----------
     const needPower = (fn) => () => { if (!c.power) say(L('Najprv zapni hlavný vypínač.', 'Switch on the main switch first.')); else fn(); };
     ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.2, label: LL('Hlavný vypínač', 'Main switch'), hint: LL('0 = vypnuté, I = zapnuté.', '0 = off, I = on.'),
@@ -239,6 +265,9 @@ function HorizSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       if (!c.power && c.running) push('running', false);
       // nastavenie priemeru vyvrtávania – len pri stojacom vretene
       if (Math.abs(c.dB / 200 - st.rb) > 1e-9) {
@@ -300,6 +329,7 @@ function HorizSimulator({ onBack, params }) {
       headY.position.y = st.ys; quill.position.x = XQ; quill.children[0].position.x = (0.3 + st.w) / 2; quill.children[0].scale.x = Math.max(0.01, 0.3 + st.w);
       barG.position.x = XQ + 0.3 + st.w; toolBit.scale.y = st.rb - BAR_R / 100 + 0.02; toolBit.position.y = BAR_R / 100 - 0.02 + (st.rb - BAR_R / 100 + 0.02) / 2;
       sad.position.x = st.z; tbl.position.z = st.x; turn.rotation.y = st.B * Math.PI / 180;
+      wX.rotation.z=-st.x*100/5*TAU;wZ.rotation.z=-st.z*100/5*TAU;wY.rotation.z=-yOf()/5*TAU;wW.rotation.z=-st.w*100/10*TAU;
       lampRun.emissive.setHex(running ? 0x22dd55 : 0);
       lamp.update(c.light);
       chipsP.update(dt, (q) => (Math.abs(q.x - st.z) < 2.2 && Math.abs(q.z - st.x) < 2.4 ? TTOP : 1.2));
@@ -315,7 +345,7 @@ function HorizSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__horiz = { st, c, holes: () => holes }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); try { if (window.__horiz && window.__horiz.st === st) delete window.__horiz; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); try { if (window.__horiz && window.__horiz.st === st) delete window.__horiz; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = horizParts();
@@ -340,11 +370,11 @@ function HorizSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Os otvoru sa nastavuje stolom X a vreteníkom Y; s tyčou v otvore sa tieto osi nepohnú.', 'The hole axis is set with table X and headstock Y; with the bar in the hole these axes do not move.'),
           L('Vyloženie tyče zväčšuje priehyb – na posledný prechod prisuň radšej sane Z a vreteno W nechaj krátke.', 'The bar overhang increases deflection – for the last pass bring the saddle Z closer and keep the spindle W short.'),
           L('Po otočení stola o 180° je os videná od vretena zrkadlová: X nastav na opačnú hodnotu.', 'After turning the table by 180° the axis seen from the spindle is mirrored: set X to the opposite value.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · horizontálka', 'Simulator · horizontal borer')} title={L('Horizontálna vŕtačka a frézka', 'Horizontal boring mill')}
           sub={L('Predloha: horizontálky TOS Varnsdorf (rad W) – vreteník na stojane, vysúvacie vyvrtávacie vreteno, krížový a otočný stôl.', 'Modelled after TOS Varnsdorf horizontal boring mills (W series) – headstock on the column, extending boring spindle, compound and rotary table.')}
           rows={[['X (a)', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(1)], ['W', tele.w.toFixed(1)]]}
@@ -403,7 +433,7 @@ function HorizSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail otvoru', 'Hole detail')], ['zhora', L('Zhora', 'Top')], ['panel', L('Ovládanie', 'Controls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

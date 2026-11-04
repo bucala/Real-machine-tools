@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -197,7 +198,7 @@ function RadialSimulator({ onBack, params }) {
     const holeGeo = new THREE.CylinderGeometry(1, 1, 1, 28); holeGeo.translate(0, -0.5, 0);
     let holes = [];
     const showHole = (h) => { h.m.scale.set(h.r, Math.min(h.depth, wk.PT) + 0.004, h.r); };
-    const addHole = (x, z, r) => { const m = new THREE.Mesh(holeGeo, M.hole); m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m); const h = { x, z, r, depth: 0, m, through: false }; holes.push(h); return h; };
+    const addHole = (x, z, r) => { const m = new THREE.Mesh(holeGeo, M.hole); m.userData.stepSubtract=true; m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m); const h = { x, z, r, depth: 0, m, through: false }; holes.push(h); return h; };
     const parX = () => wk.PW / 2 - 0.1;
     const makePlate = () => {
       [plateW, parG].forEach((g) => { for (let i = g.children.length - 1; i >= 0; i--) { const o = g.children[i]; if (o.geometry !== holeGeo) o.geometry.dispose(); g.remove(o); } });
@@ -205,7 +206,7 @@ function RadialSimulator({ onBack, params }) {
       box(parG, -parX() - 0.06, -parX() + 0.06, 0, PAR, -wk.PD / 2, wk.PD / 2, M.steel); box(parG, parX() - 0.06, parX() + 0.06, 0, PAR, -wk.PD / 2, wk.PD / 2, M.steel);
       box(plateW, -wk.PW / 2, wk.PW / 2, PAR, PAR + wk.PT, -wk.PD / 2, wk.PD / 2, M.plate);
       // upínky na krajoch dosky
-      [-1, 1].forEach((s) => { box(plateW, s * wk.PW / 2 - 0.35, s * wk.PW / 2 + 0.25, PAR + wk.PT, PAR + wk.PT + 0.12, -0.15, 0.15, M.steelDark); cylY(plateW, 0.05, 0.05, PAR + wk.PT + 0.12, PAR + wk.PT + 0.32, s * (wk.PW / 2 - 0.1), 0, M.steel, 8); });
+      [-1, 1].forEach((s) => { box(plateW, s * wk.PW / 2 - 0.35, s * wk.PW / 2 + 0.25, PAR + wk.PT, PAR + wk.PT + 0.12, -0.15, 0.15, M.steelDark).userData.excludeFromExport=true; cylY(plateW, 0.05, 0.05, PAR + wk.PT + 0.12, PAR + wk.PT + 0.32, s * (wk.PW / 2 - 0.1), 0, M.steel, 8).userData.excludeFromExport=true; });
     };
     makePlate();
     const findHole = (x, z, r) => holes.find((h) => Math.hypot(h.x - x, h.z - z) < Math.max(0.012, r * 0.35));
@@ -255,7 +256,7 @@ function RadialSimulator({ onBack, params }) {
     apiRef.current.view = (n) => insp.goView(n, false);
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(PX, topY() + 3.5, PZ + 5), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(PX, topY() + 3.5, PZ + 5), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Doska sa berie len pri stojacom vretene.', 'The plate can only be taken off with the spindle stopped.')); return; }
@@ -281,6 +282,10 @@ function RadialSimulator({ onBack, params }) {
       return true;
     };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(plateW);
+    };
 
     // ---------- ručné ovládanie ----------
     const needPower = (fn) => () => { if (!c.power) say(L('Najprv zapni hlavný vypínač.', 'Switch on the main switch first.')); else fn(); };
@@ -439,7 +444,7 @@ function RadialSimulator({ onBack, params }) {
         tips={[L('Doska stojí – miesto diery nastavíš natočením ramena (α) a vyložením vreteníka (R); displej X / Y ukazuje polohu vretena od stredu dosky.', 'The plate stays put – set the hole position by the arm angle (α) and the head reach (R); the X / Y display shows the spindle position from the plate centre.'),
           L('Pred vŕtaním upni stĺp aj vreteník, pred presunom ich uvoľni.', 'Clamp the column and the head before drilling, release them before moving.'),
           L('Automatický posuv sa vypne na hĺbkovom doraze.', 'The power feed switches off at the depth stop.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · radiálna vŕtačka', 'Simulator · radial drill')} title={L('Radiálna vŕtačka', 'Radial drilling machine')}
           sub={L('Predloha: TOS VO 50 – otočné rameno na stĺpe s veľkou prírubou, vreteník posuvný po ramene, rozvádzač na plášti stĺpa, vŕtanie do Ø50 mm.', 'Modelled after the TOS VO 50 – an arm swinging on a column with a large base flange, a head travelling along the arm, the electrical box on the column sleeve, drilling up to Ø50 mm.')}
           rows={[['X mm', tele.X.toFixed(1)], ['Y mm', tele.Y.toFixed(1)], [L('Hĺbka', 'Depth'), tele.depth.toFixed(1)]]}
@@ -504,7 +509,7 @@ function RadialSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['zhora', L('Zhora', 'Top')], ['rameno', L('Rameno', 'Arm')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

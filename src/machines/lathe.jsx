@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, mkTex, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -601,7 +602,7 @@ function LatheCore({ onBack, params, model, onModel }) {
     apiRef.current.view = (n) => insp.goView(n, false);
 
     // ---------- polotovar: nový kus, odopnutie ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => W(v3(1.0, AXIS_Y + 1.2, 5.5)), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => W(v3(1.0, AXIS_Y + 1.2, 5.5)), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Polotovar sa odopína len pri stojacom vretene.', 'The workpiece can only be unclamped with the spindle stopped.')); return; }
@@ -798,6 +799,10 @@ function LatheCore({ onBack, params, model, onModel }) {
     };
     apiRef.current.exportStl = () => exportStl(work);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      if(workDirty){rebuildWork();workDirty=false;}return exportStep(work);
+    };
     apiRef.current.setPostLock = (v) => { if (st.job) { say(L('Nožová hlava sa práve otáča – počkaj.', 'The tool post is moving – wait.'), 'info'); return; } push('postLock', v); st.postLocked = v; };
 
     insp.goView('celok', true);
@@ -1052,7 +1057,7 @@ function LatheCore({ onBack, params, model, onModel }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · sústruh', 'Simulator · lathe')} title={L('Konvenčný hrotový sústruh', 'Conventional centre lathe')}
           sub={L(`Predloha: sústruhy TOS SN a VDF, veľkosť TOS ${MD.name}.`, `Modelled after TOS SN and VDF lathes, size TOS ${MD.name}.`)}
           rows={[['X Ø', tele.x.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
@@ -1182,7 +1187,7 @@ function LatheCore({ onBack, params, model, onModel }) {
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['noz', L('Nožová hlava', 'Tool post')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['konik', L('Koník', 'Tailstock')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }
