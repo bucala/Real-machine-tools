@@ -159,6 +159,19 @@ Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov.
       </ul>
     </td>
   </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔨 Výstredníkový lis</h3>
+      <sub>TOMA LEN 40C · C-stojan 400 kN · <code>#lis</code></sub>
+      <ul>
+        <li>zotrvačník s jednootáčkovou spojkou, jednotlivý zdvih pedálom alebo trvalý chod, kryt nástroja</li>
+        <li>sila strihu F = π · d · t · 0,8 · Rm, preťaženie zasekne lis v dolnej úvrati</li>
+        <li>prestavenie baranidla: vzduch – vtlačené – prestrihnuté – zlomený razník</li>
+        <li>úlohy 5 dier Ø20 v rozstupe 50 mm a podložky Ø50 zo 6 mm s mostíkom (<code>pressMath.js</code>)</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top"></td>
+  </tr>
 </table>
 
 <table>
@@ -280,7 +293,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #profilova · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -323,7 +336,7 @@ flowchart LR
 | [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
 | [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
 | [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `radialMath.js`, `cylMath.js`, `horizMath.js`, `plateMath.js`, `hobMath.js`, `shearMath.js` (radiálna vŕtačka, brúska na guľato, horizontálka, zakružovačka, odvalovacia frézka, nožnice), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
+| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `radialMath.js`, `cylMath.js`, `horizMath.js`, `plateMath.js`, `hobMath.js`, `shearMath.js`, `pressMath.js` (radiálna vŕtačka, brúska na guľato, horizontálka, zakružovačka, odvalovacia frézka, nožnice, výstredníkový lis), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
 | [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
 | [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
 | [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |

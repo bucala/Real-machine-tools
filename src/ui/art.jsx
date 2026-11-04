@@ -303,6 +303,23 @@ function PlateRollArt() {
   );
 }
 
+function PressArt() {
+  return (
+    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <g fillOpacity=".16">
+        <path d="M110 160V96h30v-8h-24V20h86v68h-14v8h20v64z" />
+        <rect x="100" y="96" width="112" height="14" />
+        <rect x="140" y="58" width="34" height="26" />
+        <rect x="244" y="104" width="34" height="56" />
+      </g>
+      <circle cx="206" cy="48" r="34" fill="none" strokeWidth="3" />
+      <circle cx="206" cy="48" r="8" fillOpacity=".4" />
+      <path d="M157 84v8M126 104h60" fill="none" strokeWidth="3" />
+      <path d="M20 160h280" fill="none" />
+    </svg>
+  );
+}
+
 function HobberArt() {
   return (
     <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
@@ -341,4 +358,4 @@ function ShearArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };

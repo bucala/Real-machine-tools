@@ -85,6 +85,7 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Odvalovacia frézka | ✅ | `#odvalovacka`: výmenné kolesá delenia, sklon frézy, hĺbka 2,25 · m, Wk (`hobMath.js`) |
 | Zakružovačka plechu TOS XZC 3000/10 | ✅ | `#zakruzovacka`: trojvalcová pyramída, prísuv horného valca kolesom, odpruženie, predohnutie koncov podložným plechom, odklopné ložisko s kolíkom (`plateMath.js`) |
 | Tabuľové nožnice BS 2000/8 | ✅ | `#noznice`: model podľa BS 2000/8 (horný kryt výstredníka, hrebeňový kryt, pedálová tyč, pohon vľavo), plech do 8 mm, zadný doraz, uholník, vôľa nožov, kryt prstov, kapacita (`shearMath.js`) |
+| Výstredníkový lis TOMA LEN 40C | ✅ | `#lis`: C-stojan 400 kN, zotrvačník a spojka, jednotlivý / trvalý zdvih, prestavenie baranidla a zanorenie razníka, sila strihu a preťaženie, zlomený razník, úlohy dierovanie a podložky (`pressMath.js`) |
 
 ## 2. Rozsah a metodika
 

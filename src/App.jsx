@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -16,6 +16,7 @@ const FolderSimulator = lazy(() => import('./machines/folder'));
 const BenderSimulator = lazy(() => import('./machines/bender'));
 const PlateRollSimulator = lazy(() => import('./machines/plate'));
 const ShearSimulator = lazy(() => import('./machines/shear'));
+const PressSimulator = lazy(() => import('./machines/press'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -63,6 +64,10 @@ const MACHINES = [
     meta: L('Tabuľové nožnice', 'Guillotine shear'), name: L('Tabuľové nožnice', 'Guillotine shear'), model: 'BS 2000/8',
     desc: L('Strihanie plechov na pásy a prírezy: zadný doraz, bočný uholník, vôľa nožov podľa hrúbky, prítlaky, kryt prstov blokujúci pedál a kapacita stroja.', 'Shearing sheets into strips and blanks: back gauge, side square, blade clearance by thickness, hold-downs, a finger guard that blocks the pedal and the machine capacity.'),
     specs: [L('Plech do 8 mm', 'Sheet up to 8 mm'), L('Dĺžka strihu 2 000 mm', 'Cut length 2,000 mm'), L('Zadný doraz do 750 mm', 'Back gauge up to 750 mm')] }) },
+  { id: 'lis', Art: PressArt, Comp: PressSimulator, t: () => ({
+    meta: L('Výstredníkový lis', 'Eccentric press'), name: L('Výstredníkový lis', 'Eccentric press'), model: 'TOMA LEN 40C',
+    desc: L('Dierovanie a vystrihovanie z pásu: sila strihu podľa priemeru a hrúbky, prestavenie baranidla a zanorenie razníka, jednotlivý zdvih pedálom, kryt nástroja, preťaženie a zlomený razník.', 'Punching and blanking from strip: cutting force by diameter and thickness, ram adjustment and punch entry, single stroke by pedal, tool guard, overload and a broken punch.'),
+    specs: [L('Sila 400 kN', 'Force 400 kN'), L('Zdvih 10 – 80 mm', 'Stroke 10 – 80 mm'), L('80 zdvihov/min', '80 strokes/min')] }) },
   { id: 'profilova', Art: BenderArt, Comp: BenderSimulator, t: () => ({
     meta: L('Profilová ohýbačka', 'Section bender'), name: L('Zakružovačka profilov', 'Section and profile bender'), model: 'COMAC 3025 HV',
     desc: L('Zakružovanie plochých tyčí, rúr, jäklov a uholníkov tromi poháňanými valcami: prísuv stredného valca, odpruženie po ohybe, tvarové valce, bočné vodiace kladky a pracovná poloha vodorovná aj zvislá.', 'Rolling flat bars, tubes, square tubes and angles with three driven rolls: centre-roll feed, springback after bending, forming rolls, side guide rollers and horizontal or vertical working position.'),

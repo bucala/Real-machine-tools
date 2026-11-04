@@ -1,6 +1,6 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
 // Pri inštalácii uloží všetky súbory aplikácie, takže po prvej návšteve fungujú všetky stroje aj bez internetu.
-const CACHE = 'rmt-e6b5bc0e7c13';
+const CACHE = 'rmt-9f44da30e1d6';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -23,31 +23,32 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/bender-DrijpCEY.js",
+  "/assets/bender-DMRCQfOJ.js",
   "/assets/benderMath-d1cNdKwu.js",
   "/assets/core3d-69u6qx6Z.js",
-  "/assets/cylgrind-BQkSMy8D.js",
-  "/assets/drill-B3m6Vf3l.js",
-  "/assets/folder-CjB2SiT1.js",
-  "/assets/grinder-B5N5RleR.js",
+  "/assets/cylgrind-BhizqMVv.js",
+  "/assets/drill-C5DlWqns.js",
+  "/assets/folder-B_MXYvhq.js",
+  "/assets/grinder-_nJ0JlBs.js",
   "/assets/hfMath-B0JgUNbA.js",
-  "/assets/hob-DTq7fj6z.js",
-  "/assets/horiz-CdtQeIuI.js",
-  "/assets/index-CGnQyLrt.js",
+  "/assets/hob-C3VkP1s7.js",
+  "/assets/horiz-CU84BFtK.js",
   "/assets/index-CJ3vjvgB.css",
-  "/assets/lathe-GzdliEZF.js",
-  "/assets/mill-D40zE4SL.js",
-  "/assets/plate-CbGESGsg.js",
-  "/assets/radial-Dp1BIcwV.js",
-  "/assets/saw-CqQlfwwc.js",
-  "/assets/shaper-gVUO2yXU.js",
+  "/assets/index-ChRJAScA.js",
+  "/assets/lathe-ik1k0ceG.js",
+  "/assets/mill-tYLUwU3R.js",
+  "/assets/plate-DvkEmzPZ.js",
+  "/assets/press-C67WUIzW.js",
+  "/assets/radial-C3N6qKR2.js",
+  "/assets/saw-CG8a8pD7.js",
+  "/assets/shaper-CLgxXeR4.js",
   "/assets/shaperMath-BfNySK0Q.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/shear-DoqgvFEq.js",
+  "/assets/shear-dpX61c_g.js",
   "/assets/shopMath-B3CAL8Sc.js",
-  "/assets/slotter-Bf_v21Yw.js",
-  "/assets/tools-CkU-VIot.js",
-  "/assets/weld-Bk0Dogxm.js"
+  "/assets/slotter-DbLX-XiQ.js",
+  "/assets/tools-DLCCww9B.js",
+  "/assets/weld-DTHRlxam.js"
 ];
 
 self.addEventListener('install', (e) => {
