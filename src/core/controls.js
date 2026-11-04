@@ -162,7 +162,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     const k = drag.ctl || (ptr.in ? hover : null);
     const cur = drag.ctl ? (k.type === 'button' ? 'pointer' : 'grabbing') : k ? (k.type === 'button' ? 'pointer' : 'grab') : 'default';
     if (dom.style.cursor !== cur) dom.style.cursor = cur;
-    const html = k ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
+    const html = k && k.tooltip !== false ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
     if (html !== tipHtml) { tipHtml = html; tipEl.innerHTML = html; tipEl.style.display = html ? 'block' : 'none'; }
     if (html) {
       const fx = ptr.x > mount.clientWidth - 270, fy = ptr.y > mount.clientHeight - 90;

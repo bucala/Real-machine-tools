@@ -431,7 +431,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const ctrl=createControls({dom,mount,camera,root,tipEl,c,getT:()=>t,getHL:insp.hl});
     let doorDragStart=0,manualDoor=null;
     for(const d of doors){
-      ctrl.reg({type:'slide',axis:'x',label:L('Posuvné dvere','Sliding doors'),
+      ctrl.reg({type:'slide',axis:'x',tooltip:false,label:L('Posuvné dvere','Sliding doors'),
         hint:L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
         read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
         start:()=>{doorDragStart=doorK;manualDoor=doorK;},
@@ -643,9 +643,13 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
 
   return (
     <div className="machine-app modern-app hermle-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Odopnúť a prezrieť obrobok','Unclamp and inspect workpiece'),L('Upnúť obrobok späť','Clamp workpiece back')]}
-        tools={<button type="button" className={`scene-btn ${ui.hmiLocked?'on':''}`} aria-pressed={ui.hmiLocked} onClick={()=>apiRef.current.lockHmi?.()}>{ui.hmiLocked?L('🔒 Poloha HMI zaistená','🔒 HMI position locked'):L('🔓 Zaistiť polohu HMI','🔓 Lock HMI position')}</button>}
-        tips={[L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workBelowModes workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
+        tools={<button type="button" className={`scene-btn ${ui.hmiLocked?'on':''}`} aria-pressed={ui.hmiLocked} aria-label={L('HMI','HMI')} onClick={()=>apiRef.current.lockHmi?.()}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2" /><path d={ui.hmiLocked?'M8 10V6a4 4 0 0 1 8 0v4':'M8 10V6a4 4 0 0 1 8 0'} /><path d="M12 14v3" /></svg>
+          HMI
+        </button>}
+        tips={[L('Dvere v ručnom režime otvoríš alebo zatvoríš kliknutím na madlo či ťahaním do strany. Tlačidlo HMI zaistí aktuálnu polohu ramena a panela; ďalším kliknutím ju odistíš.', 'In manual mode, click a door handle or drag it sideways to open or close the doors. HMI locks the current arm and panel position; click again to unlock.'),
+          L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />
       {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}

@@ -180,10 +180,17 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
   );
 }
 
-function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint, tools, tips }) {
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, workBelowModes = false, overlay, hint, manualLabel, manualHint, tools, tips }) {
   const inspect = ui.unclamped;
   const [help, setHelp] = useState(false);
   const closeHelp = React.useCallback(() => setHelp(false), []);
+  const workButton = canUnclamp && (
+    <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
+      onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
+      {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Odopnúť polotovar', 'Unclamp workpiece')}
+    </button>
+  );
   return (
     <div className="scene-wrap relative flex-1 overflow-hidden">
       <div ref={mountRef} className="absolute inset-0" />
@@ -218,16 +225,10 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
               <span className="hidden lg:inline">{manualLabel || L('Ručné ovládanie', 'Manual control')}</span><span className="lg:hidden">{manualLabel || L('Ručne', 'Manual')}</span>
             </button>
           </div>
-          {canUnclamp && (
-            <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
-              onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
-              {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Odopnúť polotovar', 'Unclamp workpiece')}
-            </button>
-          )}
+          {!workBelowModes && workButton}
         </div>
         {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
-        {tools && <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{tools}</div>}
+        {(tools || (workBelowModes && workButton)) && <div className={`flex ${workBelowModes ? 'flex-nowrap' : 'flex-wrap'} justify-end gap-2`} style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}</div>}
         </div>
       </div>
     </div>
