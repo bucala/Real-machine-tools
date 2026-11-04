@@ -22,6 +22,8 @@ import { createToolModel } from './cnc/toolModel';
 import { HmiFullscreen } from '../ui/hmiFullscreen';
 import { StepDownloadButton } from '../ui/tools';
 import { CncToolPreview } from '../ui/cncToolPreview';
+import { ToolLibrary } from '../ui/toolLibrary';
+import { installTool, MAX_FILE_BYTES } from './cnc/toolLibrary';
 import { createStock } from './cnc/voxel';
 
 // =====================================================================
@@ -50,6 +52,9 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const init = { door: true, cabin: true, panelAngle: 0, panelYaw: 0, hmiLocked: false, accessorySetup: 'none', speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false, light: true, estop: false };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [hmiOpen,setHmiOpen]=useState(false);
+  const [libraryTab,setLibraryTab]=useState(null);
+  const [librarySource,setLibrarySource]=useState(null);
+  const [programImportError,setProgramImportError]=useState('');
   const samples = SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
   const [tele, setTele] = useTele({ run: false, paused: false, done: false, alarm: null, line: 0, X: 0, Y: 0, Z: 0, A: 0, C: 0, wx: 0, wy: 0, wz: 0, T: 0, S: 0, F: 0, load: 0, mrr: 0, t: 0, removed: 0, busy: false, building: false, maxLoad: 0 });
@@ -605,13 +610,13 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const pickSample = (id) => { const s = samples.find((x) => x.id === id); setProgId(id); if (s) setText(s.text); };
   const onFile = (e) => {
     const fl = e.target.files && e.target.files[0]; if (!fl) return;
-    const rd = new FileReader(); rd.onload = () => { setProgId(''); setText(String(rd.result || '')); }; rd.readAsText(fl); e.target.value = '';
+    setProgramImportError('');
+    if (ctl.current.running || ctl.current.unclamped || fl.size > MAX_FILE_BYTES) { setProgramImportError(L('Zastav stroj a upni obrobok. Najväčší súbor je 2 MB.','Stop the machine and clamp the part. File limit is 2 MB.')); e.target.value = ''; return; }
+    const rd = new FileReader(); rd.onload = () => { if (ctl.current.running || ctl.current.unclamped) { setProgramImportError(L('Načítanie zrušené: stroj je v chode alebo je obrobok odopnutý.','Load cancelled: machine is running or workpiece is unclamped.')); return; } setLibrarySource({text:String(rd.result || ''),name:fl.name}); setLibraryTab('detect'); }; rd.onerror = () => setProgramImportError(L('Súbor sa nepodarilo prečítať.','Could not read the file.')); rd.readAsText(fl); e.target.value = '';
   };
   const save = (blob, nameF) => { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = nameF; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); };
-  const takeCamTools = () => {
-    const defs = check.toolDefs || []; if (!defs.length) return;
-    setTools((ts) => { const out = ts.filter((x) => !defs.some((d) => d.t === x.t)); return [...out, ...defs].sort((a, b) => a.t - b.t); });
-  };
+  const canEditTools = !ctl.current.running && !tele.run && !ui.unclamped;
+  const requireStopped = () => { if (ctl.current.running || ctl.current.unclamped) throw new Error(L('Najprv zastav stroj a upni obrobok.', 'Stop the machine and clamp the workpiece first.')); };
   const setTool = (t, k, v) => setTools((ts) => ts.map((x) => {
     if (x.t !== t) return x;
     const n = { ...x, [k]: v };
@@ -658,6 +663,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />
+      {libraryTab&&<ToolLibrary initialTab={libraryTab} initialNc={librarySource?.text} initialName={librarySource?.name} tools={tools} program={text} capacity={MC.mag} canApply={canEditTools}
+        onInstall={(tool,pocket)=>{requireStopped();setTools(ts=>installTool(ts,tool,pocket,MC.mag));}}
+        onLoadProgram={txt=>{requireStopped();setProgId('');setText(txt);}}
+        onClose={()=>{setLibraryTab(null);setLibrarySource(null);}} />}
       {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}
       <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">
@@ -737,10 +746,11 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
             {samples.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <div className="flex flex-wrap gap-2 mb-2">
-            <button type="button" className="btn" onClick={() => fileRef.current && fileRef.current.click()}>{L('Načítať z CAM…', 'Load from CAM…')}</button>
+            <button type="button" className="btn" disabled={!canEditTools} onClick={() => fileRef.current && fileRef.current.click()}>{L('Načítať z PowerMill / CAM…', 'Load from PowerMill / CAM…')}</button>
             <button type="button" className="btn" onClick={() => save(new Blob([text], { type: 'text/plain' }), check.dialect === 'heidenhain' ? 'program.h' : 'program.nc')}>{L('Uložiť program', 'Save program')}</button>
             <input ref={fileRef} type="file" accept=".nc,.ngc,.tap,.cnc,.iso,.gcode,.h,.mpf,.txt,.eia,.ptp" style={{ display: 'none' }} onChange={onFile} />
           </div>
+          {programImportError&&<p className="msg msg-danger" role="alert">{programImportError}</p>}
           <div className="cnc-listing" aria-label={L('Aktuálny blok', 'Current block')}>
             {lines.slice(from, from + 9).map((s, i) => <div key={from + i} className={from + i === li ? 'cur' : ''}><span>{from + i + 1}</span>{s || ' '}</div>)}
           </div>
@@ -768,7 +778,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Nástroje', 'Tools')}</h2>
-          {check.toolDefs && check.toolDefs.length > 0 && <button type="button" className="btn w-full mb-2" onClick={takeCamTools}>{L(`Prevziať ${check.toolDefs.length} nástrojov z komentárov programu (CAM)`, `Take over ${check.toolDefs.length} tools from the program comments (CAM)`)}</button>}
+          <div className="flex flex-wrap gap-2 mb-2"><button type="button" className="btn" onClick={()=>setLibraryTab('cabinet')}>{L('Skrinka a knižnica nástrojov…','Tool cabinet & library…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('detect')}>{L('Detekovať nástroje z NC…','Detect tools from NC…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('powermill')}>PowerMill / CAM</button></div>
+          <fieldset disabled={!canEditTools} style={{border:0,padding:0,margin:0,minWidth:0}}>
           <div style={{ overflowX: 'auto' }}><table className="cnc-tools cnc-tools-illustrated text-xs tnum w-full">
             <thead><tr><th>T</th><th>{L('Nástroj / tvar', 'Tool / shape')}</th><th>Ø</th><th>R</th><th>L</th><th>{L('rez.', 'flute')}</th><th>S</th><th>ØH</th></tr></thead>
             <tbody>{tools.map((x) => (
@@ -778,7 +789,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
                 {['d', 'cr', 'l', 'lc', 's', 'dh'].map((k) => <td key={k}><input type="number" step="0.1" value={x[k]} aria-label={`T${x.t} ${k}`} onChange={(e) => setTool(x.t, k, Math.max(k === 'cr' ? 0 : 0.5, Number(e.target.value) || 0))} /></td>)}
               </tr>
             ))}</tbody>
-          </table></div>
+          </table></div></fieldset>
           <p className="text-xs muted mt-2">{L('L = dĺžka od čela vretena po špičku (korekcia dĺžky G43 / TOOL CALL), R = polomer rohu (R = Ø/2 guľová fréza), S = vyloženie, ØH = priemer držiaka. Náhľady aj 3D model používajú rovnaké rozmery v mm, upnutie HSK-A63.', 'L = length from the spindle nose to the tip (length offset G43 / TOOL CALL), R = corner radius (R = Ø/2 ball mill), S = stick-out, ØH = holder diameter. Previews and 3D models share the same millimetre dimensions and HSK-A63 interface.')}</p>
         </div>
 
@@ -799,12 +810,12 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Program z CAM', 'Program from CAM')}</h2>
           <div className="text-xs" style={{ lineHeight: 1.55 }}>
-            <p>{L('Simulátor číta výstup postprocesorov CAM (Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):', 'The simulator reads CAM post-processor output (Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):')}</p>
+            <p>{L('Simulátor číta výstup postprocesorov CAM (PowerMill, Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):', 'The simulator reads CAM post-processor output (PowerMill, Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):')}</p>
             <ul className="ctl-list" style={{ marginTop: 4 }}>
               <li><b>ISO / Fanuc:</b> G0 G1 G2 G3 (I J K / R), G17–G19, G90 / G91, G93 / G94, G43 H, G43.4 (TCP), G49, G68.2 + G53.1, G69, G81 / G82 / G83 / G73, G53, G28, M3 M4 M5 M6 M8 M9 M0 M1 M30, osi A a C.</li>
               <li><b>Heidenhain Klartext:</b> BLK FORM, TOOL CALL, L, CC, C, CR, FMAX, M128 / FUNCTION TCPM, PLANE SPATIAL / RESET, CYCL DEF 200, CYCL CALL / M99, M140.</li>
               <li>{L('Postprocesor: Fanuc / Heidenhain 5-osí s otočno-sklopným stolom A/C, výstup v mm, dráha stredu nástroja (bez G41/G42), nulový bod v strede hornej plochy polotovaru.', 'Post-processor: Fanuc / Heidenhain 5-axis with an A/C trunnion table, output in mm, tool centre path (no G41/G42), datum at the centre of the top face of the blank.')}</li>
-              <li>{L('Komentáre nástrojov typu „T3 D=10. CR=0. - flat end mill“ sa dajú prevziať do tabuľky nástrojov.', 'Tool comments like “T3 D=10. CR=0. - flat end mill” can be taken over into the tool table.')}</li>
+              <li>{L('Komentáre nástrojov typu „T3 D=10. CR=0. - flat end mill“ skontroluj cez Detekovať nástroje z NC; doplň chýbajúce rozmery a osaď ich cez knižnicu.', 'Review tool comments such as “T3 D=10. CR=0. - flat end mill” in Detect tools from NC; fill in missing dimensions and install them through the library.')}</li>
             </ul>
           </div>
         </div>
