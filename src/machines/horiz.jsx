@@ -9,6 +9,7 @@ import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { BoxDrawing } from '../ui/sketch';
 import { BAR_R, HZ_FEEDS, HZ_SPEEDS, WALL, boreStep, createHole, faceOf, findHole, holeInfo, horizChecks } from './horizMath';
 import { HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, GEAR_LOCK, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -28,27 +29,16 @@ const horizParts = () => mkParts([
   ['obrobok', 'Obrobok', 'Workpiece', 'Skriňový odliatok', 'Box casting', 'Liatinová skriňa 400 × 300 × 300 mm so stenami hrúbky 40 mm a predliatymi otvormi Ø60 v čelných stenách.', 'A cast-iron box 400 × 300 × 300 mm with 40 mm walls and cored Ø60 holes in the end walls.'],
   ['ovladanie', 'Ovládanie', 'Controls', 'Ovládací panel', 'Control panel', 'Hlavný vypínač, chod vretena, posuv vretena a aretácia otočného stola.', 'Main switch, spindle drive, spindle feed and rotary table lock.'],
 ]);
-const BoxSketch = ({ two }) => (
-  <svg viewBox="0 0 300 110" width="100%" role="img" aria-label="Ø80 H7" style={{ display: 'block' }}>
-    <rect x="60" y="15" width="180" height="80" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="1.4" />
-    <rect x="70" y="25" width="160" height="60" fill="none" stroke="currentColor" strokeWidth="0.8" strokeDasharray="4 3" />
-    <rect x="54" y="43" width="12" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    {two && <rect x="234" y="43" width="12" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" />}
-    <line x1="30" y1="55" x2="270" y2="55" stroke="currentColor" strokeDasharray="8 3 2 3" strokeWidth="0.8" />
-    <text x="12" y="40" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">Ø80 H7</text>
-    <text x="118" y="106" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{two ? L('súosé ≤ 0,02', 'coaxial ≤ 0.02') : 'y = 150'}</text>
-  </svg>
-);
 const HZ_TASKS = [
   { id: 'otvor', title: () => L('Otvor Ø80 H7 v čelnej stene', 'Ø80 H7 hole in the end wall'),
     desc: () => L('Skriňa s predliatym otvorom Ø60. Vyvrtaj otvor Ø80 H7 (80,000 – 80,030 mm) s osou v strede šírky (a = 0) a 150 mm nad spodkom skrine (±0,05 mm). Os nastav stolom X a vreteníkom Y podľa displeja, potom vyvrtávaj po prechodoch: hrubovanie po 5 – 6 mm na priemere, posledný prechod do 0,5 mm s krátkym vyložením – tyč sa menej prehne.', 'A box with a cored Ø60 hole. Bore a Ø80 H7 hole (80.000 – 80.030 mm) with its axis in the middle of the width (a = 0) and 150 mm above the bottom (±0.05 mm). Set the axis with table X and headstock Y according to the display, then bore in passes: roughing 5 – 6 mm on diameter, the last pass up to 0.5 mm with a short overhang – the bar deflects less.'),
     setup: { x: 0, y: 150, B: 0, dB: 66 },
-    drawing: () => <BoxSketch />,
+    drawing: () => <BoxDrawing />,
     labels: { size: () => L('Priemer Ø80 H7 (80,000 – 80,030)', 'Diameter Ø80 H7 (80.000 – 80.030)'), pos: () => L('Os a = 0, y = 150 ±0,05 mm', 'Axis a = 0, y = 150 ±0.05 mm'), ecc: () => L('Jedna os pre všetky prechody', 'One axis for all passes') } },
   { id: 'suose', title: () => L('Súosé otvory v protiľahlých stenách', 'Coaxial holes in opposite walls'),
     desc: () => L('Vyvrtaj Ø80 H7 v stene oproti vretenu, vysuň tyč, odsuň sane, otoč stôl o 180° a vyvrtaj protiľahlú stenu. Otvory musia byť súosé do 0,02 mm. Pozor: po otočení je os otvoru videná od vretena zrkadlovo – stôl X nastav na opačnú hodnotu.', 'Bore Ø80 H7 in the wall facing the spindle, withdraw the bar, move the saddle back, turn the table by 180° and bore the opposite wall. The holes must be coaxial within 0.02 mm. Note: after the turn the hole axis seen from the spindle is mirrored – set table X to the opposite value.'),
     setup: { x: 20, y: 150, B: 0, dB: 66 },
-    drawing: () => <BoxSketch two />,
+    drawing: () => <BoxDrawing two />,
     labels: { size0: () => L('Stena 0: Ø80 H7', 'Wall 0: Ø80 H7'), size2: () => L('Stena 180°: Ø80 H7', 'Wall 180°: Ø80 H7'), coax: () => L('Súosovosť ≤ 0,02 mm', 'Coaxiality ≤ 0.02 mm') } },
 ].map((t) => ({ ...t, checks: (m) => horizChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const HZ_SAFETY = () => [

@@ -11,6 +11,7 @@ import { createWorkInspect } from '../core/workInspect';
 import { exportStl } from '../core/export';
 import { createSound } from '../core/sound';
 import { CutCalc, ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { LatheDrawing } from '../ui/sketch';
 import { METRIC_PITCHES, latheChecks, profileInfo, threadDepth, threadRadius } from './latheMath';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -89,48 +90,26 @@ const latheParts = () => mkParts([
 ]);
 
 // výkres: obrys obrobku zboku s kótami (rozmery v mm, sk / en popisy)
-const Sketch = ({ parts, dims, note }) => {
-  // parts: [[dĺžka, priemer, závit?], …] od čeľustí k voľnému koncu
-  const total = parts.reduce((a, [l]) => a + l, 0), maxD = Math.max(...parts.map(([, d]) => d));
-  const W = 300, H = 120, k = Math.min((W - 40) / total, (H - 44) / maxD), cy = 58;
-  let x = 20;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={note} style={{ display: 'block' }}>
-      <line x1="12" y1={cy} x2={W - 8} y2={cy} stroke="currentColor" strokeDasharray="8 3 2 3" strokeWidth="0.8" opacity="0.6" />
-      <rect x="6" y={cy - maxD * k / 2 - 6} width="14" height={maxD * k + 12} fill="currentColor" opacity="0.25" />
-      {parts.map(([l, d, th], i) => {
-        const x0 = x; x += l * k;
-        return (
-          <g key={i}>
-            <rect x={x0} y={cy - d * k / 2} width={l * k} height={d * k} fill="none" stroke="currentColor" strokeWidth="1.4" />
-            {th && Array.from({ length: Math.floor(l * k / 4) }, (_, j) => <line key={j} x1={x0 + 2 + j * 4} y1={cy - d * k / 2} x2={x0 + 4 + j * 4} y2={cy + d * k / 2} stroke="currentColor" strokeWidth="0.5" opacity="0.6" />)}
-          </g>
-        );
-      })}
-      {dims.map(([txt, xx, yy], i) => <text key={i} x={xx} y={yy} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{txt}</text>)}
-    </svg>
-  );
-};
 const LATHE_TASKS = [
   { id: 'celo', title: () => L('Zarovnanie čela na dĺžku 100 mm', 'Facing to a length of 100 mm'),
     desc: () => L('Hliníková tyč Ø50 vyložená 110 mm. Zarovnaj čelo tak, aby obrobok meral od čeľustí 100 ± 0,3 mm. Použi ubierací nôž stranový alebo ohnutý, priečny posuv k osi.', 'Aluminium bar Ø50 with 110 mm stick-out. Face the end so that the part measures 100 ± 0.3 mm from the jaws. Use the side or bent tool with the cross feed towards the axis.'),
     setup: { bShape: 'round', bD: 50, bLen: 110, bMat: 'alu', slot: 0, tool: { type: 'side', hand: 'R' } },
-    drawing: () => <Sketch parts={[[100, 50]]} dims={[['100 ±0,3', 120, 112], ['Ø50', 250, 30]]} note="Ø50 × 100" />,
+    drawing: () => <LatheDrawing parts={[[100, 50]]} dims={[{ d: 50, text: 'Ø50' }, { h: [0, 100], text: L('100 ±0,3', '100 ±0.3') }]} label="Ø50 × 100" />,
     labels: { len: () => L('Dĺžka od čeľustí 100 ±0,3 mm', 'Length from the jaws 100 ±0.3 mm') } },
   { id: 'osadenie', title: () => L('Osadenie Ø40 × 50 mm', 'Shoulder Ø40 × 50 mm'),
     desc: () => L('Mosadzná tyč Ø60 vyložená 150 mm. Vysústruž na voľnom konci osadenie Ø40 ±0,1 mm dĺžky 50 ±0,5 mm. Zvyšok tyče zostáva Ø60. Hrubuj ubieracím nožom, načisto hladiacim.', 'Brass bar Ø60 with 150 mm stick-out. Turn a Ø40 ±0.1 mm shoulder 50 ±0.5 mm long at the free end. The rest stays Ø60. Rough with the turning tool, finish with the finishing tool.'),
     setup: { bShape: 'round', bD: 60, bLen: 150, bMat: 'brass', slot: 0, tool: { type: 'rough', hand: 'R' } },
-    drawing: () => <Sketch parts={[[100, 60], [50, 40]]} dims={[['Ø60', 70, 22], ['Ø40', 200, 34], ['50 ±0,5', 200, 112]]} note="Ø60 / Ø40 × 50" />,
+    drawing: () => <LatheDrawing parts={[[100, 60], [50, 40]]} dims={[{ d: 50, text: 'Ø60' }, { lead: 125, text: L('Ø40 ±0,1', 'Ø40 ±0.1') }, { h: [100, 150], text: L('50 ±0,5', '50 ±0.5') }]} label="Ø60 / Ø40 × 50" />,
     labels: { d: () => L('Priemer osadenia Ø40 ±0,1 mm', 'Shoulder diameter Ø40 ±0.1 mm'), len: () => L('Dĺžka osadenia 50 ±0,5 mm', 'Shoulder length 50 ±0.5 mm'), rest: () => L('Zvyšok tyče Ø60 nedotknutý', 'Rest of the bar Ø60 untouched') } },
   { id: 'zapich', title: () => L('Zápich 6 mm na Ø40', 'Groove 6 mm to Ø40'),
     desc: () => L('Oceľová tyč Ø50 vyložená 120 mm. Zapichovacím nožom (šírka 3 mm) urob dvoma zápichmi drážku širokú 6 ±0,4 mm s dnom Ø40 ±0,1 mm. Bližší okraj drážky je 30 ±0,5 mm od voľného konca.', 'Steel bar Ø50 with 120 mm stick-out. With the 3 mm parting tool make a 6 ±0.4 mm wide groove in two plunges, bottom Ø40 ±0.1 mm. The nearer edge of the groove is 30 ±0.5 mm from the free end.'),
     setup: { bShape: 'round', bD: 50, bLen: 120, bMat: 'steel', slot: 2, tool: { type: 'parting', hand: 'R' } },
-    drawing: () => <Sketch parts={[[84, 50], [6, 40], [30, 50]]} dims={[['Ø40', 150, 34], ['6', 160, 112], ['30 ±0,5', 230, 112]]} note="zápich" />,
+    drawing: () => <LatheDrawing parts={[[84, 50], [6, 40], [30, 50]]} dims={[{ d: 40, text: 'Ø50' }, { lead: 87, text: L('Ø40 ±0,1', 'Ø40 ±0.1') }, { h: [84, 90], text: L('6 ±0,4', '6 ±0.4'), side: 'l' }, { h: [90, 120], text: L('30 ±0,5', '30 ±0.5'), row: 1 }]} label={L('zápich', 'groove')} />,
     labels: { pos: () => L('Poloha drážky 30 ±0,5 mm od konca', 'Groove position 30 ±0.5 mm from the end'), width: () => L('Šírka drážky 6 ±0,4 mm', 'Groove width 6 ±0.4 mm'), d: () => L('Dno drážky Ø40 ±0,1 mm', 'Groove bottom Ø40 ±0.1 mm') } },
   { id: 'zavit', title: () => L('Závit M30 × 1,5', 'Thread M30 × 1.5'),
     desc: () => L('Oceľová tyč Ø30 vyložená 150 mm. Nareži vonkajší závit M30 × 1,5 dĺžky aspoň 30 mm od voľného konca. Závitový nôž v polohe 4, stúpanie 1,5 mm, nízke otáčky. Zapni maticu vodiacej skrutky, po prechode vysuň nôž (X), vypni maticu, vráť suport a pridaj prísuv. Hĺbka závitu h3 = 0,6134 · P ≈ 0,92 mm.', 'Steel bar Ø30 with 150 mm stick-out. Cut an external M30 × 1.5 thread at least 30 mm long from the free end. Thread tool in position 4, pitch 1.5 mm, low speed. Engage the half-nut, after the pass retract the tool (X), disengage, return the carriage and add infeed. Thread depth h3 = 0.6134 · P ≈ 0.92 mm.'),
     setup: { bShape: 'round', bD: 30, bLen: 150, bMat: 'steel', slot: 3, tool: { type: 'thread', hand: 'R' }, pitch: 1.5, rpm: 56 },
-    drawing: () => <Sketch parts={[[110, 30], [40, 30, true]]} dims={[['M30×1,5', 200, 26], ['≥ 30', 220, 112]]} note="M30×1,5" />,
+    drawing: () => <LatheDrawing parts={[[120, 30], [30, 30, true]]} dims={[{ lead: 135, text: L('M30 × 1,5', 'M30 × 1.5') }, { h: [120, 150], text: '≥ 30' }]} label="M30×1,5" />,
     labels: { pitch: () => L('Stúpanie 1,5 mm (jedno nastavenie)', 'Pitch 1.5 mm (one setting)'), depth: () => L('Hĺbka závitu 0,87 – 0,98 mm', 'Thread depth 0.87 – 0.98 mm'), len: () => L('Dĺžka závitu ≥ 30 mm až po koniec', 'Thread length ≥ 30 mm up to the end'), crest: () => L('Vonkajší priemer Ø30 ±0,1 mm', 'Major diameter Ø30 ±0.1 mm') } },
 ].map((t) => ({ ...t, checks: (m) => latheChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 
@@ -151,7 +130,7 @@ function LatheCore({ onBack, params, model, onModel }) {
     slot: 0, slots: [{ type: 'rough', hand: 'R' }, { type: 'bent', hand: 'R' }, { type: 'parting', hand: 'R' }, { type: 'finish', hand: 'R' }],
     postLock: true, quillLock: false, tailLock: true, bShape: 'round', bD: Math.min(90, maxD), bLen: Math.min(605, maxLen), bMat: 'brass',
     pitch: 1.5, halfNut: false, measure: false, measZ: 300,
-    guard: true, guardOpen: false, coolant: true, coolOn: false, splash: true, steady: false, steadyZ: Math.round(600 * S / 10) * 10, follow: false, screwGuard: true, brake: true,
+    guard: false, guardOpen: false, coolant: false, coolOn: false, splash: false, steady: false, steadyZ: Math.round(600 * S / 10) * 10, follow: false, screwGuard: false, brake: false,
   };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useTele({ rpm: 0, z: 395, x: 140, quill: 0, tail: Math.round(765 * S), vc: 0, msg: null, cutting: false, engaged: false, workD: 90, slot: 0, busy: false, postLocked: true, blank: 'round 90 605 brass' });

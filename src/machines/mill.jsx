@@ -14,6 +14,7 @@ import { hfInfo, millChecks } from '../core/hfMath';
 import { DIVISIONS, DIV_RATIO, barCut, createBar, indexChecks, indexPlan } from './millIndex';
 import { createSound } from '../core/sound';
 import { CutCalc, ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { MillDrawing, PolyDrawing } from '../ui/sketch';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
 // =====================================================================
@@ -52,35 +53,26 @@ const millParts = () => mkParts([
 ]);
 
 // pôdorys obrobku s drážkou alebo zarovnanou plochou (rozmery v mm)
-const TopSketch = ({ L: len, W, band, label, dims }) => {
-  const k = Math.min(260 / len, 80 / W), x0 = 20, y0 = 14;
-  return (
-    <svg viewBox="0 0 300 118" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-      <rect x={x0} y={y0} width={len * k} height={W * k} fill="none" stroke="currentColor" strokeWidth="1.4" />
-      {band && <rect x={x0} y={y0 + (W - band) / 2 * k} width={len * k} height={band * k} fill="currentColor" opacity="0.25" stroke="currentColor" strokeDasharray="4 2" />}
-      {!band && <rect x={x0 + 2} y={y0 + 2} width={len * k - 4} height={W * k - 4} fill="currentColor" opacity="0.18" />}
-      {dims.map(([t, x, y], i) => <text key={i} x={x} y={y} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{t}</text>)}
-    </svg>
-  );
-};
 const MILL_TASKS = [
   { id: 'drazka', title: () => L('Drážka 20 × 5 mm cez celú dĺžku', 'Slot 20 × 5 mm along the whole length'),
     desc: () => L('Hranol 180 × 100 × 60 mm. Stopkovou frézou Ø20 vyfrézuj v strede šírky pozdĺžnu drážku hĺbky 5 ±0,15 mm cez celú dĺžku. Hĺbku nastav konzolou (Z) od dotyku, drážku veď posuvom stola X. Šírka sa meria s presnosťou siete (~1,2 mm).', 'Block 180 × 100 × 60 mm. With a Ø20 end mill cut a longitudinal slot 5 ±0.15 mm deep along the whole length, centred in the width. Set the depth with the knee (Z) from the touch-off, feed the table along X. The width is measured to the grid resolution (~1.2 mm).'),
     setup: { bShape: 'block', bL: 180, bW: 100, bH: 60, tool: 'end20', rpm: 315 },
-    drawing: () => <TopSketch L={180} W={100} band={20} label="drážka 20 × 5" dims={[['180', 140, 112], ['20', 268, 66], ['hĺbka 5 ±0,15', 24, 10]]} />,
+    drawing: () => <MillDrawing slot />,
     labels: { depth: () => L('Hĺbka drážky 5 ±0,15 mm', 'Slot depth 5 ±0.15 mm'), width: () => L('Šírka drážky 20 mm', 'Slot width 20 mm'), len: () => L('Drážka cez celú dĺžku (≥ 95 %)', 'Slot along the whole length (≥ 95 %)'), center: () => L('Drážka v strede šírky', 'Slot centred in the width') } },
   { id: 'rovina', title: () => L('Zarovnanie hornej plochy o 2 mm', 'Facing the top by 2 mm'),
     desc: () => L('Hranol 180 × 100 × 60 mm. Čelnou frézou Ø100 zarovnaj celú hornú plochu o 2 ±0,1 mm. Najprv sa dotkni plochy, potom zdvihni konzolu o 2 mm a prejdi stolom cez celú dĺžku.', 'Block 180 × 100 × 60 mm. With the Ø100 face mill take 2 ±0.1 mm off the whole top surface. Touch off first, then raise the knee by 2 mm and traverse the table along the whole length.'),
     setup: { bShape: 'block', bL: 180, bW: 100, bH: 60, tool: 'face100', rpm: 80 },
-    drawing: () => <TopSketch L={180} W={100} label="rovina" dims={[['180', 140, 112], ['−2 ±0,1', 120, 66]]} />,
+    drawing: () => <MillDrawing />,
     labels: { share: () => L('Plocha znížená o 2 ±0,1 mm (≥ 95 %)', 'Surface lowered by 2 ±0.1 mm (≥ 95 %)'), max: () => L('Nikde hlbšie ako 2,1 mm', 'Nowhere deeper than 2.1 mm') } },
   { id: 'sesthran', title: () => L('Šesťhran s = 36 mm v deliacom prístroji', 'Hexagon s = 36 mm on the dividing head'),
     desc: () => L('Tyč Ø45 × 120 mm v skľučovadle deliaceho prístroja, koník odsunutý. Čelnou frézou Ø100 vyfrézuj na voľnom konci na dĺžke aspoň 40 mm šesťhran s rozmerom cez plochy 36 ±0,15 mm. Stenu frézuj priečnym posuvom (Y) s čelom frézy 18 mm nad osou tyče, potom pootoč o dielik: n = 40 / 6 = 6 2/3 otáčky kľuky (6 otáčok + 12 dier na kruhu 18).', 'Ø45 × 120 mm bar in the dividing-head chuck, tailstock moved away. With the Ø100 face mill cut a hexagon 36 ±0.15 mm across flats on the free end over at least 40 mm. Mill each face with the cross feed (Y), cutter face 18 mm above the bar axis, then index one division: n = 40 / 6 = 6 2/3 crank turns (6 turns + 12 holes on the 18-hole circle).'),
     setup: { hold: 'div', bShape: 'round', bL: 120, bD: 45, tail: false, divZ: 6, tool: 'face100', rpm: 80 }, div: true,
+    drawing: () => <PolyDrawing n={6} s={36} />,
     labels: { size: () => L('Rozmer cez plochy 36 ±0,15 mm', 'Across flats 36 ±0.15 mm'), flat: () => L('Rovinné steny (do 0,2 mm)', 'Flat faces (within 0.2 mm)'), len: () => L('Dĺžka šesťhranu aspoň 40 mm', 'Hexagon length at least 40 mm') } },
   { id: 'stvorhran', title: () => L('Štvorhran 30 × 30 mm v deliacom prístroji', 'Square 30 × 30 mm on the dividing head'),
     desc: () => L('Tyč Ø45 × 120 mm, koník odsunutý. Na voľnom konci vyfrézuj na dĺžke aspoň 40 mm štvorhran 30 ±0,15 mm. Delenie: n = 40 / 4 = 10 otáčok kľuky.', 'Ø45 × 120 mm bar, tailstock moved away. Mill a 30 ±0.15 mm square on the free end over at least 40 mm. Indexing: n = 40 / 4 = 10 crank turns.'),
     setup: { hold: 'div', bShape: 'round', bL: 120, bD: 45, tail: false, divZ: 4, tool: 'face100', rpm: 80 }, div: true,
+    drawing: () => <PolyDrawing n={4} s={30} />,
     labels: { size: () => L('Rozmer cez plochy 30 ±0,15 mm', 'Across flats 30 ±0.15 mm'), flat: () => L('Rovinné steny (do 0,2 mm)', 'Flat faces (within 0.2 mm)'), len: () => L('Dĺžka štvorhranu aspoň 40 mm', 'Square length at least 40 mm') } },
 ].map((t) => ({ ...t, checks: (m) => (t.div ? indexChecks : millChecks)[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const MILL_SAFETY = () => [

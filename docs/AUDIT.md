@@ -78,7 +78,9 @@ Celkové hodnotenie: **simulácia 8/10, architektúra a údržba 5/10, dodanie a
 | Deliaci prístroj na fréze | ✅ | tyč r(x, θ), delenie n = 40 / z s kruhom dier, aretácia, koník, úlohy šesťhran a štvorhran (`millIndex.js`) |
 | Zvislá obrážačka TOS ST 350 | ✅ | `#zobrazacka` za brúskou: zvislé smykadlo s kulisou, krížový a otočný stôl s delením, prierez triesky, úlohy drážka 12 × 3,3 a štvorhran 25 × 25 (`slotterMath.js`) |
 | Profilová ohýbačka COMAC 3025 HV | ✅ | 11. stroj `#profilova` za ohýbačkou plechu: tri valce v pyramíde, pružno-plastický ohyb s odpružením, 5 profilov, tvarové valce, vodiace kladky, poloha H / V, 3 úlohy (`benderMath.js`) |
-| Sústruh: veľkosti a vybavenie | ✅ | TOS SN 32 / 40 / 50 / 55 (mierka stroja, mm obrobku zachované, `profileInfo(u)`), kryt skľučovadla s mikrospínačom, chladenie, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda |
+| Sústruh: veľkosti a vybavenie | ✅ | TOS SN 32 / 40 / 50 / 55 (mierka stroja, mm obrobku zachované, `profileInfo(u)`), kryt skľučovadla s mikrospínačom, chladenie, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda – všetko predvolene vypnuté, zapína sa v paneli |
+| Výkresy úloh s kótami | ✅ | spoločné kótovacie prvky (`src/ui/sketch.jsx`) pre všetkých 34 úloh, automatická kontrola prekrytí textu s čiarami a textami a viditeľnosti vo viewBoxe |
+| Protokol z cvičenia | ✅ | „Vyexportovať protokol“ namiesto odkazu pre žiakov: HTML protokol so zadaním, výkresom, nastavením stroja, odchýlkami, snímkou a hodnotením (`src/ui/protocol.js`, testy) |
 | Radiálna vŕtačka TOS VO 50 | ✅ | `#radialka`: model podľa VO 50 (základová doska, príruba stĺpa, horná skriňa, rozvádzač na plášti, skriňové rameno), otočné rameno, vreteník na ramene, upínanie stĺpa a vreteníka, automatický posuv s dorazom, úlohy rozteč a príruba (`radialMath.js`) |
 | Hrotová brúska na guľato | ✅ | `#gulato`: hydraulický stôl s dorazmi, prísuv 0,005 mm, odtláčanie a vyiskrovanie, prepal, úlohy h6 a h5 (`cylMath.js`) |
 | Horizontálka TOS Varnsdorf | ✅ | `#horizontalka`: vreteník Y, vreteno W, sane Z, stôl X, otočný stôl B; vyvrtávanie s priehybom tyče, úlohy Ø80 H7 a súosé otvory (`horizMath.js`) |

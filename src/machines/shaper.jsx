@@ -13,6 +13,7 @@ import { exportStl } from '../core/export';
 import { grooveInfo, hfInfo } from '../core/hfMath';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection, fromB64, toB64 } from '../ui/tools';
+import { ShaperDrawing } from '../ui/sketch';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { SHAPER_SPEEDS, SHAPER_TOOLS, SH_K, crankR, cutSpeed, isForward, ramPos, shaperChecks, toolLift } from './shaperMath';
 
@@ -47,32 +48,21 @@ const shaperParts = () => mkParts([
 ]);
 
 // priečny rez obrobku so zadaným tvarom (mm)
-const CutSketch = ({ W, H, cut, label }) => {
-  const k = Math.min(240 / W, 70 / H), x0 = 30, y0 = 18, ww = W * k, hh = H * k;
-  return (
-    <svg viewBox="0 0 300 110" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-      <path d={cut(x0, y0, k)} fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.4" />
-      <text x={x0 + ww / 2 - 8} y={y0 + hh + 14} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{W}</text>
-      <text x={x0 + ww + 6} y={y0 + hh / 2} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{H}</text>
-      <text x={x0} y={y0 - 6} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{label}</text>
-    </svg>
-  );
-};
 const SHAPER_TASKS = [
   { id: 'rovina', title: () => L('Obrobenie roviny o 2 mm', 'Shaping a flat face by 2 mm'),
     desc: () => L('Hranol 160 × 80 × 50 mm. Ubieracím nožom zníž celú hornú plochu o 2 ±0,1 mm. Zdvih nastav o 20 – 30 mm dlhší ako obrobok, nôž sa dotkne plochy, potom prisuň o 2 mm a zapni posuv stola 0,5 – 1 mm na zdvih. Pri väčšom posuve zostanú ryhy hlbšie ako tolerancia.', 'Block 160 × 80 × 50 mm. With the roughing tool lower the whole top face by 2 ±0.1 mm. Set the stroke 20 – 30 mm longer than the work, touch the face, feed the tool down 2 mm and switch on the table feed of 0.5 – 1 mm per stroke. A larger feed leaves ridges deeper than the tolerance.'),
     setup: { bL: 160, bW: 80, bH: 50, tool: 'ubr', S: 190, pos: 0 },
-    drawing: () => <CutSketch W={80} H={50} label={L('rez: −2 ±0,1', 'section: −2 ±0.1')} cut={(x, y, k) => `M${x} ${y + 2 * k}h${80 * k}v${48 * k}h${-80 * k}z`} />,
+    drawing: () => <ShaperDrawing kind="rovina" />,
     labels: { share: () => L('Plocha znížená o 2 ±0,1 mm (≥ 95 %)', 'Face lowered by 2 ±0.1 mm (≥ 95 %)'), max: () => L('Nikde hlbšie ako 2,1 mm', 'Nowhere deeper than 2.1 mm') } },
   { id: 'drazka', title: () => L('Drážka pre pero 10 × 5 mm', 'Keyway slot 10 × 5 mm'),
     desc: () => L('Hranol 160 × 80 × 50 mm. Drážkovacím nožom 10 mm vyobrážaj v strede šírky drážku hĺbky 5 ±0,15 mm cez celú dĺžku. Posuv stola je vypnutý, nôž prisúvaj kolieskom hlavy po 0,5 – 1 mm na zdvih (viac ako 1,5 mm naraz nôž nezvládne).', 'Block 160 × 80 × 50 mm. With the 10 mm slotting tool shape a slot 5 ±0.15 mm deep along the whole length, centred in the width. Keep the table feed off and feed the tool down with the head handwheel by 0.5 – 1 mm per stroke (more than 1.5 mm at once stalls the tool).'),
     setup: { bL: 160, bW: 80, bH: 50, tool: 'drazk10', S: 190, pos: 0, tz: 0 },
-    drawing: () => <CutSketch W={80} H={50} label={L('rez: drážka 10 × 5', 'section: slot 10 × 5')} cut={(x, y, k) => `M${x} ${y}h${35 * k}v${5 * k}h${10 * k}v${-5 * k}h${35 * k}v${50 * k}h${-80 * k}z`} />,
+    drawing: () => <ShaperDrawing kind="drazka" />,
     labels: { depth: () => L('Hĺbka drážky 5 ±0,15 mm', 'Slot depth 5 ±0.15 mm'), width: () => L('Šírka drážky 10 mm', 'Slot width 10 mm'), len: () => L('Drážka cez celú dĺžku (≥ 95 %)', 'Slot along the whole length (≥ 95 %)'), center: () => L('Drážka v strede šírky', 'Slot centred in the width') } },
   { id: 'osadenie', title: () => L('Osadenie 30 × 10 mm', 'Shoulder 30 × 10 mm'),
     desc: () => L('Hranol 160 × 80 × 50 mm. Pozdĺž jednej hrany vyobrážaj osadenie šírky 30 mm a hĺbky 10 ±0,2 mm; zvyšok plochy nechaj neporušený. Ber po 2 – 4 mm s posuvom stola, posledný prechod jemne.', 'Block 160 × 80 × 50 mm. Along one edge shape a shoulder 30 mm wide and 10 ±0.2 mm deep; leave the rest of the face untouched. Take 2 – 4 mm per pass with the table feed, finish with a light pass.'),
     setup: { bL: 160, bW: 80, bH: 50, tool: 'ubr', S: 190, pos: 0 },
-    drawing: () => <CutSketch W={80} H={50} label={L('rez: osadenie 30 × 10', 'section: shoulder 30 × 10')} cut={(x, y, k) => `M${x} ${y + 10 * k}h${30 * k}v${-10 * k}h${50 * k}v${50 * k}h${-80 * k}z`} />,
+    drawing: () => <ShaperDrawing kind="osadenie" />,
     labels: { step: () => L('Osadenie 30 mm hlboké 10 ±0,2 mm (≥ 90 %)', '30 mm shoulder 10 ±0.2 mm deep (≥ 90 %)'), rest: () => L('Zvyšok plochy neporušený (≥ 95 %)', 'Rest of the face untouched (≥ 95 %)') } },
 ].map((t) => ({ ...t, checks: (m) => shaperChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const SHAPER_SAFETY = () => [

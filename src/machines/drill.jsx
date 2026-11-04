@@ -10,6 +10,7 @@ import { TAU, approach, clamp, logNear } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
 import { createSound } from '../core/sound';
 import { CutCalc, ExportSection, TaskSection } from '../ui/tools';
+import { DrillDrawing } from '../ui/sketch';
 import { drillChecks } from './shopMath';
 import { BlankSection, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -36,23 +37,16 @@ const drillParts = () => mkParts([
 ]);
 
 // pôdorys dosky s dierami (rozmery v mm)
-const PlateSketch = ({ holes, label, dims }) => (
-  <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={label} style={{ display: 'block' }}>
-    <rect x="60" y="10" width="180" height="100" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    {holes.map(([x, y, r], i) => <g key={i}><circle cx={150 + x} cy={60 + y} r={r} fill="none" stroke="currentColor" strokeWidth="1.4" /><path d={`M${144 + x} ${60 + y}h12M${150 + x} ${54 + y}v12`} stroke="currentColor" strokeWidth="0.6" /></g>)}
-    {dims.map(([t, x, y], i) => <text key={i} x={x} y={y} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{t}</text>)}
-  </svg>
-);
 const DRILL_TASKS = [
   { id: 'dve', title: () => L('Dve diery Ø10 naskrz, rozostup 50 mm', 'Two Ø10 through holes, 50 mm apart'),
     desc: () => L('Oceľová doska 180 × 120 × 25 mm. Vyvŕtaj vrtákom Ø10 dve diery naskrz vo vzdialenosti 50 ±1 mm. Medzi dierami posúvaj stôl (u, v). Pri vŕtaní naskrz sleduj podložky – vrták musí vyjsť medzi ne.', 'Steel plate 180 × 120 × 25 mm. Drill two Ø10 through holes 50 ±1 mm apart. Move the table (u, v) between the holes. When drilling through, watch the parallels – the drill must exit between them.'),
     setup: { bL: 180, bW: 120, bT: 25, bit: 10, rpm: 710 },
-    drawing: () => <PlateSketch holes={[[-25, 0, 6], [25, 0, 6]]} label="2 × Ø10" dims={[['2 × Ø10 naskrz', 96, 34], ['50 ±1', 136, 84]]} />,
+    drawing: () => <DrillDrawing holes={[[-25, 0, 10], [25, 0, 10]]} callout={L('2 × Ø10 naskrz', '2 × Ø10 through')} dist="50 ±1" />,
     labels: { count: () => L('Práve dve diery', 'Exactly two holes'), d: () => L('Priemer Ø10', 'Diameter Ø10'), through: () => L('Obe naskrz', 'Both through'), dist: () => L('Rozostup 50 ±1 mm', 'Spacing 50 ±1 mm') } },
   { id: 'slepa', title: () => L('Slepá diera Ø8 hĺbky 15 mm', 'Blind hole Ø8, 15 mm deep'),
     desc: () => L('Oceľová doska 180 × 120 × 25 mm. Vyvŕtaj jednu slepú dieru Ø8 hĺbky 15 ±0,5 mm (nie naskrz). Hĺbku sleduj na displeji, pinolu posúvaj pomaly.', 'Steel plate 180 × 120 × 25 mm. Drill one blind Ø8 hole 15 ±0.5 mm deep (not through). Watch the depth on the display, feed the quill slowly.'),
     setup: { bL: 180, bW: 120, bT: 25, bit: 8, rpm: 1000 },
-    drawing: () => <PlateSketch holes={[[0, 0, 5]]} label="Ø8 × 15" dims={[['Ø8 hĺbka 15 ±0,5', 104, 34]]} />,
+    drawing: () => <DrillDrawing holes={[[0, 0, 8]]} callout={L('Ø8, hĺbka 15 ±0,5', 'Ø8, depth 15 ±0.5')} />,
     labels: { count: () => L('Práve jedna diera', 'Exactly one hole'), d: () => L('Priemer Ø8', 'Diameter Ø8'), depth: () => L('Hĺbka 15 ±0,5 mm, nie naskrz', 'Depth 15 ±0.5 mm, not through') } },
 ].map((t) => ({ ...t, checks: (m) => drillChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const DRILL_SAFETY = () => [

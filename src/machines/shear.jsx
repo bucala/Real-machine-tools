@@ -8,6 +8,7 @@ import { createStage } from '../core/stage';
 import { approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { SheetDrawing } from '../ui/sketch';
 import { SHEAR, cutStrip, gapIdeal, shearChecks } from './shearMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -28,22 +29,16 @@ const shearParts = () => mkParts([
   ['pohon', 'Pohon', 'Drive', 'Motor so zotrvačníkom', 'Motor with flywheel', 'Elektromotor 7,5 kW vľavo roztáča cez prevod zotrvačník; pri strihu odovzdá energiu výstredníkovej hriadeli v hornom kryte. Na podstavci je hlavný vypínač a prepínač.', 'The 7.5 kW motor on the left spins the flywheel through a drive; during the cut it gives its energy to the eccentric shaft in the top housing. The main switch and the selector are on the pedestal.'],
   ['plech', 'Plech', 'Sheet', 'Plech', 'Sheet', 'Oceľový plech S235 na stole. Odstrihnuté pásy padajú za nožom do zberného koša.', 'S235 steel sheet on the table. The cut strips fall behind the blade into the bin.'],
 ]);
-const StripSketch = ({ w, n, t }) => (
-  <svg viewBox="0 0 300 100" width="100%" role="img" aria-label={`${n} × ${w}`} style={{ display: 'block' }}>
-    {Array.from({ length: n }, (_, k) => <rect key={k} x={30 + k * 85} y="20" width="70" height="60" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.4" />)}
-    <text x="30" y="95" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{`${n} × ${w} ±0,3 · t ${t}`}</text>
-  </svg>
-);
 const SHEAR_TASKS = [
   { id: 'pasy', title: () => L('Tri pásy 100 × 1000 z plechu 2 mm', 'Three 100 × 1000 strips from 2 mm sheet'),
     desc: () => L('Plech 2 × 1000 × 500 mm. Nastrihaj tri pásy šírky 100 ±0,3 mm. Nastav zadný doraz na 100 mm a vôľu nožov podľa hrúbky (≈ 7 % = 0,14 mm), plech prilož k bočnému uholníku a zasuň po doraz. Kryt prstov musí byť dole, strih spustíš pedálom.', 'Sheet 2 × 1000 × 500 mm. Cut three strips 100 ±0.3 mm wide. Set the back gauge to 100 mm and the blade clearance to the thickness (≈ 7 % = 0.14 mm), lay the sheet against the side square and push it to the gauge. The finger guard must be down; the pedal triggers the cut.'),
     setup: { t: 2, L: 1000, D: 500, gauge: 300, gap: 0.3 },
-    drawing: () => <StripSketch w={100} n={3} t={2} />,
+    drawing: () => <SheetDrawing w={100} n={3} t={2} L={1000} D={500} />,
     labels: { count: () => L('Tri pásy 100 ±0,3 mm', 'Three strips 100 ±0.3 mm'), square: () => L('Pravouhlé (klin ≤ 0,3 mm)', 'Square (taper ≤ 0.3 mm)'), burr: () => L('Bez ostriny (správna vôľa nožov)', 'No burr (correct blade clearance)') } },
   { id: 'hrube', title: () => L('Prírezy 150 mm z plechu 6 mm', '150 mm blanks from 6 mm sheet'),
     desc: () => L('Plech 6 × 1500 × 500 mm. Nastrihaj dva pásy 150 ±0,3 mm bez ostriny. Hrubší plech potrebuje väčšiu vôľu nožov (≈ 0,42 mm) – s vôľou pre tenký plech bude mať strih ostrinu.', 'Sheet 6 × 1500 × 500 mm. Cut two strips 150 ±0.3 mm without burr. A thicker sheet needs a larger blade clearance (≈ 0.42 mm) – with the clearance for thin sheet the cut has a burr.'),
     setup: { t: 6, L: 1500, D: 500, gauge: 300, gap: 0.14 },
-    drawing: () => <StripSketch w={150} n={2} t={3} />,
+    drawing: () => <SheetDrawing w={150} n={2} t={6} L={1500} D={500} />,
     labels: { size: () => L('Dva pásy 150 ±0,3 mm (6 mm)', 'Two strips 150 ±0.3 mm (6 mm)'), burr: () => L('Bez ostriny', 'No burr') } },
 ].map((t) => ({ ...t, checks: (m) => shearChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 const SHEAR_SAFETY = () => [

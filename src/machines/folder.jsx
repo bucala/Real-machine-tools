@@ -9,6 +9,7 @@ import { TAU, approach, clamp } from '../core/util';
 import { createWorkInspect } from '../core/workInspect';
 import { exportStl } from '../core/export';
 import { ExportSection, TaskSection } from '../ui/tools';
+import { BendDrawing } from '../ui/sketch';
 import { folderChecks } from './shopMath';
 import { BlankSection, HelpFooter, PanelHeader, PartsSection, SceneView, SegRow, Slider, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 
@@ -26,26 +27,14 @@ const foldParts = () => mkParts([
 ]);
 
 // bočný pohľad na ohnutý plech s uhlom a prírubou
-const BendSketch = ({ angle, flange, th }) => {
-  const a = (180 - angle) * Math.PI / 180, x0 = 150, y0 = 90, L = 110, F = Math.min(70, flange * 1.2);
-  return (
-    <svg viewBox="0 0 300 120" width="100%" role="img" aria-label={`${angle}°`} style={{ display: 'block' }}>
-      <path d={`M${x0 - L} ${y0}H${x0}L${x0 + Math.cos(a) * F} ${y0 - Math.sin(a) * F}`} fill="none" stroke="currentColor" strokeWidth={Math.max(1.4, th * 1.6)} />
-      <path d={`M${x0 - 30} ${y0}A30 30 0 0 1 ${x0 + Math.cos(a) * 30} ${y0 - Math.sin(a) * 30}`} fill="none" stroke="currentColor" strokeDasharray="3 2" strokeWidth="0.8" />
-      <text x={x0 - 14} y={y0 - 34} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{angle}° ±1°</text>
-      <text x={x0 + Math.cos(a) * F / 2 + 8} y={y0 - Math.sin(a) * F / 2 + 4} fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">{flange}</text>
-      <text x="20" y="112" fontSize="10" fill="currentColor" fontFamily="var(--f-mono)">t = {th} mm</text>
-    </svg>
-  );
-};
 const FOLD_TASKS = [
   { id: 'ohyb90', title: () => L('Ohyb 90° s prírubou 50 mm', 'Bend 90° with a 50 mm flange'),
     desc: () => L('Plech hrúbky 1 mm, príruba 50 mm. Ohni plech na trvalý uhol 90 ±1°. Pamätaj na odpruženie – lištu treba vykývnuť o kúsok ďalej.', 'Sheet 1 mm thick, 50 mm flange. Bend it to a permanent 90 ±1°. Mind the springback – swing the beam a little further.'),
-    setup: { thick: 1, flange: 50 }, drawing: () => <BendSketch angle={90} flange={50} th={1} />,
+    setup: { thick: 1, flange: 50 }, drawing: () => <BendDrawing angle={90} flange={50} th={1} />,
     labels: { angle: () => L('Trvalý uhol 90 ±1°', 'Permanent angle 90 ±1°'), flange: () => L('Príruba 50 mm', 'Flange 50 mm'), th: () => L('Plech 1 mm', 'Sheet 1 mm') } },
   { id: 'ohyb45', title: () => L('Ohyb 45° hrubšieho plechu', 'Bend 45° of a thicker sheet'),
     desc: () => L('Plech hrúbky 2 mm odpruží viac. Ohni prírubu 30 mm na trvalý uhol 45 ±1°.', 'A 2 mm sheet springs back more. Bend a 30 mm flange to a permanent 45 ±1°.'),
-    setup: { thick: 2, flange: 30 }, drawing: () => <BendSketch angle={45} flange={30} th={2} />,
+    setup: { thick: 2, flange: 30 }, drawing: () => <BendDrawing angle={45} flange={30} th={2} />,
     labels: { angle: () => L('Trvalý uhol 45 ±1°', 'Permanent angle 45 ±1°'), flange: () => L('Príruba 30 mm', 'Flange 30 mm'), th: () => L('Plech 2 mm', 'Sheet 2 mm') } },
 ].map((t) => ({ ...t, checks: (m) => folderChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 
