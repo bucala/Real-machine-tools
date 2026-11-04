@@ -9,6 +9,8 @@ describe('TNC console geometry', () => {
     const panel=createHmiPanel(parent,M);
     expect(panel.display.geometry.parameters.width/panel.display.geometry.parameters.height).toBeGreaterThan(1.45);
     expect(panel.monitor.rotation.x).toBeLessThan(0);
+    expect(Object.keys(panel.controls.buttons).sort()).toEqual(['coolant','emergency','hold','light','reset','single','start']);
+    expect(panel.controls.knobs.feed).toBeDefined();expect(panel.controls.knobs.rapid).toBeDefined();
     expect(panel.deck.rotation.x).toBeCloseTo(20*Math.PI/180);
     for(const mesh of Object.values(panel.instances)){
       for(let i=0;i<mesh.count;i++){

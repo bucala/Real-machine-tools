@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
+import { createControls } from '../core/controls';
 import { createInspector } from '../core/inspector';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { createSound } from '../core/sound';
+import { createWorkInspect } from '../core/workInspect';
 import { HelpFooter, PartsSection, SceneView, SegRow, Slider, Toggle, ViewSection, mkParts, useMachine, useTele } from '../ui/common';
 import { interpret } from './cnc/gcode';
 import { MODELS } from './cnc/kin';
@@ -16,6 +18,7 @@ import { createHmiPanel } from './cnc/hmiPanel';
 import { cabinHalfWidth, hmiPose } from './cnc/hermleLayout';
 import { createAccessories } from './cnc/accessories';
 import { createToolModel } from './cnc/toolModel';
+import { HmiFullscreen } from '../ui/hmiFullscreen';
 import { CncToolPreview } from '../ui/cncToolPreview';
 import { createStock } from './cnc/voxel';
 
@@ -42,14 +45,15 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart
 function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
   const MC = MODELS[model] || MODELS.c32;
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
-  const init = { door: true, cabin: true, panelAngle: 0, panelYaw: 0, accessorySetup: 'none', speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false };
-  const { ctl, ui, set, selected, selectPart, apiRef } = useMachine(init);
+  const init = { door: true, cabin: true, panelAngle: 0, panelYaw: 0, hmiLocked: false, accessorySetup: 'none', speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false, light: true, estop: false };
+  const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
+  const [hmiOpen,setHmiOpen]=useState(false);
   const samples = SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
   const [tele, setTele] = useTele({ run: false, paused: false, done: false, alarm: null, line: 0, X: 0, Y: 0, Z: 0, A: 0, C: 0, wx: 0, wy: 0, wz: 0, T: 0, S: 0, F: 0, load: 0, mrr: 0, t: 0, removed: 0, busy: false, building: false, maxLoad: 0 });
 
   useEffect(() => {
-    const mount = mountRef.current, layer = layerRef.current;
+    const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
     const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount, { far: 500, floorSize: 400, gridSize: 240, fogNear: 180, fogFar: 400 });
     const snd = createSound('mill');
@@ -126,6 +130,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     for (let i = 0; i < 12; i++) { const sl = box(cT, 0.45, 3.1, -0.02, 0.003, -0.065, 0.065, M.steelD); sl.position.x = 0; sl.geometry.translate(1.775, 0, 0); sl.rotation.y = i * Math.PI / 6; }
     cylY(cG, FIX.r * U * 1.35, FIX.r * U * 1.35, 0, 0.22, 0, 0, M.steelD, 40);                     // nulový upínací systém
     cylY(cG, FIX.r * U, FIX.r * U, 0.22, FIX.h * U, 0, 0, M.anth, 40);
+    const clampPins = [0,1,2].map(i=>{
+      const pin=new THREE.Group();pin.rotation.y=i*Math.PI*2/3;cG.add(pin);
+      return box(pin,-.055,.055,.25,.42,FIX.r*U-.06,FIX.r*U+.06,M.steel);
+    });
     // ---------------- portál: priečnik Y, sane X, smykadlo Z, vreteno ----------------
     const ax = grp('osi');
     const yG = new THREE.Group(); ax.add(yG);
@@ -270,7 +278,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     cylY(armElbow,.38,.38,2.4,9.45,0,6.8,M.anth);
     cylY(armElbow,.55,.55,4.25,5.2,0,6.8,M.steelD);
     const panG = new THREE.Group(); panG.position.set(0,0,6.8); armElbow.add(panG);
-    const { display: sm } = createHmiPanel(panG,M,tex);
+    const hmi = createHmiPanel(panG,M,tex), sm = hmi.display;
     let scr = null;
     const screen = tex(640, 460, (g, w, h) => {
       g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
@@ -283,6 +291,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       g.fillStyle = scr.alarm ? '#ff5a4f' : '#59d17b'; g.fillRect(0, h - 40, w, 40); g.fillStyle = '#0d1a2a'; g.font = 'bold 17px sans-serif'; g.fillText(scr.status.slice(0, 64), 12, h - 14);
     });
     sm.material.map=screen.tx;sm.material.needsUpdate=true;
+    apiRef.current.getHmiCanvas=()=>screen.tx.image;
     // Cabinet seams, ventilation grille and levelling pads from the brochure views.
     for (const x of [-10.9,10.9]) for(const y of [7,23.2]) {
       const screw=new THREE.Mesh(new THREE.CircleGeometry(.07,12),M.steelD);screw.position.set(x,y,8.68);cabS.add(screw);
@@ -322,6 +331,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     };
 
     // ---------------- program a vykonávanie ----------------
+    let loadedText='',loadedTools=[];
     let prog = null, ex = null, toolsNow = [], o54 = [0, 0, 90], curT = -1, stockMin = null, stockMax = null, maxLoad = 0, msg = null;
     const stockCfg = () => {
       if (prog && prog.stock) {
@@ -340,11 +350,12 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       applyChunks(stock.takeDirty());
     };
     const load = (txt, tls) => {
-      toolsNow = tls; loadMagazine(tls);
+      loadedText=txt;loadedTools=tls;toolsNow = tls; loadMagazine(tls);
       prog = interpret(txt, { o54: [0, 0, 0], tools: tls, mach: MC });                        // najprv kvôli BLK FORM
       buildStock();
       prog = interpret(txt, { o54, tools: tls, mach: MC });
       ex = createExecutor({ moves: prog.moves, tools: tls, o54, stock, fixture: FIX, kc: (MATERIALS[c.mat] || MATERIALS.al).kc, mach: MC });
+      if(c.estop)ex.S.alarm={kind:'estop',text:L('Núdzový STOP je stlačený.', 'Emergency STOP is latched.'),line:0};
       scr = { title: L('Pripravený', 'Ready'), lines: prog.lines.slice(0,13).map((t,i)=>({t,cur:i===0})),
         pos: [['X',fmt(ex.S.pose.m[0])],['Y',fmt(ex.S.pose.m[1])],['Z','0.000'],['A','0.000'],['C','0.000'],['T','0'],['S','0'],['F','100']],
         status: L('Pripravený', 'Ready'), alarm: false };
@@ -355,14 +366,22 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     apiRef.current.load = load;
     apiRef.current.start = () => {
       if (!ex) return 'noprog';
+      if(c.unclamped){msg=L('Najprv upni obrobok späť.','Clamp the workpiece back first.');return 'unclamped';}
+      if (c.estop) { msg=L('Uvoľni núdzový STOP a stlač Reset.', 'Release Emergency STOP and press Reset.'); return 'estop'; }
       if (c.door) { msg = L('Dvere sú otvorené – zatvor ich, potom spusti program.', 'The doors are open – close them, then start the program.'); return 'door'; }
       if (prog.errors.length) { msg = L(`Program má chyby (${prog.errors.length}) – oprav ich pred spustením.`, `The program has errors (${prog.errors.length}) – fix them before starting.`); return 'err'; }
       if (ex.S.alarm) { msg = L('Najprv potvrď alarm tlačidlom Reset.', 'Acknowledge the alarm with Reset first.'); return 'alarm'; }
       if (ex.S.done) return 'done';
-      ex.S.paused = false; c.running = true; msg = null; return 'ok';
+      ex.S.paused = false; c.fast=false; c.running = true; msg = null; return 'ok';
     };
-    apiRef.current.hold = () => { c.running = false; };
-    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door) return; ex.S.paused = false; c.running = true; c.fast = true; };
+    apiRef.current.hold = () => { c.running = false;c.fast=false;if(ex)ex.S.paused=true; };
+    apiRef.current.emergency = () => {
+      set('estop',!c.estop);set('running',false);c.fast=false;
+      if(c.estop&&ex){ex.S.dir=0;ex.S.cool=false;ex.S.paused=true;ex.S.alarm={kind:'estop',text:L('Núdzové zastavenie – uvoľni STOP a stlač Reset.','Emergency stop – release STOP and press Reset.'),line:ex.S.line};}
+      msg=c.estop?L('Núdzový STOP stlačený.','Emergency STOP latched.'):L('Núdzový STOP uvoľnený – stlač Reset.','Emergency STOP released – press Reset.');
+    };
+    apiRef.current.reset = () => { if(c.unclamped)return;set('running',false);c.fast=false;setCheck(load(loadedText,loadedTools)); };
+    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
     apiRef.current.snapshot = snapshot;
     apiRef.current.stl = () => {
       const parts = [];
@@ -407,31 +426,93 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
       orbitOptions: { maxDistance: 180, maxTargetY: 45 },
-      enabled: () => true, onPick: (k) => apiRef.current.onPick(k), blockPick: () => false, onHL: () => {},
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || !!panelDrag || c.unclamped, onHL: () => ctrl.invalidate(),
     });
-    apiRef.current.view = (n) => insp.goView(n, false);
+    const ctrl=createControls({dom,mount,camera,root,tipEl,c,getT:()=>t,getHL:insp.hl});
+    let doorDragStart=0,manualDoor=null;
+    for(const d of doors){
+      ctrl.reg({type:'slide',axis:'x',label:L('Posuvné dvere','Sliding doors'),
+        hint:L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
+        read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
+        start:()=>{doorDragStart=doorK;manualDoor=doorK;},
+        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/(4*K)));ctrl.push('door',manualDoor>.01);},
+        click:()=>ctrl.push('door',!c.door),
+        end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
+      },d);
+    }
+    const hmiActions={};
+    const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);};
+    apiRef.current.hmiAction=id=>{const control=hmiActions[id];if(control){control.pressT=t;control.action();}};
+    apiRef.current.setHmiOverride=(key,value)=>{if(key==='fo'||key==='ro')set(key,Math.max(key==='fo'?0:5,Math.min(key==='fo'?150:100,Math.round(value))));};
+    button('start',L('Štart cyklu','Cycle start'),L('Spustí alebo obnoví program pri zatvorených dverách.','Start / resume the program with the doors closed.'),()=>{if(apiRef.current.start()==='ok')ctrl.push('running',true);});
+    button('hold',L('Stop posuvu','Feed hold'),L('Pozastaví program. Zelené tlačidlo pokračuje.','Pause the program. Green resumes.'),()=>{apiRef.current.hold();ctrl.push('running',false);});
+    button('emergency',L('Núdzový STOP','Emergency STOP'),L('Zastaví stroj. Klik uvoľní; potom Reset.','Stop the machine. Click to release, then Reset.'),()=>apiRef.current.emergency(),()=>c.estop?L('stlačený','latched'):L('uvoľnený','released'),()=>c.estop);
+    button('reset','Reset',L('Vynuluje program a potvrdí alarm po uvoľnení STOP.','Reset the program and clear an alarm after releasing STOP.'),()=>apiRef.current.reset());
+    button('single',L('Blok po bloku','Single block'),L('Prepne vykonávanie po jednotlivých blokoch.','Toggle single-block execution.'),()=>ctrl.push('single',!c.single),()=>c.single?L('zapnuté','on'):L('vypnuté','off'));
+    button('light',L('Pracovné osvetlenie','Work light'),L('Zapne alebo vypne svetlo pracovného priestoru.','Toggle the work light.'),()=>ctrl.push('light',!c.light),()=>c.light?L('zapnuté','on'):L('vypnuté','off'));
+    button('coolant',L('Chladenie','Coolant'),L('Prepne chladenie; príkazy programu M8/M9 môžu stav zmeniť.','Toggle coolant; program M8/M9 can change its state.'),()=>{if(ex&&!c.estop)ex.S.cool=!ex.S.cool;},()=>ex?.S.cool?L('zapnuté','on'):L('vypnuté','off'));
+    for(const [id,key,max,min] of [['feed','fo',150,0],['rapid','ro',100,5]]){
+      ctrl.reg({type:'wheel',axis:'y',minR:.12,inc:1,label:id==='feed'?L('Korekcia posuvu','Feed override'):L('Korekcia rýchloposuvu','Rapid override'),
+        hint:L('Otáčaj ťahaním alebo kolieskom myši.','Turn by dragging or using the mouse wheel.'),read:()=>`${c[key]} %`,
+        turn:(a)=>ctrl.push(key,Math.max(min,Math.min(max,Math.round(c[key]+a*40))))},hmi.controls.knobs[id]);
+    }
+    // Use the same detach / rotate / return mechanism as the lathe.
+    let savedDoor=true,savedManual=false;
+    const wi=createWorkInspect({scene,camera,dom,insp,c,getObj:()=>stockG,
+      getSpot:()=>v3(0,PY+2*K,14*K),canDetach:()=>doorK>=.995,
+      onState:unclamped=>{
+        set('unclamped',unclamped);set('manual',unclamped?false:savedManual);
+        if(!unclamped){set('door',savedDoor);msg=null;}
+      }});
+    apiRef.current.toggleWork=()=>{
+      if(wi.phase()==='in'){
+        if(c.running){msg=L('Najprv zastav posuv.','Stop the feed first.');return;}
+        if(!stockG.children.length){msg=L('Nie je dostupný obrobok na prehliadku.','No workpiece is available to inspect.');return;}
+        savedDoor=c.door;savedManual=c.manual;
+        set('door',true);manualDoor=null;
+        msg=L('Otváranie dverí a odopínanie obrobku…','Opening the doors and unclamping the workpiece…');
+      }
+      if(!wi.toggle())msg=L('Počkaj na dokončenie pohybu obrobku.','Wait until the workpiece movement finishes.');
+    };
+    apiRef.current.view = (n) => {if(!c.unclamped)insp.goView(n, false);};
     insp.goView('celok', true);
 
     // ---------------- triesky a chladenie ----------------
     const chips = createParticles(scene, new THREE.BoxGeometry(0.04, 0.012, 0.07), std(0xc9ced3, 0.3, 0.85), 220);
     const drops = createParticles(scene, new THREE.SphereGeometry(0.025, 5, 4), new THREE.MeshStandardMaterial({ color: 0xdfeaf2, roughness: 0.1, transparent: true, opacity: 0.7 }), 160, false);
 
-    const panelRay = new THREE.Raycaster(); let panelDrag = null;
+    let panelDrag = null;
     const panelDown = (e) => {
-      if (!c.manual || e.button !== 0) return;
-      const rect = dom.getBoundingClientRect(); camera.updateMatrixWorld(); scene.updateMatrixWorld();
-      panelRay.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
-      if (!panelRay.intersectObjects(panG.children, true).length) return;
+      if (!c.manual || c.unclamped || c.hmiLocked || e.button !== 0) return;
+      if(ctrl.hitAt(e.clientX,e.clientY))return;
+      const hit=ctrl.pickAt(e.clientX,e.clientY);
+      let obj=hit?.object;while(obj&&obj!==panG)obj=obj.parent;
+      if(obj!==panG)return;
       panelDrag = { id: e.pointerId, x: e.clientX, key: e.shiftKey ? 'panelYaw' : 'panelAngle', start: e.shiftKey ? c.panelYaw : c.panelAngle };
       dom.setPointerCapture(e.pointerId); e.stopImmediatePropagation(); e.preventDefault();
     };
     const panelMove = (e) => {
       if (!panelDrag || panelDrag.id !== e.pointerId) return;
+      if(!c.manual||c.hmiLocked||c.unclamped){panelUp(e);return;}
       const v = panelDrag.start + (e.clientX - panelDrag.x) * .5;
       set(panelDrag.key, panelDrag.key === 'panelAngle' ? Math.max(0, Math.min(180, v)) : ((v + 180) % 360 + 360) % 360 - 180);
       e.stopImmediatePropagation(); e.preventDefault();
     };
     const panelUp = (e) => { if (panelDrag?.id === e.pointerId) { panelDrag = null; e.stopImmediatePropagation(); if (dom.hasPointerCapture(e.pointerId)) dom.releasePointerCapture(e.pointerId); } };
+    const openHmi=e=>{
+      if(!c.manual)return;
+      const hit=ctrl.pickAt(e.clientX,e.clientY);
+      if(hit?.object!==sm)return;
+      e.preventDefault();e.stopPropagation();setHmiOpen(true);
+    };
+    apiRef.current.lockHmi=()=>{
+      if(!c.hmiLocked){
+        set('panelAngle',panelA*180/Math.PI);set('panelYaw',panelYaw*180/Math.PI);
+        if(panelDrag){const id=panelDrag.id;panelDrag=null;if(dom.hasPointerCapture(id))dom.releasePointerCapture(id);}
+      }
+      set('hmiLocked',!c.hmiLocked);
+    };
+    dom.addEventListener('dblclick',openHmi);
     dom.addEventListener('pointerdown', panelDown, true); dom.addEventListener('pointermove', panelMove, true);
     dom.addEventListener('pointerup', panelUp, true); dom.addEventListener('pointercancel', panelUp, true);
 
@@ -442,17 +523,21 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
       // dvere: otvorenie počas chodu zastaví posuv (bezpečnostný zámok)
       if (c.door && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
-      doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
+      if(c.unclamped){c.running=false;c.fast=false;c.door=true;c.manual=false;}
+      if(manualDoor!==null)doorK=manualDoor;else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
       doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.82); });
+      wi.update(dt);
+      clampPins.forEach(pin=>{pin.position.z=FIX.r*U+wi.open()*.12;});
       const xc = xG.position.x / K;
       covers.forEach((me, i) => { const x0 = i ? xc + 1.95 : -6.9, x1 = i ? 6.9 : xc - 1.95, w = Math.max(0.05, x1 - x0); me.scale.x = w; me.position.x = (x0 + x1) / 2; me.material.map.repeat.set(w / 2.2, 1); });
-      cab.visible = c.cabin;
+      cab.visible = c.cabin;lamp.visible=c.light;
+      hmi.controls.knobs.feed.rotation.y=(c.fo-100)*Math.PI/75;hmi.controls.knobs.rapid.rotation.y=(c.ro-100)*Math.PI/50;
       accessories.update(c, dt);
-      panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
+      if(!c.hmiLocked)panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
       const armPose = hmiPose(panelA*180/Math.PI,0,bodyHalf,K);
       armPivot.rotation.y = armPose.angle;
       armElbow.rotation.y = armPose.elbow;
-      panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
+      if(!c.hmiLocked)panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
       panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - armPose.angle - armPose.elbow;
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
@@ -485,7 +570,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       if (S && S.cool && c.running) for (let i = 0; i < 3; i++) drops.spawn(v3(tipW.x + 0.9, tipW.y + 2.2, tipW.z + 0.4), v3(-1.6 + Math.random() * 0.4, -3.4, -0.7 + Math.random() * 0.4), 0.7, 8);
       chips.update(dt, () => 7.25); drops.update(dt, () => 7.25);
       snd.update({ motor: spinOn ? Math.min(1, S.spin / MC.smax) : 0, cut: S && S.cutting && c.running ? Math.min(1, 0.3 + (S.load || 0)) : 0 });
-      insp.update(t, c);
+      insp.update(t, c);ctrl.update(dt);
+      if(Object.keys(ctrl.pend).length){const next={...ctrl.pend};for(const k of Object.keys(ctrl.pend))delete ctrl.pend[k];setUi(u=>({...u,...next}));}
       if (t - scrT > 0.25 && S) {
         scrT = t;
         const lines = prog ? prog.lines : [], li = S.line, from = Math.max(0, li - 5);
@@ -498,17 +584,17 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
         teleT = t;
         const w = [p.pT[0] - o54[0], p.pT[1] - o54[1], p.pT[2] - o54[2]], mv = prog && prog.moves[S.idx];
         setTele({ run: !!c.running, paused: S.paused, done: S.done, alarm: S.alarm, line: S.line, X: p.m[0], Y: p.m[1], Z: p.m[2] + Lt - MC.nose[1], A: p.a, C: p.c, wx: w[0], wy: w[1], wz: w[2], T, S: S.dir ? S.spin : 0,
-          F: mv && mv.kind !== 'tc' ? (mv.rapid ? -1 : Math.round((mv.F || 0) * c.fo / 100)) : 0, load: S.load || 0, mrr: (S.mrr || 0) * 60 / 1000, t: S.t, removed: S.removed / 1000, busy, building: false, maxLoad, msg });
+          F: mv && mv.kind !== 'tc' ? (mv.rapid ? -1 : Math.round((mv.F || 0) * c.fo / 100)) : 0, load: S.load || 0, mrr: (S.mrr || 0) * 60 / 1000, t: S.t, removed: S.removed / 1000, busy, building: false, maxLoad, msg, cool: !!S.cool });
       }
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, root, camera, armPivot, armElbow, panG, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
-    return () => { cancelAnimationFrame(raf); dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, root, camera, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    return () => { cancelAnimationFrame(raf); dom.removeEventListener('dblclick',openHmi);dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   // program, nástroje alebo polotovar sa zmenili → znova interpretovať (pri zastavenom stroji)
-  const reload = (txt = text, tls = tools) => { if (apiRef.current.load) { set('running', false); setCheck(apiRef.current.load(txt, tls)); } };
+  const reload = (txt = text, tls = tools) => { if (!ctl.current.unclamped && apiRef.current.load) { set('running', false); setCheck(apiRef.current.load(txt, tls)); } };
   useEffect(() => { const h = setTimeout(() => reload(), 350); return () => clearTimeout(h); }, [text, tools, ui.mat, ui.sx, ui.sy, ui.sz, ui.res]);
   const pickSample = (id) => { const s = samples.find((x) => x.id === id); setProgId(id); if (s) setText(s.text); };
   const onFile = (e) => {
@@ -542,7 +628,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   }));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
-  const status = tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
+  const status = ui.unclamped ? {kind:'info',text:L('Prehliadka obrobku: ťahaním ho otáčaj, kolieskom približuj. Potom ho upni späť.','Workpiece inspection: drag to rotate, scroll to zoom, then clamp it back.')} : tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
     : tele.msg ? { kind: 'warn', text: tele.msg }
     : tele.done ? { kind: 'idle', text: L(`Program ukončený za ${mmss(tele.t)} – odobratých ${fmt(tele.removed, 1)} cm³.`, `Program finished in ${mmss(tele.t)} – ${fmt(tele.removed, 1)} cm³ removed.`) }
     : tele.run ? { kind: 'run', text: `${L('Chod programu', 'Program running')} · ${L('riadok', 'line')} ${tele.line + 1}${tele.busy ? L(' · výpočet úberu spomaľuje simuláciu', ' · material removal slows the simulation') : ''}` }
@@ -557,11 +643,13 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
 
   return (
     <div className="machine-app modern-app hermle-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Odopnúť a prezrieť obrobok','Unclamp and inspect workpiece'),L('Upnúť obrobok späť','Clamp workpiece back')]}
+        tools={<button type="button" className={`scene-btn ${ui.hmiLocked?'on':''}`} aria-pressed={ui.hmiLocked} onClick={()=>apiRef.current.lockHmi?.()}>{ui.hmiLocked?L('🔒 Poloha HMI zaistená','🔒 HMI position locked'):L('🔓 Zaistiť polohu HMI','🔓 Lock HMI position')}</button>}
         tips={[L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />
-      <aside className="panel">
+      {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}
+      <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">
           <p className="sec-title" style={{ letterSpacing: '.14em' }}>{L('Moderné stroje · 5-osé CNC', 'Modern machines · 5-axis CNC')}</p>
           <h1 className="app-title mt-2" tabIndex={-1}>Hermle {MC.name}</h1>
@@ -597,18 +685,23 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             <button type="button" className="btn" onClick={() => apiRef.current.ffwd && apiRef.current.ffwd()}>⏭ {L('Rýchlo na koniec', 'Fast to the end')}</button>
+            <button type="button" className={`btn ${ui.estop ? 'active' : ''}`} onClick={() => apiRef.current.emergency?.()}>{ui.estop ? L('Uvoľniť núdzový STOP','Release Emergency STOP') : L('Núdzový STOP','Emergency STOP')}</button>
             <button type="button" className={`btn ${ui.door ? 'active' : ''}`} onClick={() => set('door', !ui.door)}>{ui.door ? L('Zatvoriť dvere', 'Close doors') : L('Otvoriť dvere', 'Open doors')}</button>
           </div>
           <div className="mt-2">
             <SegRow label={L('Rýchlosť simulácie', 'Simulation speed')} value={ui.speed} options={[[1, '×1'], [5, '×5'], [20, '×20'], [80, '×80']]} onChange={(v) => set('speed', v)} />
             <SegRow label={L('Korekcia posuvu', 'Feed override')} value={ui.fo} options={[[50, '50 %'], [100, '100 %'], [120, '120 %'], [150, '150 %']]} onChange={(v) => set('fo', v)} />
             <SegRow label={L('Rýchloposuv', 'Rapid')} value={ui.ro} options={[[5, '5 %'], [25, '25 %'], [50, '50 %'], [100, '100 %']]} onChange={(v) => set('ro', v)} />
+            <Toggle on={ui.light} label={L('Pracovné osvetlenie','Work light')} onClick={() => set('light',!ui.light)} />
             <Toggle on={ui.single} label={L('Blok po bloku', 'Single block')} onClick={() => set('single', !ui.single)} />
+            <fieldset className="hermle-hmi-position" disabled={ui.hmiLocked}>
             <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [90, L('Bok', 'Side')], [180, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
-            <Slider id="hermle-arm-angle" label={L('Uhol ramena HMI', 'HMI arm angle')} min={0} max={180} step={0.1} digits={1} value={ui.panelAngle} unit="°" onChange={(v) => set('panelAngle', v)} />
-            <Slider id="hermle-panel-yaw" label={L('Korekcia natočenia HMI', 'HMI rotation trim')} min={-180} max={180} step={0.1} digits={1} value={ui.panelYaw} unit="°" onChange={(v) => set('panelYaw', v)} />
+            <Slider id="hermle-arm-angle" label={L('Uhol ramena HMI', 'HMI arm angle')} min={0} max={180} step={0.1} digits={1} disabled={ui.hmiLocked} value={ui.panelAngle} unit="°" onChange={(v) => set('panelAngle', v)} />
+            <Slider id="hermle-panel-yaw" label={L('Korekcia natočenia HMI', 'HMI rotation trim')} min={-180} max={180} step={0.1} digits={1} disabled={ui.hmiLocked} value={ui.panelYaw} unit="°" onChange={(v) => set('panelYaw', v)} />
+            </fieldset>
             <button type="button" className="btn mb-2" onClick={() => apiRef.current.view?.('panel')}>{L('Pohľad na HMI', 'HMI view')}</button>
-            <p className="text-xs muted mb-2">{L('Rameno 0–180°; panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel.', '0–180° arm swing; the panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel.')}</p>
+            {ui.manual&&<button type="button" className="btn mb-2 ml-2" onClick={()=>{if(ctl.current.manual)setHmiOpen(true);}}>{L('HMI cez celé okno','Full-screen HMI')}</button>}
+            <p className="text-xs muted mb-2">{L('Rameno 0–180°; panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel. Dvojklik na displej otvorí HMI cez celé okno.', '0–180° arm swing; the panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel. Double-click the display for full-screen HMI.')}</p>
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
         </div>
@@ -708,7 +801,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')], ['zasobnik', L('Zásobník', 'Magazine')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter />
-      </aside>
+      </fieldset></aside>
     </div>
   );
 }

@@ -1,5 +1,27 @@
 import * as THREE from 'three';
 
+// Shared 3D / full-screen control positions on the 6.04 × 4.7 keyboard plate.
+export const HMI_CONTROL_LAYOUT={
+  width:6.04,depth:4.7,
+  buttons:{emergency:{x:-2.62,z:4.1},hold:{x:.72,z:3.7},start:{x:.72,z:4.3}},
+  dials:{feed:{x:1.35,z:3.7},rapid:{x:1.35,z:4.3}},
+};
+export function hmiKeyLayout(){
+  const keys=[];
+  const key=(x,z,w,d,label='',mat='white',control=null)=>keys.push({x,z,w,d,label,mat,control});
+  const qwerty=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+  qwerty.forEach((row,r)=>[...row].forEach((label,i)=>key(-2.58+i*.345+(r%2)*.1,.48+r*.34,.3,.25,label)));
+  for(let i=0;i<11;i++)key(-2.58+i*.32,1.5,.27,.23,String(i%10));
+  key(-1.25,1.82,1.8,.22,'');
+  // Axis/navigation bank to the right, with the orange axis keys in their own column.
+  for(let r=0;r<5;r++)for(let c=0;c<3;c++)key(1.48+c*.39,.48+r*.34,.32,.26,c===0?['X','Y','Z','IV','V'][r]:String((r*2+c)%10),c===0?'orange':'dark');
+  for(const [x,z] of [[-1.7,2.4],[-.05,2.4],[-1.7,3.1],[-.05,3.1]])for(let r=0;r<2;r++)for(let c=0;c<3;c++)key(x+c*.35,z+r*.3,.29,.22,'');
+  for(let r=0;r<3;r++)for(let c=0;c<4;c++)key(1.05+c*.38,2.35+r*.3,.3,.22,'',r===0&&c===0?'orange':'dark');
+  // Machine keypad along the front edge, leaving the emergency stop and knobs clear.
+  for(let r=0;r<2;r++)for(let c=0;c<8;c++)key(-1.9+c*.32,3.94+r*.28,.27,.22,r===0&&c<4?['R','L','SBL','KSS'][c]:'',r===0&&c<2?'dark':'white',r===0&&c<4?['reset','light','single','coolant'][c]:null);
+  return keys;
+}
+
 // Console geometry follows the TNC photograph: landscape monitor, sloping full-depth
 // keyboard plate, separate lower housing and red grab rails outside the enclosure.
 export function createHmiPanel(parent, M, tex) {
@@ -22,22 +44,15 @@ export function createHmiPanel(parent, M, tex) {
 
   const deck=new THREE.Group();deck.name='keyboard-deck';deck.position.set(0,rearY,rearZ);deck.rotation.x=slope;parent.add(deck);
   box(deck,0,.035,depth/2,6.04,.07,depth-.1,M.brush);
-  const keys=[];
-  const key=(x,z,w,d,label='',mat='white')=>keys.push({x,z,w,d,label,mat});
-  const qwerty=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
-  qwerty.forEach((row,r)=>[...row].forEach((label,i)=>key(-2.58+i*.345+(r%2)*.1,.48+r*.34,.3,.25,label)));
-  for(let i=0;i<11;i++)key(-2.58+i*.32,1.5,.27,.23,String(i%10));
-  key(-1.25,1.82,1.8,.22,'');
-  // Axis/navigation bank to the right, with the orange axis keys in their own column.
-  for(let r=0;r<5;r++)for(let c=0;c<3;c++)key(1.48+c*.39,.48+r*.34,.32,.26,c===0?['X','Y','Z','IV','V'][r]:String((r*2+c)%10),c===0?'orange':'dark');
-  for(const [x,z] of [[-1.7,2.4],[-.05,2.4],[-1.7,3.1],[-.05,3.1]])for(let r=0;r<2;r++)for(let c=0;c<3;c++)key(x+c*.35,z+r*.3,.29,.22,'');
-  for(let r=0;r<3;r++)for(let c=0;c<4;c++)key(1.05+c*.38,2.35+r*.3,.3,.22,'',r===0&&c===0?'orange':'dark');
-  // Machine keypad along the front edge, leaving the emergency stop and knobs clear.
-  for(let r=0;r<2;r++)for(let c=0;c<8;c++)key(-1.9+c*.32,3.94+r*.28,.27,.22,'',r===0&&c<2?'dark':'white');
+  const keys=hmiKeyLayout(), controls={buttons:{},knobs:{}};
   const instances={};
   for(const [name,mat] of Object.entries(capMaterials)){
-    const list=keys.filter(k=>k.mat===name), mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,list.length);mesh.name=`keycaps-${name}`;
+    const list=keys.filter(k=>k.mat===name&&!k.control), mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,list.length);mesh.name=`keycaps-${name}`;
     list.forEach((k,i)=>{const m=new THREE.Matrix4().compose(new THREE.Vector3(k.x,.12,k.z),new THREE.Quaternion(),new THREE.Vector3(k.w,.1,k.d));mesh.setMatrixAt(i,m);});mesh.castShadow=true;deck.add(mesh);instances[name]=mesh;
+  }
+  for(const k of keys.filter(k=>k.control)){
+    const g=new THREE.Group();g.position.set(k.x,0,k.z);deck.add(g);
+    box(g,0,.12,0,k.w,.1,k.d,capMaterials[k.mat]);controls.buttons[k.control]=g;
   }
   if(tex){
     const labels=tex(960,720,(g,w,h)=>{
@@ -45,13 +60,14 @@ export function createHmiPanel(parent, M, tex) {
       for(const k of keys){g.fillStyle=k.mat==='dark'?'#e8ecee':'#262b30';g.fillText(k.label,(k.x/6.04+.5)*w,k.z/depth*h);}
       g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText('HERMLE',w*.57,h*.77);
     });
-    const plane=new THREE.Mesh(new THREE.PlaneGeometry(6.04,depth),new THREE.MeshBasicMaterial({map:labels.tx,transparent:true,depthWrite:false,toneMapped:false}));plane.rotation.x=-Math.PI/2;plane.position.set(0,.175,depth/2);deck.add(plane);
+    const plane=new THREE.Mesh(new THREE.PlaneGeometry(6.04,depth),new THREE.MeshBasicMaterial({map:labels.tx,transparent:true,depthWrite:false,toneMapped:false}));plane.userData.controlPassThrough=true;plane.rotation.x=-Math.PI/2;plane.position.set(0,.175,depth/2);deck.add(plane);
   }
-  const knob=(x,z)=>{cyl(deck,x,.11,z,.21,.08,M.steelD);cyl(deck,x,.25,z,.15,.24,M.black);box(deck,x,.38,z,.04,.025,.19,M.cab);};
-  knob(-2.65,2.4);knob(1.35,3.7);knob(1.35,4.3);
+  const knob=(x,z,id)=>{const g=new THREE.Group();g.position.set(x,0,z);deck.add(g);cyl(g,0,.11,0,.21,.08,M.steelD);cyl(g,0,.25,0,.15,.24,M.black);box(g,0,.38,0,.04,.025,.19,M.cab);if(id)controls.knobs[id]=g;};
+  knob(-2.65,2.4);for(const [id,p] of Object.entries(HMI_CONTROL_LAYOUT.dials))knob(p.x,p.z,id);
   // Mushroom stop, two illuminated machine buttons and trackball, all normal to the deck.
-  cyl(deck,-2.62,.12,4.1,.25,.12,M.yellow);cyl(deck,-2.62,.28,4.1,.16,.22,M.red);
-  for(const [x,z,mat] of [[.72,3.7,M.red],[.72,4.3,color(0x258c6a)]]){cyl(deck,x,.12,z,.19,.09,M.steel);cyl(deck,x,.18,z,.14,.04,mat);}
+  const stop=HMI_CONTROL_LAYOUT.buttons.emergency;
+  cyl(deck,stop.x,.12,stop.z,.25,.12,M.yellow);controls.buttons.emergency=cyl(deck,stop.x,.28,stop.z,.16,.22,M.red);
+  for(const id of ['hold','start']){const {x,z}=HMI_CONTROL_LAYOUT.buttons[id];cyl(deck,x,.12,z,.19,.09,M.steel);controls.buttons[id]=cyl(deck,x,.18,z,.14,.04,id==='hold'?M.red:color(0x258c6a));}
   cyl(deck,2.45,.1,3.95,.27,.07,M.steelD);const ball=new THREE.Mesh(new THREE.SphereGeometry(.2,24,12),M.black);ball.position.set(2.45,.13,3.95);deck.add(ball);
   const keySwitch=cyl(deck,-2.65,.13,2.9,.15,.12,M.steelD);box(deck,keySwitch.position.x,.28,2.9,.06,.25,.08,M.black);
   for(const x of [-2.85,2.85])for(const z of [.17,4.5])cyl(deck,x,.09,z,.055,.025,M.steelD);
@@ -74,5 +90,5 @@ export function createHmiPanel(parent, M, tex) {
   for(let r=0;r<4;r++)for(let c=0;c<3;c++)box(pendant,-.42+c*.42,.14-r*.36,.22,.3,.25,.12,c===2?capMaterials.orange:capMaterials.dark);
   const cable=new THREE.CatmullRomCurve3([new THREE.Vector3(3.5,9.2,1.8),new THREE.Vector3(3.6,8.4,1.5),new THREE.Vector3(2.5,8.2,.8),new THREE.Vector3(1,9.55,0)]);
   parent.add(new THREE.Mesh(new THREE.TubeGeometry(cable,24,.055,8,false),M.black));
-  return {display,deck,monitor,body,instances,keys,frontY,frontZ};
+  return {display,deck,monitor,body,instances,keys,controls,frontY,frontZ};
 }

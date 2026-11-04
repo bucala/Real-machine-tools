@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { clamp } from './util';
 
 // ---------- odopnutie polotovaru: vyberie sa zo stroja, dá sa otáčať a vráti sa na pôvodné miesto ----------
-function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onState }) {
+function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onState, canDetach = () => true }) {
   const pivot = new THREE.Group(), box3 = new THREE.Box3();
   const s = { phase: 'in', t: 0, obj: null, parent: null, lp: new THREE.Vector3(), lq: new THREE.Quaternion(), cL: new THREE.Vector3(),
     from: new THREE.Vector3(), to: new THREE.Vector3(), q0: new THREE.Quaternion(), pose: null, rad: 1 };
@@ -38,7 +38,7 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
   const update = (dt) => {
     if (s.phase === 'in') { open = 0; return; }
     s.t += dt;
-    if (s.phase === 'opening') { open = Math.min(1, s.t / OPEN); if (s.t >= OPEN) { detach(); s.phase = 'out'; s.t = 0; } }
+    if (s.phase === 'opening') { open = Math.min(1, s.t / OPEN); if (s.t >= OPEN && canDetach()) { detach(); s.phase = 'out'; s.t = 0; } }
     else if (s.phase === 'out') {
       const k = ease(Math.min(1, s.t / MOVE));
       pivot.position.lerpVectors(s.from, s.to, k); pivot.position.y += Math.sin(Math.PI * k) * 0.8;

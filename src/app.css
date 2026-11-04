@@ -198,3 +198,39 @@ html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{backgrou
   .hermle-app .panel{min-height:0;overscroll-behavior:contain}
   .hermle-app canvas{touch-action:none;max-width:100%;max-height:100%}
 }
+
+/* Full-window TNC operator panel; the live display and physical layout share data with the 3D HMI. */
+.hermle-settings,.hermle-hmi-position{border:0;padding:0;margin:0;min-width:0}
+.hermle-hmi-position:disabled{opacity:.4;filter:grayscale(1)}
+.hermle-hmi-position:disabled input,.hermle-hmi-position:disabled button{cursor:not-allowed}
+.hermle-settings:disabled .sec{opacity:.5}
+.hmi-fullscreen{position:fixed;inset:0;z-index:200;height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:48px minmax(0,1.05fr) minmax(0,.95fr);background:#171c22;color:#eef2f4;font-family:var(--f-ui);isolation:isolate;overscroll-behavior:contain}
+.hmi-full-toolbar{display:flex;align-items:center;gap:16px;padding:5px 14px;border-bottom:1px solid #3f474f;background:#11161c;min-width:0}
+.hmi-full-toolbar strong{font-size:14px;white-space:nowrap}.hmi-full-toolbar strong span{color:#a9b4bd;font-size:11px;margin-left:14px}
+.hmi-full-toolbar kbd{font-size:10px;opacity:.7}.hmi-full-message{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#b3cfba}.hmi-full-message.alarm{color:#ff9292}
+.hmi-live-display{min-width:0;min-height:0;padding:10px 20px;display:flex;justify-content:center;background:#2b3035}
+.hmi-screen-bezel{height:100%;max-width:100%;aspect-ratio:640/460;box-sizing:border-box;border:8px solid #07090a;outline:2px solid #a9afb4;background:#e9edf0;box-shadow:-8px 0 #c82735,8px 0 #c82735}
+.hmi-screen-bezel canvas{display:block;width:100%;height:100%;object-fit:contain}
+.hmi-full-controls{min-width:0;min-height:0;padding:10px 20px 16px;display:flex;justify-content:center;background:linear-gradient(#9ea5aa,#c3c8cb);border-top:3px solid #6f767c;color:#20282d}
+.hmi-console-deck{height:100%;width:min(1120px,100%);position:relative;border-inline:6px solid #b92a36;box-shadow:inset 0 0 0 2px #636a70;background:linear-gradient(135deg,#b7bdc0,#d3d6d8 50%,#b3bac0)}
+.hmi-key{position:absolute;transform:translate(-50%,-50%);box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #777f85;border-radius:3px;background:#e0e4e6;color:#263038;font-size:clamp(9px,1vw,13px);box-shadow:0 2px #6f787f;line-height:1;cursor:pointer;font-family:var(--f-ui)}
+button.hmi-key{min-height:24px;font-weight:700}button.hmi-key:active{box-shadow:none;filter:brightness(.85)}button.hmi-key[aria-pressed=true]{outline:2px solid #25895b;background:#bfdec9}
+.hmi-key-dark{background:#343a40;color:#f0f2f4}.hmi-key-orange{background:#dfa07a}.hmi-key-static{cursor:default;opacity:.72}
+.hmi-deck-brand{position:absolute;left:55%;top:72%;font-size:13px;letter-spacing:.12em;color:#626c73;font-weight:700}
+.hmi-control-position,.hmi-override-position{position:absolute;transform:translate(-50%,-50%)}
+.hmi-machine-button{border:3px solid #687276;border-radius:50%;width:38px;height:38px;box-shadow:0 3px #5a646b;color:white;cursor:pointer;font-weight:750;font-size:17px;display:inline-flex;align-items:center;justify-content:center}
+.hmi-start{background:#238e63}.hmi-hold{background:#d3453e}.hmi-emergency{background:#d62e2c;border:9px solid #e8ba30;width:64px;height:64px;font-size:10px}.hmi-emergency[aria-pressed=true]{box-shadow:inset 0 3px 7px #7d1516,0 0 0 2px #ea5752}
+.hmi-machine-button:active{transform:translateY(2px);box-shadow:none}
+.hmi-override-position{width:16%;max-width:185px}.hmi-override{display:block;color:#29353c;font-size:11px;font-weight:700;min-width:0}.hmi-override>span:first-child{display:flex;justify-content:space-between;gap:4px;white-space:nowrap}.hmi-override output{font-variant-numeric:tabular-nums}
+.hmi-dial-row{display:flex;align-items:center;gap:5px}.hmi-dial{display:block;flex:none;width:30px;height:30px;border-radius:50%;border:3px solid #566068;background:repeating-conic-gradient(#303940 0deg 12deg,#4e585e 12deg 24deg);position:relative;box-shadow:0 2px 3px #6b7277}.hmi-dial:after{content:'';position:absolute;top:2px;left:50%;width:2px;height:8px;background:white}
+.hmi-override input[type=range]{min-width:0;width:100%;accent-color:#b32336}.hmi-override input[type=number]{width:44px;flex:none;padding:3px 2px;color:#172831;background:#f3f5f6;border:1px solid #777f85;border-radius:3px;font-size:12px}
+.hmi-trackball{position:absolute;transform:translate(-50%,-50%);width:40px;height:40px;box-sizing:border-box;border:4px solid #6b757c;border-radius:50%;background:radial-gradient(at 30% 25%,#5b646b,#101619)}
+.hmi-fullscreen button:focus-visible,.hmi-fullscreen input:focus-visible{outline:3px solid #267dd0;outline-offset:3px}
+.hmi-compact-controls{display:none}
+@media(max-width:700px),(max-height:590px){
+  .hmi-fullscreen{grid-template-rows:46px minmax(0,.9fr) minmax(0,1.1fr)}
+  .hmi-full-toolbar{padding:4px 8px;gap:8px}.hmi-full-toolbar strong{font-size:12px}.hmi-full-toolbar strong span,.hmi-full-message{display:none}.hmi-full-toolbar .scene-btn{margin-left:auto;font-size:11px;padding:6px}
+  .hmi-live-display{padding:7px 12px}.hmi-full-controls{padding:10px;overflow:auto;display:block;overscroll-behavior:contain}.hmi-console-deck{display:none}.hmi-compact-controls{display:grid;gap:14px;max-width:640px;margin:auto}
+  .hmi-compact-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center}.hmi-compact-buttons>span{display:flex;justify-content:center}.hmi-compact-buttons .hmi-key{position:static;transform:none;min-height:44px;padding:6px;text-align:center;font-size:11px}.hmi-compact-buttons .hmi-machine-button{min-width:44px;min-height:44px}.hmi-compact-buttons .hmi-emergency{width:54px;height:54px}
+  .hmi-override{font-size:12px}.hmi-override input[type=range]{height:38px}.hmi-override input[type=number]{width:62px;height:38px;font-size:16px}
+}
