@@ -25,6 +25,7 @@ import { CncToolPreview } from '../ui/cncToolPreview';
 import { ToolLibrary } from '../ui/toolLibrary';
 import { installTool, MAX_FILE_BYTES } from './cnc/toolLibrary';
 import { createStock } from './cnc/voxel';
+import { createCabinLighting } from './cnc/cabinLighting';
 
 // =====================================================================
 // 5-OSÉ OBRÁBACIE CENTRUM HERMLE C 32 – CNC program, 5-osá kinematika a úber materiálu
@@ -53,6 +54,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [hmiOpen,setHmiOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState(null);
+  const [libraryPocket,setLibraryPocket]=useState(undefined);
   const [librarySource,setLibrarySource]=useState(null);
   const [programImportError,setProgramImportError]=useState('');
   const samples = SAMPLES();
@@ -318,7 +320,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       sp.add(new THREE.Mesh(new THREE.TubeGeometry(hose,12,.07,8,false),M.dark));
     }
     // ---------------- osvetlenie pracovného priestoru ----------------
-    const lamp = new THREE.PointLight(0xffffff, 18, 18 * K, 1.6); lamp.position.set(0, 19 * K, 3 * K); scene.add(lamp);
+    const lighting = createCabinLighting(scene, root, { scale: K, halfWidth: bodyHalf, emitter: M.lamp });
+    Object.values(M).forEach(lighting.registerMaterial);
 
     // ---------------- polotovar (voxely) ----------------
     const stockG = grp('obrobok', cG); stockG.userData.stepJoin=true; stockG.rotation.x = -Math.PI / 2; stockG.scale.setScalar(U);
@@ -353,6 +356,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       const M2 = MATERIALS[c.mat] || MATERIALS.al;
       if (mat) mat.dispose();
       mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: M2.rough, metalness: M2.metal, side: THREE.FrontSide });
+      lighting.registerMaterial(mat);
       clearStock(); stock = createStock({ min: stockMin, max: stockMax, res: c.res });
       applyChunks(stock.takeDirty());
     };
@@ -541,7 +545,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       clampPins.forEach(pin=>{pin.position.z=FIX.r*U+wi.open()*.12;});
       const xc = xG.position.x / K;
       covers.forEach((me, i) => { const x0 = i ? xc + 1.95 : -6.9, x1 = i ? 6.9 : xc - 1.95, w = Math.max(0.05, x1 - x0); me.scale.x = w; me.position.x = (x0 + x1) / 2; me.material.map.repeat.set(w / 2.2, 1); });
-      cab.visible = c.cabin;lamp.visible=c.light;
+      cab.visible = c.cabin;lighting.update({ cabin: c.cabin, light: c.light, opening: doorK });
       hmi.controls.knobs.feed.rotation.y=(c.fo-100)*Math.PI/75;hmi.controls.knobs.rapid.rotation.y=(c.ro-100)*Math.PI/50;
       accessories.update(c, dt);
       if(!c.hmiLocked)panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
@@ -600,7 +604,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, equipment: accessories.equipment, root, camera, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, lighting, equipment: accessories.equipment, root, camera, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
     return () => { cancelAnimationFrame(raf); dom.removeEventListener('dblclick',openHmi);dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
@@ -617,26 +621,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const save = (blob, nameF) => { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = nameF; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); };
   const canEditTools = !ctl.current.running && !tele.run && !ui.unclamped;
   const requireStopped = () => { if (ctl.current.running || ctl.current.unclamped) throw new Error(L('Najprv zastav stroj a upni obrobok.', 'Stop the machine and clamp the workpiece first.')); };
-  const setTool = (t, k, v) => setTools((ts) => ts.map((x) => {
-    if (x.t !== t) return x;
-    const n = { ...x, [k]: v };
-    n.d = Math.min(80, Math.max(.5, n.d)); n.l = Math.min(300, Math.max(40, n.l));
-    const minCut = n.kind === 'cone' ? n.d / 2 / Math.tan((n.tip || 118) * Math.PI / 360) : Math.min(n.cr || 0, n.d / 2);
-    n.l = Math.max(n.l, minCut + 25);
-    n.s = Math.min(n.l - 25, Math.max(minCut, 1, n.s)); n.lc = Math.min(n.s, Math.max(minCut, .5, n.lc));
-    n.dh = Math.min(80, Math.max(20, n.dh));
-    n.cr = Math.min(n.d / 2, Math.max(0, n.cr));
-    if (k === 'd' && x.cr === x.d / 2) n.cr = n.d / 2;
-    return n;
-  }));
-  const setToolShape = (t, shape) => setTools((ts) => ts.map((x) => x.t !== t ? x : {
-    ...x, kind: shape === 'drill' || shape === 'chamfer' ? 'cone' : 'mill',
-    tip: shape === 'chamfer' ? 90 : 118, cr: shape === 'ball' ? x.d / 2 : shape === 'bull' ? Math.min(2, x.d / 4) : 0,
-    lc: Math.max(x.lc, shape === 'ball' || shape === 'chamfer' ? x.d / 2 : 0),
-    s: Math.max(x.s, shape === 'ball' || shape === 'chamfer' ? x.d / 2 : 0),
-    l: Math.max(x.l, shape === 'ball' || shape === 'chamfer' ? x.d / 2 + 25 : 40),
-    name: shape === 'drill' ? L('Vrták', 'Drill') : shape === 'chamfer' ? L('Skosovacia fréza', 'Chamfer mill') : shape === 'ball' ? L('Guľová fréza', 'Ball mill') : shape === 'bull' ? L('Toroidná fréza', 'Bull nose') : L('Stopková / čelná fréza', 'End / face mill'),
-  }));
+  const openToolPicker = pocket => { setLibraryPocket(pocket);setLibraryTab('pick'); };
+  const freePocket = Array.from({length:MC.mag},(_,i)=>i+1).find(t=>!tools.some(tool=>tool.t===t));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
   const status = ui.unclamped ? {kind:'info',text:L('Prehliadka obrobku: ťahaním ho otáčaj, kolieskom približuj. Potom ho upni späť.','Workpiece inspection: drag to rotate, scroll to zoom, then clamp it back.')} : tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
@@ -663,10 +649,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />
-      {libraryTab&&<ToolLibrary initialTab={libraryTab} initialNc={librarySource?.text} initialName={librarySource?.name} tools={tools} program={text} capacity={MC.mag} canApply={canEditTools}
+      {libraryTab&&<ToolLibrary initialTab={libraryTab} initialPocket={libraryPocket} initialNc={librarySource?.text} initialName={librarySource?.name} tools={tools} program={text} capacity={MC.mag} canApply={canEditTools}
         onInstall={(tool,pocket)=>{requireStopped();setTools(ts=>installTool(ts,tool,pocket,MC.mag));}}
         onLoadProgram={txt=>{requireStopped();setProgId('');setText(txt);}}
-        onClose={()=>{setLibraryTab(null);setLibrarySource(null);}} />}
+        onClose={()=>{setLibraryTab(null);setLibrarySource(null);setLibraryPocket(undefined);}} />}
       {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}
       <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">
@@ -778,19 +764,19 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
 
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Nástroje', 'Tools')}</h2>
-          <div className="flex flex-wrap gap-2 mb-2"><button type="button" className="btn" onClick={()=>setLibraryTab('cabinet')}>{L('Skrinka a knižnica nástrojov…','Tool cabinet & library…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('detect')}>{L('Detekovať nástroje z NC…','Detect tools from NC…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('powermill')}>PowerMill / CAM</button></div>
-          <fieldset disabled={!canEditTools} style={{border:0,padding:0,margin:0,minWidth:0}}>
-          <div style={{ overflowX: 'auto' }}><table className="cnc-tools cnc-tools-illustrated text-xs tnum w-full">
-            <thead><tr><th>T</th><th>{L('Nástroj / tvar', 'Tool / shape')}</th><th>Ø</th><th>R</th><th>L</th><th>{L('rez.', 'flute')}</th><th>S</th><th>ØH</th></tr></thead>
-            <tbody>{tools.map((x) => (
-              <tr key={x.t} className={x.t === tele.T ? 'cur' : ''}><td>{x.t}</td><td title={x.name}><CncToolPreview tool={x} /><span>{x.name.replace(/ Ø.*$/, '')}</span><select className="sel" aria-label={`T${x.t} ${L('typ', 'type')}`} value={x.kind === 'cone' ? x.tip === 90 ? 'chamfer' : 'drill' : x.cr === x.d / 2 ? 'ball' : x.cr > 0 ? 'bull' : 'flat'} onChange={(e) => setToolShape(x.t, e.target.value)}>
-                  <option value="flat">{L('Plochá', 'Flat')}</option><option value="ball">{L('Guľová', 'Ball')}</option><option value="bull">{L('Toroidná', 'Bull nose')}</option><option value="drill">{L('Vrták', 'Drill')}</option><option value="chamfer">{L('Skosenie 90°', 'Chamfer 90°')}</option>
-                </select></td>
-                {['d', 'cr', 'l', 'lc', 's', 'dh'].map((k) => <td key={k}><input type="number" step="0.1" value={x[k]} aria-label={`T${x.t} ${k}`} onChange={(e) => setTool(x.t, k, Math.max(k === 'cr' ? 0 : 0.5, Number(e.target.value) || 0))} /></td>)}
-              </tr>
-            ))}</tbody>
-          </table></div></fieldset>
-          <p className="text-xs muted mt-2">{L('L = dĺžka od čela vretena po špičku (korekcia dĺžky G43 / TOOL CALL), R = polomer rohu (R = Ø/2 guľová fréza), S = vyloženie, ØH = priemer držiaka. Náhľady aj 3D model používajú rovnaké rozmery v mm, upnutie HSK-A63.', 'L = length from the spindle nose to the tip (length offset G43 / TOOL CALL), R = corner radius (R = Ø/2 ball mill), S = stick-out, ØH = holder diameter. Previews and 3D models share the same millimetre dimensions and HSK-A63 interface.')}</p>
+          <div className="flex flex-wrap gap-2 mb-2">
+            <button type="button" className="btn" disabled={!canEditTools} onClick={()=>openToolPicker(freePocket||1)}>{L('Vybrať nástroj zo skrinky…','Choose a tool from cabinet…')}</button>
+            <button type="button" className="btn" onClick={()=>{setLibraryPocket(undefined);setLibraryTab('cabinet');}}>{L('Spravovať skrinku…','Manage cabinet…')}</button>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-2"><button type="button" className="btn" onClick={()=>setLibraryTab('detect')}>{L('Detekovať nástroje z NC…','Detect tools from NC…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('powermill')}>PowerMill / CAM</button></div>
+          <p className="text-xs muted">{L('Rozmery sa upravujú v skrinke. Nový nástroj najprv ulož do skrinky a potom ho vyber pre miesto T v zásobníku.','Edit dimensions in the cabinet. Save a new tool there first, then choose it for a magazine pocket T.')}</p>
+          <ul className="cnc-installed-tools" aria-label={L('Osadené nástroje','Installed tools')}>
+            {tools.map(tool=><li key={tool.t} className={tool.t===tele.T?'cur':''}>
+              <b className="cnc-pocket">T{tool.t}</b><CncToolPreview tool={tool} fit/>
+              <div><strong>{tool.name}</strong><span>Ø{tool.d} · R{tool.cr} · L{tool.l} mm</span></div>
+              <button type="button" className="btn" disabled={!canEditTools} aria-label={L(`Vybrať nástroj pre T${tool.t}`,`Choose tool for T${tool.t}`)} onClick={()=>openToolPicker(tool.t)}>{L('Zmeniť','Change')}</button>
+            </li>)}
+          </ul>
         </div>
 
         <div className="sec">

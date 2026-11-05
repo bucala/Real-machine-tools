@@ -80,7 +80,7 @@ export function readCabinet(storage, defaults) {
 }
 export function installTool(machineTools, tool, pocket, capacity) {
   if (!Number.isInteger(pocket) || pocket < 1 || pocket > capacity) throw new Error(`T: 1–${capacity}`);
-  const next = { ...validateTool(tool), t: pocket };
+  const next = { ...validateTool(tool), t: pocket, ...(tool.id ? { libraryId: tool.id } : {}) };
   return [...machineTools.filter(t => t.t !== pocket), next].sort((a, b) => a.t - b.t);
 }
 export function encodeToolComments(tools) {

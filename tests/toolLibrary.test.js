@@ -28,7 +28,7 @@ describe('Portable CNC tool cabinet',()=>{
     storage.setItem(LIBRARY_KEY,encodeLibrary(seeded));
     expect(readCabinet(storage,defaultTools())).toEqual(seeded);
     const original=tools(),next=installTool(original,seeded[2],12,36);
-    expect(original).toHaveLength(10);expect(next.find(t=>t.t===12).d).toBe(10);
+    expect(original).toHaveLength(10);expect(next.find(t=>t.t===12).d).toBe(10);expect(next.find(t=>t.t===12).libraryId).toBe(seeded[2].id);
     expect(readCabinet(storage,defaultTools())).toEqual(seeded);
     expect(installTool(original,seeded[2],1,36)).toHaveLength(10);
     expect(()=>installTool(original,seeded[2],37,36)).toThrow();

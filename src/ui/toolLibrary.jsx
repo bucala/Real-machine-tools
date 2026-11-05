@@ -21,19 +21,21 @@ function download(data, filename, type) {
   const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a'); a.href=url; a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
 function initialCabinet() {
-  try { return {tools:readCabinet(localStorage,defaultTools())}; }
+  try { const tools=readCabinet(localStorage,defaultTools());if(localStorage.getItem(LIBRARY_KEY)===null)localStorage.setItem(LIBRARY_KEY,encodeLibrary(tools));return {tools}; }
   catch(e) { return {tools:defaultTools().map(t=>({id:newToolId(),...validateTool(t)})),error:`${L('Uloženú skrinku sa nepodarilo načítať. Pracuješ s dočasnou kópiou; uloženie prepíše pôvodnú skrinku.','Saved cabinet could not be loaded. This is a temporary copy; saving replaces the original cabinet.')} ${e.message}`}; }
 }
-export function ToolLibrary({tools,program,capacity,canApply,onInstall,onLoadProgram,onClose,initialTab='cabinet',initialNc,initialName}) {
+export function ToolLibrary({tools,program,capacity,canApply,onInstall,onLoadProgram,onClose,initialTab='pick',initialPocket,initialNc,initialName}) {
   const [initial]=useState(initialCabinet);
-  const [cabinet,setCabinet]=useState(initial.tools),[draft,setDraft]=useState(()=>({...initial.tools[0]||defaultTools()[2]})),[tab,setTab]=useState(initialTab),[query,setQuery]=useState('');
+  const [cabinet,setCabinet]=useState(initial.tools),[draft,setDraft]=useState(()=>{const installed=tools.find(t=>t.t===initialPocket);const saved=initial.tools.find(t=>t.id===installed?.libraryId)||initial.tools.find(t=>t.t===initialPocket);return {...saved||initial.tools[0]||defaultTools()[2]};}),[tab,setTab]=useState(initialTab),[query,setQuery]=useState('');
   const [error,setError]=useState(initial.error||''),[notice,setNotice]=useState(''),[review,setReview]=useState(null),[reviewed,setReviewed]=useState(false),[ack,setAck]=useState(false);
-  const [pocket,setPocket]=useState(initial.tools[0]?.t||1),[nc,setNc]=useState(initialNc??program),[ncName,setNcName]=useState(initialName||L('Aktuálny program','Current program'));
+  const [pocket,setPocket]=useState(Math.min(capacity,initialPocket||initial.tools[0]?.t||1)),[nc,setNc]=useState(initialNc??program),[ncName,setNcName]=useState(initialName||L('Aktuálny program','Current program'));
   const rootRef=useRef(null),closeRef=useRef(null),importRef=useRef(null),ncRef=useRef(null);
   const detected=useMemo(()=>detectNcTools(nc),[nc]);
-  useEffect(()=>setAck(false),[tab,nc]);
+  useEffect(()=>setAck(false),[tab,nc,draft]);
   let valid=null,validation='';
   try { valid=validateTool(draft); } catch(e) { validation=e.message; }
+  const stored=cabinet.find(tool=>tool.id===draft.id);
+  const draftIsSaved=!!valid&&!!stored&&JSON.stringify(validateTool(stored))===JSON.stringify(valid);
   useEffect(()=>{
     const previous=document.activeElement,overflow=document.body.style.overflow;
     const host=document.querySelector('.hermle-app'),inert=host?.inert;
@@ -52,7 +54,7 @@ export function ToolLibrary({tools,program,capacity,canApply,onInstall,onLoadPro
   },[]);
   const message=fn=>{setError('');setNotice('');try{fn();}catch(e){setError(e.message);}};
   const persist=next=>{if(next.length>MAX_TOOLS)throw new Error(`Max. ${MAX_TOOLS}`);localStorage.setItem(LIBRARY_KEY,encodeLibrary(next));setCabinet(next);};
-  const select=tool=>{setDraft({...tool});setPocket(Math.min(capacity,tool.t));setReview(null);setReviewed(false);setError('');setNotice('');};
+  const select=tool=>{setDraft({...tool});setReview(null);setReviewed(false);setError('');setNotice('');};
   const store=()=>message(()=>{
     const tool={id:draft.id||newToolId(),...validateTool(draft)};
     if(review&&!reviewed)throw new Error(L('Najprv over rozmery nástroja.','Verify tool dimensions first.'));
@@ -85,21 +87,21 @@ export function ToolLibrary({tools,program,capacity,canApply,onInstall,onLoadPro
     setDraft(candidate);setPocket(Math.min(capacity,row.t));setReview(row);setReviewed(false);setTab('cabinet');setError('');setNotice('');
   };
   const install=()=>message(()=>{
-    if(!canApply||!ack||!valid||review)throw new Error(L('Zastav stroj, ulož overený nástroj a potvrď obnovenie polotovaru.','Stop the machine, save a verified tool and confirm the stock reset.'));
-    onInstall(valid,Number(pocket));setAck(false);setNotice(L(`Nástroj osadený na T${pocket}. Simulácia začína od polotovaru.`,`Tool installed at T${pocket}. Simulation starts from the blank.`));
+    if(!canApply||!ack||!draftIsSaved||review)throw new Error(L('Zastav stroj, ulož overený nástroj a potvrď obnovenie polotovaru.','Stop the machine, save a verified tool and confirm the stock reset.'));
+    onInstall(stored,Number(pocket));setAck(false);setNotice(L(`Nástroj osadený na T${pocket}. Simulácia začína od polotovaru.`,`Tool installed at T${pocket}. Simulation starts from the blank.`));
   });
   const busyNote=L('Počas chodu stroja alebo prehliadky obrobku je osádzanie a načítanie programu vypnuté.','Installation and program loading are disabled while running or inspecting the workpiece.');
   return createPortal(<div className="tool-library-backdrop" onKeyDown={e=>e.stopPropagation()}>
     <section className="tool-library" role="dialog" aria-modal="true" aria-labelledby="tool-library-title" ref={rootRef}>
       <header><div><p className="sec-title">CNC · HSK-A63 · mm</p><h2 id="tool-library-title">{L('Skrinka a knižnica nástrojov','Tool cabinet & library')}</h2></div><button ref={closeRef} className="btn" onClick={onClose}>{L('Späť k stroju','Back to machine')} · Esc</button></header>
-      <nav aria-label={L('Časti knižnice','Library sections')}>{[['cabinet',L('Skrinka','Cabinet')],['detect',L('Detekcia z NC','Detect from NC')],['powermill','PowerMill / CAM']].map(([id,label])=><button key={id} className={`btn ${tab===id?'on':''}`} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
+      <nav aria-label={L('Časti knižnice','Library sections')}>{[['pick',L('Výber do stroja','Install from cabinet')],['cabinet',L('Správa skrinky','Manage cabinet')],['detect',L('Detekcia z NC','Detect from NC')],['powermill','PowerMill / CAM']].map(([id,label])=><button key={id} className={`btn ${tab===id?'on':''}`} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
       {error&&<p className="tool-library-error" role="alert">{error}</p>}{notice&&<p className="tool-library-notice" role="status">{notice}</p>}
       <input ref={importRef} type="file" accept=".json,.csv" hidden onChange={e=>importFile(e,false)} />
       <input ref={ncRef} type="file" accept=".nc,.tap,.cnc,.ngc,.iso,.gcode,.h,.mpf,.txt,.eia,.ptp" hidden onChange={e=>importFile(e,true)} />
-      {tab==='cabinet'&&<div className="tool-library-columns">
+      {['pick','cabinet'].includes(tab)&&<div className="tool-library-columns">
         <aside className="tool-cabinet-list"><h3>{L('Uložené nástroje','Saved tools')} <span>{cabinet.length}/{MAX_TOOLS}</span></h3>
           <input className="sel" type="search" placeholder={L('Hľadať názov alebo T…','Search name or T…')} aria-label={L('Hľadať nástroj','Search tools')} value={query} onChange={e=>setQuery(e.target.value)} />
-          <div className="tool-library-actions"><button className="btn" onClick={()=>{select({...defaultTools()[2],id:newToolId(),name:L('Nový nástroj','New tool')});}}>{L('+ Nový','+ New')}</button><button className="btn" onClick={()=>importRef.current.click()}>{L('Import JSON / CSV','Import JSON / CSV')}</button></div>
+          <div className="tool-library-actions"><button className="btn" onClick={()=>{select({...defaultTools()[2],id:newToolId(),name:L('Nový nástroj','New tool')});setTab('cabinet');}}>{L('+ Nový','+ New')}</button><button className="btn" onClick={()=>importRef.current.click()}>{L('Import JSON / CSV','Import JSON / CSV')}</button></div>
           <div className="tool-library-records">{cabinet.filter(t=>`${t.name} T${t.t}`.toLowerCase().includes(query.toLowerCase())).map(t=><button key={t.id} className={`tool-library-record ${draft.id===t.id?'selected':''}`} aria-pressed={draft.id===t.id} onClick={()=>select(t)}><CncToolPreview tool={t} fit/><span><strong>{t.name}</strong><small>T{t.t} · Ø{t.d} · L{t.l} mm</small></span></button>)}</div>
           {!cabinet.length&&<p>{L('Skrinka je prázdna. Pridaj alebo importuj nástroj.','Cabinet is empty. Add or import a tool.')}</p>}
           <button className="btn" onClick={()=>message(()=>{
@@ -110,21 +112,29 @@ export function ToolLibrary({tools,program,capacity,canApply,onInstall,onLoadPro
           <div className="tool-library-actions">{[['JSON',()=>encodeLibrary(cabinet),'json'],['CSV',()=>encodeCsv(cabinet),'csv']].map(([label,encode,ext])=><button key={label} className="btn" onClick={()=>message(()=>download(encode(),`rmt-tools.${ext}`,ext==='json'?'application/json':'text/csv'))}>Export {label}</button>)}</div>
           <p className="muted">{L('Skrinka sa ukladá lokálne v prehliadači. Export JSON slúži ako záloha a na prenos medzi zariadeniami.','Cabinet is saved locally in this browser. Export JSON to back up or transfer between devices.')}</p>
         </aside>
-        <main className="tool-library-editor"><h3>{L('Editor nástroja','Tool editor')}</h3>
+        {tab==='cabinet'?<main className="tool-library-editor"><h3>{L('Editor nástroja','Tool editor')}</h3>
           {review&&<div className="tool-library-warning"><strong>{L('Over rozmery z NC','Verify NC dimensions')} · T{review.t}</strong><p>{L('Nezistené údaje používajú dočasný vzor z tabuľky stroja. Pred uložením ich zmeraj alebo doplň z CAM.','Missing values use a temporary machine-table template. Measure or obtain them from CAM before saving.')}</p><p>{L('Chýba','Missing')}: {review.missing.join(', ')||'—'}</p>{review.conflicts.length>0&&<p>{L('Rozpory','Conflicts')}: {review.conflicts.join('; ')}</p>}</div>}
           <div className="tool-library-edit-top">{valid?<CncToolPreview tool={valid} fit/>:<span className="muted">{L('Náhľad čaká na platné rozmery','Preview needs valid dimensions')}</span>}<div><label>{L('Názov nástroja','Tool name')}<input className="sel" maxLength={160} value={draft.name||''} onChange={e=>setDraft({...draft,name:e.target.value})}/></label><label>{L('Tvar reznej časti','Cutter shape')}<select aria-label={L('Tvar reznej časti','Cutter shape')} className="sel" value={shapeOf(draft)} onChange={e=>setDraft(shapeTool(draft,e.target.value))}>{[['flat',L('Plochá / čelná fréza','Flat / face mill')],['ball',L('Guľová fréza','Ball mill')],['bull',L('Toroidná fréza','Bull nose')],['drill',L('Vrták','Drill')],['chamfer',L('Skosovacia fréza','Chamfer mill')]].map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label></div></div>
           <div className="tool-library-fields">{fields().filter(([k])=>k!=='tip'||draft.kind==='cone').map(([k,label,min,max,step])=><label key={k}>{label}<input className="sel" type="number" min={min} max={max} step={step} value={draft[k]??''} onChange={e=>{const value=e.target.value;setDraft(d=>({...d,[k]:value,...(k==='d'&&d.kind==='mill'&&Number(d.cr)===Number(d.d)/2?{cr:Number(value)/2}:{})}));}}/></label>)}</div>
           {validation&&<p className="tool-library-error" role="status">{validation}</p>}
           {review&&<label className="tool-library-check"><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>{L('Overil som tvar a všetky rozmery vrátane doplnených údajov.','I verified the shape and all dimensions, including missing values.')}</label>}
           <div className="tool-library-actions"><button className="btn on" disabled={!valid||(review&&!reviewed)} onClick={store}>{L('Uložiť do skrinky','Save to cabinet')}</button><button className="btn" onClick={()=>{setDraft({...draft,id:newToolId(),name:`${draft.name.slice(0,145)} · ${L('kópia','copy')}`});setNotice(L('Kópia je pripravená na uloženie.','Copy is ready to save.'));}}>{L('Duplikovať','Duplicate')}</button><button className="btn" disabled={!cabinet.some(t=>t.id===draft.id)} onClick={()=>message(()=>{persist(cabinet.filter(t=>t.id!==draft.id));setNotice(L('Nástroj odstránený zo skrinky. Osadenie stroja sa nemení.','Tool removed from cabinet. Machine installation is unchanged.'));})}>{L('Odstrániť zo skrinky','Remove from cabinet')}</button></div>
+          <p className="muted">{L('Do stroja sa vyberajú iba uložené nástroje. Úpravy najprv ulož do skrinky.','Only saved tools can be installed. Save edits to the cabinet first.')}</p>
+          <button className="btn" disabled={!draftIsSaved||!!review} onClick={()=>setTab('pick')}>{L('Vybrať uložený nástroj do stroja','Choose saved tool for machine')}</button>
+        </main>:<main className="tool-library-editor tool-library-picker">
+          <h3>{L('Výber zo skrinky','Choose from cabinet')}</h3>
+          {stored?<><div className="tool-library-edit-top"><CncToolPreview tool={stored} fit/><div><h3>{stored.name}</h3><p className="muted">HSK-A63 · {L('uložený nástroj','saved tool')}</p></div></div>
+            <dl className="tool-library-saved-dimensions">{fields().filter(([k])=>k!=='tip'||stored.kind==='cone').map(([key,label])=><div key={key}><dt>{label}</dt><dd>{stored[key]}</dd></div>)}</dl>
+          </>:<p className="tool-library-warning">{L('Vyber uložený nástroj vľavo. Nový nástroj najprv pridaj a ulož cez Správu skrinky.','Choose a saved tool on the left. Add and save new tools in Manage cabinet first.')}</p>}
+          {stored&&!draftIsSaved&&<p className="tool-library-warning">{L('V editore sú neuložené úpravy. Ulož ich v Správe skrinky alebo znova vyber uložený nástroj vľavo.','There are unsaved edits. Save them in Manage cabinet or select the stored tool again on the left.')}</p>}
           <section className="tool-library-install"><h3>{L('Osadiť do stroja','Install in machine')} · {capacity} {L('miest','pockets')}</h3><p>{L('Uloženie v skrinke nemení stroj. Osadenie nahradí vybrané T a obnoví simuláciu od polotovaru.','Saving in the cabinet does not change the machine. Installing replaces the selected T and resets simulation to the blank.')}</p>
             <label>{L('Miesto zásobníka / číslo NC','Magazine pocket / NC number')}<select aria-label={L('Miesto zásobníka / číslo NC','Magazine pocket / NC number')} className="sel" value={pocket} onChange={e=>{setPocket(Number(e.target.value));setAck(false);}}>{Array.from({length:capacity},(_,i)=>i+1).map(t=><option key={t} value={t}>T{t} · {tools.find(x=>x.t===t)?.name||L('voľné','empty')}</option>)}</select></label>
             {Number(draft.t)>capacity&&<p className="tool-library-warning">{L('Predvolené T je mimo zásobníka. Pri osadení na iné miesto uprav rovnaké T aj v NC programe.','Preferred T exceeds magazine capacity. If installing at a different pocket, update the NC T number to match.')}</p>}
             {!canApply&&<p className="tool-library-warning">{busyNote}</p>}
             <label className="tool-library-check"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>{L('Potvrdzujem nahradenie T a obnovenie polotovaru.','Replace this T and reset the stock.')}</label>
-            <button className="btn" disabled={!canApply||!ack||!valid||!!review} onClick={install}>{L('Osadiť vybraný nástroj','Install selected tool')}</button>
+            <button className="btn" disabled={!canApply||!ack||!draftIsSaved||!!review} onClick={install}>{L('Osadiť vybraný nástroj','Install selected tool')}</button>
           </section>
-        </main>
+        </main>}
       </div>}
       {tab==='detect'&&<main className="tool-library-content"><h3>{L('Nástroje z NC programu','Tools from an NC program')}</h3><p>{L('Čítajú sa čísla T a explicitné metadáta v komentároch. H je register dĺžkovej korekcie a D v G41/G42 je register polomerovej korekcie; neudávajú rozmery. Chýbajúce údaje sa musia overiť v editore.','Reads T numbers and explicit comment metadata. H is a length-offset register and D in G41/G42 is a radius-offset register; they do not specify geometry. Missing data must be verified in the editor.')}</p>
         <div className="tool-library-actions"><button className="btn" onClick={()=>ncRef.current.click()}>{L('Vybrať .nc / .h…','Choose .nc / .h…')}</button><button className="btn" onClick={()=>{setNc(program);setNcName(L('Aktuálny program','Current program'));}}>{L('Použiť aktuálny program','Use current program')}</button><span>{ncName}</span></div>

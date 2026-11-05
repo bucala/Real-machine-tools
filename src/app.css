@@ -181,13 +181,6 @@ html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{backgrou
 .cnc-listing div span{display:inline-block;width:3.2em;color:#56677a;text-align:right;margin-right:8px}
 .cnc-listing div.cur{background:#ffd34d;color:#10202f} .cnc-listing div.cur span{color:#47391a}
 .cnc-edit{width:100%;border:1px solid var(--border);background:#070b10;color:#d7e3ef;border-radius:9px;padding:8px 10px;font-family:var(--f-mono);font-size:12px;line-height:1.5;resize:vertical;white-space:pre;overflow:auto}
-.cnc-tools{border-collapse:collapse} .cnc-tools th{text-align:left;color:var(--muted);font-weight:600;padding:2px 3px}
-.cnc-tools td{padding:2px 3px;border-top:1px solid var(--border)} .cnc-tools td:nth-child(2){max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cnc-tools tr.cur td{background:var(--accent-soft)}
-.cnc-tools input{width:52px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:1px 4px;font-size:11.5px}
-
-.cnc-tools-illustrated{min-width:580px}.cnc-tools-illustrated td:nth-child(2){min-width:125px;white-space:normal}.cnc-tools-illustrated svg{display:block;margin:auto}.cnc-tools-illustrated select{font-size:11px;width:120px}
-
 /* Keep the desktop simulator inside the viewport; only the settings pane scrolls. */
 @media(min-width:768px){
   body:has(.hermle-app){overflow:hidden;overscroll-behavior:none}
@@ -234,3 +227,6 @@ button.hmi-key{min-height:24px;font-weight:700}button.hmi-key:active{box-shadow:
 }
 
 .machine-settings{border:0;padding:0;margin:0;min-width:0}.machine-settings:disabled .sec{opacity:.5}
+
+/* Installed CNC tools are chosen from the cabinet; geometry is edited there. */
+.cnc-installed-tools{list-style:none;margin:12px 0 0;padding:0}.cnc-installed-tools li{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--border)}.cnc-installed-tools li.cur{background:var(--accent-soft);border-radius:7px}.cnc-installed-tools .cnc-pocket{font-size:12px;min-width:25px;color:var(--muted)}.cnc-installed-tools svg{width:30px;height:58px;flex-shrink:0}.cnc-installed-tools li>div{min-width:0;flex:1}.cnc-installed-tools strong{display:block;font-size:12px;overflow-wrap:anywhere}.cnc-installed-tools span{display:block;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}.cnc-installed-tools .btn{font-size:11px;padding:5px 7px}
