@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createHmiPanel } from '../src/machines/cnc/hmiPanel';
+import { createHmiPanel, HMI_CONTROL_LAYOUT, HMI_MONITOR_LAYOUT } from '../src/machines/cnc/hmiPanel';
 
 describe('TNC console geometry', () => {
   it('uses a landscape LCD and seats raised keys on the same inclined plane as the controls', () => {
@@ -10,7 +10,14 @@ describe('TNC console geometry', () => {
     expect(panel.display.geometry.parameters.width/panel.display.geometry.parameters.height).toBeGreaterThan(1.45);
     expect(panel.monitor.rotation.x).toBeLessThan(0);
     expect(Object.keys(panel.controls.buttons).sort()).toEqual(['coolant','emergency','hold','light','reset','single','start']);
-    expect(panel.controls.knobs.feed).toBeDefined();expect(panel.controls.knobs.rapid).toBeDefined();
+    for(const [id,p] of Object.entries(HMI_CONTROL_LAYOUT.dials)){
+      expect(panel.controls.knobs[id].position.x).toBe(p.x);expect(panel.controls.knobs[id].position.z).toBe(p.z);
+    }
+    for(const [id,p] of Object.entries(HMI_CONTROL_LAYOUT.buttons)){
+      expect(panel.controls.buttons[id].position.x).toBe(p.x);expect(panel.controls.buttons[id].position.z).toBe(p.z);
+    }
+    expect(panel.display.geometry.parameters.width).toBe(HMI_MONITOR_LAYOUT.screen.width);
+    expect(panel.display.geometry.parameters.height).toBe(HMI_MONITOR_LAYOUT.screen.height);
     expect(panel.deck.rotation.x).toBeCloseTo(20*Math.PI/180);
     for(const mesh of Object.values(panel.instances)){
       for(let i=0;i<mesh.count;i++){

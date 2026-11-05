@@ -163,7 +163,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (!ex) return 'noprog';
       if(c.unclamped){msg=L('Najprv upni obrobok späť.','Clamp the workpiece back first.');return 'unclamped';}
       if (c.estop) { msg=L('Uvoľni núdzový STOP a stlač Reset.', 'Release Emergency STOP and press Reset.'); return 'estop'; }
-      if (c.door) { msg = L('Dvere sú otvorené – zatvor ich, potom spusti program.', 'The doors are open – close them, then start the program.'); return 'door'; }
+      if (c.door || geometry.serviceOpen?.()) { msg = L('Dvere sú otvorené – zatvor ich, potom spusti program.', 'The doors are open – close them, then start the program.'); return 'door'; }
       if (prog.errors.length) { msg = L(`Program má chyby (${prog.errors.length}) – oprav ich pred spustením.`, `The program has errors (${prog.errors.length}) – fix them before starting.`); return 'err'; }
       if (ex.S.alarm) { msg = L('Najprv potvrď alarm tlačidlom Reset.', 'Acknowledge the alarm with Reset first.'); return 'alarm'; }
       if (ex.S.done) return 'done';
@@ -176,7 +176,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       msg=c.estop?L('Núdzový STOP stlačený.','Emergency STOP latched.'):L('Núdzový STOP uvoľnený – stlač Reset.','Emergency STOP released – press Reset.');
     };
     apiRef.current.reset = () => { if(c.unclamped)return;set('running',false);c.fast=false;setCheck(load(loadedText,loadedTools)); };
-    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
+    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || geometry.serviceOpen?.() || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
     apiRef.current.snapshot = snapshot;
     apiRef.current.exportStep = async () => {
       if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
@@ -240,6 +240,19 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         click:()=>ctrl.push('door',!c.door),
         end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
       },d);
+    }
+    for(const d of geometry.serviceDoors||[]){
+      ctrl.reg({type:'button',still:true,tooltip:false,label:L(d.label,'Service door'),
+        action:()=>{d.open=!d.open;if(d.open){apiRef.current.hold();ctrl.push('running',false);}},
+        read:()=>d.open?L('otvorené','open'):L('zatvorené','closed')},d.hinge);
+    }
+    if(accessories.chipPan){
+      const pan=accessories.chipPan;
+      ctrl.reg({type:'button',still:true,tooltip:false,label:L('Zásuvka na triesky','Chip pan'),action:()=>{pan.open=!pan.open;}},pan.object);
+    }
+    if(accessories.chipCart){
+      const cart=accessories.chipCart;
+      ctrl.reg({type:'button',still:true,tooltip:false,label:L('Výklopný vozík','Tipping chip cart'),guard:()=>!c.running,action:()=>{cart.open=!cart.open;}},cart.object);
     }
     const hmiActions={};
     const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:hmi.pressAxis?.(id)||'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);for(const duplicate of hmi.controls.duplicates?.[id]||[])ctrl.reg({...control,pressAxis:duplicate.axis},duplicate.object);};
@@ -323,7 +336,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
       // dvere: otvorenie počas chodu zastaví posuv (bezpečnostný zámok)
-      if (c.door && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
+      if ((c.door || geometry.serviceOpen?.()) && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
       if(c.unclamped){c.running=false;c.fast=false;c.door=true;c.manual=false;}
       if(manualDoor!==null)doorK=manualDoor;else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
       wi.update(dt);
@@ -336,6 +349,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if(!c.hmiLocked)panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
       if(!c.hmiLocked)panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
       geometry.updateGeometry?.({doorK,panelA,panelYaw});
+      geometry.updateServiceDoors?.(dt);
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
         const sp2 = c.fast ? 400 : c.speed, budget = c.fast ? 2.5e7 : 4e6;
@@ -382,13 +396,13 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (t - teleT > 0.12 && S) {
         teleT = t;
         const w = [p.pT[0] - o54[0], p.pT[1] - o54[1], p.pT[2] - o54[2]], mv = prog && prog.moves[S.idx];
-        setTele({ run: !!c.running, paused: S.paused, done: S.done, alarm: S.alarm, line: S.line, X: p.m[0], Y: p.m[1], Z: p.m[2] + Lt - MC.nose[1], A: p.a, C: p.c, wx: w[0], wy: w[1], wz: w[2], T, S: S.dir ? S.spin : 0,
+        setTele({ serviceDoorOpen:!!geometry.serviceOpen?.(), run: !!c.running, paused: S.paused, done: S.done, alarm: S.alarm, line: S.line, X: p.m[0], Y: p.m[1], Z: p.m[2] + Lt - MC.nose[1], A: p.a, C: p.c, wx: w[0], wy: w[1], wz: w[2], T, S: S.dir ? S.spin : 0,
           F: mv && mv.kind !== 'tc' ? (mv.rapid ? -1 : Math.round((mv.F || 0) * c.fo / 100)) : 0, load: S.load || 0, mrr: (S.mrr || 0) * 60 / 1000, t: S.t, removed: S.removed / 1000, busy, building: false, maxLoad, msg, cool: !!S.cool });
       }
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, lighting, equipment: accessories.equipment, root, camera, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, lighting, chipPan:accessories.chipPan, chipCart:accessories.chipCart, equipment: accessories.equipment, root, camera, serviceDoors:geometry.serviceDoors, serviceOpen:geometry.serviceOpen, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
     return () => { cancelAnimationFrame(raf); dom.removeEventListener('dblclick',openHmi);dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
@@ -430,7 +444,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     : tele.paused ? { kind: 'warn', text: L('Program zastavený (M0 / blok po bloku) – pokračuj Štartom.', 'Program stopped (M0 / single block) – continue with Start.') }
     : check.errors.length ? { kind: 'danger', text: L(`Program má ${check.errors.length} chýb – pozri Kontrola programu.`, `The program has ${check.errors.length} errors – see Program check.`) }
     : { kind: 'idle', text: L('Pripravený. Zatvor dvere a stlač Štart cyklu.', 'Ready. Close the doors and press Cycle start.') };
-  const chips = [{ color: tele.run ? '#3ee06c' : tele.alarm ? '#ff5a4f' : '#8b8f89', text: tele.run ? L('Automat', 'Auto') : tele.alarm ? L('Alarm', 'Alarm') : L('Stojí', 'Stopped') }, { color: ui.door ? '#ff8a1f' : '#3ee06c', text: ui.door ? L('Dvere otvorené', 'Doors open') : L('Dvere zatvorené', 'Doors closed') }];
+  const chips = [{ color: tele.run ? '#3ee06c' : tele.alarm ? '#ff5a4f' : '#8b8f89', text: tele.run ? L('Automat', 'Auto') : tele.alarm ? L('Alarm', 'Alarm') : L('Stojí', 'Stopped') }, { color: ui.door||tele.serviceDoorOpen ? '#ff8a1f' : '#3ee06c', text: ui.door||tele.serviceDoorOpen ? L('Dvere otvorené', 'Doors open') : L('Dvere zatvorené', 'Doors closed') }];
   const lines = text.split('\n'), li = tele.line, from = Math.max(0, li - 4);
   const dro = [['X', tele.X], ['Y', tele.Y], ['Z', tele.Z], ['A', tele.A, 'deg'], ['C', tele.C, 'deg']];
   const tl = tools.find((x) => x.t === tele.T);
@@ -444,6 +458,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
           HMI
         </button>}
         tips={[L('Dvere v ručnom režime otvoríš alebo zatvoríš kliknutím na madlo či ťahaním do strany. Tlačidlo HMI zaistí aktuálnu polohu ramena a panela; ďalším kliknutím ju odistíš.', 'In manual mode, click a door handle or drag it sideways to open or close the doors. HMI locks the current arm and panel position; click again to unlock.'),
+          ...(!rxu?[L('Zásuvku na triesky vysunieš kliknutím; zastavený vozík vyklopíš kliknutím na jeho vaňu. Servisné dvere na bokoch a vzadu otvoríš kliknutím v ručnom režime. Pred spustením programu ich zatvor; pohyb sa zastaví aj počas ich otvárania.', 'Click the chip pan to pull it out; with the machine stopped, click the cart bucket to tip it. Click side and rear service doors in manual mode to open them. Close them before starting the program; opening them also stops motion.')]:[]),
           L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />

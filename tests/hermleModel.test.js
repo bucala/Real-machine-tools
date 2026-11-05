@@ -50,6 +50,46 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     const front=new THREE.Raycaster(new THREE.Vector3(0,PY-MC.hA*.01-1.3,10),new THREE.Vector3(0,0,-1));
     const hits=front.intersectObject(cradle);expect(hits.length).toBeGreaterThan(0);expect(hits[0].point.z).toBeGreaterThan(2);expect(hits[0].face.normal.z).toBeGreaterThan(.8);
   });
+  it('opens each service leaf outward and keeps the cycle interlock active until fully closed',()=>{
+    const {root,model:m}=setup(id);expect(m.serviceDoors.filter(d=>!d.enabled)).toHaveLength(6);expect(m.serviceOpen()).toBe(false);
+    for(const d of m.serviceDoors.filter(d=>!d.enabled)){
+      root.updateMatrixWorld(true);
+      const origin=d.hinge.localToWorld(new THREE.Vector3(d.side*d.width*.7,d.height*.6,1));
+      const direction=new THREE.Vector3(0,0,-1).transformDirection(d.hinge.matrixWorld);
+      const ray=new THREE.Raycaster(origin,direction,0,2);
+      expect(ray.intersectObject(d.hinge,true).length).toBeGreaterThan(0);
+      d.open=true;expect(m.serviceOpen()).toBe(true);
+      for(let i=0;i<100;i++)m.updateServiceDoors(.05);
+      root.updateMatrixWorld(true);expect(d.hinge.rotation.y).toBeCloseTo(-d.side*Math.PI/2,4);
+      expect(ray.intersectObject(d.hinge,true)).toHaveLength(0);
+      d.open=false;expect(m.serviceOpen()).toBe(true);
+      for(let i=0;i<100;i++)m.updateServiceDoors(.05);
+      expect(m.serviceOpen()).toBe(false);
+    }
+  });
+  it('keeps the model stripe fixed and mirrors the notched transparent door openings',()=>{
+    const {root,model:m}=setup(id),label=root.getObjectByName('fixed-model-stripe');
+    root.updateMatrixWorld(true);const before=label.getWorldPosition(new THREE.Vector3());
+    m.updateGeometry({doorK:0});root.updateMatrixWorld(true);
+    expect(label.getWorldPosition(new THREE.Vector3()).distanceTo(before)).toBe(0);
+    const shapes=m.doors.map(d=>d.getObjectByName('shaped-door-skin').geometry.parameters.shapes.holes[0].getPoints());
+    shapes[0].forEach((p,i)=>{expect(p.x).toBeCloseTo(-shapes[1][i].x);expect(p.y).toBe(shapes[1][i].y);});
+    for(const d of m.doors){const glass=d.getObjectByName('door-safety-glass');expect(glass.material.transparent).toBe(true);expect(glass.geometry.type).toBe('ShapeGeometry');}
+  });
+  it('keeps the low chip pan below the cabinet and slides it along X without duplicating the conveyor',()=>{
+    const {model:m,MC}=setup(id),{chipPan,update,equipment}=m.accessories;
+    update({accessorySetup:'none'},0);const size=new THREE.Box3().setFromObject(chipPan.object).getSize(new THREE.Vector3());
+    expect(size.x).toBeGreaterThan(size.z*2);expect(size.y).toBeLessThan(2.5);
+    chipPan.open=true;for(let i=0;i<100;i++)update({accessorySetup:'none'},.05);
+    expect(chipPan.object.position.x).toBeCloseTo(-17*cabinHalfWidth(MC)/12.25,4);
+    update({accessorySetup:'conveyor'},.05);expect(chipPan.object.visible).toBe(false);expect(chipPan.open).toBe(false);expect(equipment.conveyor.visible).toBe(true);
+    expect(equipment.conveyor.getObjectByName('chip-conveyor-discharge-hood')).toBeTruthy();
+    const bucket=m.accessories.chipCart;bucket.open=true;for(let i=0;i<100;i++)update({accessorySetup:'conveyor'},.05);expect(bucket.object.rotation.z).toBeCloseTo(.6,4);
+    for(let i=0;i<100;i++)update({accessorySetup:'conveyor',running:true},.05);expect(bucket.object.rotation.z).toBeCloseTo(0,4);
+    equipment.coolant.updateWorldMatrix(true,true);const head=new THREE.Box3().setFromObject(equipment.coolant.getObjectByName('ICS-sloping-filter-housing'));expect(head.max.y-head.min.y).toBeLessThan(10);
+    update({accessorySetup:'ics80cooler'},0);equipment.coolant.updateWorldMatrix(true,true);const coolantBounds=new THREE.Box3();for(const child of equipment.coolant.children)if(child.geometry?.type==='BoxGeometry')coolantBounds.union(new THREE.Box3().setFromObject(child));expect(-cabinHalfWidth(MC)-coolantBounds.max.x).toBeGreaterThan(8*cabinHalfWidth(MC)/12.25);const cooler=m.serviceDoors.find(d=>d.enabled);cooler.open=true;m.updateServiceDoors(.1);expect(m.serviceOpen()).toBe(true);
+    update({accessorySetup:'none'},0);m.updateServiceDoors(.1);expect(cooler.open).toBe(false);expect(m.serviceOpen()).toBe(false);
+  });
   it('keeps short trapezoidal bellows attached to the X slide across its full stroke',()=>{
     const {root,model:m,MC}=setup(id),left=root.getObjectByName('left-trapezoid-bellows');
     for(const x of [MC.X[0]*.01,0,MC.X[1]*.01]){
@@ -65,7 +105,7 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     const {root,model:m}=setup(id);expect(Object.keys(m.hmi.controls.buttons)).toHaveLength(7);
     for(const angle of [0,Math.PI/2,Math.PI]){
       m.updateGeometry({doorK:0,panelA:angle});root.updateMatrixWorld(true);
-      const panel=m.panG.getWorldPosition(new THREE.Vector3());expect(panel.x).toBeGreaterThan(cabinHalfWidth(MODELS[id]));
+      const panel=m.panG.getWorldPosition(new THREE.Vector3()),column=root.getObjectByName('HMI-terminal-column'),centre=column.getWorldPosition(new THREE.Vector3());expect(centre.x).toBeCloseTo(panel.x);expect(centre.z).toBeCloseTo(panel.z);expect(new THREE.Box3().setFromObject(column).getSize(new THREE.Vector3()).y).toBeCloseTo(6.8);expect(panel.x).toBeGreaterThan(cabinHalfWidth(MODELS[id]));
       const scale=m.panG.getWorldScale(new THREE.Vector3());scale.toArray().forEach(v=>expect(v).toBeCloseTo(1));
     }
     expect(m.accessories.equipment.conveyor.visible).toBe(false);

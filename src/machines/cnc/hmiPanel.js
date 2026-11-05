@@ -3,10 +3,24 @@ import * as THREE from 'three';
 // Shared 3D / full-screen control positions on the 6.04 × 4.7 keyboard plate.
 export const HMI_CONTROL_LAYOUT={
   width:6.04,depth:4.7,
-  brand:{x:-2.35,z:3.35},
-  buttons:{emergency:{x:-2.62,z:4.1},hold:{x:.72,z:3.7},start:{x:.72,z:4.3}},
-  dials:{feed:{x:1.35,z:3.7},rapid:{x:1.35,z:4.3}},
+  brand:{x:.50,z:3.58,width:.95,height:.20},
+  buttons:{emergency:{x:-2.62,z:4.1,r:.25},hold:{x:.72,z:3.95,r:.19},start:{x:.72,z:4.45,r:.19}},
+  dials:{feed:{x:1.35,z:3.95,r:.21},rapid:{x:1.35,z:4.45,r:.21}},
+  selector:{x:-2.65,z:2.4,r:.21},keySwitch:{x:-2.65,z:2.9,r:.15},
+  blank:{x:-2.65,z:3.42,r:.13},trackball:{x:2.45,z:4.16,r:.27},
 };
+export const HMI_MONITOR_LAYOUT={width:6.2,height:4.72,screen:{x:0,y:2.45,width:5.18,height:3.46},keys:[
+  ...Array.from({length:10},(_,i)=>({x:-2.88,y:.88+i*.34,width:.15,height:.16})),
+  ...Array.from({length:13},(_,i)=>({x:-2.65+i*.435,y:.3,width:.17,height:.15})),
+]};
+export function drawHmiBrand(g,x,y,w,h,brand='HERMLE'){
+  g.save();g.translate(x-w/2,y-h/2);g.fillStyle='#485057';g.strokeStyle='#485057';g.lineWidth=h*.13;
+  if(brand.toUpperCase()==='HERMLE'){
+    g.beginPath();g.arc(h*.48,h*.5,h*.38,.25,Math.PI*2-.25);g.stroke();g.fillRect(0,h*.44,h*.23,h*.15);
+    g.font=`italic bold ${h*.72}px sans-serif`;g.textAlign='left';g.textBaseline='middle';g.fillText('HERMLE',h*.95,h*.54,w-h);
+  }else{g.font=`bold ${h*.72}px sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText(brand,w/2,h/2,w);}
+  g.restore();
+}
 export function hmiKeyLayout(){
   const keys=[];
   const key=(x,z,w,d,label='',mat='white',control=null)=>keys.push({x,z,w,d,label,mat,control});
@@ -16,7 +30,7 @@ export function hmiKeyLayout(){
   key(-1.25,1.82,1.8,.22,'');
   // Axis/navigation bank to the right, with the orange axis keys in their own column.
   for(let r=0;r<5;r++)for(let c=0;c<3;c++)key(1.48+c*.39,.48+r*.34,.32,.26,c===0?['X','Y','Z','IV','V'][r]:String((r*2+c)%10),c===0?'orange':'dark');
-  for(const [x,z] of [[-1.7,2.4],[-.05,2.4],[-1.7,3.1],[-.05,3.1]])for(let r=0;r<2;r++)for(let c=0;c<3;c++)key(x+c*.35,z+r*.3,.29,.22,'');
+  for(const [x,z] of [[-1.7,2.4],[-.05,2.4],[-1.7,3.02],[-.05,3.02]])for(let r=0;r<2;r++)for(let c=0;c<3;c++)key(x+c*.35,z+r*.3,.29,.22,'');
   for(let r=0;r<3;r++)for(let c=0;c<4;c++)key(1.05+c*.38,2.35+r*.3,.3,.22,'',r===0&&c===0?'orange':'dark');
   // Machine keypad along the front edge, leaving the emergency stop and knobs clear.
   for(let r=0;r<2;r++)for(let c=0;c<8;c++)key(-1.9+c*.32,3.94+r*.28,.27,.22,r===0&&c<4?['R','L','SBL','KSS'][c]:'',r===0&&c<2?'dark':'white',r===0&&c<4?['reset','light','single','coolant'][c]:null);
@@ -60,24 +74,26 @@ export function createHmiPanel(parent, M, tex, {brand='HERMLE'}={}) {
       g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font='15px sans-serif';
       for(const k of keys){g.fillStyle=k.mat==='dark'?'#e8ecee':'#262b30';g.fillText(k.label,(k.x/6.04+.5)*w,k.z/depth*h);}
       const brandPos=HMI_CONTROL_LAYOUT.brand;
-      g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText(brand,(brandPos.x/HMI_CONTROL_LAYOUT.width+.5)*w,brandPos.z/HMI_CONTROL_LAYOUT.depth*h);
+      drawHmiBrand(g,(brandPos.x/HMI_CONTROL_LAYOUT.width+.5)*w,brandPos.z/HMI_CONTROL_LAYOUT.depth*h,brandPos.width/HMI_CONTROL_LAYOUT.width*w,brandPos.height/HMI_CONTROL_LAYOUT.depth*h,brand);
     });
     const plane=new THREE.Mesh(new THREE.PlaneGeometry(6.04,depth),new THREE.MeshBasicMaterial({map:labels.tx,transparent:true,depthWrite:false,toneMapped:false}));plane.userData.controlPassThrough=true;plane.rotation.x=-Math.PI/2;plane.position.set(0,.175,depth/2);deck.add(plane);
   }
   const knob=(x,z,id)=>{const g=new THREE.Group();g.position.set(x,0,z);deck.add(g);cyl(g,0,.11,0,.21,.08,M.steelD);cyl(g,0,.25,0,.15,.24,M.black);box(g,0,.38,0,.04,.025,.19,M.cab);if(id)controls.knobs[id]=g;};
-  knob(-2.65,2.4);for(const [id,p] of Object.entries(HMI_CONTROL_LAYOUT.dials))knob(p.x,p.z,id);
+  knob(HMI_CONTROL_LAYOUT.selector.x,HMI_CONTROL_LAYOUT.selector.z);for(const [id,p] of Object.entries(HMI_CONTROL_LAYOUT.dials))knob(p.x,p.z,id);
   // Mushroom stop, two illuminated machine buttons and trackball, all normal to the deck.
   const stop=HMI_CONTROL_LAYOUT.buttons.emergency;
   cyl(deck,stop.x,.12,stop.z,.25,.12,M.yellow);controls.buttons.emergency=cyl(deck,stop.x,.28,stop.z,.16,.22,M.red);
   for(const id of ['hold','start']){const {x,z}=HMI_CONTROL_LAYOUT.buttons[id];cyl(deck,x,.12,z,.19,.09,M.steel);controls.buttons[id]=cyl(deck,x,.18,z,.14,.04,id==='hold'?M.red:color(0x258c6a));}
-  cyl(deck,2.45,.1,3.95,.27,.07,M.steelD);const ball=new THREE.Mesh(new THREE.SphereGeometry(.2,24,12),M.black);ball.position.set(2.45,.13,3.95);deck.add(ball);
-  const keySwitch=cyl(deck,-2.65,.13,2.9,.15,.12,M.steelD);box(deck,keySwitch.position.x,.28,2.9,.06,.25,.08,M.black);
+  const track=HMI_CONTROL_LAYOUT.trackball;cyl(deck,track.x,.1,track.z,track.r,.07,M.steelD);const ball=new THREE.Mesh(new THREE.SphereGeometry(.2,24,12),M.black);ball.position.set(track.x,.13,track.z);deck.add(ball);
+  const ks=HMI_CONTROL_LAYOUT.keySwitch;cyl(deck,ks.x,.13,ks.z,ks.r,.12,M.steelD);box(deck,ks.x,.28,ks.z,.06,.25,.08,M.black);
+  const blank=HMI_CONTROL_LAYOUT.blank;cyl(deck,blank.x,.09,blank.z,blank.r,.025,M.steel);
   for(const x of [-2.85,2.85])for(const z of [.17,4.5])cyl(deck,x,.09,z,.055,.025,M.steelD);
 
   const monitor=new THREE.Group();monitor.name='monitor';monitor.position.set(0,rearY+.04,rearZ-.04);monitor.rotation.x=-8*Math.PI/180;parent.add(monitor);
   box(monitor,0,2.36,-.24,6.2,4.72,.48,M.brush);
   box(monitor,0,2.44,.015,5.72,4.07,.035,M.black);
-  const display=new THREE.Mesh(new THREE.PlaneGeometry(5.18,3.46),new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false}));display.position.set(0,2.45,.045);monitor.add(display);
+  const screen=HMI_MONITOR_LAYOUT.screen;const display=new THREE.Mesh(new THREE.PlaneGeometry(screen.width,screen.height),new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false}));display.position.set(screen.x,screen.y,.045);monitor.add(display);
+  for(const key of HMI_MONITOR_LAYOUT.keys)box(monitor,key.x,key.y,.06,key.width,key.height,.08,capMaterials.dark);
   for(const x of [-2.94,2.94])for(const y of [.18,4.55]){const screw=cyl(monitor,x,y,.04,.045,.025,M.steelD);screw.rotation.x=Math.PI/2;}
   // Rails track the two rigid faces; no spline bulge through the controls or screen.
   for(const s of [-1,1]){
