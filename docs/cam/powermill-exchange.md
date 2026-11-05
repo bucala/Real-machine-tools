@@ -1,13 +1,13 @@
 # PowerMill / CAM a knižnica nástrojov
 
-V simulátore **Hermle C 32 U / C 42 U → Nástroje** otvoríš *Vybrať nástroj zo skrinky…* alebo *Spravovať skrinku…*. Karta *Výber do stroja* používa iba uložené nástroje a zobrazuje ich rozmery bez možnosti úprav. Editor a pridávanie nových nástrojov sú v *Správe skrinky*; detekcia z NC a karta **PowerMill / CAM** sú dostupné v rovnakom podokne.
+V simulátore **Hermle C 32 U / C 42 U → Nástroje** otvoríš *Vybrať nástroj zo skrinky…* alebo *Spravovať skrinku…*. Výber má vlastné jednoduché okno bez importu/exportu a editorov: uložený nástroj zvoľ kliknutím alebo potiahnutím na miesto T a použi *Osadiť na T…*. Editor, nové nástroje, import/export, detekcia z NC a karta **PowerMill / CAM** sú iba v *Správe skrinky*.
 
 ## Prenos programu
 
 1. V PowerMill vytvor NC program postprocesorom pre zodpovedajúci stroj s otočno-sklopným stolom A/C a riadenie ISO/Fanuc alebo Heidenhain. Použi mm, dráhu stredu nástroja bez G41/G42 a nulový bod G54 v strede hornej plochy polotovaru. Podporovaná podmnožina príkazov je uvedená v README a v aplikácii v časti *Program z CAM*.
 2. V knižnici otvor *Detekcia z NC* a vyber `.nc` alebo `.h`. Detekcia sama nemení stroj, jeho program ani rozpracovaný diel. Súbor môže mať najviac 2 MB.
 3. Pri každom T klikni na *Otvoriť a overiť*. Doplň geometriu podľa CAM alebo nástroja, over prípadné rozpory a potvrď kontrolu rozmerov. Chýbajúce údaje v editore sú **dočasný vzor**; nejde o rozmery zistené z NC.
-4. Ulož nástroj do skrinky a klikni na *Vybrať uložený nástroj do stroja*. Nový alebo upravený nástroj bez uloženia nemožno osadiť. Vyber miesto zásobníka s číslom T zhodným s programom a osaď nástroj. C32 má 36 a C42 42 miest. Skrinka môže obsahovať 500 položiek vrátane alternatívnych nástrojov s rovnakým predvoleným T; každá má samostatné ID.
+4. Ulož nástroj do skrinky a klikni na *Vybrať uložený nástroj do stroja*. Nový alebo upravený nástroj bez uloženia nemožno osadiť. V jednoduchom výbere klikni na miesto T zhodné s programom, alebo naň nástroj potiahni. Potiahnutie nemení stroj; použi *Osadiť na T…*. Tlačidlo *Späť do skrinky* zachová rozpracovaný NC text a vráti ťa do správy. C32 má 36 a C42 42 miest. Skrinka môže obsahovať 500 položiek vrátane alternatívnych nástrojov s rovnakým predvoleným T; každá má samostatné ID.
 5. Vráť sa na *Detekcia z NC*, potvrď obnovenie polotovaru a klikni na *Načítať NC do stroja*. Skontroluj chyby interpretera a až potom spusti simuláciu. Výsledok môžeš exportovať ako STP/STEP alebo STL.
 
 Osadenie nástroja alebo načítanie programu obnovuje simuláciu od polotovaru. Počas behu alebo prehliadky obrobku sú tieto akcie zablokované. Prezeranie, editácia a uloženie v skrinke samy osebe nemenia stav stroja. Skrinka sa uchováva v tomto prehliadači; osadenie zásobníka zostáva nastavením aktuálnej relácie simulátora. Tlačidlo *Uložiť osadené do skrinky* odloží kópie aktuálne osadených nástrojov stroja bez vybratia zo zásobníka. Zhodné záznamy sa nepridávajú opakovane.

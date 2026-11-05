@@ -23,6 +23,7 @@ import { HmiFullscreen } from '../ui/hmiFullscreen';
 import { StepDownloadButton } from '../ui/tools';
 import { CncToolPreview } from '../ui/cncToolPreview';
 import { ToolLibrary } from '../ui/toolLibrary';
+import { ToolPicker } from '../ui/toolPicker';
 import { installTool, MAX_FILE_BYTES } from './cnc/toolLibrary';
 import { createStock } from './cnc/voxel';
 import { createCabinLighting } from './cnc/cabinLighting';
@@ -55,6 +56,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const [hmiOpen,setHmiOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState(null);
   const [libraryPocket,setLibraryPocket]=useState(undefined);
+  const [libraryToolId,setLibraryToolId]=useState(undefined);
+  const [libraryReturn,setLibraryReturn]=useState(null);
   const [librarySource,setLibrarySource]=useState(null);
   const [programImportError,setProgramImportError]=useState('');
   const samples = SAMPLES();
@@ -621,7 +624,10 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const save = (blob, nameF) => { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = nameF; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); };
   const canEditTools = !ctl.current.running && !tele.run && !ui.unclamped;
   const requireStopped = () => { if (ctl.current.running || ctl.current.unclamped) throw new Error(L('Najprv zastav stroj a upni obrobok.', 'Stop the machine and clamp the workpiece first.')); };
-  const openToolPicker = pocket => { setLibraryPocket(pocket);setLibraryTab('pick'); };
+  const openToolPicker = (pocket,toolId) => { setLibraryPocket(pocket);setLibraryToolId(toolId);setLibraryReturn(null);setLibraryTab('pick'); };
+  const closeLibrary = () => {setLibraryTab(null);setLibrarySource(null);setLibraryPocket(undefined);setLibraryToolId(undefined);setLibraryReturn(null);};
+  const closePicker = () => { if(libraryReturn){setLibrarySource(libraryReturn.source);setLibraryTab(libraryReturn.tab);setLibraryReturn(null);}else closeLibrary(); };
+  const installSavedTool = (tool,pocket) => {requireStopped();setTools(ts=>installTool(ts,tool,pocket,MC.mag));};
   const freePocket = Array.from({length:MC.mag},(_,i)=>i+1).find(t=>!tools.some(tool=>tool.t===t));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
@@ -649,10 +655,11 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           L('Nulový bod G54 je v strede hornej plochy polotovaru; nástroje T1 – T10 sú v tabuľke (alebo sa prevezmú z komentárov CAM programu).', 'Datum G54 is at the centre of the top face of the blank; tools T1 – T10 are in the table (or taken over from the CAM program comments).'),
           L('Bez G43 / G43.4 (alebo TOOL CALL) je naprogramovaná výška čelo vretena – nástroj potom ide o svoju dĺžku hlbšie.', 'Without G43 / G43.4 (or TOOL CALL) the programmed height is the spindle nose – the tool then goes deeper by its length.'),
           L('Pohľad Nástroj ukáže detail rezu; rýchlosť simulácie a korekcie posuvu sú v paneli.', 'The Tool view shows a close-up of the cut; simulation speed and feed overrides are in the panel.')]} />
-      {libraryTab&&<ToolLibrary initialTab={libraryTab} initialPocket={libraryPocket} initialNc={librarySource?.text} initialName={librarySource?.name} tools={tools} program={text} capacity={MC.mag} canApply={canEditTools}
-        onInstall={(tool,pocket)=>{requireStopped();setTools(ts=>installTool(ts,tool,pocket,MC.mag));}}
+      {libraryTab==='pick'&&<ToolPicker tools={tools} capacity={MC.mag} canApply={canEditTools} initialPocket={libraryPocket||1} initialToolId={libraryToolId} onInstall={installSavedTool} onClose={closePicker} backLabel={libraryReturn?L('Späť do skrinky','Back to cabinet'):undefined}/>}
+      {libraryTab&&libraryTab!=='pick'&&<ToolLibrary initialTab={libraryTab} initialPocket={libraryPocket} initialToolId={libraryToolId} initialNc={librarySource?.text} initialName={librarySource?.name} tools={tools} program={text} capacity={MC.mag} canApply={canEditTools}
+        onChoose={(tool,source)=>{openToolPicker(libraryPocket||Math.min(MC.mag,tool.t),tool.id);setLibraryReturn({tab:libraryTab,source});}}
         onLoadProgram={txt=>{requireStopped();setProgId('');setText(txt);}}
-        onClose={()=>{setLibraryTab(null);setLibrarySource(null);setLibraryPocket(undefined);}} />}
+        onClose={closeLibrary} />}
       {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}
       <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">

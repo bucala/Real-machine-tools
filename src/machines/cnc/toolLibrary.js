@@ -78,6 +78,12 @@ export function readCabinet(storage, defaults) {
   const saved = storage.getItem(LIBRARY_KEY);
   return saved === null ? defaults.map(t => ({ id: newToolId(), ...validateTool(t) })) : decodeLibrary(saved);
 }
+// Persist the starter cabinet once so saved identities survive separate dialogs.
+export function loadCabinet(storage, defaults) {
+  const tools = readCabinet(storage, defaults);
+  if (storage.getItem(LIBRARY_KEY) === null) storage.setItem(LIBRARY_KEY, encodeLibrary(tools));
+  return tools;
+}
 export function installTool(machineTools, tool, pocket, capacity) {
   if (!Number.isInteger(pocket) || pocket < 1 || pocket > capacity) throw new Error(`T: 1–${capacity}`);
   const next = { ...validateTool(tool), t: pocket, ...(tool.id ? { libraryId: tool.id } : {}) };

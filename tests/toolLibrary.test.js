@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultTools } from '../src/machines/cnc/tooling';
-import { LIBRARY_KEY, decodeCsv, decodeLibrary, detectNcTools, encodeCsv, encodeLibrary, encodeToolComments, installTool, readCabinet, validateTool } from '../src/machines/cnc/toolLibrary';
+import { LIBRARY_KEY, decodeCsv, decodeLibrary, detectNcTools, encodeCsv, encodeLibrary, encodeToolComments, installTool, loadCabinet, readCabinet, validateTool } from '../src/machines/cnc/toolLibrary';
 const tools=()=>defaultTools().map((t,i)=>({id:`fixture-${i}`,...validateTool(t)}));
 
 describe('Portable CNC tool cabinet',()=>{
@@ -25,6 +25,7 @@ describe('Portable CNC tool cabinet',()=>{
     const map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};
     const seeded=readCabinet(storage,defaultTools());
     expect(seeded).toHaveLength(10);expect(map.size).toBe(0);
+    const loaded=loadCabinet(storage,defaultTools());expect(loadCabinet(storage,defaultTools())).toEqual(loaded);
     storage.setItem(LIBRARY_KEY,encodeLibrary(seeded));
     expect(readCabinet(storage,defaultTools())).toEqual(seeded);
     const original=tools(),next=installTool(original,seeded[2],12,36);

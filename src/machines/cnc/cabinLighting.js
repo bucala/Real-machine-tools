@@ -10,6 +10,7 @@ export function createCabinLighting(scene, root, { scale: K, halfWidth, emitter 
     rmtCabinFade: { value: .35 * K },
     rmtCabinClosed: { value: 1 },
     rmtCabinAmbient: { value: .06 },
+    rmtCabinBounce: { value: 0 },
   };
   const materials = new Set();
   const registerMaterial = material => {
@@ -36,16 +37,20 @@ export function createCabinLighting(scene, root, { scale: K, halfWidth, emitter 
         uniform vec3 rmtCabinMax;
         uniform float rmtCabinFade;
         uniform float rmtCabinClosed;
-        uniform float rmtCabinAmbient;`);
+        uniform float rmtCabinAmbient;
+        uniform float rmtCabinBounce;`);
       shader.fragmentShader = shader.fragmentShader.replace('#include <aomap_fragment>', `#include <aomap_fragment>
         vec3 rmtEdge = smoothstep(rmtCabinMin, rmtCabinMin + vec3(rmtCabinFade), vRmtCabinPosition)
           * (vec3(1.0) - smoothstep(rmtCabinMax - vec3(rmtCabinFade), rmtCabinMax, vRmtCabinPosition));
         float rmtInside = rmtEdge.x * rmtEdge.y * rmtEdge.z * rmtCabinClosed;
         float rmtOcclusion = mix(1.0, rmtCabinAmbient, rmtInside);
         reflectedLight.indirectDiffuse *= rmtOcclusion;
-        reflectedLight.indirectSpecular *= rmtOcclusion;`);
+        reflectedLight.indirectSpecular *= mix(1.0, min(1.0, rmtCabinAmbient + rmtCabinBounce * .5), rmtInside);
+        // Approximate interreflection from the illuminated enclosure surfaces.
+        // Confined to the cabin; extinguished with the actual work lights.
+        reflectedLight.indirectDiffuse += material.diffuseColor * rmtCabinBounce * rmtInside;`);
     };
-    material.customProgramCacheKey = () => 'rmt-cabin-indirect-v1';
+    material.customProgramCacheKey = () => 'rmt-cabin-indirect-v2';
     material.needsUpdate = true;
   };
   root.traverse(o => {
@@ -62,21 +67,28 @@ export function createCabinLighting(scene, root, { scale: K, halfWidth, emitter 
     light.shadow.bias = -.00015;
     light.shadow.normalBias = .015 * K;
   });
-  const lamp = new THREE.SpotLight(0xe5f1ff, 520 * K * K, 42 * K, Math.PI / 2.8, .6, 2);
-  lamp.name = 'CNC work light';
-  lamp.position.set(0, 23.5 * K, 4 * K);
-  lamp.target.position.set(0, 9.5 * K, -.5 * K);
-  lamp.castShadow = true;
-  lamp.shadow.mapSize.set(1024, 1024);
-  lamp.shadow.camera.near = .3 * K;
-  lamp.shadow.bias = -.0002;
-  lamp.shadow.normalBias = .02 * K;
-  scene.add(lamp, lamp.target);
+  // Two broad sources follow the two modelled side diffusers. The brochure
+  // (PDF pages 13/15) shows distributed illumination, not calibrated photometry.
+  const lamps = [-1, 1].map(side => {
+    const lamp = new THREE.SpotLight(0xeaf3ff, 360 * K * K, 34 * K, Math.PI / 2.7, .85, 2);
+    lamp.name = `CNC work light ${side < 0 ? 'left' : 'right'}`;
+    lamp.position.set(side * 5.4 * K, 19.95 * K, 1.6 * K);
+    lamp.target.position.set(-side * .6 * K, 9.5 * K, .1 * K);
+    lamp.castShadow = true;
+    lamp.shadow.mapSize.set(1024, 1024);
+    lamp.shadow.camera.near = .3 * K;
+    lamp.shadow.bias = -.0002;
+    lamp.shadow.normalBias = .02 * K;
+    lamp.shadow.radius = 2;
+    scene.add(lamp, lamp.target);
+    return lamp;
+  });
   const update = ({ cabin = true, light = true, opening = 0 }) => {
     uniforms.rmtCabinClosed.value = cabin ? 1 : 0;
     uniforms.rmtCabinAmbient.value = .06 + .14 * THREE.MathUtils.clamp(opening, 0, 1);
-    lamp.visible = light;
-    emitter.emissiveIntensity = light ? 2 : 0;
+    lamps.forEach(lamp => { lamp.visible = light; });
+    uniforms.rmtCabinBounce.value = light ? .32 : 0;
+    emitter.emissiveIntensity = light ? 3 : 0;
   };
-  return { lamp, uniforms, registerMaterial, update };
+  return { lamp: lamps[0], lamps, uniforms, registerMaterial, update };
 }
