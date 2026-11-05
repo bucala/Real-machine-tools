@@ -331,7 +331,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     sm.material.map=screen.tx;sm.material.needsUpdate=true;
     apiRef.current.getHmiCanvas=()=>screen.tx.image;
     // ---------------- osvetlenie pracovného priestoru ----------------
-    const lighting = createCabinLighting(scene, root, { scale: K, halfWidth: bodyHalf, emitter: M.lamp, workHeight:rxu?13.4:9.5*K });
+    const lighting = createCabinLighting(scene, root, { scale: K, halfWidth: bodyHalf, emitter: M.lamp, workHeight:rxu?13.4:9.5*K, ...geometry.lighting });
     Object.values(M).forEach(lighting.registerMaterial);
 
     // ---------------- polotovar (voxely) ----------------
@@ -431,11 +431,12 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     };
 
     // ---------------- pohľady ----------------
-    const toolTip = () => { const p = ex ? ex.S.pose.m : [0, MC.tcY, MC.nose[1]]; return v3(p[0] * U, PY + p[2] * U, -p[1] * U); };
+    const toolTip = () => { const p = ex ? ex.S.pose.m : [0, MC.tcY, MC.nose[1]]; const point=[p[0]*U,PY+p[2]*U,-p[1]*U];return geometry.machinePoint?geometry.machinePoint(point):v3(...point); };
     const anchors = {
       kabina: () => v3(-9.5 * K, 25 * K, 8.7 * K), lozko: () => v3(9.6 * K, 4 * K, 8.5 * K), osi: () => v3(8.8 * K, 23.1 * K, -1.7 * K + yG.position.z), vreteno: () => v3(xG.position.x + 1.3 * K, zG.position.y + 1.5 * K, yG.position.z + 1.3 * K),
       stol: () => v3(-6.3 * K, PY - 2.5 * K, 2.0 * K), zasobnik: () => v3(4 * K, magY * K, magZ * K), panel: () => new THREE.Vector3(0, 17.8, 0).applyMatrix4(panG.matrixWorld), obrobok: () => toolTip().clone().setY(PY + 0.3),
     };
+    Object.assign(anchors,geometry.anchorOverrides||{});
     const views = {
       celok: () => c.accessorySetup !== 'none' ? [[-42 * K, 38 * K, 65 * K], [-9 * K, 13 * K, -5*K]] : [[42 * K, 38 * K, 62 * K], [0, 13 * K, -5*K]],
       vybavenie: () => [[-44 * K, 22 * K, 34 * K], [-26 * K, 7 * K, -4 * K]],
@@ -459,17 +460,17 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     const ctrl=createControls({dom,mount,camera,root,tipEl,c,getT:()=>t,getHL:insp.hl});
     let doorDragStart=0,manualDoor=null;
     for(const d of doors){
-      ctrl.reg({type:'slide',axis:'x',tooltip:false,label:rxu?L('Pravé otváracie dvere','Right-hinged door'):L('Posuvné dvere','Sliding doors'),
-        hint:rxu?L('Pravý pánt: potiahni doprava alebo klikni.','Right hinge: drag right or click.'):L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
+      ctrl.reg({type:'slide',axis:'x',tooltip:false,label:rxu?L('Posuvné dvere doprava','Right-sliding door'):L('Posuvné dvere','Sliding doors'),
+        hint:rxu?L('Potiahni doprava po koľajnici alebo klikni.','Drag right along the rail or click.'):L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
         read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
         start:()=>{doorDragStart=doorK;manualDoor=doorK;},
-        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/((rxu?10.5:4)*K)));ctrl.push('door',manualDoor>.01);},
+        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/((rxu?11.8:4)*K)));ctrl.push('door',manualDoor>.01);},
         click:()=>ctrl.push('door',!c.door),
         end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
       },d);
     }
     const hmiActions={};
-    const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:hmi.pressAxis?.(id)||'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);};
+    const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:hmi.pressAxis?.(id)||'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);for(const duplicate of hmi.controls.duplicates?.[id]||[])ctrl.reg({...control,pressAxis:duplicate.axis},duplicate.object);};
     apiRef.current.hmiAction=id=>{const control=hmiActions[id];if(control){control.pressT=t;control.action();}};
     apiRef.current.setHmiOverride=(key,value)=>{if(key==='fo'||key==='ro')set(key,Math.max(key==='fo'?0:5,Math.min(key==='fo'?150:100,Math.round(value))));};
     button('start',L('Štart cyklu','Cycle start'),L('Spustí alebo obnoví program pri zatvorených dverách.','Start / resume the program with the doors closed.'),()=>{if(apiRef.current.start()==='ok')ctrl.push('running',true);});
@@ -586,6 +587,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       const spinOn = S && S.dir && S.spin > 0 && !S.alarm && (c.running || false);
       spinA += spinOn ? dt * Math.min(60, S.spin / 60 * 2 * Math.PI) * 0.15 * (S.dir || 1) : 0; toolG.rotation.y = spinA;
       const change = S && prog?.moves[S.idx]?.kind === 'tc' ? prog.moves[S.idx] : null;
+      geometry.updateTransfer?.(change,S?.tcPhase||0,toolsNow,T);
       const indexedT = change ? (S.tcPhase < .4 ? change.from : change.to) : T;
       const targetA = indexedT ? -(indexedT - 1) / MC.mag * Math.PI * 2 : magA;
       const deltaA = Math.atan2(Math.sin(targetA - magA), Math.cos(targetA - magA));
@@ -643,7 +645,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
   if(rxu){
-    const detail={kabina:['Pracovná kabína RXU','Ľavé bočné pozorovacie okno a červené nakladacie dvere otvárané doprava okolo pravého pántu.','Left observation window and red loading door opening to the right around its right hinge.'],lozko:['QUADROGUIDE','Masívne lôžko, priame pohony a teplotná stabilizácia.','Massive bed, direct drives and thermal stabilisation.'],osi:['QUADROGUIDE · X/Y/Z','Dráhy 800 × 855 × 500 mm; štyri vedenia v rohoch osi Z.','800 × 855 × 500 mm travel; four guide rails at the corners of Z.'],vreteno:['HSK-A63 · 24 000 ot/min','Štandardné vreteno 67 Nm S1, nástroj max. Ø35 mm.','Standard spindle 67 Nm S1, tool max. Ø35 mm.'],stol:['A/C · Ø600 mm','Obojstranné uloženie, A ±115°, C neobmedzene; nosnosť 800 kg.','Two-sided support, A ±115°, continuous C; 800 kg load.'],zasobnik:['24 miest / pockets','Štandardný rotačný zásobník. Čas výmeny v simulácii je odhad.','Standard rotary magazine. Simulated tool-change timing is estimated.'],panel:['Röders RMS6','Výukové ISO rozhranie; nejde o emuláciu proprietárneho RMS6.','Training ISO interface; not an emulation of proprietary RMS6.']};
+    const detail={kabina:['Pracovná kabína RXU','Ľavé bočné pozorovacie okno a červené čelné dvere posúvané doprava po spodnej koľajnici.','Left observation window and red front door sliding to the right along its lower rail.'],lozko:['QUADROGUIDE','Masívne lôžko, priame pohony a teplotná stabilizácia.','Massive bed, direct drives and thermal stabilisation.'],osi:['QUADROGUIDE · X/Y/Z','Dráhy 800 × 855 × 500 mm; štyri vedenia v rohoch osi Z.','800 × 855 × 500 mm travel; four guide rails at the corners of Z.'],vreteno:['HSK-A63 · 24 000 ot/min','Štandardné vreteno 67 Nm S1, nástroj max. Ø35 mm.','Standard spindle 67 Nm S1, tool max. Ø35 mm.'],stol:['A/C · Ø600 mm','Obojstranné uloženie, A ±115°, C neobmedzene; nosnosť 800 kg.','Two-sided support, A ±115°, continuous C; 800 kg load.'],zasobnik:['24 miest / pockets','Štandardný rotačný zásobník. Čas výmeny v simulácii je odhad.','Standard rotary magazine. Simulated tool-change timing is estimated.'],panel:['Röders RMS6','Výukové ISO rozhranie; nejde o emuláciu proprietárneho RMS6.','Training ISO interface; not an emulation of proprietary RMS6.']};
     for(const [key,v] of Object.entries(detail)){const part=parts.find(p=>p.key===key);if(part){part.name=v[0];part.desc=L(v[1],v[2]);}}
   }
   const status = ui.unclamped ? {kind:'info',text:L('Prehliadka obrobku: ťahaním ho otáčaj, kolieskom približuj. Potom ho upni späť.','Workpiece inspection: drag to rotate, scroll to zoom, then clamp it back.')} : tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
@@ -733,7 +735,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
           </div>
         </div>
 
-        {rxu&&<div className="sec"><h2 className="sec-title mb-2">{L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}</h2><select className="sel" aria-label={L('Vybavenie Röders','Röders equipment')} value={ui.accessorySetup} onChange={e=>set('accessorySetup',e.target.value)}><option value="none">{L('Vypnuté','Off')}</option><option value="cooling">{L('Chladiaca jednotka 1050 × 750 mm','Cooling unit 1050 × 750 mm')}</option><option value="filter">{L('Chladenie + pásový filter 1523 × 1390 mm','Cooling + band filter 1523 × 1390 mm')}</option></select><button className="btn mt-2" onClick={()=>apiRef.current.view?.('vybavenie')}>{L('Pohľad na vybavenie','Equipment view')}</button><p className="text-xs muted mt-2">{L('Predvolene vypnuté. Pôdorysné rozmery z katalógu; výšky a vnútorné diely sú vizuálny odhad.','Off by default. Plan dimensions follow the catalogue; heights and internal parts are visual estimates.')}</p></div>}
+        {rxu&&<div className="sec"><h2 className="sec-title mb-2">{L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}</h2><select className="sel" aria-label={L('Vybavenie Röders','Röders equipment')} value={ui.accessorySetup} onChange={e=>set('accessorySetup',e.target.value)}><option value="none">{L('Vypnuté','Off')}</option><option value="cooling">{L('Chladiaca jednotka 1050 × 750 mm','Cooling unit 1050 × 750 mm')}</option><option value="filter">{L('Chladenie + pásový filter 1523 × 1380 mm','Cooling + band filter 1523 × 1380 mm')}</option></select><button className="btn mt-2" onClick={()=>apiRef.current.view?.('vybavenie')}>{L('Pohľad na vybavenie','Equipment view')}</button><p className="text-xs muted mt-2">{L('Predvolene vypnuté. Pôdorysné rozmery z katalógu; výšky a vnútorné diely sú vizuálny odhad.','Off by default. Plan dimensions follow the catalogue; heights and internal parts are visual estimates.')}</p></div>}
         {!rxu&&<>
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2>

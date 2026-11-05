@@ -301,10 +301,12 @@ Katalóg Röders označuje dodaný stroj **RXU 1001 DSH**, preto používa toto 
 
 **Röders RXU 1001 DSH** (`#roeders`)
 
-[![Röders RXU 1001 DSH – ľavé pozorovacie okno, zadnejší RMS panel a pravé otváracie dvere](docs/img/roeders-rxu1001.png)](https://real-machine-tools.marcel-bucala.workers.dev/#roeders)
+[![Röders RXU 1001 DSH – ľavé pozorovacie okno, RMS panel vľavo a dvere posuvné doprava](docs/img/roeders-rxu1001.png)](https://real-machine-tools.marcel-bucala.workers.dev/#roeders)
 
-- Samostatný model podľa fotografie a pôdorysu: strieborná zadná skriňa, vínová základňa, červené dvere s pravým pántom, skutočný otvor ľavého bočného okna a kompaktný červený RMS panel na ľavom boku za čelom stroja.
-- Voliteľné vonkajšie jednotky podľa pôdorysu: chladenie 1050 × 750 mm a pásový filter 1523 × 1390 mm; predvolene vypnuté.
+[Pôdorys](docs/img/roeders-layout.png) · [HMI s ručným ovládačom](docs/img/roeders-rms.png) · [Bočné a zadné vybavenie](docs/img/roeders-equipment.png)
+
+- Samostatný model podľa fotografie a pôdorysu: stupňovitá vínová základňa, odsadené servisné bloky a voľný zadný výrez podľa strany 57, červené čelné dvere **posuvné doprava**, priehľadné ľavé okno a červený RMS panel na držiaku pri ľavom boku.
+- Voliteľné vonkajšie jednotky podľa pôdorysu: chladenie 1050 × 750 mm a pásový filter 1523 × 1380 mm; predvolene vypnuté. V základnej zostave je vysoká šikmá výsypka KNOLL s otvoreným ústím nad vozíkom.
 - Obojstranne uložený stôl A/C, štyri vedenia smykadla Z, kryty vedení, káblový reťazec, vreteno HSK-A63 a 24-miestny rotačný zásobník s animovanou výmenou.
 - CNC jadro zdieľané s Hermle: ISO programy, 3+2 a TCP, skutočný úber, blokovanie dverí, koncové spínače, osvetlenie, ručné tlačidlá a regulátory, fullscreen HMI a prehliadka obrobku.
 - Nástroje sa vyberajú z rovnakej skrinky. Štandardné vreteno povoľuje Ø35 mm; väčší nástroj sa neosadí. Dodaná ukážka používa Ø10 mm. Natívne RMS6 sa neemuluje; simulácia používa výučbové ISO rozhranie.

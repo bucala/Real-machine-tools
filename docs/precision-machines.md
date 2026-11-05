@@ -2,14 +2,14 @@
 
 ## Röders RXU 1001 DSH
 
-Podklad: používateľom dodaný katalóg `884756316-roders-rxu-1001-dsh-katalogu-729.pdf` (2016), PDF strany 58–59. Fotografia, diagramy obojstranného uloženia stola a údaje DSH sú na týchto stranách; pôdorys základného RXU 1001 je na strane 57. Katalóg výslovne uvádza rovnaké rozloženie pre DSH. Používateľ doplnil rovnakú fotografiu a pôdorys a upresnil ľavé pozorovacie okno, zadnejšiu ľavú polohu HMI a otváranie dverí doprava.
+Podklad: používateľom dodaný katalóg `884756316-roders-rxu-1001-dsh-katalogu-729.pdf` (2016), PDF strany 58–59. Fotografia, diagramy obojstranného uloženia stola a údaje DSH sú na týchto stranách; pôdorys základného RXU 1001 je na strane 57. Katalóg na strane 59 uvádza, že rozloženie DSH je **veľmi podobné** RXU 1001. Pôdorys zo strany 57 preto určuje vzájomné polohy blokov, nie zameniteľnosť všetkých rozmerov oboch variantov. Používateľ doplnil rovnakú fotografiu a pôdorys a upresnil ľavé pozorovacie okno, zadnejšiu ľavú polohu HMI a otváranie dverí doprava.
 
 | Parameter | Použitý údaj |
 | --- | --- |
 | Dráhy | 800 × 855 × 500 mm |
 | Os A | ±115° |
 | Os C | priebežná rotácia |
-| Stôl | variant Ø600 mm, obojstranné uloženie |
+| Stôl | variant Ø600 mm s dvomi zarovnanými stranami, obojstranné uloženie |
 | Zaťaženie stola | max. 800 kg |
 | Vreteno | 24 000 ot/min, 67 Nm S1, HSK-A63 |
 | Priemer nástroja | max. Ø35 mm so štandardným vretenom |
@@ -20,9 +20,19 @@ Podklad: používateľom dodaný katalóg `884756316-roders-rxu-1001-dsh-katalog
 
 Pôvodné zadanie uvádzalo RXU1000DSH; dodaný katalóg a fotografia identifikujú **RXU 1001 DSH**. Údaje trojosého RXU 1001 (1 000 × 810 × 500 mm, pravouhlý stôl 996 × 798 mm a 2 000 kg) sa nepoužívajú pre DSH.
 
-Exteriér a neokótované vnútorné diely sú rekonštruované z fotografií, nejde o výrobný CAD. Pracovný priestor má ľavé bočné okno bez nepriehľadnej steny za sklom; červené dvere sa otvárajú okolo pravého pántu. HMI má samostatný červený RMS terminál s PC klávesnicou. Je umiestnený pri ľavom boku za čelnou rovinou, nie pred nakladacím otvorom.
+Exteriér a neokótované vnútorné diely sú rekonštruované z fotografií, nejde o výrobný CAD. Pracovný priestor má ľavé bočné okno bez nepriehľadnej steny za sklom; červené čelné dvere sa **posúvajú doprava po spodnej koľajnici**, bez otáčania do priestoru. List sa posúva pred pravým servisným panelom, madlo aj sklo sa pohybujú spolu s ním. HMI má samostatný červený RMS terminál s PC klávesnicou, strieborným rámom displeja, fyzickými ovládačmi nad čiernou klávesnicou, myšou a samostatným ručným ovládačom vpravo. Detail vychádza aj z dodaných fotografií skutočného stroja; tlačidlá Stop/Štart na ručnom ovládači sú prepojené s rovnakými funkciami ako konzola. Je umiestnený pri ľavom boku za čelnou rovinou, nie pred nakladacím otvorom.
 
-Kinematika A/C, interpolácia, CNC úber a skrinka nástrojov sú zdieľané s Hermle. ISO rozhranie nie je emulácia RMS6 ani import natívneho projektu RMS. Rotačné rýchlosti (90/180 °/s), výmena 6 s, výškové offsety a zaťažovací model sú výučbové odhady. Katalóg neposkytuje výkonovú krivku; zaťaženie používa momentový obal 67 Nm. Dĺžka nástroja 250 mm je limit výučbového profilu, nie tvrdenie o limite výrobcu. Doplnkový reťazový zásobník nie je simulovaný. Samostatne zapínateľná chladiaca jednotka (1050 × 750 mm) a pásový filter (1523 × 1390 mm) rešpektujú dodaný pôdorys; sú predvolene vypnuté a modelované vizuálne bez simulácie filtrácie. Ich výšky a vnútorné diely sú odhady.
+Kinematika A/C, interpolácia, CNC úber a skrinka nástrojov sú zdieľané s Hermle. ISO rozhranie nie je emulácia RMS6 ani import natívneho projektu RMS. Rotačné rýchlosti (90/180 °/s), výmena 6 s, výškové offsety a zaťažovací model sú výučbové odhady. Katalóg neposkytuje výkonovú krivku; zaťaženie používa momentový obal 67 Nm. Dĺžka nástroja 250 mm je limit výučbového profilu, nie tvrdenie o limite výrobcu. Doplnkový reťazový zásobník nie je simulovaný.
+
+Samostatne zapínateľná chladiaca jednotka (1050 × 750 mm) a pásový filter (1523 × 1380 mm) rešpektujú dodaný pôdorys; sú predvolene vypnuté a modelované vizuálne bez simulácie filtrácie. Ich výšky a vnútorné diely sú odhady.
+
+Prepravný vozík na triesky je pri zadnej ľavej časti, napojený na dva výstupy skrutkových dopravníkov. Bočná zostava **KNOLL** s vysokou šikmou výsypkou nad vozíkom je súčasťou základného modelu podľa ďalších používateľových fotografií. Výsypka je napojená na stroj, má otvorené spodné ústie priamo nad korbou a zobrazuje sa aj bez zapnutia prídavných chladiacich zariadení. Dopravné priečky sa počas chodu posúvajú.
+
+Pravý bok má malé kontrolné okno a rozdelené servisné panely; chladenie má ventilátory na hornej ploche. Vnútorné odovzdávanie nástroja medzi rotačným zásobníkom a vretenom je schematická animácia; katalóg neobsahuje výrobný výkres tejto mechaniky.
+
+Pôdorys modelu má čelo široké 2190 mm, odsadené širšie ľavé rameno, zadnú pravú servisnú skriňu a priečny zadný blok s voľným servisným výrezom. HMI je pri ľavom ramene za bočným oknom; jeho držiak je pripojený ku skrini. Rozmer 4814 mm na strane 57 patrí základnému RXU 1001; údaj 5300 mm v tabuľke DSH je potrebný inštalačný priestor. Nie je použitý ako automatické predĺženie jednotlivých panelov. Tieto vzťahy sú sústredené v `src/machines/precision/roedersLayout.js`. Detailné výšky krytov, šírka okien a zdvih dverí sú rekonštrukcia podľa fotografie.
+
+Pracovná zostava je posunutá do prednej ľavej časti kabíny ako celok: stôl, upínač, polotovar, lineárne osi a vreteno zdieľajú rovnaký súradnicový rámec. Tvarovaná kolíska A/C a dve ložiskové podpery vychádzajú z rezov a fotografie na stranách 58–59. Osvetlenie aj detailné pohľady sledujú skutočnú polohu tejto zostavy.
 
 ## OSCARMAX EX 500
 
@@ -56,4 +66,4 @@ Kategória `#moderne` je tmavosivá; simulátory používajú pôvodné rozlože
 
 Oba nové stroje majú zamknutú kameru v ručnom režime, fyzické tlačidlá, živé HMI, zámok jeho polohy a odopnutie/prehliadku/vrátenie rovnakého obrobku. EX 500 pred odopnutím vypustí nádrž, otvorí stenu a odtiahne elektródu. STL a STEP zachovajú aktuálny prerušený stav; STEP používa existujúci AP214 export geometrie v mm, neobnovuje čistý polotovar.
 
-Automatické testy `precision.test.js`, `precisionModels.test.js` a `electrodes.test.js` kontrolujú dráhy DSH, ukážkový CNC cyklus, bezpečnostné blokovania EDM, rozdiel hranol/valec, zachovanie rozpracovaného stavu, odtiahnutie medzi dutinami, priehľadný otvor okna RXU, správny smer dverí, polohu RMS, stacionárny stôl EX500 a validáciu skrinky.
+Automatické testy `precision.test.js`, `precisionModels.test.js` a `electrodes.test.js` kontrolujú dráhy DSH, ukážkový CNC cyklus, bezpečnostné blokovania EDM, rozdiel hranol/valec, zachovanie rozpracovaného stavu, odtiahnutie medzi dutinami, priehľadný otvor okna RXU, posuv dverí bez natočenia, otvorený servisný výrez v pôdoryse, priechodnosť okna, rozsah ramena RMS bez prieniku do kabíny, polohu RMS, stacionárny stôl EX500 a validáciu skrinky.
