@@ -72,10 +72,27 @@ export function createStock({ min, max, res }) {
     let n = 0;
     const b = scan(tip, v, t.d / 2, 0, t.lc, (idx, z, r) => {
       const val = dist(z, r) / q, cur = f[idx];
-      if (val < cur) { if (cur > 0 && val <= 0) n++; f[idx] = val < -127 ? -127 : Math.round(val); }
+      if (val < cur) { const next=val < -127 ? -127 : Math.round(val); if (cur > 0 && next <= 0) n++; f[idx] = next; }
     });
     if (n) { markDirty(b); removed += n; }
     return { n, ops: b ? b.ops : 0 };
+  };
+  // Non-rotating prismatic electrode, used by sinker EDM. Same SDF and dirty-chunk
+  // pipeline as milling; the electrode face subtracts material without a spindle.
+  const cutBox = (lo, hi) => {
+    const low=lo.map((v,a)=>Math.max(0,Math.floor((v-res-o[a])/res)));
+    const high=hi.map((v,a)=>Math.min([nx,ny,nz][a]-1,Math.ceil((v+res-o[a])/res)));
+    let n=0,ops=0;
+    for(let k=low[2];k<=high[2];k++)for(let j=low[1];j<=high[1];j++)for(let i=low[0];i<=high[0];i++){
+      const p=[o[0]+i*res,o[1]+j*res,o[2]+k*res];
+      const d=p.map((v,a)=>Math.max(lo[a]-v,v-hi[a]));
+      const sdf=Math.hypot(...d.map(v=>Math.max(0,v)))+Math.min(0,Math.max(...d));
+      const idx=i+nx*(j+ny*k),val=sdf/q,cur=f[idx];ops++;
+      if(val<cur){const next=Math.max(-127,Math.round(val));if(cur>0&&next<=0)n++;f[idx]=next;}
+    }
+    // Surface can change before a sample changes sign; retain sub-voxel face updates.
+    markDirty({i0:low[0],i1:high[0],j0:low[1],j1:high[1],k0:low[2],k1:high[2]});removed+=n;
+    return {n,ops};
   };
   // kolízia driekom alebo držiakom: počet voxelov materiálu (s rezervou) v danom valci
   const hits = (tip, v, R, z0, z1) => {
@@ -133,5 +150,5 @@ export function createStock({ min, max, res }) {
     if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return false;
     return f[i + nx * (j + ny * k)] > 0;
   };
-  return { cut, hits, takeDirty, volume, inside, removed: () => removed * vox, vox, res, min, max, dims: [nx, ny, nz], chunks: [cx, cy, cz], o, field: f, boxSdf };
+  return { cut, cutBox, hits, takeDirty, volume, inside, removed: () => removed * vox, vox, res, min, max, dims: [nx, ny, nz], chunks: [cx, cy, cz], o, field: f, boxSdf };
 }

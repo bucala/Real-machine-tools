@@ -320,6 +320,50 @@ function PressArt() {
   );
 }
 
+// A neutral category illustration: five-axis workholding, precision milling
+// and an electrode above a dielectric tank. Individual machine art stays separate.
+function PrecisionArt() {
+  return <svg viewBox="0 0 480 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10 158h460" opacity=".35"/>
+    <g>
+      <path d="M26 156V42h118v114M46 42V29h77v13"/><path d="M36 54h98v85H36z" fill="currentColor" fillOpacity=".04" strokeOpacity=".2"/>
+      <path d="M73 56h24v41H73zM79 97h12l-3 13h-6zM85 110v7"/>
+      <path d="M52 133c4-20 62-20 66 0M60 131h50M71 122h28v9H71z"/><circle cx="49" cy="135" r="7"/><circle cx="121" cy="135" r="7"/>
+      <path d="M35 66v50M135 66v50" strokeWidth="3" opacity=".55"/>
+    </g>
+    <g transform="translate(157)">
+      <path d="M18 156V35h126v121M30 35V24h102v11"/><path d="M29 48h104v93H29z" fill="currentColor" fillOpacity=".04" strokeOpacity=".2"/>
+      <path d="M49 53h64v15H49zM69 68h25v31H69zM75 99h13l-4 16h-5zM81 115v12"/><path d="M42 137h77M58 130h46v7H58z" strokeWidth="3"/>
+      <path d="M138 81h14v48h-14M141 90h7M141 98h7M140 136h10"/>
+    </g>
+    <g transform="translate(318)">
+      <path d="M21 156V37h113v119M40 37V25h73v12"/><path d="M46 50h47v19H46zM60 69h19v33H60z" fill="currentColor" fillOpacity=".06"/>
+      <path d="M66 102h7v17h-7zM35 112v29h80v-29M35 112h23M81 112h34M49 131h52v10H49z"/>
+      <path d="M39 121q6-4 12 0t12 0t12 0t12 0t12 0t12 0" strokeWidth="1.5" opacity=".6"/>
+      <path d="M129 76h20v47h-20M133 84h12M133 91h12M139 123v17"/>
+      <path d="m74 114 5 4-5 4 6 3" strokeWidth="1.5"/>
+    </g>
+  </svg>;
+}
+
+function OscarArt(){
+  return <svg viewBox="0 0 320 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M54 165V94h175v71z" fill="currentColor" fillOpacity=".12"/><path d="M113 92V13h28v79m0-46h36v48" fill="currentColor" fillOpacity=".15"/>
+    <path d="M114 18l26-5v8l-26 5zM114 34l26-5v6l-26 5z" fill="#e8df43" stroke="#e8df43"/><path d="M114 28l26-5v5l-26 5z" fill="#2854a0" stroke="#2854a0"/>
+    <path d="M90 94v32h100V94m-67-1v15m0 0h13v9h-13zM98 120h83M63 134h154M70 145h140"/>
+    <rect x="229" y="88" width="55" height="35" fill="currentColor" fillOpacity=".5"/><rect x="233" y="92" width="47" height="26" fill="#e7edf1"/><path d="M226 125h60v9h-60zm27 9v31m-13 0h28M20 167h280"/>
+  </svg>;
+}
+
+function RoedersArt(){
+  return <svg viewBox="0 0 320 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M88 150V20h160v130" fill="currentColor" fillOpacity=".1"/><path d="M91 63V43h140v107H91" fill="currentColor" fillOpacity=".07"/>
+    <path d="M135 48h62v98h-62zM89 149h150v17H89z" fill="#a51536" stroke="#a51536"/><path d="M146 73h40v56h-40z" fill="#edf1f5"/>
+    <path d="M161 74h13v21h-13zm6 21v10m-17 17c0-17 34-17 34 0m-28-2h22"/><path d="M202 82h23m-22 10h20m-22 13h23m-23 31h23"/>
+    <rect x="44" y="94" width="32" height="29" fill="#a51536" stroke="#a51536"/><rect x="49" y="98" width="22" height="16" fill="#edf1f5"/><path d="M60 123v32m0-13h28M20 167h280M35 157h47"/>
+  </svg>;
+}
+
 function HermleArt() {
   return (
     <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
@@ -380,4 +424,4 @@ function ShearArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HermleArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HermleArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };

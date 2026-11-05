@@ -25,7 +25,7 @@ export function hmiKeyLayout(){
 
 // Console geometry follows the TNC photograph: landscape monitor, sloping full-depth
 // keyboard plate, separate lower housing and red grab rails outside the enclosure.
-export function createHmiPanel(parent, M, tex) {
+export function createHmiPanel(parent, M, tex, {brand='HERMLE'}={}) {
   const box=(g,x,y,z,w,h,d,mat=M.brush)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o;};
   const cyl=(g,x,y,z,r,h,mat=M.black)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),mat);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o;};
   const line=(g,a,b,r,mat)=>{const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),delta=q.clone().sub(p);const o=cyl(g,0,0,0,r,delta.length(),mat);o.position.copy(p).add(q).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return o;};
@@ -59,8 +59,8 @@ export function createHmiPanel(parent, M, tex) {
     const labels=tex(960,720,(g,w,h)=>{
       g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font='15px sans-serif';
       for(const k of keys){g.fillStyle=k.mat==='dark'?'#e8ecee':'#262b30';g.fillText(k.label,(k.x/6.04+.5)*w,k.z/depth*h);}
-      const brand=HMI_CONTROL_LAYOUT.brand;
-      g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText('HERMLE',(brand.x/HMI_CONTROL_LAYOUT.width+.5)*w,brand.z/HMI_CONTROL_LAYOUT.depth*h);
+      const brandPos=HMI_CONTROL_LAYOUT.brand;
+      g.fillStyle='#485057';g.font='bold 20px sans-serif';g.fillText(brand,(brandPos.x/HMI_CONTROL_LAYOUT.width+.5)*w,brandPos.z/HMI_CONTROL_LAYOUT.depth*h);
     });
     const plane=new THREE.Mesh(new THREE.PlaneGeometry(6.04,depth),new THREE.MeshBasicMaterial({map:labels.tx,transparent:true,depthWrite:false,toneMapped:false}));plane.userData.controlPassThrough=true;plane.rotation.x=-Math.PI/2;plane.position.set(0,.175,depth/2);deck.add(plane);
   }

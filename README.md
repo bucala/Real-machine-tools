@@ -2,7 +2,7 @@
 
 # Real machine tools
 
-**Interaktívne 3D simulátory konvenčných obrábacích a tvárniacich strojov priamo v prehliadači.**
+**Interaktívne 3D simulátory konvenčných strojov, presného CNC obrábania a elektroerózie priamo v prehliadači.**
 
 [![Spustiť simulátor](https://img.shields.io/badge/%E2%96%B6%20Spusti%C5%A5-real--machine--tools-4f7f3b?style=for-the-badge)](https://real-machine-tools.marcel-bucala.workers.dev)
 
@@ -251,9 +251,19 @@ Kliknutím na snímku otvoríš príslušný simulátor. Všetky stroje majú ru
   </tr>
 </table>
 
-### 🏭 Moderné stroje – CNC a 5-osé obrábanie (`#moderne`)
+### 🏭 Presné obrábanie a elektroerózia (`#moderne`)
 
-Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup je baner v hlavnom menu.
+Samostatná kategória má moderný bielo-sivý vstup a tri rodiny strojov. Simulátory zachovávajú spoločné ovládanie: kamera / ručne, zvuk predvolene vypnutý, prehliadka obrobku, živé HMI a export aktuálneho obrobku. Každá značka má vlastný akcent: Hermle červený, Röders vínovočervený, OSCARMAX žltý s modrými detailmi.
+
+![Kategória presného obrábania a elektroerózie](docs/img/precision-menu.png)
+
+| Stroj | Technológia | Dráhy X / Y / Z | Stôl | Spustenie |
+| --- | --- | --- | --- | --- |
+| Hermle C 32 U / C 42 U | 5-osé CNC | 650 / 650 / 500; 800 / 800 / 550 mm | Ø650 / Ø800 mm | [Hermle](https://real-machine-tools.marcel-bucala.workers.dev/#hermle) |
+| Röders RXU 1001 DSH | 5-osé HSC · QUADROGUIDE | 800 / 855 / 500 mm | Ø600 mm, A ±115° | [Röders](https://real-machine-tools.marcel-bucala.workers.dev/#roeders) |
+| OSCARMAX EX 500 | Hĺbiaca EDM, pohyblivý stĺp | 500 / 400 / 450 mm | 850 × 450 mm | [OSCARMAX](https://real-machine-tools.marcel-bucala.workers.dev/#oscarmax) |
+
+Katalóg Röders označuje dodaný stroj **RXU 1001 DSH**, preto používa toto meno aj simulátor. EX 500 je hĺbiaca EDM, nezamieňa sa s EDM vŕtačkami EXD z pôvodného katalógu. [Zdroje, presné údaje a zjednodušenia modelov →](docs/precision-machines.md)
 
 **Hermle C 32 U / C 42 U** (`#hermle`) – 5-osé obrábacie centrum s otočno-sklopným stolom A/C, s voliteľným príslušenstvom, ktoré je pri otvorení modelu vypnuté:
 
@@ -289,6 +299,27 @@ Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup j
 - **Prevádzka.** Blok po bloku, korekcie posuvu a rýchloposuvu, rýchlosť simulácie, odhad času.
 - **Ukážky.** Štyri ukážkové programy: 3-osý, 3+2 (G68.2), simultánny 5-osý s TCP a Heidenhain s PLANE SPATIAL (`programs.js`).
 
+**Röders RXU 1001 DSH** (`#roeders`)
+
+[![Röders RXU 1001 DSH – ľavé pozorovacie okno, zadnejší RMS panel a pravé otváracie dvere](docs/img/roeders-rxu1001.png)](https://real-machine-tools.marcel-bucala.workers.dev/#roeders)
+
+- Samostatný model podľa fotografie a pôdorysu: strieborná zadná skriňa, vínová základňa, červené dvere s pravým pántom, skutočný otvor ľavého bočného okna a kompaktný červený RMS panel na ľavom boku za čelom stroja.
+- Voliteľné vonkajšie jednotky podľa pôdorysu: chladenie 1050 × 750 mm a pásový filter 1523 × 1390 mm; predvolene vypnuté.
+- Obojstranne uložený stôl A/C, štyri vedenia smykadla Z, kryty vedení, káblový reťazec, vreteno HSK-A63 a 24-miestny rotačný zásobník s animovanou výmenou.
+- CNC jadro zdieľané s Hermle: ISO programy, 3+2 a TCP, skutočný úber, blokovanie dverí, koncové spínače, osvetlenie, ručné tlačidlá a regulátory, fullscreen HMI a prehliadka obrobku.
+- Nástroje sa vyberajú z rovnakej skrinky. Štandardné vreteno povoľuje Ø35 mm; väčší nástroj sa neosadí. Dodaná ukážka používa Ø10 mm. Natívne RMS6 sa neemuluje; simulácia používa výučbové ISO rozhranie.
+
+**OSCARMAX EX 500** (`#oscarmax`)
+
+[![OSCARMAX EX 500 – hĺbiaci EDM stroj s PC terminálom a dielektrickou nádržou](docs/img/oscarmax-ex500.png)](https://real-machine-tools.marcel-bucala.workers.dev/#oscarmax)
+
+- Samostatná strieborná konštrukcia s modro-žltými pásmi, PC monitorom a klávesnicou, nádržou so zostupnými dverami, UV snímačom, hasiacim zariadením, tryskami a zadnou skriňou generátora.
+- **Pohyblivý stĺp** nesie elektródu v X/Y; stôl 850 × 450 mm a obrobok zostávajú na mieste. Elektróda sa pri hĺbení netočí.
+- Postup: zavri nádrž → napusť dielektrikum → zapni výplach → spusti cyklus. Hladina musí byť najmenej 40 mm nad obrobkom. Dvere, nízka hladina, vypnutý výplach a STOP zastavia proces.
+- Skrinka medených elektród: jednoduchý výber uloženého hranola/valca; samostatná správa umožňuje pridať alebo upraviť elektródu a importovať/exportovať JSON. Uloženie nemení elektródu v stroji.
+- Program hĺbenia obsahuje polohy X/Y a hĺbku. Medzi dutinami prebehne odtiahnutie, presun a nový prísuv. Geometria odoberá materiál podľa tvaru elektródy a medzery; po Stop zostáva zachovaný aktuálny rozpracovaný stav.
+- Ručné fyzické tlačidlá, dvojklik na monitor pre živé HMI, zámok natočenia panela, prehliadka s vypustením nádrže a odtiahnutím elektródy, STL/STEP a PNG. Výučbový proces nepoužíva obrábacie M3/M5 ani postprocesor frézky.
+
 ### 🎓 Výučba
 
 | | |
@@ -312,7 +343,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle / #roeders / #oscarmax · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
@@ -370,7 +401,7 @@ flowchart LR
 
 Všetkých 19 simulátorov má tlačidlo **Pozrieť obrobok**. Prehliadka umožňuje diel vybrať, otáčať a priblížiť; **Upnúť späť** obnoví jeho uloženie a režim ovládania. Pri strojoch, ktoré vyžadujú zastavenie alebo odsunutie nástroja, sa najprv zobrazí príslušný pokyn. Pri zakružovačke sa pred vybratím otvorí odklopné ložisko. Nožnice ukážu posledný odstrihnutý pás, ak je dostupný, inak plech na stole. Nastavenia sú počas prehliadky zablokované. Zakružovačka používa spoločnú podlahu s mriežkou ako ostatné stroje; samostatná svetlá podkladová doska je odstránená. Tlačidlá chodu vpred/vzad a Stop používajú rovnaké plné zelené a červené tlačidlá ako ostatné pohony.
 
-**Stiahnuť STP** exportuje geometrický stav obrobku v okamihu exportu po zastavení, vrátane dovtedy vykonaných operácií; obrábanie sa nemusí dokončiť. Export neobnovuje polotovar ani neresetuje program. Hermle pred exportom dokončí aktualizáciu geometrie z aktuálnych voxelov. Otvory vŕtačiek, radiálnej vŕtačky a lisu sa pri exporte odčítajú z materiálu; horizontálka rekonštruuje aj rozdielne priemery po hĺbke rozpracovaného otvoru.
+**Stiahnuť STP** exportuje geometrický stav obrobku v okamihu exportu po zastavení, vrátane dovtedy vykonaných operácií; obrábanie sa nemusí dokončiť. Export neobnovuje polotovar ani neresetuje program. Hermle, Röders a OSCARMAX pred exportom dokončia aktualizáciu geometrie z aktuálnych voxelov. Otvory vŕtačiek, radiálnej vŕtačky a lisu sa pri exporte odčítajú z materiálu; horizontálka rekonštruuje aj rozdielne priemery po hĺbke rozpracovaného otvoru.
 
 STEP AP214 používa rovinné plochy podľa rozlíšenia geometrie simulátora. Uzavreté diely sa zapisujú ako telesá; neuzavretá geometria zostane plošným modelom. Ide o aktuálny tvar simulácie v mm, nie o parametrický výrobný CAD s históriou operácií. Snímky sa overujú načítaním v OpenCascade; export nezávisí od servera. Boolean operácie pre otvory sa načítajú až pri exporte.
 

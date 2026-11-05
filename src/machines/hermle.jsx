@@ -27,6 +27,8 @@ import { ToolPicker } from '../ui/toolPicker';
 import { installTool, MAX_FILE_BYTES } from './cnc/toolLibrary';
 import { createStock } from './cnc/voxel';
 import { createCabinLighting } from './cnc/cabinLighting';
+import { createRoedersModel } from './precision/roedersModel';
+import { RXU, validateRxuTool, RXU_PROGRAM } from './precision/profiles';
 
 // =====================================================================
 // 5-OSÉ OBRÁBACIE CENTRUM HERMLE C 32 – CNC program, 5-osá kinematika a úber materiálu
@@ -48,8 +50,9 @@ const hermleParts = () => mkParts([
 const fmt = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
-  const MC = MODELS[model] || MODELS.c32;
+function CncCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }) {
+  const rxu=model===RXU.id, MC = rxu ? RXU : MODELS[model] || MODELS.c32;
+  const brand=rxu?'Röders':'Hermle', controller=rxu?'RMS6':'HEIDENHAIN · TNC 640';
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
   const init = { door: true, cabin: true, panelAngle: 0, panelYaw: 0, hmiLocked: false, accessorySetup: 'none', speed: 5, fo: 100, ro: 100, single: false, mat: 'al', sx: 100, sy: 80, sz: 40, res: 0.7, labels: false, manual: false, light: true, estop: false };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
@@ -60,7 +63,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const [libraryReturn,setLibraryReturn]=useState(null);
   const [librarySource,setLibrarySource]=useState(null);
   const [programImportError,setProgramImportError]=useState('');
-  const samples = SAMPLES();
+  const samples = rxu ? [{id:'rxu',name:L('ISO: kruhová kapsa','ISO: circular pocket'),text:RXU_PROGRAM},...SAMPLES().filter(s=>s.id!=='p3'&&s.id!=='ph')] : SAMPLES();
   const [check, setCheck] = useState({ errors: [], warns: [], time: 0, dialect: 'iso', toolDefs: [], stock: null, n: 0 });
   const [tele, setTele] = useTele({ run: false, paused: false, done: false, alarm: null, line: 0, X: 0, Y: 0, Z: 0, A: 0, C: 0, wx: 0, wy: 0, wz: 0, T: 0, S: 0, F: 0, load: 0, mrr: 0, t: 0, removed: 0, busy: false, building: false, maxLoad: 0 });
 
@@ -88,7 +91,9 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
     // geometria je kreslená v rozmeroch C 32; väčší model sa zväčší mierkou K (pohyby osí sú v skutočných mm)
-    const K = MC.K, PY = PY0 * K, bodyHalf = cabinHalfWidth(MC);
+    const K = MC.K, PY = rxu?14:PY0*K, bodyHalf = rxu?12:cabinHalfWidth(MC);
+    let scr = null;
+    const buildHermleGeometry = () => {
     const sc = (parent) => { const g = new THREE.Group(); g.scale.setScalar(K); parent.add(g); return g; };
     M.win = std(0x1d2329, 0.15, 0.4); M.yellow = std(0xf2c230, 0.5, 0.1); M.brush = std(0xc2c6ca, 0.38, 0.7);
     // ---------------- lôžko z minerálneho liatia a steny s vedeniami Y ----------------
@@ -291,19 +296,6 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     cylY(armElbow,.55,.55,4.25,5.2,0,6.8,M.steelD);
     const panG = new THREE.Group(); panG.position.set(0,0,6.8); armElbow.add(panG);
     const hmi = createHmiPanel(panG,M,tex), sm = hmi.display;
-    let scr = null;
-    const screen = tex(640, 460, (g, w, h) => {
-      g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
-      g.fillStyle = '#fff'; g.font = 'bold 18px monospace'; g.fillText(`HEIDENHAIN · ${scr ? scr.title : 'TNC 640'}`, 12, 23);
-      if (!scr) return;
-      g.font = '17px monospace';
-      scr.lines.forEach((ln, i) => { if (ln.cur) { g.fillStyle = '#ffd34d'; g.fillRect(8, 48 + i * 24, 384, 22); g.fillStyle = '#10202f'; } else g.fillStyle = '#27333e'; g.fillText(ln.t.slice(0, 36), 12, 64 + i * 24); });
-      g.fillStyle = '#d7dfe5'; g.fillRect(404, 44, 228, 340); g.font = '18px monospace';
-      scr.pos.forEach(([k, v], i) => { g.fillStyle = '#334b5f'; g.fillText(k, 414, 74 + i * 38); g.fillStyle = '#172b3b'; g.fillText(v, 446, 74 + i * 38); });
-      g.fillStyle = scr.alarm ? '#ff5a4f' : '#59d17b'; g.fillRect(0, h - 40, w, 40); g.fillStyle = '#0d1a2a'; g.font = 'bold 17px sans-serif'; g.fillText(scr.status.slice(0, 64), 12, h - 14);
-    });
-    sm.material.map=screen.tx;sm.material.needsUpdate=true;
-    apiRef.current.getHmiCanvas=()=>screen.tx.image;
     // Cabinet seams, ventilation grille and levelling pads from the brochure views.
     for (const x of [-10.9,10.9]) for(const y of [7,23.2]) {
       const screw=new THREE.Mesh(new THREE.CircleGeometry(.07,12),M.steelD);screw.position.set(x,y,8.68);cabS.add(screw);
@@ -322,8 +314,24 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       const hose=new THREE.CatmullRomCurve3([v3(x,1.4,.7),v3(x,1,.9),v3(x*.7,.25,.8)]);
       sp.add(new THREE.Mesh(new THREE.TubeGeometry(hose,12,.07,8,false),M.dark));
     }
+    return {cab,aG,cG,yG,xG,zG,sp,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories};
+    };
+    const geometry = rxu ? createRoedersModel({root,G,M,tex,MC,PY}) : buildHermleGeometry();
+    const {cab,aG,cG,yG,xG,zG,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories}=geometry;
+    const screen = tex(640, 460, (g, w, h) => {
+      g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
+      g.fillStyle = '#fff'; g.font = 'bold 18px monospace'; g.fillText(`${controller} · ${scr ? scr.title : 'Ready'}`, 12, 23);
+      if (!scr) return;
+      g.font = '17px monospace';
+      scr.lines.forEach((ln, i) => { if (ln.cur) { g.fillStyle = '#ffd34d'; g.fillRect(8, 48 + i * 24, 384, 22); g.fillStyle = '#10202f'; } else g.fillStyle = '#27333e'; g.fillText(ln.t.slice(0, 36), 12, 64 + i * 24); });
+      g.fillStyle = '#d7dfe5'; g.fillRect(404, 44, 228, 340); g.font = '18px monospace';
+      scr.pos.forEach(([k, v], i) => { g.fillStyle = '#334b5f'; g.fillText(k, 414, 74 + i * 38); g.fillStyle = '#172b3b'; g.fillText(v, 446, 74 + i * 38); });
+      g.fillStyle = scr.alarm ? '#ff5a4f' : '#59d17b'; g.fillRect(0, h - 40, w, 40); g.fillStyle = '#0d1a2a'; g.font = 'bold 17px sans-serif'; g.fillText(scr.status.slice(0, 64), 12, h - 14);
+    });
+    sm.material.map=screen.tx;sm.material.needsUpdate=true;
+    apiRef.current.getHmiCanvas=()=>screen.tx.image;
     // ---------------- osvetlenie pracovného priestoru ----------------
-    const lighting = createCabinLighting(scene, root, { scale: K, halfWidth: bodyHalf, emitter: M.lamp });
+    const lighting = createCabinLighting(scene, root, { scale: K, halfWidth: bodyHalf, emitter: M.lamp, workHeight:rxu?13.4:9.5*K });
     Object.values(M).forEach(lighting.registerMaterial);
 
     // ---------------- polotovar (voxely) ----------------
@@ -364,6 +372,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       applyChunks(stock.takeDirty());
     };
     const load = (txt, tls) => {
+      if(rxu)tls.forEach(validateRxuTool);
       loadedText=txt;loadedTools=tls;toolsNow = tls; loadMagazine(tls);
       prog = interpret(txt, { o54: [0, 0, 0], tools: tls, mach: MC });                        // najprv kvôli BLK FORM
       buildStock();
@@ -441,6 +450,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       zasobnik: () => [[18 * K, 32 * K, -24 * K], [0, 18 * K, -6.5 * K], true],
       zhora: () => [[0.01, 90 * K, -6 * K], [0, 10 * K, -6 * K], true],
     };
+    Object.assign(views,geometry.viewOverrides||{});
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
       orbitOptions: { maxDistance: 180, maxTargetY: 45 },
@@ -449,17 +459,17 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     const ctrl=createControls({dom,mount,camera,root,tipEl,c,getT:()=>t,getHL:insp.hl});
     let doorDragStart=0,manualDoor=null;
     for(const d of doors){
-      ctrl.reg({type:'slide',axis:'x',tooltip:false,label:L('Posuvné dvere','Sliding doors'),
-        hint:L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
+      ctrl.reg({type:'slide',axis:'x',tooltip:false,label:rxu?L('Pravé otváracie dvere','Right-hinged door'):L('Posuvné dvere','Sliding doors'),
+        hint:rxu?L('Pravý pánt: potiahni doprava alebo klikni.','Right hinge: drag right or click.'):L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
         read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
         start:()=>{doorDragStart=doorK;manualDoor=doorK;},
-        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/(4*K)));ctrl.push('door',manualDoor>.01);},
+        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/((rxu?10.5:4)*K)));ctrl.push('door',manualDoor>.01);},
         click:()=>ctrl.push('door',!c.door),
         end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
       },d);
     }
     const hmiActions={};
-    const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);};
+    const button=(id,label,hint,action,read,latched)=>{const control={type:'button',pressAxis:hmi.pressAxis?.(id)||'y',label,hint,action,read,latched};hmiActions[id]=control;ctrl.reg(control,hmi.controls.buttons[id]);};
     apiRef.current.hmiAction=id=>{const control=hmiActions[id];if(control){control.pressT=t;control.action();}};
     apiRef.current.setHmiOverride=(key,value)=>{if(key==='fo'||key==='ro')set(key,Math.max(key==='fo'?0:5,Math.min(key==='fo'?150:100,Math.round(value))));};
     button('start',L('Štart cyklu','Cycle start'),L('Spustí alebo obnoví program pri zatvorených dverách.','Start / resume the program with the doors closed.'),()=>{if(apiRef.current.start()==='ok')ctrl.push('running',true);});
@@ -470,7 +480,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
     button('light',L('Pracovné osvetlenie','Work light'),L('Zapne alebo vypne svetlo pracovného priestoru.','Toggle the work light.'),()=>ctrl.push('light',!c.light),()=>c.light?L('zapnuté','on'):L('vypnuté','off'));
     button('coolant',L('Chladenie','Coolant'),L('Prepne chladenie; príkazy programu M8/M9 môžu stav zmeniť.','Toggle coolant; program M8/M9 can change its state.'),()=>{if(ex&&!c.estop)ex.S.cool=!ex.S.cool;},()=>ex?.S.cool?L('zapnuté','on'):L('vypnuté','off'));
     for(const [id,key,max,min] of [['feed','fo',150,0],['rapid','ro',100,5]]){
-      ctrl.reg({type:'wheel',axis:'y',minR:.12,inc:1,label:id==='feed'?L('Korekcia posuvu','Feed override'):L('Korekcia rýchloposuvu','Rapid override'),
+      ctrl.reg({type:'wheel',axis:hmi.knobAxis||'y',minR:.12,inc:1,label:id==='feed'?L('Korekcia posuvu','Feed override'):L('Korekcia rýchloposuvu','Rapid override'),
         hint:L('Otáčaj ťahaním alebo kolieskom myši.','Turn by dragging or using the mouse wheel.'),read:()=>`${c[key]} %`,
         turn:(a)=>ctrl.push(key,Math.max(min,Math.min(max,Math.round(c[key]+a*40))))},hmi.controls.knobs[id]);
     }
@@ -543,20 +553,21 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
       if (c.door && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
       if(c.unclamped){c.running=false;c.fast=false;c.door=true;c.manual=false;}
       if(manualDoor!==null)doorK=manualDoor;else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
-      doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.82); });
+      if(!rxu)doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.82); });
       wi.update(dt);
       clampPins.forEach(pin=>{pin.position.z=FIX.r*U+wi.open()*.12;});
       const xc = xG.position.x / K;
       covers.forEach((me, i) => { const x0 = i ? xc + 1.95 : -6.9, x1 = i ? 6.9 : xc - 1.95, w = Math.max(0.05, x1 - x0); me.scale.x = w; me.position.x = (x0 + x1) / 2; me.material.map.repeat.set(w / 2.2, 1); });
       cab.visible = c.cabin;lighting.update({ cabin: c.cabin, light: c.light, opening: doorK });
-      hmi.controls.knobs.feed.rotation.y=(c.fo-100)*Math.PI/75;hmi.controls.knobs.rapid.rotation.y=(c.ro-100)*Math.PI/50;
+      hmi.controls.knobs.feed.rotation[hmi.knobAxis||'y']=(c.fo-100)*Math.PI/75;hmi.controls.knobs.rapid.rotation[hmi.knobAxis||'y']=(c.ro-100)*Math.PI/50;
       accessories.update(c, dt);
       if(!c.hmiLocked)panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
       const armPose = hmiPose(panelA*180/Math.PI,0,bodyHalf,K);
-      armPivot.rotation.y = armPose.angle;
-      armElbow.rotation.y = armPose.elbow;
+      if(!rxu)armPivot.rotation.y = armPose.angle;
+      if(!rxu)armElbow.rotation.y = armPose.elbow;
       if(!c.hmiLocked)panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
-      panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - armPose.angle - armPose.elbow;
+      if(!rxu)panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - armPose.angle - armPose.elbow;
+      geometry.updateGeometry?.({doorK,panelA,panelYaw});
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
         const sp2 = c.fast ? 400 : c.speed, budget = c.fast ? 2.5e7 : 4e6;
@@ -627,10 +638,14 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
   const openToolPicker = (pocket,toolId) => { setLibraryPocket(pocket);setLibraryToolId(toolId);setLibraryReturn(null);setLibraryTab('pick'); };
   const closeLibrary = () => {setLibraryTab(null);setLibrarySource(null);setLibraryPocket(undefined);setLibraryToolId(undefined);setLibraryReturn(null);};
   const closePicker = () => { if(libraryReturn){setLibrarySource(libraryReturn.source);setLibraryTab(libraryReturn.tab);setLibraryReturn(null);}else closeLibrary(); };
-  const installSavedTool = (tool,pocket) => {requireStopped();setTools(ts=>installTool(ts,tool,pocket,MC.mag));};
+  const installSavedTool = (tool,pocket) => {requireStopped();if(rxu)validateRxuTool(tool);setTools(ts=>installTool(ts,tool,pocket,MC.mag));};
   const freePocket = Array.from({length:MC.mag},(_,i)=>i+1).find(t=>!tools.some(tool=>tool.t===t));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
+  if(rxu){
+    const detail={kabina:['Pracovná kabína RXU','Ľavé bočné pozorovacie okno a červené nakladacie dvere otvárané doprava okolo pravého pántu.','Left observation window and red loading door opening to the right around its right hinge.'],lozko:['QUADROGUIDE','Masívne lôžko, priame pohony a teplotná stabilizácia.','Massive bed, direct drives and thermal stabilisation.'],osi:['QUADROGUIDE · X/Y/Z','Dráhy 800 × 855 × 500 mm; štyri vedenia v rohoch osi Z.','800 × 855 × 500 mm travel; four guide rails at the corners of Z.'],vreteno:['HSK-A63 · 24 000 ot/min','Štandardné vreteno 67 Nm S1, nástroj max. Ø35 mm.','Standard spindle 67 Nm S1, tool max. Ø35 mm.'],stol:['A/C · Ø600 mm','Obojstranné uloženie, A ±115°, C neobmedzene; nosnosť 800 kg.','Two-sided support, A ±115°, continuous C; 800 kg load.'],zasobnik:['24 miest / pockets','Štandardný rotačný zásobník. Čas výmeny v simulácii je odhad.','Standard rotary magazine. Simulated tool-change timing is estimated.'],panel:['Röders RMS6','Výukové ISO rozhranie; nejde o emuláciu proprietárneho RMS6.','Training ISO interface; not an emulation of proprietary RMS6.']};
+    for(const [key,v] of Object.entries(detail)){const part=parts.find(p=>p.key===key);if(part){part.name=v[0];part.desc=L(v[1],v[2]);}}
+  }
   const status = ui.unclamped ? {kind:'info',text:L('Prehliadka obrobku: ťahaním ho otáčaj, kolieskom približuj. Potom ho upni späť.','Workpiece inspection: drag to rotate, scroll to zoom, then clamp it back.')} : tele.alarm ? { kind: 'danger', text: `${L('Alarm', 'Alarm')}: ${tele.alarm.text} (${L('riadok', 'line')} ${tele.alarm.line + 1})` }
     : tele.msg ? { kind: 'warn', text: tele.msg }
     : tele.done ? { kind: 'idle', text: L(`Program ukončený za ${mmss(tele.t)} – odobratých ${fmt(tele.removed, 1)} cm³.`, `Program finished in ${mmss(tele.t)} – ${fmt(tele.removed, 1)} cm³ removed.`) }
@@ -660,13 +675,13 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
         onChoose={(tool,source)=>{openToolPicker(libraryPocket||Math.min(MC.mag,tool.t),tool.id);setLibraryReturn({tab:libraryTab,source});}}
         onLoadProgram={txt=>{requireStopped();setProgId('');setText(txt);}}
         onClose={closeLibrary} />}
-      {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} onClose={()=>setHmiOpen(false)} />}
+      {hmiOpen&&<HmiFullscreen apiRef={apiRef} ui={ui} tele={tele} model={MC.name} brand={brand} controller={controller} compactOnly={rxu} onClose={()=>setHmiOpen(false)} />}
       <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">
           <p className="sec-title" style={{ letterSpacing: '.14em' }}>{L('Moderné stroje · 5-osé CNC', 'Modern machines · 5-axis CNC')}</p>
-          <h1 className="app-title mt-2" tabIndex={-1}>Hermle {MC.name}</h1>
-          <div className="mt-2"><SegRow label={L('Model', 'Model')} value={model} options={Object.values(MODELS).map((x) => [x.id, x.name])} onChange={(v) => { if (!tele.run) setModel(v); }} /></div>
-          <p className="text-xs muted">{L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Prídavné zariadenia sa zapínajú samostatne nižšie.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Optional equipment can be enabled separately below.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p>
+          <h1 className="app-title mt-2" tabIndex={-1}>{brand} {MC.name}</h1>
+          {!rxu&&<div className="mt-2"><SegRow label={L('Model', 'Model')} value={model} options={Object.values(MODELS).map((x) => [x.id, x.name])} onChange={(v) => { if (!tele.run) setModel(v); }} /></div>}
+          <p className="text-xs muted">{rxu?L('QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · stôl Ø600 mm (katalógový variant), 800 kg · HSK-A63, 24 000 ot/min, 67 Nm S1 · 24 miest. Výučbové ISO rozhranie pre RMS6; čas výmeny, dynamika rotačných osí a zaťaženie sú odhady.','QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · Ø600 mm table (catalogue variant), 800 kg · HSK-A63, 24,000 rpm, 67 Nm S1 · 24 pockets. Educational ISO interface for RMS6; change time, rotary dynamics and load are estimates.'):L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Prídavné zariadenia sa zapínajú samostatne nižšie.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Optional equipment can be enabled separately below.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p>
           <div className="cnc-dro mt-3">
             <div className="cnc-dro-col">
               <span className="cnc-dro-h">{L('Stroj', 'Machine')}</span>
@@ -718,6 +733,8 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           </div>
         </div>
 
+        {rxu&&<div className="sec"><h2 className="sec-title mb-2">{L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}</h2><select className="sel" aria-label={L('Vybavenie Röders','Röders equipment')} value={ui.accessorySetup} onChange={e=>set('accessorySetup',e.target.value)}><option value="none">{L('Vypnuté','Off')}</option><option value="cooling">{L('Chladiaca jednotka 1050 × 750 mm','Cooling unit 1050 × 750 mm')}</option><option value="filter">{L('Chladenie + pásový filter 1523 × 1390 mm','Cooling + band filter 1523 × 1390 mm')}</option></select><button className="btn mt-2" onClick={()=>apiRef.current.view?.('vybavenie')}>{L('Pohľad na vybavenie','Equipment view')}</button><p className="text-xs muted mt-2">{L('Predvolene vypnuté. Pôdorysné rozmery z katalógu; výšky a vnútorné diely sú vizuálny odhad.','Off by default. Plan dimensions follow the catalogue; heights and internal parts are visual estimates.')}</p></div>}
+        {!rxu&&<>
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2>
           <label className="text-sm font-semibold" htmlFor="hermle-accessories">{L('Katalógová zostava', 'Catalogue configuration')}</label>
@@ -732,6 +749,7 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
           <button type="button" className="btn mt-2" onClick={() => apiRef.current.view && apiRef.current.view('vybavenie')}>{L('Pohľad na vybavenie', 'Equipment view')}</button>
         </div>
 
+        </>}
         <div className="sec">
           <h2 className="sec-title mb-2">{L('CNC program', 'CNC program')}</h2>
           <select className="sel mb-2" value={progId} onChange={(e) => pickSample(e.target.value)} aria-label={L('Ukážkový program', 'Sample program')}>
@@ -794,9 +812,9 @@ function HermleCore({ onBack, model, setModel, text, setText, tools, setTools, p
             <div>{L('Najväčšie zaťaženie vretena', 'Peak spindle load')}: <b>{Math.round(tele.maxLoad * 100)} %</b></div>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
-            <button type="button" className="btn" onClick={() => { const b = apiRef.current.stl && apiRef.current.stl(); if (b) save(b, 'hermle-c32-obrobok.stl'); }}>{L('Stiahnuť STL obrobku', 'Download part STL')}</button>
-            <StepDownloadButton machine={`hermle-${model}`} apiRef={apiRef} />
-            <button type="button" className="btn" onClick={() => apiRef.current.snapshot && apiRef.current.snapshot((b) => b && save(b, 'hermle-c32.png'))}>{L('Snímka PNG', 'PNG snapshot')}</button>
+            <button type="button" className="btn" onClick={() => { const b = apiRef.current.stl && apiRef.current.stl(); if (b) save(b, `${model}-obrobok.stl`); }}>{L('Stiahnuť STL obrobku', 'Download part STL')}</button>
+            <StepDownloadButton machine={model} apiRef={apiRef} />
+            <button type="button" className="btn" onClick={() => apiRef.current.snapshot && apiRef.current.snapshot((b) => b && save(b, `${model}.png`))}>{L('Snímka PNG', 'PNG snapshot')}</button>
           </div>
         </div>
 
@@ -828,8 +846,8 @@ function HermleSimulator({ onBack }) {
   const [progId, setProgId] = useState('p3');
   const [text, setText] = useState(() => SAMPLES()[0].text);
   const [tools, setTools] = useState(defaultTools);
-  return <HermleCore key={model} {...{ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }} />;
+  return <CncCore key={model} {...{ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId }} />;
 }
 
-export { HermleSimulator };
+export { HermleSimulator, CncCore };
 export default HermleSimulator;

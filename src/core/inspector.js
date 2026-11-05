@@ -13,7 +13,7 @@ function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views
     const [p, tg, fixed] = views[name]();
     const tt = new THREE.Vector3(...tg);
     const tp = new THREE.Vector3(...p).sub(tt).multiplyScalar(fixed ? 1 : viewFactor()).add(tt);
-    if (instant) { camera.position.copy(tp); orbit.target.copy(tt); orbit.sync(); orbit.apply(); return; }
+    if (instant) { tween.active=false; camera.position.copy(tp); orbit.target.copy(tt); orbit.sync(); orbit.apply(); return; }
     Object.assign(tween, { active: true, t0: now, dur: 0.9, fp: camera.position.clone(), ft: orbit.target.clone(), tp, tt });
   };
 
