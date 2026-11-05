@@ -145,29 +145,30 @@ html[data-mode="modern"] .panel{background:linear-gradient(180deg,#121820,#0e131
 html[data-mode="modern"] .sec-title{letter-spacing:.14em;font-size:11.5px}
 html[data-mode="modern"] .btn{border-radius:9px;background:rgba(255,255,255,.04)}
 html[data-mode="modern"] .seg button.on,html[data-mode="modern"] .sw.on{background:var(--accent)}
-/* Neutral category identity; machine simulator colours and controls stay scoped above. */
+/* Graphite category identity; simulator themes remain scoped separately above. */
 html[data-mode="modern-menu"]{
-  --bg:#f1f3f5;--panel:#fff;--panel-2:#f5f6f8;--border:#d7dde3;--text:#26323e;--muted:#667584;
-  --accent:#445362;--accent-soft:#e5eaf0;--on-accent:#fff;--f-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--f-head:var(--f-ui);color-scheme:light;
+  --bg:#1b2026;--panel:#252c34;--panel-2:#303943;--border:#46515d;--text:#edf1f5;--muted:#aebbc8;
+  --accent:#d4dce5;--accent-soft:#3a4552;--on-accent:#1b2026;--chrome:#242b33;
+  --f-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--f-head:var(--f-ui);color-scheme:dark;
 }
-.modern-menu{background:linear-gradient(150deg,#fff 0%,#f0f2f5 60%,#e9edf1 100%)}
+.modern-menu{background:linear-gradient(150deg,#292f37 0%,#1e242b 60%,#191e24 100%)}
 .modern-kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
-.modern-title{color:#26323e;letter-spacing:-.025em}
-.modern-back{border:1px solid var(--border);background:#fff9;color:var(--text);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer}
+.modern-title{color:var(--text);letter-spacing:-.025em}
+.modern-back{border:1px solid var(--border);background:#303943;color:var(--text);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer}
 .modern-back:hover{border-color:var(--accent)}
-.modern-card{background:linear-gradient(180deg,#fff,#f8fafb);border-color:#d7dde3;border-radius:18px;box-shadow:0 6px 22px -12px #34445433}
-.modern-card .card-art{background:linear-gradient(160deg,#eef1f4,#fff);color:#596775}
-.modern-category-visual{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:26px;padding:20px 28px;border:1px solid #d7dde3;border-radius:16px;background:#ffffffa8;color:#647382}
-.modern-category-visual svg{width:min(560px,100%);height:auto}.modern-category-visual>div{display:flex;flex-direction:column;gap:12px;font-size:12px;font-weight:650;letter-spacing:.12em;color:#7d8995}
-.modern-banner{display:grid;grid-template-columns:minmax(0,220px) 1fr auto;align-items:center;gap:18px;width:100%;text-align:left;padding:16px 20px;border-radius:16px;cursor:pointer;color:#26323e;
-  background:linear-gradient(120deg,#fff 0%,#edf0f4 70%,#e4e9ee 100%);border:1px solid #d0d8e1;box-shadow:0 16px 40px -28px #27374755;transition:transform .15s,border-color .15s}
-.modern-banner:hover{transform:translateY(-2px);border-color:#6c7a88}
-.modern-banner:focus-visible{outline:2px solid #657486;outline-offset:2px}
-.modern-banner .modern-kicker{color:#697887}
-.modern-banner-art{color:#5f6f7e;display:block}.modern-banner-art svg{width:100%;height:auto;display:block}
+.modern-card{background:linear-gradient(180deg,#2b323b,#232a32);border-color:#46515d;border-radius:18px;box-shadow:0 6px 22px -12px #0008}
+.modern-card .card-art{background:linear-gradient(160deg,#353e49,#2b333d);color:#b5c0cc}
+.modern-category-visual{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:26px;padding:20px 28px;border:1px solid var(--border);border-radius:16px;background:#2a323c;color:#aebbc8}
+.modern-category-visual svg{width:min(560px,100%);height:auto}.modern-category-visual>div{display:flex;flex-direction:column;gap:12px;font-size:12px;font-weight:650;letter-spacing:.12em;color:#b2beca}
+.modern-banner{display:grid;grid-template-columns:minmax(0,220px) 1fr auto;align-items:center;gap:18px;width:100%;text-align:left;padding:16px 20px;border-radius:16px;cursor:pointer;color:#edf1f5;
+  background:linear-gradient(120deg,#38424e 0%,#2b333d 70%,#232a32 100%);border:1px solid #4d5a68;box-shadow:0 16px 40px -28px #0009;transition:transform .15s,border-color .15s}
+.modern-banner:hover{transform:translateY(-2px);border-color:#aab7c5}
+.modern-banner:focus-visible,.modern-menu .card:focus-visible,.modern-back:focus-visible{outline:2px solid #d4dce5;outline-offset:3px}
+.modern-banner .modern-kicker{color:#b7c3cf}
+.modern-banner-art{color:#b5c0cc;display:block}.modern-banner-art svg{width:100%;height:auto;display:block}
 .modern-banner-body{display:flex;flex-direction:column;gap:6px;min-width:0}
 .modern-banner-title{font-size:clamp(18px,2.4vw,24px);font-weight:700;line-height:1.15}
-.modern-banner-cta{font-weight:700;color:#425468;white-space:nowrap}
+.modern-banner-cta{font-weight:700;color:#e0e7ef;white-space:nowrap}
 @media(max-width:640px){.modern-banner{grid-template-columns:1fr}.modern-banner-art{max-width:270px}.modern-category-visual{padding:14px}.modern-category-visual>div{display:none}}
 /* ---------- CNC panel ---------- */
 .modern-app .panel{width:auto}

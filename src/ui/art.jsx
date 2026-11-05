@@ -365,25 +365,21 @@ function RoedersArt(){
 }
 
 function HermleArt() {
-  return (
-    <svg viewBox="0 0 320 180" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-      <g fillOpacity=".13">
-        <path d="M56 160V30h208v130z" />
-        <rect x="128" y="14" width="64" height="16" />
-      </g>
-      <path d="M96 44h128" fill="none" strokeWidth="6" opacity=".55" />
-      <rect x="148" y="36" width="24" height="56" fillOpacity=".3" />
-      <path d="M154 92h12l-2 10h-8z" fillOpacity=".5" />
-      <path d="M160 102v14" fill="none" strokeWidth="3" />
-      <path d="M100 128c0-14 28-22 60-22s60 8 60 22" fill="none" strokeWidth="3" />
-      <path d="M112 126h96" fill="none" strokeWidth="5" />
-      <rect x="144" y="116" width="32" height="10" fillOpacity=".45" />
-      <circle cx="92" cy="128" r="10" fillOpacity=".25" /><circle cx="228" cy="128" r="10" fillOpacity=".25" />
-      <path d="M68 52v84M252 52v84" fill="none" strokeWidth="3" stroke="#e1252f" />
-      <path d="M128 140a32 8 0 0 0 64 0" fill="none" strokeDasharray="4 3" />
-      <path d="M20 160h280" fill="none" />
-    </svg>
-  );
+  return <svg viewBox="0 0 320 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M58 151V39h178v112zM120 39V19h56v20" fill="currentColor" fillOpacity=".1"/>
+    <path d="M58 151h178v15H58zM64 143h166" fill="currentColor" fillOpacity=".16"/>
+    <path d="M94 50h106v93H94zM147 50v93" fill="currentColor" fillOpacity=".07"/>
+    <rect x="102" y="59" width="34" height="69" fill="#e7edf1"/>
+    <rect x="158" y="59" width="34" height="69" fill="#e7edf1"/>
+    <path d="m142 94-4 7v17l4 7m10-31 4 7v17l-4 7M218 56v82" stroke="#e1252f" strokeWidth="3"/>
+    <path d="M65 68h21v58H65z" fill="currentColor" fillOpacity=".13"/>
+    <path d="M79 57a5 5 0 1 0 0 8" stroke="#e1252f"/>
+    <path d="M209 48h19m-19 95h19M77 157h139"/>
+    <rect x="251" y="88" width="43" height="30" fill="currentColor" fillOpacity=".5"/>
+    <rect x="255" y="92" width="35" height="22" fill="#e7edf1"/>
+    <path d="m251 120-5 11h49v-11zm24 11v29m-14 0h28M236 151h14l8-10"/>
+    <path d="M20 167h280"/>
+  </svg>;
 }
 
 function HobberArt() {

@@ -253,7 +253,7 @@ Kliknutím na snímku otvoríš príslušný simulátor. Všetky stroje majú ru
 
 ### 🏭 Presné obrábanie a elektroerózia (`#moderne`)
 
-Samostatná kategória má moderný bielo-sivý vstup a tri rodiny strojov. Simulátory zachovávajú spoločné ovládanie: kamera / ručne, zvuk predvolene vypnutý, prehliadka obrobku, živé HMI a export aktuálneho obrobku. Každá značka má vlastný akcent: Hermle červený, Röders vínovočervený, OSCARMAX žltý s modrými detailmi.
+Samostatná kategória má moderný tmavosivý vstup a tri rodiny strojov. Simulátory zachovávajú spoločné ovládanie: kamera / ručne, zvuk predvolene vypnutý, prehliadka obrobku, živé HMI a export aktuálneho obrobku. Každá značka má vlastný akcent: Hermle červený, Röders vínovočervený, OSCARMAX žltý s modrými detailmi.
 
 ![Kategória presného obrábania a elektroerózie](docs/img/precision-menu.png)
 
