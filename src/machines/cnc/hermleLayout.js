@@ -1,22 +1,19 @@
 // Scene units = 100 mm. Exterior width from C42 brochure layout (2450 mm).
 export const cabinHalfWidth = (model) => model.id === 'c42' ? 12.25 : 11.35;
-export const HMI_LINKS = [4.6, 6.8];
+// One rigid, cranked support, not a two-link folding arm (C42 PDF p. 19).
+// Undimensioned fittings are photo estimates; the terminal is not scaled with K.
+export const HMI_ARM = { reach:10.2, mountOffset:-.55, mountZ:4.2, start:34, end:146 };
 export function hmiPose(angle, trim = 0, halfWidth = 11.4, scale = 1) {
   const sweep = Math.max(0, Math.min(180, angle)) * Math.PI / 180;
-  const base = [halfWidth + 2.5 * scale, 7.5 * scale];
-  // Two real links fold to the OUTSIDE of the cabin, rather than doubling back
-  // in front of the operator. The endpoint moves to the magazine loading side.
-  const radius = (5 + 6 * Math.sin(sweep / 2)) * scale;
-  const dx=radius*Math.sin(sweep), dz=radius*Math.cos(sweep);
-  const first=HMI_LINKS[0]*scale,second=HMI_LINKS[1]*scale;
-  const along=(first*first-second*second+radius*radius)/(2*radius);
-  const side=Math.sqrt(Math.max(0,first*first-along*along));
-  const ex=along*Math.sin(sweep)+side*Math.cos(sweep);
-  const ez=along*Math.cos(sweep)-side*Math.sin(sweep);
-  const a=Math.atan2(ex,ez),b=Math.atan2(dx-ex,dz-ez);
+  const base = [halfWidth + HMI_ARM.mountOffset * scale, HMI_ARM.mountZ * scale];
+  const radius = HMI_ARM.reach * scale;
+  // UI 0–180 is the operator-to-magazine travel, not a half-circle through
+  // the enclosure. With the pivot under the edge, the physical sector is smaller.
+  const bearing=(HMI_ARM.start+(HMI_ARM.end-HMI_ARM.start)*sweep/Math.PI)*Math.PI/180;
+  const dx=radius*Math.sin(bearing), dz=radius*Math.cos(bearing);
   return {
-    base, angle:a, elbow:b-a, sweep,
+    base, angle:bearing, sweep,
     column:[base[0]+dx,base[1]+dz],
-    yaw:(-25+115*Math.min(1,angle/90)+trim)*Math.PI/180,
+    yaw:(-25+115*Math.min(1,sweep/(Math.PI/2))+trim)*Math.PI/180,
   };
 }

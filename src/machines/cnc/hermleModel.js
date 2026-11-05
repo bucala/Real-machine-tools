@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createHmiPanel } from './hmiPanel';
-import { createAccessories } from './accessories';
+import { CHIP_DRAWER, createAccessories } from './accessories';
 import { createToolModel } from './toolModel';
-import { cabinHalfWidth, hmiPose } from './hermleLayout';
+import { cabinHalfWidth, HMI_ARM, hmiPose } from './hermleLayout';
 import cradleAsset from './assets/hermle-cradle.json';
 
 // Dimensions: supplied C32 catalogue pp. 12–13, 34–39; C42 pp. 18–19, 46–50.
@@ -36,20 +36,41 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       positions.forEach((p,i)=>mesh.setMatrixAt(i,new THREE.Matrix4().compose(v3(...p),q,v3(1,1,1))));parent.add(mesh);return mesh;
     };
     const face=(parent,texture,w,h,x,y,z,ry=0)=>{const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture,roughness:.55}));mesh.position.set(x,y,z);mesh.rotation.y=ry;parent.add(mesh);return mesh;};
+    const caution=tex(128,128,(g,w,h)=>{
+      g.clearRect(0,0,w,h);g.fillStyle='#edc632';g.strokeStyle='#22282b';g.lineWidth=7;
+      g.beginPath();g.moveTo(w/2,10);g.lineTo(w-9,h-12);g.lineTo(9,h-12);g.closePath();g.fill();g.stroke();
+      g.fillStyle='#22282b';g.fillRect(w/2-5,43,10,36);g.fillRect(w/2-5,89,10,10);
+    });
+    const warning=(parent,x,y,z,size=.22,ry=0)=>{
+      const decal=face(parent,caution.tx,size,size,x,y,z,ry);decal.name='machine-caution-decal';decal.material.transparent=true;decal.material.depthWrite=false;return decal;
+    };
     // ---------------- lôžko z minerálneho liatia a steny s vedeniami Y ----------------
     const bed = sc(grp('lozko')); bed.scale.y=1;
-    [[-8.6, -9.6], [8.6, -9.6], [-8.6, 7.4], [8.6, 7.4]].forEach(([x, z]) => box(bed, x - 0.9, x + 0.9, 0, 0.7, z - 0.9, z + 0.9, M.black));
+    for(const sign of [-1,1])for(const z of [-9.6*K,5.4]){
+      const x=sign*(bodyHalf-2.6)/K,zz=z/K;
+      const pad=box(bed,x-.6/K,x+.6/K,0,.35,zz-.7/K,zz+.7/K,M.steelD);pad.name='machine-levelling-pad';
+      cylY(bed,.13/K,.13/K,.35,.72,x,zz,M.steel,16);
+      cylY(bed,.23/K,.23/K,.43,.52,x,zz,M.steelD,6);
+    }
     const bedHalf=Math.min(10,bodyHalf/K-.1);
-    box(bed, -bedHalf, bedHalf, 0.7, 6.2, -12.5, 7.7/K, M.dark);
+    const drawerScale=bodyHalf/12.25,drawerRear=(CHIP_DRAWER.z-CHIP_DRAWER.depth/2-.3)*drawerScale,drawerFront=(CHIP_DRAWER.z+CHIP_DRAWER.depth/2+.3)*drawerScale;
+    // Real base opening for the withdrawable reservoir; no solid casting through it.
+    box(bed,-bedHalf,bedHalf,3.4,6.2,-12.5,6.1/K,M.dark);
+    box(bed,-P.opening/2/K,P.opening/2/K,3.4,6.2,6.1/K,6.8/K,M.dark);
+    box(bed,-bedHalf,bedHalf,.7,3.4,-12.5,drawerRear/K,M.dark);
+    box(bed,-bedHalf,(bodyHalf-1.4)/K,.7,3.4,drawerFront/K,6.8/K,M.dark);
+    box(bed,(bodyHalf-1.4)/K,bedHalf,.7,1.85,drawerFront/K,6.8/K,M.dark);
+    box(bed,(CHIP_DRAWER.innerX+.3)*drawerScale/K,(bodyHalf-1.4)/K,.7,3.4,drawerRear/K,drawerFront/K,M.dark);
+    box(bed,(bodyHalf-1.4)/K,bedHalf,.7,1.85,drawerRear/K,drawerFront/K,M.dark);
     [-1, 1].forEach((s) => {
-      const wall=profile(bed,[[-7.8/K,6.2],[-7.8/K,14.6],[-3.2,20.8],[12.3,20.8],[12.5,6.2]],0,2.7,M.anth);
+      const wall=profile(bed,[[-6.05/K,6.2],[-7.5/K,7.8],[-7.8/K,14.6],[-3.2,20.8],[12.3,20.8],[12.5,6.2]],0,2.7,M.anth);
       wall.name='mineral-cast-bed-cheek';wall.rotation.y=Math.PI/2;wall.position.x=s*6.9;wall.scale.z=s;                                    // stena lôžka
       box(bed, s * 7.6, s * 8.6, 20.8, 21.2, -11, 3.2, M.steelD);                                  // vedenie Y
       cylX(bed, 2.1, s * 6.4, s * 6.9, PY0, 0, M.table, 48);                                      // príruba osi A
       const motorOuter=Math.min(10.6,bodyHalf/K-.2);
       if(MC.id==='c42'||s>0)cylX(bed, 1.2, s * (motorOuter-.8), s * motorOuter, PY0, 0, M.steelD, 32);                                    // pohon osi A (tandem)
     });
-    box(bed, -6.9, 6.9, 4.5, 4.65, -12.5, 7.8/K, M.inox);                                               // dno pracovného priestoru (nerez)
+    const chipFloor=box(bed,-6.9,6.9,4.5,4.65,-12.5,6.1/K,M.inox);chipFloor.name='recessed-stainless-chip-floor';
     box(bed, -6.9, 6.9, 7.2, 19, -12.4, -12.2, M.inox);                                              // zadná stena
     box(bed, -6.9, 6.9, 6.3, 13.3, -3.55, -3.4, M.inox);
     for(const sign of [-1,1])box(bed,sign*2.3,sign*6.9,13.3,18.8,-3.55,-3.4,M.inox);
@@ -96,6 +117,7 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       const flange=new THREE.Mesh(new THREE.TorusGeometry(2.18,.055,8,96),M.steel);flange.rotation.y=Math.PI/2;flange.position.x=sign*(bearingX-.38);aG.add(flange);
       bolts(aG,Array.from({length:24},(_,i)=>[sign*(bearingX-.4),1.97*Math.sin(i*Math.PI/12),1.97*Math.cos(i*Math.PI/12)]),.055,'x');
       const padX=sign*(bearingX-.38);box(aG,padX-.14,padX+.14,.6,.94,.68,.74,M.cab2);bolts(aG,[[padX,.78,.77]],.05);
+      warning(aG,sign*(bearingX-.42),1.5,.8,.24,sign<0?Math.PI/2:-Math.PI/2);
       for(const y of [.75,-.75])box(aG,sign*(bearingX-.64),sign*(bearingX-.47),y-.12,y+.12,-.16,.16,M.steel);
     }
     box(aG,-.18,.18,-2.9,-2.55,P.tableDepth/2+.36,P.tableDepth/2+.4,M.cab2);
@@ -114,6 +136,7 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
     const tdisc=new THREE.Mesh(new THREE.ExtrudeGeometry(outline,{depth:.22,bevelEnabled:false,curveSegments:80}),M.table);
     tdisc.name='parallel-slot-clamping-table';tdisc.rotation.x=-Math.PI/2;tdisc.position.y=-.22;tdisc.castShadow=true;tdisc.receiveShadow=true;cG.add(tdisc);
     bolts(cG,[[-r*.65,.025,-1.05],[r*.65,.025,-1.05],[-r*.65,.025,1.05],[r*.65,.025,1.05]],.06,'y');
+    for(const x of [-r*.7,r*.7]){const label=warning(cG,x,.028,.45,.2);label.rotation.x=-Math.PI/2;}
     cylY(cG, FIX.r * U * 1.35, FIX.r * U * 1.35, 0, 0.22, 0, 0, M.steelD, 40);                     // nulový upínací systém
     cylY(cG, FIX.r * U, FIX.r * U, 0.22, FIX.h * U, 0, 0, M.anth, 40);
     const clampPins = [0,1,2].map(i=>{
@@ -253,37 +276,80 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       const hx=side*(width-.35);box(hinge,hx-.07,hx+.07,height*.5-.35,height*.5+.35,.02,.15,M.black);
       const d={hinge,label,side,width,height,open:false,angle:0};serviceDoors.push(d);return d;
     };
-    const fascia=(parent,x0,x1,frontZ)=>{
-      // YZ profile: upper front, inward sloping lower fold, then vertical plinth.
-      const m=profile(parent,[[-frontZ,7.4],[-frontZ,6.7],[-frontZ+.65,4.65],[-frontZ+.65,2.65],[-frontZ+.85,2.65],[-frontZ+.85,4.7],[-frontZ+.2,6.75],[-frontZ+.2,7.4]],0,x1-x0,M.cab2);
-      m.rotation.y=Math.PI/2;m.position.x=x0;return m;
+    // Thin folded sheets, with matching mitres at the front/side corners.
+    const sheet=(parent,rows,inward,mat=M.cab2)=>{
+      const positions=[],indices=[],uv=[],n=rows.length*2;
+      for(const offset of [[0,0,0],inward])for(const [i,row] of rows.entries())for(const [j,p] of row.entries()){positions.push(...p.map((v,k)=>v+offset[k]));uv.push(j,i/(rows.length-1));}
+      const quad=(a,b,c,d)=>indices.push(a,b,c,a,c,d);
+      for(let i=0;i<n-2;i+=2){quad(i,i+2,i+3,i+1);quad(n+i+1,n+i+3,n+i+2,n+i);quad(i,n+i,n+i+2,i+2);quad(i+3,n+i+3,n+i+1,i+1);}
+      quad(0,1,n+1,n);quad(n-2,2*n-2,2*n-1,n-1);
+      const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(indices);geo.computeVertexNormals();
+      const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+    };
+    const fascia=(parent,x0,x1,frontZ,apron=false)=>{
+      const lo=x0<=-bodyHalf+.01?x0+1.8:x0,hi=x1>=bodyHalf-.01?x1-1.8:x1;
+      const rows=[[[x0,7.4,frontZ],[x1,7.4,frontZ]],[[lo,4.65,frontZ-2.2],[hi,4.65,frontZ-2.2]],[[lo,apron?2.65:4.45,frontZ-2.2],[hi,apron?2.65:4.45,frontZ-2.2]]];
+      const mesh=sheet(parent,rows,[0,0,-.14]);mesh.name=apron?'sliding-door-lower-fold':'fixed-front-lower-fold';return mesh;
     };
     const ventTexture=tex(128,256,(g,w,h)=>{g.fillStyle='#c9cdd1';g.fillRect(0,0,w,h);g.fillStyle='#252b30';for(let y=5;y<h;y+=12)for(let x=6;x<w;x+=13)g.fillRect(x,y,6,7);});
     const sideLength=front-rear;
     for(const sign of [-1,1]){
       const wall=new THREE.Group();wall.position.x=sign*bodyHalf;wall.rotation.y=sign*Math.PI/2;cabS.add(wall);
       wall.position.z=(front+rear)/2;
-      box(wall,-sideLength/2,sideLength/2,1.2,3,-.22,0,M.cab2);
-      box(wall,-sideLength/2,sideLength/2,19.4,P.roof,-.22,0,M.cab);
+      if(sign<0){
+        const mid=(front+rear)/2;
+        box(wall,-sideLength/2,drawerRear-mid,1.2,4.45,-1.95,-1.8,M.anth);
+        box(wall,drawerFront-mid,sideLength/2-2.2,1.2,4.45,-1.95,-1.8,M.anth);
+        box(wall,drawerRear-mid,drawerFront-mid,3.35,4.45,-1.95,-1.8,M.anth);
+      }else box(wall,-sideLength/2+2.2,sideLength/2,1.2,4.45,-1.95,-1.8,M.anth);
+      const sideRows=[[[sign*bodyHalf,7.4,rear],[sign*bodyHalf,7.4,front]],[[sign*(bodyHalf-1.8),4.65,rear],[sign*(bodyHalf-1.8),4.65,front-2.2]],[[sign*(bodyHalf-1.8),4.45,rear],[sign*(bodyHalf-1.8),4.45,front-2.2]]];
+      if(sign>0)sideRows.forEach(row=>row.reverse());
+      const sideFold=sheet(cabS,sideRows,[-sign*.14,0,0]);sideFold.name=sign<0?'left-side-lower-fold':'right-side-lower-fold';
+      if(sign>0)box(wall,-sideLength/2,sideLength/2,19.4,P.roof,-.22,0,M.cab);
+      else box(wall,-sideLength/2,sideLength/2,P.roof-.15,P.roof,-.22,0,M.cab);
       // Service access is behind the work area; the front flank stays fixed
       // for the heat exchanger and HMI. No leaf sweeps through those fittings.
       const endZ=.4,midZ=(front+rear)/2,centreX=sign*(midZ-(rear+endZ)/2),span=endZ-rear,width=span/2-.12;
-      for(const side of [-1,1])serviceDoor(wall,{name:`service-${sign<0?'left':'right'}-${side}`,label:sign<0?'Ľavé servisné dvere':'Pravé servisné dvere',x:centreX+side*(span/2-.06),y:3.04,z:.01,width,height:16.3,side:-side});
-      box(wall,sign*(midZ-front),sign*(midZ-endZ),3,19.4,-.22,0,M.cab);
-      for(const x of [centreX-span/2,centreX,centreX+span/2])box(wall,x-.045,x+.045,3,19.4,-.22,-.15,M.steelD);
+      for(const side of [-1,1]){
+        const d=serviceDoor(wall,{name:`service-${sign<0?'left':'right'}-${side}`,label:sign<0?'Ľavé servisné dvere':'Pravé servisné dvere',x:centreX+side*(span/2-.06),y:7.44,z:.01,width,height:sign<0?P.roof-7.64:11.9,side:-side});
+        if(sign<0){
+          box(d.hinge,0,-side*width,11.92,11.96,0,.012,M.steelD);
+          if(side<0){
+            // Tall folded cooling cover on the rear left service leaf.
+            // The annotated photo shows a smooth recessed face, not a flat wall.
+            const cover=new THREE.Group();cover.name='left-service-cooling-cover';cover.position.set(width/2,.28,.2);d.hinge.add(cover);
+            profile(cover,[[-2.5,.3],[-2.2,0],[2.2,0],[2.5,.3],[2.5,16.65],[2.05,17.2],[-2.1,17.4],[-2.5,17]],0,.88,M.cab,.09).name='left-cooling-folded-shell';
+            profile(cover,[[-.25,1],[1.82,1],[2.12,1.32],[2.12,16.26],[1.76,16.7],[-.25,16.9]],.91,.045,M.cab2,.06).name='left-cooling-recessed-face';
+            box(cover,-2.12,-.45,8.05,8.58,.985,1.015,M.black).name='left-cooling-label-band';
+            for(let i=0;i<7;i++)box(cover,-2.12,-1.73,5.85+i*.3,6.02+i*.3,.985,1.01,M.steelD);
+            bolts(cover,[[-2.25,.55,1.015],[2.25,.55,1.015],[-2.25,16.8,1.015],[2.15,16.6,1.015]],.045);
+          }
+        }
+      }
+      box(wall,sign*(midZ-front),sign*(midZ-endZ),7.4,19.4,-.22,0,M.cab);
+      if(sign<0)box(wall,sign*(midZ-front),sign*(midZ-endZ),19.4,P.roof-.15,-.22,0,M.cab);
+      for(const x of [centreX-span/2,centreX,centreX+span/2]){
+        box(wall,x-.025,x+.025,7.4,P.roof,-.22,.006,M.steelD);
+        bolts(wall,[[x-.12,19.58,.025],[x+.12,19.58,.025],[x-.12,P.roof-.25,.025]],.04);
+      }
+      if(sign>0)box(wall,-sideLength/2,sideLength/2,19.36,19.4,-.1,.008,M.steelD);
       const sideLogo=face(wall,logo.tx,3.2,.8,0,19.5,.025);sideLogo.material.transparent=true;
-      bolts(wall,[[-sideLength/2+.3,1.6,.04],[sideLength/2-.3,1.6,.04],[-sideLength/2+.3,25.6,.04],[sideLength/2-.3,25.6,.04]]);
+      bolts(wall,[[-sideLength/2+.3,7.7,.04],[sideLength/2-.3,7.7,.04],[-sideLength/2+.3,25.6,.04],[sideLength/2-.3,25.6,.04]]);
       box(cabS,sign*half,sign*bodyHalf,7.4,P.roof,front-.25,front,M.cab);
       fascia(cabS,Math.min(sign*half,sign*bodyHalf),Math.max(sign*half,sign*bodyHalf),front);
     }
     // Side heat exchanger: perforated folded cover beside the swivel terminal.
     box(cabS,bodyHalf,bodyHalf+1,3.8,12.5,2.7,5.5,M.cab2);
     face(cabS,ventTexture.tx,2.35,8,bodyHalf+1.015,8.1,4.1,Math.PI/2);
-    const ventTop=face(cabS,ventTexture.tx,1,2.7,bodyHalf+.5,12.515,4.1);ventTop.rotation.x=-Math.PI/2;
-    box(cabS,-bodyHalf,bodyHalf,1.1,1.35,rear,front+.45,M.cab2);
-    box(cabS,-half,half,1.35,6.6,front-.15,front-.05,M.cab2);
-    for(const y of [1.8,2.5,3.3,4.1,5.6,6.2])box(cabS,-half,half,y,y+.045,front-.04,front+.01,M.steelD);
-    bolts(cabS,[-half+.18,0,half-.18].flatMap(x=>[1.8,3.3,6.2].map(y=>[x,y,front+.03])));
+    for(const z of [2.9,5.3])bolts(cabS,[[bodyHalf+1.03,4.05,z],[bodyHalf+1.03,12.2,z]],.04,'x');
+    profile(cabS,[[bodyHalf,12.5],[bodyHalf+1,12.5],[bodyHalf,13.1]],2.7,2.8,M.cab2).name='heat-exchanger-sloping-cap';
+    const ventTop=face(cabS,ventTexture.tx,Math.hypot(1,.6),2.7,bodyHalf+.5,12.815,4.1);ventTop.rotation.z=-Math.atan(.6);ventTop.rotateX(-Math.PI/2);
+    box(cabS,-bodyHalf,bodyHalf,1.1,1.35,rear,drawerRear,M.cab2);
+    box(cabS,-bodyHalf,bodyHalf,1.1,1.35,drawerFront,front-1.95,M.cab2);
+    box(cabS,(CHIP_DRAWER.innerX+.3)*drawerScale,bodyHalf,1.1,1.35,drawerRear,drawerFront,M.cab2);
+    box(cabS,-half,half,1.35,6.6,front-2.45,front-2.35,M.cab2);
+    for(const y of [1.8,2.5,3.3,4.1,5.6,6.2])box(cabS,-half,half,y,y+.045,front-2.34,front-2.29,M.steelD);
+    bolts(cabS,[-half+.18,0,half-.18].flatMap(x=>[1.8,3.3,6.2].map(y=>[x,y,front-2.27])));
     box(cabS,-bodyHalf,bodyHalf,P.roof-.35,P.roof,front-.55,front+.12,M.cab);
     box(cabS,-bodyHalf,bodyHalf,1.2,P.roof,rear-.2,rear,M.cab);
     // Roof with a real aperture for the travelling ram and recessed concertina covers.
@@ -292,16 +358,25 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
     box(cabS,-6.5,6.5,P.roof-.3,P.roof,rear,-10.8,M.cab);
     for(const sign of [-1,1])box(cabS,sign*(bodyHalf-.15),sign*bodyHalf,P.roof,P.roof+.15,rear,front,M.cab2);
     const frontLogo=face(cabS,logo.tx,4.6,1.15,-bodyHalf+2.8,19.4,front+.035);frontLogo.name='front-hermle-logo';frontLogo.material.transparent=true;
-    const label=face(cabS,modelLabel.tx,1.6,P.roof-7.4,half+1.45,(P.roof+7.4)/2,front+.04);label.name='fixed-model-stripe';label.material.transparent=true;
+    const stripeX=bodyHalf-1.6;
+    const label=face(cabS,modelLabel.tx,1.6,P.roof-7.4,stripeX,(P.roof+7.4)/2,front+.04);label.name='fixed-model-stripe';label.material.transparent=true;
+    const stripeFold=sheet(cabS,[[[stripeX-.3,7.4,front+.045],[stripeX+.3,7.4,front+.045]],[[stripeX-2.1,4.65,front-2.155],[stripeX-1.5,4.65,front-2.155]]],[0,0,-.01],M.red);stripeFold.name='model-stripe-lower-fold';
     // Upper door guide, drive belt, rollers, safety interlock and lower sill.
     for(const y of [1.55,P.roof-.65]){
-      box(cabS,-bodyHalf+.4,bodyHalf-.4,y-.14,y+.14,front+.08,front+.32,M.steelD);
-      box(cabS,-bodyHalf+.4,bodyHalf-.4,y+.02,y+.08,front+.325,front+.36,M.steel);
+      const z=front-(y<2?2.2:0);
+      box(cabS,-bodyHalf+.4,bodyHalf-.4,y-.14,y+.14,z+.08,z+.32,M.steelD);
+      box(cabS,-bodyHalf+.4,bodyHalf-.4,y+.02,y+.08,z+.325,z+.36,M.steel);
     }
-    for(let row=0;row<3;row++)box(cabS,-half,half,1.8+row*.34,2.05+row*.34,front-.15,front+.27,M.steel);
+    for(let row=0;row<3;row++)box(cabS,-half,half,1.8+row*.34,2.05+row*.34,front-2.35,front-1.93,M.steel);
     box(cabS,-half,half,7.15,7.3,front-.9,front-.15,M.steel);
     box(cabS,half+.25,half+1.25,P.roof-.45,P.roof+.02,front-.2,front+.2,M.red);
     box(cabS,half-.15,half+.15,P.roof-.8,P.roof-.55,front+.35,front+.55,M.black);
+    const beacon=new THREE.Group();beacon.name='machine-status-beacon';beacon.position.set(bodyHalf-.55,P.roof,-.7);cabS.add(beacon);
+    cylY(beacon,.27,.27,0,.1,0,0,M.steelD);cylY(beacon,.09,.09,.1,.75,0,0,M.steel);
+    for(const [i,color] of [0x8eafa4,0xddbe72,0xc98481].entries()){
+      cylY(beacon,.2,.2,.75+i*.38,1.1+i*.38,0,0,std(color,.27,.08),24);
+      cylY(beacon,.21,.21,1.1+i*.38,1.13+i*.38,0,0,M.steelD,24);
+    }
     const doors=[-1,1].map(sign=>{
       const d=new THREE.Group();d.name=sign<0?'left-sliding-door':'right-sliding-door';cabS.add(d);d.userData.s=sign;
       const w=leaf/2, windowW=leaf*.54, bottom=2.65, top=P.roof-.35, wy0=7.8,wy1=18.8;
@@ -314,57 +389,56 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       const glassShape=new THREE.Shape();glassPoints.forEach(([x,y],i)=>i?glassShape.lineTo(x,y):glassShape.moveTo(x,y));glassShape.closePath();
       const glass=new THREE.Mesh(new THREE.ShapeGeometry(glassShape),M.glass.clone());glass.material.opacity=.34;glass.material.color.setHex(0x44605c);glass.material.side=THREE.DoubleSide;glass.name='door-safety-glass';glass.position.z=-.1;d.add(glass);
       for(let i=0;i<glassPoints.length;i++){const a=glassPoints[i],b=glassPoints[(i+1)%glassPoints.length];rod(d,[...a,.015],[...b,.015],.035,M.black);}
-      fascia(d,-w,w,.14);
+      fascia(d,-w,w,.14,true);
       const hx=-sign*(w-.22),points=[[hx,8.5,.2],[hx+sign*.36,9.2,.57],[hx+sign*.36,11.8,.57],[hx,12.5,.2]];
       for(let j=1;j<points.length;j++)rod(d,points[j-1],points[j],.09,M.red);
       for(const y of [8.5,12.5]){box(d,hx-.13,hx+.13,y-.15,y+.15,.14,.28,M.black);bolts(d,[[hx,y,.29]]);}
       for(const y of [bottom+.3,top-.3])for(const x of [-w+.25,w-.25]){
-        const roller=cylY(d,.12,.12,-.04,.04,0,0,M.steel);roller.rotation.x=Math.PI/2;roller.position.set(x,y,-.2);
+        const roller=cylY(d,.12,.12,-.04,.04,0,0,M.steel);roller.rotation.x=Math.PI/2;roller.position.set(x,y,y<7.4?-2.4:-.2);
       }
-      box(d,-sign*w-.025,-sign*w+.025,bottom,top,-.16,.16,M.black);
-      bolts(d,[[-w+.12,bottom+.15,.2],[w-.12,bottom+.15,.2],[-w+.12,top-.15,.2],[w-.12,top-.15,.2]]);
+      box(d,-sign*w-.025,-sign*w+.025,7.4,top,-.16,.16,M.black);
+      rod(d,[-sign*w,7.4,.14],[-sign*w,4.65,-2.06],.025,M.black);
+      box(d,-sign*w-.025,-sign*w+.025,bottom,4.65,-2.2,-2.02,M.black);
+      bolts(d,[[-w+.12,bottom+.15,-2.02],[w-.12,bottom+.15,-2.02],[-w+.12,top-.15,.2],[w-.12,top-.15,.2]]);
+      const glassMark=face(d,logo.tx,.38,.095,sign*(w-.48),7.59,.151);glassMark.name='door-glass-marking';glassMark.material.transparent=true;
       return d;
     });
     // ---------------- ovládací panel TNC 640 (Hermle) na otočnom ramene ----------------
     const pan = grp('panel');
     const panBase = new THREE.Group();pan.add(panBase);
-    // Photo reference: low rectangular swing arms and a deep cylindrical
-    // terminal sleeve. The polished upper swivel meets the underside of the HMI.
+    // C42 ergonomics photograph: a single welded low arm rises into a box
+    // column. Its crank is rigid; only the machine pivot and terminal swivel turn.
     const hmiBase = hmiPose(0, 0, bodyHalf, 1);
-    const mounting=box(panBase,bodyHalf-.1,bodyHalf+3.4,1.85,2.4,3.8,8.15,M.anth);mounting.name='HMI-fixed-mounting-bracket';
-    box(panBase,bodyHalf+.15,bodyHalf+3.15,2.4,2.48,4,7.95,M.cab2);
-    box(panBase,bodyHalf-.12,bodyHalf+.16,1.65,4.1,4.2,7.9,M.steelD);
-    bolts(panBase,[[bodyHalf+.2,2.7,7.94],[bodyHalf+.2,3.7,7.94]],.085);
-    cylY(panBase,.58,.58,2.4,3.45,hmiBase.base[0],7.5,M.steelD);
-    const armPivot=new THREE.Group();armPivot.name='HMI-machine-pivot';armPivot.position.set(hmiBase.base[0],0,7.5);panBase.add(armPivot);
-    const firstArm=box(armPivot,-.38,.38,2.65,3.25,.12,4.6,M.anth);firstArm.name='HMI-lower-swing-arm';
-    box(armPivot,-.32,.32,3.25,3.3,.5,4.1,M.steelD);
-    cylY(armPivot,.48,.48,3.2,3.32,0,0,M.steelD);
-    const armElbow=new THREE.Group();armElbow.name='HMI-elbow';armElbow.position.z=4.6;armPivot.add(armElbow);
-    cylY(armElbow,.52,.52,2.65,3.85,0,0,M.anth);
-    cylY(armElbow,.43,.43,3.85,3.91,0,0,M.steelD);
-    const secondArm=box(armElbow,-.33,.33,3.35,3.95,.05,6.8,M.anth);secondArm.name='HMI-terminal-arm';
-    // Folded triangular stiffeners run into the post, not through the keyboard.
-    for(const x of [-.34,.27]){
-      const gusset=profile(armElbow,[[-5.05,3.9],[-6.8,3.9],[-6.8,5.25]],0,.07,M.steelD);gusset.rotation.y=Math.PI/2;gusset.position.x=x;
-    }
-    const sleeve=cylY(armElbow,.66,.66,1.25,8.05,0,6.8,M.anth,64);sleeve.name='HMI-terminal-column';
-    cylY(armElbow,.68,.68,1.25,1.4,0,6.8,M.steelD,64);
-    cylY(armElbow,.71,.71,7.85,8.08,0,6.8,M.steelD,64);
-    cylY(armElbow,.37,.37,8.05,9.55,0,6.8,M.brush,48);
-    // Cable runs along the protected underside with slack loops at both joints.
-    const cableMat=M.black;
-    rod(armPivot,[.43,2.6,.45],[.43,2.6,4.05],.055,cableMat);
-    rod(armElbow,[.4,3.28,.55],[.4,3.28,6.2],.055,cableMat);
-    const loopCurve=new THREE.CatmullRomCurve3([v3(.25,3.15,-.35),v3(.8,2.45,0),v3(.8,2.5,.6),v3(.4,3.28,.85)]);
-    armElbow.add(new THREE.Mesh(new THREE.TubeGeometry(loopCurve,20,.055,8,false),cableMat));
-    const panG=new THREE.Group();panG.position.set(0,0,6.8);armElbow.add(panG);
+    const mounting=box(panBase,bodyHalf-1.3,bodyHalf+.02,1.65,2.12,3.48,4.92,M.anth);mounting.name='HMI-fixed-mounting-bracket';
+    bolts(panBase,[3.65,4.75].map(z=>[bodyHalf-1.08,2.15,z]),.085,'y');
+    cylY(panBase,.46,.46,2.1,3.05,...hmiBase.base,M.steelD);
+    const armPivot=new THREE.Group();armPivot.name='HMI-machine-pivot';armPivot.position.set(hmiBase.base[0],0,hmiBase.base[1]);panBase.add(armPivot);
+    const reach=HMI_ARM.reach;
+    // Extruded side elevation: the straight run and rising end are one solid.
+    const arm=profile(armPivot,[[0,2.18],[-reach+2.1,2.18],[-reach,4.08],[-reach,4.92],[-reach+2.3,2.94],[0,2.94]],0,.82,M.anth,.035);
+    arm.name='HMI-rigid-cranked-arm';arm.rotation.y=Math.PI/2;arm.position.x=-.41;
+    cylY(armPivot,.48,.48,2.97,3.06,0,0,M.steelD);
+    bolts(armPivot,[[0,3.085,0]],.1,'y');
+    const column=new THREE.Group();column.name='HMI-column-assembly';column.position.z=reach;armPivot.add(column);
+    const sleeve=box(column,-.56,.56,1.25,8.05,-.6,.6,M.anth);sleeve.name='HMI-terminal-column';
+    box(column,-.58,.58,1.25,1.4,-.62,.62,M.steelD);
+    box(column,-.59,.59,7.88,8.1,-.63,.63,M.steelD);
+    box(column,-.44,.44,2,7.45,.602,.63,M.anth).name='HMI-column-access-cover';
+    bolts(column,[[-.34,2.2,.66],[.34,2.2,.66],[-.34,7.22,.66],[.34,7.22,.66]],.045);
+    cylY(column,.34,.34,8.05,9.55,0,0,M.brush,48);
+    cylY(column,.4,.4,8.07,8.24,0,0,M.black,48);
+    box(column,.55,.75,7.55,7.78,-.15,.15,M.black);
+    // Cable is protected underneath the beam; no fictitious elbow/slack loop.
+    const cableCurve=new THREE.CatmullRomCurve3([v3(.2,2.12,0),v3(.3,2.04,.6),v3(.3,2.04,reach-2.3),v3(.3,3.8,reach-.4)]);
+    const armCable=new THREE.Mesh(new THREE.TubeGeometry(cableCurve,32,.055,8,false),M.black);armCable.name='HMI-arm-cable';armPivot.add(armCable);
+    for(const z of [1.2,4,7])box(armPivot,.2,.4,1.98,2.21,z-.06,z+.06,M.steelD);
+    const panG=new THREE.Group();panG.position.z=reach;armPivot.add(panG);
     cylY(panG,.52,.52,9.38,9.55,0,0,M.steelD,48);
     const hmi = createHmiPanel(panG,M,tex), sm = hmi.display;
     // Folded stainless chip troughs, linear guide shoes and fastened ram panels.
     for(const sign of [-1,1]){
-      profile(bed,[[sign*3.9,5.6],[sign*6.9,7.5],[sign*6.9,7.62],[sign*3.9,5.72]],-3.1,8.05/K+3.1,M.inox);
-      box(bed,sign*3.85,sign*4.35,5.5,5.62,-3.1,8.05/K,M.dark);
+      const trough=profile(bed,[[sign*3.9,5.6],[sign*6.9,7.5],[sign*6.9,7.62],[sign*3.9,5.72]],-3.1,6.1/K+3.1,M.inox);trough.name='recessed-side-chip-trough';
+      box(bed,sign*3.85,sign*4.35,5.5,5.62,-3.1,6.1/K,M.dark);
       const lining=box(bed,sign*6.65,sign*6.78,7.4,19.9,-3.3,3.2,M.inox);lining.name='stainless-workspace-lining';
       for(const z of [-.95,.95])box(yS,sign*7.45,sign*8.7,20.7,21.35,z-.4,z+.4,M.steelD);
       for(const y of [3,6,9,11.8])bolts(zS,[[sign*1.1,y,1.93]],.04);
@@ -417,7 +491,7 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
     const updateGeometry=({doorK,panelA=0,panelYaw=0})=>{
       doors.forEach(d=>d.position.set(d.userData.s*(leaf/2+doorK*opening/2),0,front+.54));
       const pose=hmiPose(panelA*180/Math.PI,panelYaw*180/Math.PI,bodyHalf,1);
-      armPivot.rotation.y=pose.angle;armElbow.rotation.y=pose.elbow;panG.rotation.y=pose.yaw-pose.angle-pose.elbow;
+      armPivot.rotation.y=pose.angle;panG.rotation.y=pose.yaw-pose.angle;
       const centre=yG.position.z, limits=[[-10.8,centre-2],[centre+2,6.5]];
       roofCovers.forEach((mesh,i)=>{const [lo,hi]=limits[i];mesh.scale.z=Math.max(.01,hi-lo);mesh.position.z=(hi+lo)/2;});
     };
@@ -432,14 +506,15 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
     };
     const viewOverrides={
       celok:()=>Object.values(accessories.equipment).some(g=>g.visible)?[[-65,43,60],[-8,13,-7],false]:[[39,28,46],[0,13,-4],false],
-      panel:()=>{const p=new THREE.Vector3(0,13,0).applyMatrix4(panG.matrixWorld),direction=new THREE.Vector3(3,3,16).transformDirection(panG.matrixWorld).multiplyScalar(18);return [p.clone().add(direction).toArray(),p.toArray(),true];},
+      panel:()=>{const p=new THREE.Vector3(0,9.1,-2.6).applyMatrix4(panG.matrixWorld),direction=new THREE.Vector3(12,4,18).transformDirection(panG.matrixWorld).multiplyScalar(37);return [p.clone().add(direction).toArray(),p.toArray(),true];},
+      vybavenie:()=>Object.values(accessories.equipment).some(g=>g.visible)?[[-54,27,35],[-25,7,-10],false]:[[-49,31,32],[-7,12,-5],false],
       spredu:()=>[[0,16,48],[0,14,0],false],
       zhora:()=>[[.01,78,-6],[0,9,-6],true],
     };
     // Hundreds of immobile jaws, screws and teeth share a handful of draw calls.
     // Pocket groups remain separate so tool loading/indexing keeps its real poses.
     for(const group of [magG,drum,saddle])batchStaticMeshes(group);
-    return {serviceDoors,updateServiceDoors,serviceOpen,profile:P,doorTravel:opening/2,updateGeometry,updateAxes,lighting,viewOverrides,anchorOverrides,cab,aG,cG,yG,xG,zG,sp,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories};
+    return {serviceDoors,updateServiceDoors,serviceOpen,profile:P,doorTravel:opening/2,updateGeometry,updateAxes,lighting,viewOverrides,anchorOverrides,cab,aG,cG,yG,xG,zG,sp,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,hmi,sm,covers,clampPins,doors,loadMagazine,accessories};
 
 }
 

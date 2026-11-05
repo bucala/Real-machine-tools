@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 
+// User-selected C42 standard layout (2016 PDF p. 50): 680 mm outboard,
+// 720 mm behind the front; 1700 mm ADDITIONAL withdrawal space.
+// The matching tray is 400 mm wide along Z (explicit in the newer PDF p. 52).
+// Sheet thicknesses, internal length and pump details are photo estimates.
+export const CHIP_DRAWER={outerX:-19.05,innerX:5.15,z:-.6,depth:4,rim:2.65,travel:17};
+
 // C42 layout, in 100 mm units: cabin 2450 mm, conveyor reach 1710 mm,
 // ICS footprint 1110 × 1630 mm, recooler 740 × 950 mm. C32 scales by cabin width.
 export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
@@ -17,25 +23,67 @@ export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
   };
   const rod=(g,a,b,r,mat=M.steelD)=>{const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),d=q.clone().sub(p),mesh=cyl(g,0,0,0,r,d.length(),mat);mesh.position.copy(p).add(q).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return mesh;};
   const fasteners=(g,points)=>{const mesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.045,.035,6),M.steelD,points.length),q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI/2);points.forEach((p,i)=>mesh.setMatrixAt(i,new THREE.Matrix4().compose(new THREE.Vector3(...p),q,new THREE.Vector3(1,1,1))));g.add(mesh);};
-  // Low chip pan runs along X under the bed; its handle belongs on the
-  // outboard end, not on a tall strip across the front corner of the enclosure.
+  // Open, folded reservoir at the left base, not a narrow trough across the front.
   const drawer=new THREE.Group();drawer.name='pull-out-chip-pan';drawer.scale.setScalar(k);parent.add(drawer);
-  const panOuter=-19.05,panInner=-7.4,panZ=5.7,panDepth=4.4;
-  box(drawer,(panOuter+panInner)/2,1.17,panZ,panInner-panOuter,.14,panDepth,M.steelD);
-  for(const z of [panZ-panDepth/2,panZ+panDepth/2]){
-    box(drawer,(panOuter+panInner)/2,1.75,z,panInner-panOuter,1.2,.12,housing);
-    box(drawer,(panOuter+panInner)/2,2.4,z,panInner-panOuter,.12,.2,M.steel);
+  const {outerX:panOuter,innerX:panInner,z:panZ,depth:panDepth,rim}=CHIP_DRAWER,mid=(panOuter+panInner)/2;
+  const tray=new THREE.Group();tray.name='chip-drawer-open-tray';drawer.add(tray);
+  box(tray,mid,1.06,panZ,panInner-panOuter-.35,.14,panDepth-.4,M.steelD);
+  // A shallow return at the bottom, sloping outer folds and narrow rolled lips.
+  const wall=[[panOuter,1.35],[panOuter+.22,1.05],[panInner-.2,1.05],[panInner,1.35],[panInner,rim],[panOuter,rim]];
+  for(const z of [panZ-panDepth/2,panZ+panDepth/2-.12]){
+    profile(tray,wall,z,.12);
+    box(tray,mid,rim,z+.06,panInner-panOuter,.12,.24,housing);
+    fasteners(tray,[[panOuter+.3,1.65,z+.14],[panInner-.3,1.65,z+.14]]);
   }
-  for(const x of [panOuter,panInner])box(drawer,x,1.75,panZ,.12,1.2,panDepth,housing);
-  box(drawer,panOuter-.16,1.85,panZ,.12,.13,1.55,M.black);
-  for(const z of [panZ-.65,panZ+.65])box(drawer,panOuter-.1,1.85,z,.15,.18,.16,M.steelD);
-  // Rollers stay with the pan, the support rails stay bolted to the base.
-  for(const x of [panOuter+.8,panInner-.8])for(const z of [panZ-1.8,panZ+1.8]){
-    const wheel=cyl(drawer,x,.72,z,.32,.18,M.black);wheel.rotation.x=Math.PI/2;
+  for(const x of [panOuter,panInner]){
+    const end=profile(tray,[[-panDepth/2,1.35],[-panDepth/2+.2,1.05],[panDepth/2-.2,1.05],[panDepth/2,1.35],[panDepth/2,rim],[-panDepth/2,rim]],0,.12);
+    end.rotation.y=Math.PI/2;end.position.set(x,0,panZ);
+    box(tray,x,rim,panZ,.25,.12,panDepth,housing);
   }
+  box(tray,mid,1.145,panZ,panInner-panOuter-.65,.025,panDepth-.65,M.dark).name='chip-drawer-recessed-floor';
+  for(const z of [panZ-1.05,panZ+1.05])box(drawer,panOuter-.17,1.95,z,.3,.22,.2,M.steelD);
+  rod(drawer,[panOuter-.32,1.95,panZ-1.05],[panOuter-.32,1.95,panZ+1.05],.095,M.black).name='chip-drawer-pull-handle';
+  // The pump stands on the fixed rear reservoir, outside the hatched withdrawal
+  // aisle in the plan. It must not follow the removable chip drawer.
+  const reservoir=new THREE.Group();reservoir.name='chip-drawer-fixed-reservoir';reservoir.scale.setScalar(k);parent.add(reservoir);
+  const tankInner=-12.38,tankRear=-10.85,tankFront=panZ-panDepth/2-.32,tankMid=(panOuter+tankInner)/2,tankZ=(tankRear+tankFront)/2,tankWidth=tankInner-panOuter,tankDepth=tankFront-tankRear;
+  const tank=new THREE.Group();tank.name='chip-reservoir-folded-tank';reservoir.add(tank);
+  box(tank,tankMid,.8,tankZ,tankWidth-.25,.2,tankDepth-.25);
+  for(const z of [tankRear,tankFront-.12])profile(tank,[[panOuter+.18,.8],[panOuter,1.06],[panOuter,2.3],[tankInner,2.3],[tankInner,1.06],[tankInner-.18,.8]],z,.12);
+  for(const x of [panOuter,tankInner]){
+    box(tank,x,1.61,tankZ,.12,1.38,tankDepth);
+    box(tank,x,2.32,tankZ,.24,.14,tankDepth+.12,M.steelD);
+    box(tank,x,.98,tankZ,.22,.14,tankDepth,M.steelD);
+  }
+  for(const z of [tankRear,tankFront])box(tank,tankMid,2.32,z,tankWidth,.14,.24,M.steelD);
+  // Split lids, a shallow recessed forward deck and an exposed lower return.
+  box(reservoir,tankMid,2.29,(tankRear-6.25)/2,tankWidth-.24,.12,-6.25-tankRear-.16,M.steelD).name='chip-reservoir-pump-lid';
+  box(reservoir,tankMid,2.19,(-6.25+tankFront)/2,tankWidth-.3,.12,tankFront+6.25-.15,M.steelD).name='chip-reservoir-recessed-lid';
+  for(const z of [-5.9,-4.9,-3.9])box(reservoir,tankMid,2.27,z,tankWidth-.6,.06,.1,M.dark);
+  for(const z of [tankRear+.4,tankFront-.4])box(reservoir,tankMid,.54,z,tankWidth-.6,.32,.4,M.steelD);
+  const pump=new THREE.Group();pump.name='chip-drawer-coolant-pump';pump.position.set(tankMid,-.3,-8.15);reservoir.add(pump);
+  box(pump,0,rim+.04,0,2.6,.16,2.45,M.steelD);
+  cyl(pump,0,rim+.18,0,.58,.18);
+  cyl(pump,0,3.25,0,.32,1.15);
+  cyl(pump,0,4.25,0,.48,1.3,M.anth);
+  cyl(pump,0,4.96,0,.5,.14);
+  for(let i=0;i<12;i++){const a=i*Math.PI/6;box(pump,Math.cos(a)*.49,4.25,Math.sin(a)*.49,.055,1.15,.055,M.steelD);}
+  box(pump,.55,4.24,0,.36,.5,.55,M.black);
+  rod(pump,[.2,3.12,.4],[1,3.12,.4],.1);
+  rod(pump,[.82,3.25,.17],[.82,3.25,.63],.065,M.red);
+  hose(pump,[[.6,3.1,.4],[1.25,2.9,.55],[1.45,2,.8]],.09);
+  // Compact wheel forks sit under the reservoir, rather than hovering on rails.
+  for(const x of [panOuter+.65,panInner-.65])for(const z of [panZ-panDepth/2+.55,panZ+panDepth/2-.55]){
+    const fork=new THREE.Group();fork.name='chip-drawer-wheel';fork.position.set(x,0,z);drawer.add(fork);
+    box(fork,0,.72,0,.65,.12,.62,M.steelD);
+    for(const side of [-1,1])box(fork,0,.51,side*.22,.48,.42,.08,M.steelD);
+    const wheel=cyl(fork,0,.35,0,.32,.34,M.black);wheel.rotation.x=Math.PI/2;
+    const hub=cyl(fork,0,.35,.185,.13,.035,M.steel);hub.rotation.x=Math.PI/2;
+  }
+  for(const z of [panZ-panDepth/2+.55,panZ+panDepth/2-.55])box(drawer,mid,.88,z,panInner-panOuter-.3,.24,.45,M.steelD);
   const panRails=new THREE.Group();panRails.name='chip-pan-guide-rails';panRails.scale.setScalar(k);parent.add(panRails);
-  for(const z of [panZ-2,panZ+2])box(panRails,-12.8,.88,z,13.2,.18,.2,M.steelD);
-  const chipPan={object:drawer,open:false,amount:0,travel:17*k};
+  for(const z of [panZ-panDepth/2-.17,panZ+panDepth/2+.17])box(panRails,-3.5,1.45,z,17.5,.2,.18,M.steelD);
+  const chipPan={object:drawer,open:false,amount:0,travel:CHIP_DRAWER.travel*k};
   const conveyor=group('conveyor'), flights=[];
   // Enclosed hinge-belt conveyor, folded side sheets and a continuous rising hood.
   const cheek=[[-12.1,1.1],[-17.2,1.1],[-24.2,8.2],[-26.35,8.8],[-26.35,10],[-24.9,10.8],[-23.5,10.65],[-16.1,3.05],[-12.1,3.05]];
@@ -43,7 +91,7 @@ export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
     const side=profile(conveyor,cheek,z,.13);side.name='conveyor-folded-side';
     fasteners(conveyor,[[-13,2.4,z+.14],[-16,2.3,z+.14],[-19.5,5,z+.14],[-23.8,9.4,z+.14]]);
   }
-  box(conveyor,-14.1,1.15,6.5,4.1,.18,3.5);
+  box(conveyor,-14.1,1.15,6.5,4.1,.18,3.5).name='chip-conveyor-inlet';
   link(conveyor,[-16.3,1.4,6.5],[-24.3,8.5,6.5],.18,3.5);
   const belt=link(conveyor,[-16.05,2.9,6.5],[-24.25,9.4,6.5],.12,2.9,M.dark);
   for(let i=0;i<14;i++)flights.push(box(conveyor,0,0,0,.15,.18,2.75,M.steelD));
@@ -166,9 +214,12 @@ export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
   for(let i=0;i<14;i++)box(recooler,-37.9,3+i*.85,-9.4,.08,.14,8.4,M.dark);
   hose(recooler,[[-30.45,3,-8],[-30,2.5,-8],[-29.55,3,-8]]);
   wheels(recooler,-34.15,-9.4,6.7,8.8);
+  // All external modules share the same outlet datum. Keep their mutual aisle
+  // clearances while aligning the conveyor with the drawer opening, not the front.
+  for(const g of Object.values(equipment))g.position.z=(CHIP_DRAWER.z-6.5)*k;
   let phase=0;
   const update=(state,dt)=>{
-    const mode=state.accessorySetup||'none';drawer.visible=mode==='none';panRails.visible=drawer.visible;
+    const mode=state.accessorySetup||'none';drawer.visible=mode==='none';panRails.visible=drawer.visible;reservoir.visible=drawer.visible;
     if(!drawer.visible)chipPan.open=false;
     chipPan.amount=THREE.MathUtils.damp(chipPan.amount,chipPan.open?1:0,5,dt);
     drawer.position.x=-chipPan.amount*chipPan.travel;

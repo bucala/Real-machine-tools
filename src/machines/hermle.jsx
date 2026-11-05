@@ -515,12 +515,12 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             <Toggle on={ui.single} label={L('Blok po bloku', 'Single block')} onClick={() => set('single', !ui.single)} />
             <fieldset className="hermle-hmi-position" disabled={ui.hmiLocked}>
             <SegRow label={L('Poloha ovládacieho panela', 'Control panel position')} value={ui.panelAngle} options={[[0, L('Obsluha', 'Operator')], [90, L('Bok', 'Side')], [180, L('Zásobník', 'Magazine')]]} onChange={(v) => set('panelAngle', v)} />
-            <Slider id="hermle-arm-angle" label={L('Uhol ramena HMI', 'HMI arm angle')} min={0} max={180} step={0.1} digits={1} disabled={ui.hmiLocked} value={ui.panelAngle} unit="°" onChange={(v) => set('panelAngle', v)} />
+            <Slider id="hermle-arm-angle" label={rxu?L('Uhol ramena HMI','HMI arm angle'):L('Poloha ramena HMI','HMI arm position')} min={0} max={rxu?180:100} step={0.1} digits={1} disabled={ui.hmiLocked} value={rxu?ui.panelAngle:ui.panelAngle/1.8} unit={rxu?'°':'%'} onChange={(v) => set('panelAngle',rxu?v:v*1.8)} />
             <Slider id="hermle-panel-yaw" label={L('Korekcia natočenia HMI', 'HMI rotation trim')} min={-180} max={180} step={0.1} digits={1} disabled={ui.hmiLocked} value={ui.panelYaw} unit="°" onChange={(v) => set('panelYaw', v)} />
             </fieldset>
             <button type="button" className="btn mb-2" onClick={() => apiRef.current.view?.('panel')}>{L('Pohľad na HMI', 'HMI view')}</button>
             {ui.manual&&<button type="button" className="btn mb-2 ml-2" onClick={()=>{if(ctl.current.manual)setHmiOpen(true);}}>{L('HMI cez celé okno','Full-screen HMI')}</button>}
-            <p className="text-xs muted mb-2">{L('Rameno 0–180°; panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel. Dvojklik na displej otvorí HMI cez celé okno.', '0–180° arm swing; the panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel. Double-click the display for full-screen HMI.')}</p>
+            <p className="text-xs muted mb-2">{rxu?L('Rameno 0–180°.', '0–180° arm swing.'):L('Poloha 0–100 % medzi krajnými polohami pevného ramena.', 'Position 0–100% between the rigid arm endpoints.')} {L('Panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel. Dvojklik na displej otvorí HMI cez celé okno.', 'The panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel. Double-click the display for full-screen HMI.')}</p>
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
         </div>

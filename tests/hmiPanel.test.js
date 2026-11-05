@@ -32,7 +32,33 @@ describe('TNC console geometry', () => {
       expect(Math.abs(a.x-b.x)>=(a.w+b.w)/2-.001||Math.abs(a.z-b.z)>=(a.d+b.d)/2-.001).toBe(true);
     }
     parent.updateMatrixWorld(true);
-    expect(new THREE.Box3().setFromObject(parent).min.y).toBeGreaterThan(8);
+    expect(new THREE.Box3().setFromObject(panel.body).min.y).toBeGreaterThan(9.6);
+    expect(new THREE.Box3().setFromObject(parent).min.y).toBeGreaterThan(6.4);
+    parent.traverse(o=>o.geometry?.dispose());mat.dispose();
+  });
+  it('has two open-ended side tubes and a low pendant with keys, hanger, connector and coiled cable',()=>{
+    const parent=new THREE.Group(),mat=new THREE.MeshStandardMaterial();
+    const M=Object.fromEntries(['brush','cab2','black','steelD','steel','red','yellow','cab','anth'].map(k=>[k,mat]));
+    createHmiPanel(parent,M);
+    expect(parent.getObjectByName('HMI-front-grab-rail')).toBeUndefined();
+    for(const name of ['HMI-left-side-tube','HMI-right-side-tube']){
+      const tube=parent.getObjectByName(name),p=tube.geometry.attributes.position;
+      expect(tube.geometry.type).toBe('TubeGeometry');
+      for(let i=0;i<p.count;i++)expect(Math.abs(p.getX(i))).toBeGreaterThan(3.18);
+    }
+    const caps=parent.children.filter(o=>o.name==='HMI-tube-end-plug');expect(caps).toHaveLength(4);
+    caps.forEach(o=>{expect(o.geometry.type).toBe('CylinderGeometry');expect(o.material).toBe(M.black);});
+    const pendant=parent.getObjectByName('handheld-pendant'),body=pendant.getObjectByName('pendant-moulded-housing');
+    body.geometry.computeBoundingBox();const size=body.geometry.boundingBox.getSize(new THREE.Vector3());
+    expect(size.x/size.y).toBeGreaterThan(2);expect(pendant.rotation.z).toBeCloseTo(20*Math.PI/180);
+    expect(pendant.children.filter(o=>o.name==='pendant-keycap')).toHaveLength(15);
+    expect(pendant.getObjectByName('pendant-rail-hanger')).toBeTruthy();
+    expect(pendant.getObjectByName('pendant-cable-connector')).toBeTruthy();
+    const cable=parent.getObjectByName('pendant-coiled-cable');
+    expect(cable.geometry.parameters.path.points.length).toBeGreaterThan(190);
+    parent.updateMatrixWorld(true);expect(new THREE.Box3().setFromObject(cable).min.y).toBeGreaterThan(6.4);
+    const local=pendant.position.clone();parent.rotation.y=Math.PI;parent.updateMatrixWorld(true);
+    expect(pendant.position.equals(local)).toBe(true);expect(cable.parent).toBe(parent);
     parent.traverse(o=>o.geometry?.dispose());mat.dispose();
   });
 });
