@@ -17,12 +17,13 @@ export const MODELS = {
     smax: 18000, pmax: 42, mmax: 148, // vreteno HSK-A63: 42 kW / 148 Nm
     tc: 4.5, tcY: 320,                // čas výmeny nástroja (s), poloha výmeny
   },
-  // C 42 U – orientačné údaje (bez katalógu): väčší stroj rovnakej koncepcie
+  // C42 brochure 2016 pp. 46–47: 18,000 rpm spindle and Ø800 Torque table with tandem A drive.
+  // Internal pivot/transfer offsets remain a visual reconstruction.
   c42: {
-    id: 'c42', name: 'C 42 U', K: 1.23, table: 800, mag: 42, upperW: 4.4, approx: true,
+    id: 'c42', name: 'C 42 U', K: 1.23, table: 800, mag: 42, upperW: 4.4,
     hA: 123, X: [-400, 400], Y: [-400, 400], nose: [43, 593], A: [-130, 130],
-    rapid: 60000, rapidZ: 55000, vA: 25 * 360 / 60, vC: 30 * 360 / 60,
-    smax: 18000, pmax: 35, mmax: 130, tc: 5, tcY: 394,
+    rapid: 45000, rapidZ: 40000, vA: 25 * 360 / 60, vC: 65 * 360 / 60,
+    smax: 18000, pmax: 20, mmax: 180, tc: 4.5, tcY: 394,
   },
 };
 export const MACH = MODELS.c32;

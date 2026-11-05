@@ -15,10 +15,7 @@ import { programTime } from './cnc/motion';
 import { SAMPLES } from './cnc/programs';
 import { createExecutor } from './cnc/sim';
 import { MATERIALS, defaultTools } from './cnc/tooling';
-import { createHmiPanel } from './cnc/hmiPanel';
 import { cabinHalfWidth, hmiPose } from './cnc/hermleLayout';
-import { createAccessories } from './cnc/accessories';
-import { createToolModel } from './cnc/toolModel';
 import { HmiFullscreen } from '../ui/hmiFullscreen';
 import { StepDownloadButton } from '../ui/tools';
 import { CncToolPreview } from '../ui/cncToolPreview';
@@ -27,6 +24,7 @@ import { ToolPicker } from '../ui/toolPicker';
 import { installTool, MAX_FILE_BYTES } from './cnc/toolLibrary';
 import { createStock } from './cnc/voxel';
 import { createCabinLighting } from './cnc/cabinLighting';
+import { createHermleModel } from './cnc/hermleModel';
 import { createRoedersModel } from './precision/roedersModel';
 import { RXU, validateRxuTool, RXU_PROGRAM } from './precision/profiles';
 
@@ -35,7 +33,7 @@ import { RXU, validateRxuTool, RXU_PROGRAM } from './precision/profiles';
 // =====================================================================
 // mierka scény 1 = 100 mm. Scéna: x = X stroja, y hore, z = −Y stroja (k obsluhe). Otočný bod (os A ∩ os C) je
 // v (0, PY, 0); plocha stola pri A = 0 je 100 mm pod ním (výška nakladania 950 mm). Prídavné zariadenia sa zapínajú samostatne nižšie.
-const PY0 = 10.5, U = 0.01;
+const U = 0.01;
 const FIX = { r: 35, h: 50 };                         // nulový upínací systém pod polotovarom
 const hermleParts = () => mkParts([
   ['kabina', 'Kabína', 'Cabin', 'Kabína s posuvnými dverami', 'Cabin with sliding doors', 'Uzavretý pracovný priestor s veľkými oknami. Dvere majú bezpečnostný zámok – pri otvorených dverách sa program nespustí a posuv sa zastaví.', 'Enclosed working area with large windows. The doors are interlocked – with the doors open the program does not start and the feed stops.'],
@@ -84,239 +82,13 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     const root = new THREE.Group(); scene.add(root);
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
-    const box = (p, xa, xb, y0, y1, z0, z1, m) => { const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb); const me = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m); me.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); me.castShadow = true; me.receiveShadow = true; p.add(me); return me; };
-    const cylY = (p, r0, r1, y0, y1, x, z, m, s = 32) => { const me = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, y1 - y0, s), m); me.position.set(x, (y0 + y1) / 2, z); me.castShadow = true; p.add(me); return me; };
-    const cylX = (p, r, xa, xb, y, z, m, s = 40) => { const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb); const me = new THREE.Mesh(new THREE.CylinderGeometry(r, r, x1 - x0, s), m); me.rotation.z = Math.PI / 2; me.position.set((x0 + x1) / 2, y, z); me.castShadow = true; p.add(me); return me; };
     const tex = (w, h, draw) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const g = cv.getContext('2d'); const redraw = () => { draw(g, w, h); tx.needsUpdate = true; }; redraw(); return { tx, redraw, g }; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    // geometria je kreslená v rozmeroch C 32; väčší model sa zväčší mierkou K (pohyby osí sú v skutočných mm)
-    const K = MC.K, PY = rxu?14:PY0*K, bodyHalf = rxu?12:cabinHalfWidth(MC);
+    // Scene dimensions follow each catalogue; the CNC pose remains in real millimetres.
+    const K = MC.K, PY = rxu?14:9.5+MC.hA*U, bodyHalf = rxu?12:cabinHalfWidth(MC);
     let scr = null;
-    const buildHermleGeometry = () => {
-    const sc = (parent) => { const g = new THREE.Group(); g.scale.setScalar(K); parent.add(g); return g; };
-    M.win = std(0x1d2329, 0.15, 0.4); M.yellow = std(0xf2c230, 0.5, 0.1); M.brush = std(0xc2c6ca, 0.38, 0.7);
-    // ---------------- lôžko z minerálneho liatia a steny s vedeniami Y ----------------
-    const bed = sc(grp('lozko'));
-    [[-8.6, -9.6], [8.6, -9.6], [-8.6, 7.4], [8.6, 7.4]].forEach(([x, z]) => box(bed, x - 0.9, x + 0.9, 0, 0.7, z - 0.9, z + 0.9, M.black));
-    const bedHalf=Math.min(10,bodyHalf/K-.1);
-    box(bed, -bedHalf, bedHalf, 0.7, 6.2, -12.5, 8.0, M.dark);
-    [-1, 1].forEach((s) => {
-      box(bed, s * 6.9, s * 9.6, 6.2, 20.8, -11, 3.2, M.anth);                                    // stena lôžka
-      box(bed, s * 7.6, s * 8.6, 20.8, 21.2, -11, 3.2, M.steelD);                                  // vedenie Y
-      cylX(bed, 2.1, s * 6.4, s * 6.9, PY0, 0, M.table, 48);                                      // príruba osi A
-      const motorOuter=Math.min(10.6,bodyHalf/K-.2);
-      cylX(bed, 1.2, s * (motorOuter-.8), s * motorOuter, PY0, 0, M.steelD, 32);                                    // pohon osi A (tandem)
-    });
-    box(bed, -6.9, 6.9, 6.2, 7.2, -12.5, 3.2, M.inox);                                               // dno pracovného priestoru (nerez)
-    box(bed, -6.9, 6.9, 7.2, 19, -12.4, -12.2, M.inox);                                              // zadná stena
-    box(bed, -6.9, 6.9, 7.2, 13.9, -3.55, -3.4, M.inox);                                           // deliaca stena pred zásobníkom
-    // Rear service/electrical section completes the 4000 mm C42 plan envelope.
-    const service = sc(bed.parent), envelopeScale = bodyHalf / 12.25;
-    const serviceRear = (9.3*K - 40*envelopeScale)/K, serviceFront = -12.4;
-    const serviceHalf = 8.75*envelopeScale/K;
-    box(service,-serviceHalf,serviceHalf,1.2,21.5*envelopeScale/K,serviceRear,serviceFront,M.cab2);
-    box(service,-serviceHalf+.2,serviceHalf-.2,1,1.2,serviceRear+.2,serviceFront-.2,M.dark);
-    for(const x of [-serviceHalf*.8,serviceHalf*.8])for(const z of [serviceRear+.6,serviceFront-.6])cylY(service,.4,.4,.05,1.2,x,z,M.steelD);
-    for(const x of [-serviceHalf*.5,serviceHalf*.5]){
-      box(service,x-serviceHalf*.48,x+serviceHalf*.48,2,20.7*envelopeScale/K,serviceRear-.08,serviceRear-.02,M.cab);
-      box(service,x+.8,x+.9,10,11,serviceRear-.18,serviceRear-.08,M.black);
-    }
-    const accessories = createAccessories(root, M, K, bodyHalf);
-    // ---------------- otočno-sklopný stôl A / C ----------------
-    const tab = grp('stol');
-    const aG = new THREE.Group(); aG.position.set(0, PY, 0); tab.add(aG);
-    const cr = sc(aG);
-    [-1, 1].forEach((s) => {
-      box(cr, s * 4.4, s * 6.3, -3.4, 0.8, -2.0, 2.0, M.table); cylX(cr, 2.0, s * 4.4, s * 6.4, 0, 0, M.table, 40);
-      const fr = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.32, 12, 56), M.steel); fr.rotation.y = Math.PI / 2; fr.position.set(s * 6.05, 0, 0); fr.castShadow = true; cr.add(fr);   // prstencová príruba osi A
-    });
-    box(cr, -4.6, 4.6, -3.6, -1.55, -3.0, 3.0, M.table);                                           // vaňa stola (U)
-    cylY(cr, 3.0, 3.0, -1.75, -1.55, 0, 0, M.steelD, 56);
-    const cG = new THREE.Group(); cG.position.y = -MC.hA * U; aG.add(cG);
-    const cT = sc(cG);
-    // plocha stola: radiálne T-drážky, sústredné rysky a uhlová stupnica na obvode (ako na predlohe)
-    const top = tex(512, 512, (g, w) => {
-      const c0 = w / 2; g.fillStyle = '#b9bec3'; g.fillRect(0, 0, w, w);
-      g.strokeStyle = 'rgba(70,76,82,.45)'; g.lineWidth = 1.5; for (let r = 30; r < 240; r += 15) { g.beginPath(); g.arc(c0, c0, r, 0, Math.PI * 2); g.stroke(); }
-      g.strokeStyle = '#4b5157'; g.lineWidth = 2; for (let d = 0; d < 360; d += 5) { const a = d * Math.PI / 180, r1 = d % 10 ? 246 : 240; g.beginPath(); g.moveTo(c0 + Math.cos(a) * r1, c0 + Math.sin(a) * r1); g.lineTo(c0 + Math.cos(a) * 252, c0 + Math.sin(a) * 252); g.stroke(); }
-      g.fillStyle = '#8a9096'; g.beginPath(); g.arc(c0, c0, 22, 0, Math.PI * 2); g.fill();
-    });
-    const tdisc = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.25, 0.22, 72), [M.table, new THREE.MeshStandardMaterial({ map: top.tx, roughness: 0.32, metalness: 0.7 }), M.table]);
-    tdisc.position.y = -0.11; tdisc.receiveShadow = true; cT.add(tdisc);
-    for (let i = 0; i < 12; i++) { const sl = box(cT, 0.45, 3.1, -0.02, 0.003, -0.065, 0.065, M.steelD); sl.position.x = 0; sl.geometry.translate(1.775, 0, 0); sl.rotation.y = i * Math.PI / 6; }
-    cylY(cG, FIX.r * U * 1.35, FIX.r * U * 1.35, 0, 0.22, 0, 0, M.steelD, 40);                     // nulový upínací systém
-    cylY(cG, FIX.r * U, FIX.r * U, 0.22, FIX.h * U, 0, 0, M.anth, 40);
-    const clampPins = [0,1,2].map(i=>{
-      const pin=new THREE.Group();pin.rotation.y=i*Math.PI*2/3;cG.add(pin);
-      return box(pin,-.055,.055,.25,.42,FIX.r*U-.06,FIX.r*U+.06,M.steel);
-    });
-    // ---------------- portál: priečnik Y, sane X, smykadlo Z, vreteno ----------------
-    const ax = grp('osi');
-    const yG = new THREE.Group(); ax.add(yG);
-    const yS = sc(yG);
-    box(yS, -8.8, 8.8, 21.2, 23.0, -1.7, 1.7, M.cab2);                                             // priečnik Y
-    box(yS, -8.8, 8.8, 23.0, 23.1, -1.7, 1.7, M.steelD);
-    // lamelové nerezové kryty osi X vľavo a vpravo od smykadla (skracujú / predlžujú sa)
-    const rib = tex(256, 64, (g, w, h) => { g.fillStyle = '#c3c8cd'; g.fillRect(0, 0, w, h); for (let i = 0; i < w; i += 64) { g.fillStyle = '#9aa1a8'; g.fillRect(i, 0, 3, h); g.fillStyle = '#e1e4e7'; g.fillRect(i + 3, 0, 24, h); g.fillStyle = '#3f454b'; for (let y = 6; y < h; y += 14) g.fillRect(i + 8, y, 2, 2); } });   // nerezové lamely s nitmi
-    rib.tx.wrapS = THREE.RepeatWrapping;
-    const covers = [0, 1].map(() => { const tx = rib.tx.clone(); tx.needsUpdate = true; const me = new THREE.Mesh(new THREE.BoxGeometry(1, 8.6, 0.08), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.3, metalness: 0.75 })); me.position.set(0, 18.4, 1.78); yS.add(me); return me; });
-    const xG = new THREE.Group(); yG.add(xG);
-    const xS = sc(xG);
-    box(xS, -1.9, 1.9, 20.0, 23.6, -2.0, 2.0, M.cab);                                              // sane X
-    const zG = new THREE.Group(); xG.add(zG);
-    const zS = sc(zG);
-    box(zS, -1.25, 1.25, 0.9, 13.0, -1.25, 1.25, M.inox);                                          // smykadlo Z (počiatok = čelo vretena)
-    const sp = grp('vreteno', zG);
-    cylY(sp, 0.78, 0.78, 0.05, 0.9 * K, 0, 0, M.steel, 40);
-    cylY(sp, 0.55, 0.78, 0, 0.05, 0, 0, M.steelD, 40);
-    for (const y of [.2, .45, .7]) cylY(sp, .8, .8, y, y + .035, 0, 0, M.steelD);
-    for (const x of [-.98, .98]) {
-      cylY(sp, .12, .12, .55, 1.3, x, 0, M.red, 16);
-      cylY(sp, .19, .19, 1.3, 1.5, x, 0, M.steelD, 16);
-      box(sp, x - .18, x + .18, 1.5, 1.75, -.18, .18, M.anth);
-    }
-    const toolG = new THREE.Group(); sp.add(toolG);
-    const clearTool = (g) => { while (g.children.length) { const o = g.children[0]; g.remove(o); o.traverse((n) => n.geometry?.dispose()); } };
-    const buildTool = (t) => { clearTool(toolG); if (t) toolG.add(createToolModel(t, M)); };
-    // Pick-up ring on a stationary bearing housing bolted to the mineral-cast bed.
-    const mag = grp('zasobnik'), magS = sc(mag);
-    const magZ = -MC.tcY * U / K - 4.0, magY = (PY + (MC.nose[1] - 80) * U) / K;
-    box(magS, -5.3, 5.3, 6.2, 8, magZ - 4.5, magZ + 3.5, M.anth);
-    [-1, 1].forEach((s) => {
-      box(magS, s * 3.6 - .35, s * 3.6 + .35, 8, magY - .5, magZ - 2, magZ + 2, M.dark);
-      for (const z of [-1.6, 1.6]) cylY(magS, .12, .12, magY - .48, magY - .35, s * 3.6, magZ + z, M.steel);
-    });
-    cylY(magS, 3.6, 3.6, magY - .5, magY - .2, 0, magZ, M.steelD, 72);
-    cylY(magS, .65, .65, magY - .2, magY + .45, 0, magZ, M.steel, 40);
-    box(magS, -4.7, -3.8, magY - .8, magY + .4, magZ - .8, magZ + .8, M.dark); // index motor
-    const magG = new THREE.Group(); magG.position.set(0, magY, magZ); magS.add(magG);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(4, .12, 10, 96), M.steel); ring.rotation.x = Math.PI / 2; magG.add(ring);
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4; cylY(magS, .1, .1, magY - .18, magY - .1, Math.sin(a) * 3.4, magZ + Math.cos(a) * 3.4, M.steel);
-    }
-    for (let i = 0; i < 3; i++) {
-      const spoke = new THREE.Group(); magG.add(spoke); spoke.rotation.y = i * Math.PI * 2 / 3;
-      box(spoke, -.15, .15, -.18, -.05, .55, 3.9, M.steelD);
-    }
-    const pockets = [];
-    for (let i = 0; i < MC.mag; i++) {
-      const a = i / MC.mag * Math.PI * 2, g = new THREE.Group(); g.position.set(Math.sin(a) * 4, 0, Math.cos(a) * 4); g.rotation.y = a; magG.add(g);
-      // Open fork engages the HSK flange groove; no fabricated tools in empty pockets.
-      for (const x of [-.28, .28]) box(g, x - .045, x + .045, -.14, -.08, -.25, .28, M.red);
-      box(g, -.32, .32, -.14, -.08, -.32, -.24, M.red);
-      const holder = new THREE.Group(); holder.scale.setScalar(1 / K); g.add(holder);
-      pockets.push(holder);
-    }
-    // Compact mechanism stays over the magazine, within the bed's rear wall.
-    const saddle = new THREE.Group(); saddle.name = 'magazine-drive'; magS.add(saddle);
-    const driveY = magY + 1.6;
-    for (const x of [-1.55, 1.55]) {
-      box(saddle, x - .25, x + .25, magY + .2, driveY, magZ - 1.1, magZ + 1.1, M.anth);
-      box(saddle, x - .3, x + .3, driveY, driveY + .2, magZ - 2.8, magZ + 2.8, M.dark);
-    }
-    const rodZ = (x, y, z0, z1, r, mat) => {
-      const rod = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z1-z0, 24), mat);
-      rod.rotation.x = Math.PI/2; rod.position.set(x,y,(z0+z1)/2); saddle.add(rod); return rod;
-    };
-    for (const x of [-1.1, 1.1]) rodZ(x, driveY + .45, magZ - 2.55, magZ + 2.55, .12, M.steel);
-    rodZ(0, driveY + .45, magZ - 2.55, magZ + 2.55, .15, M.red);
-    for (const z of [-2.7, 2.7]) {
-      box(saddle, -1.85, 1.85, driveY + .05, driveY + .9, magZ + z - .15, magZ + z + .15, M.inox);
-      for (const x of [-1.1,0,1.1]) rodZ(x,driveY+.45,magZ+z-.17,magZ+z+.17,.23,M.steelD);
-    }
-    box(saddle, -.5,.5,driveY+.05,driveY+.9,magZ-3.45,magZ-2.85,M.black);
-    rodZ(0,driveY+.45,magZ-2.85,magZ-2.55,.18,M.steelD);
-    // Flanged vertical transmission physically joins the bridge to the ring hub.
-    const driveShaft = new THREE.Group(); driveShaft.position.set(0,magY,magZ); magS.add(driveShaft);
-    cylY(driveShaft,.25,.25,0,1.8,0,0,M.steel);
-    for(const y of [.25,1.35]) cylY(driveShaft,.62,.62,y,y+.15,0,0,M.steelD);
-    cylY(saddle,.8,.8,driveY-.1,driveY+.1,0,magZ,M.anth);
-    box(saddle,-2.9,-1.85,driveY-.1,driveY+.55,magZ-.8,magZ+.8,M.cab2);
-    cylY(saddle,.55,.55,driveY+.55,driveY+.75,-2.35,magZ,M.steelD);
-    const loadMagazine = (tls) => pockets.forEach((g, i) => { clearTool(g); const tl = tls.find((x) => x.t === i + 1); if (tl) g.add(createToolModel(tl, M)); });
-    // ---------------- kabína: čelo podľa predlohy (široký spodný a podľa modelu užší horný otvor) ----------------
-    const cab = grp('kabina'), cabS = sc(cab), uw = MC.upperW;
-    cabS.scale.x = bodyHalf / 11.4;
-    [-1, 1].forEach((s) => {                                                                       // bočné panely s oknom
-      box(cabS, s * 9.6, s * 11.4, 0.7, 9, -12, 8.2, M.cab); box(cabS, s * 9.6, s * 11.4, 21, 26, -12, 8.2, M.cab);
-      box(cabS, s * 9.6, s * 11.4, 9, 21, -12, -9, M.cab); box(cabS, s * 9.6, s * 11.4, 9, 21, 5, 8.2, M.cab);
-    });
-    box(cabS, -11.4, 11.4, 26, 26.4, -12, 8.6, M.cab2);                                            // strecha
-    box(cabS, -11.4, 11.4, 0.7, 26.4, -12.4, -12, M.cab);                                          // zadná stena
-    box(cabS, -3.6, 3.6, 26.4, 29.6, -4.2, 1.2, M.cab2); box(cabS, -3.7, 3.7, 29.6, 29.8, -4.3, 1.3, M.steelD);   // nadstavba pohonu Z
-    box(cabS, -11.4, 11.4, 0.7, 2.2, 8.2, 9.3, M.cab2);                                            // svetlý sokel
-    box(cabS, -11.4, 11.4, 2.2, 6.4, 8.2, 8.6, M.dark);                                            // tmavý pás
-    box(cabS, -4.4, 4.4, 2.6, 6.2, 8.6, 8.72, M.cab2); box(cabS, -3.6, 3.6, 4.1, 4.35, 8.72, 8.76, M.dark);   // spodný kryt so žliabkom
-    [-1, 1].forEach((s) => box(cabS, s * 4.4, s * 11.4, 6.4, 26, 8.2, 8.6, M.cab));                // čelné panely
-    if (uw < 4.39) [-1, 1].forEach((s) => box(cabS, s * uw, s * 4.4, 14.2, 23.6, 8.2, 8.6, M.cab)); // užší horný otvor (C 32)
-    box(cabS, -4.4, 4.4, 23.6, 26, 8.2, 8.6, M.cab);                                               // nadpražie
-    box(cabS, -9.0, -6.6, 9.5, 19.5, 8.6, 8.64, M.cab2); box(cabS, 6.0, 8.4, 9.5, 19.5, 8.6, 8.64, M.cab2);   // zapustené sivé čelné plechy
-    box(cabS, 8.75, 9.0, 9.5, 19.5, 8.6, 8.66, M.red);                                             // červený pás
-    const label = tex(512, 128, (g, w, h) => { g.fillStyle = '#e6e8ea'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d8202a'; g.lineWidth = 16; g.beginPath(); g.arc(70, 64, 40, 0.5, Math.PI * 2 - 0.5); g.stroke(); g.fillStyle = '#5d6369'; g.font = 'bold 62px sans-serif'; g.textBaseline = 'middle'; g.fillText('HERMLE', 128, 66); });
-    const lab = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), new THREE.MeshStandardMaterial({ map: label.tx, roughness: 0.6 })); lab.position.set(-8.9, 21.4, 8.63); cabS.add(lab);
-    const name = tex(128, 512, (g, w, h) => { g.fillStyle = '#e6e8ea'; g.fillRect(0, 0, w, h); g.save(); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2); g.fillStyle = '#6b7178'; g.font = '78px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(MC.name, 0, 0); g.restore(); });
-    const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 2.8), new THREE.MeshStandardMaterial({ map: name.tx, roughness: 0.6 })); nm.position.set(9.6, 18.0, 8.63); cabS.add(nm);
-    // Separate sliding leaves on upper and lower rails; handles stay on their own outer frame edges.
-    for (const y of [6.35, 23.65]) box(cabS, -8.8, 8.8, y - .12, y + .12, 7.75, 8.1, M.steelD);
-    const doors = [-1, 1].map((s) => {
-      const d = new THREE.Group(); cabS.add(d);
-      box(d, -2.2, 2.2, 0, 1.0, -0.08, 0.08, M.cab); box(d, -2.2, 2.2, 16.2, 17.2, -0.08, 0.08, M.cab);
-      box(d, -2.2, -1.85, 1.0, 16.2, -0.08, 0.08, M.cab); box(d, 1.85, 2.2, 1.0, 16.2, -0.08, 0.08, M.cab);
-      const win = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 15.2), M.glass); win.position.set(0, 8.6, 0); d.add(win);
-      const hx = -s * 1.7;
-      const pts = [v3(hx, 3.6, .12), v3(hx + s * .38, 4.2, .5), v3(hx + s * .38, 6.4, .5), v3(hx, 7.0, .12)];
-      for (let j = 1; j < pts.length; j++) {
-        const delta = pts[j].clone().sub(pts[j - 1]);
-        const bar = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, delta.length(), 12), M.red);
-        bar.position.copy(pts[j]).add(pts[j - 1]).multiplyScalar(.5); bar.quaternion.setFromUnitVectors(v3(0, 1, 0), delta.normalize()); d.add(bar);
-      }
-      for (const y of [3.6, 7]) box(d, hx - .16, hx + .16, y - .16, y + .16, .08, .21, M.steelD);
-      box(d, s < 0 ? 2.12 : -2.2, s < 0 ? 2.2 : -2.12, 0, 17.2, -.1, .11, M.black); // meeting seal
-      d.userData.s = s; return d;
-    });
-    [-1, 1].forEach((s) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(14, 12), M.glass); w.rotation.y = Math.PI / 2; w.position.set(s * 11.4, 15, -2); cabS.add(w); });
-    // ---------------- ovládací panel TNC 640 (Hermle) na otočnom ramene ----------------
-    const pan = grp('panel');
-    const panBase = sc(pan);
-    // Two low articulated links. The machine-side pivot is at the FRONT corner.
-    const hmiBase = hmiPose(0, 0, bodyHalf, K);
-    box(panBase, bodyHalf/K-.1,hmiBase.base[0]/K,2.9,4.3,7.05,7.95,M.anth);
-    cylY(panBase,.65,.65,2.7,4.7,hmiBase.base[0]/K,7.5,M.steelD);
-    const armPivot = new THREE.Group(); armPivot.position.set(hmiBase.base[0]/K,0,7.5); panBase.add(armPivot);
-    // Offset links and forked elbow: the folded arm has clearance between its two members.
-    box(armPivot,-.48,.48,3.2,4.05,0,4.6,M.anth);
-    box(armPivot,-.52,.52,4.05,4.16,.4,4.2,M.steelD);
-    const armElbow = new THREE.Group(); armElbow.position.z=4.6; armPivot.add(armElbow);
-    cylY(armElbow,.68,.68,3.85,4.95,0,0,M.steelD);
-    box(armElbow,-.42,.42,4.35,5.05,0,6.8,M.anth);
-    const brace=new THREE.Mesh(new THREE.BoxGeometry(.7,3.95,.7),M.anth);
-    brace.position.set(0,6.8,6.02);brace.rotation.x=.42;armElbow.add(brace);
-    cylY(armElbow,.38,.38,2.4,9.45,0,6.8,M.anth);
-    cylY(armElbow,.55,.55,4.25,5.2,0,6.8,M.steelD);
-    const panG = new THREE.Group(); panG.position.set(0,0,6.8); armElbow.add(panG);
-    const hmi = createHmiPanel(panG,M,tex), sm = hmi.display;
-    // Cabinet seams, ventilation grille and levelling pads from the brochure views.
-    for (const x of [-10.9,10.9]) for(const y of [7,23.2]) {
-      const screw=new THREE.Mesh(new THREE.CircleGeometry(.07,12),M.steelD);screw.position.set(x,y,8.68);cabS.add(screw);
-    }
-    const vents=sc(cab);
-    for(let i=0;i<12;i++) box(vents,bodyHalf/K+.02,bodyHalf/K+.08,5+i*.35,5.12+i*.35,-5.8,-2.8,M.dark);
-    for(const x of [-8.6,8.6]) for(const z of [-9.6,7.4]) cylY(bed,.55,.55,.05,.2,x,z,M.steelD);
-    const roofCable = new THREE.CatmullRomCurve3([v3(2.8,29.7,.8),v3(2.8,29.1,-1.8),v3(2.8,27.8,-4.5),v3(2.8,26.5,-4.5)]);
-    for(let i=0;i<22;i++){
-      const p=roofCable.getPoint(i/21), link=box(cabS,-.32,.32,-.2,.2,-.3,.3,M.black);
-      link.position.copy(p);link.quaternion.setFromUnitVectors(v3(0,1,0),roofCable.getTangent(i/21).normalize());
-    }
-    M.lamp=std(0xffffff,.3,0,{emissive:0xffffff,emissiveIntensity:.5});
-    for(const x of [-5.6,5.6])box(cabS,x-.15,x+.15,20.1,20.35,-2,2.5,M.lamp);
-    for(const x of [-.65,.65]){
-      const hose=new THREE.CatmullRomCurve3([v3(x,1.4,.7),v3(x,1,.9),v3(x*.7,.25,.8)]);
-      sp.add(new THREE.Mesh(new THREE.TubeGeometry(hose,12,.07,8,false),M.dark));
-    }
-    return {cab,aG,cG,yG,xG,zG,sp,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories};
-    };
-    const geometry = rxu ? createRoedersModel({root,G,M,tex,MC,PY}) : buildHermleGeometry();
+    const geometry = rxu ? createRoedersModel({root,G,M,tex,MC,PY}) : createHermleModel({root,G,M,tex,MC,PY});
     const {cab,aG,cG,yG,xG,zG,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories}=geometry;
     const screen = tex(640, 460, (g, w, h) => {
       g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
@@ -464,7 +236,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         hint:rxu?L('Potiahni doprava po koľajnici alebo klikni.','Drag right along the rail or click.'):L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
         read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
         start:()=>{doorDragStart=doorK;manualDoor=doorK;},
-        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/((rxu?11.8:4)*K)));ctrl.push('door',manualDoor>.01);},
+        slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/(geometry.doorTravel ?? (rxu?11.8:4)*K)));ctrl.push('door',manualDoor>.01);},
         click:()=>ctrl.push('door',!c.door),
         end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
       },d);
@@ -554,7 +326,6 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (c.door && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
       if(c.unclamped){c.running=false;c.fast=false;c.door=true;c.manual=false;}
       if(manualDoor!==null)doorK=manualDoor;else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
-      if(!rxu)doors.forEach((d) => { d.position.set(d.userData.s * (2.2 + doorK * 4.0), 6.4, 8.82); });
       wi.update(dt);
       clampPins.forEach(pin=>{pin.position.z=FIX.r*U+wi.open()*.12;});
       const xc = xG.position.x / K;
@@ -563,11 +334,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       hmi.controls.knobs.feed.rotation[hmi.knobAxis||'y']=(c.fo-100)*Math.PI/75;hmi.controls.knobs.rapid.rotation[hmi.knobAxis||'y']=(c.ro-100)*Math.PI/50;
       accessories.update(c, dt);
       if(!c.hmiLocked)panelA += ((c.panelAngle || 0) * Math.PI / 180 - panelA) * Math.min(1, dt * 4);
-      const armPose = hmiPose(panelA*180/Math.PI,0,bodyHalf,K);
-      if(!rxu)armPivot.rotation.y = armPose.angle;
-      if(!rxu)armElbow.rotation.y = armPose.elbow;
       if(!c.hmiLocked)panelYaw += ((c.panelYaw || 0) * Math.PI / 180 - panelYaw) * Math.min(1, dt * 8);
-      if(!rxu)panG.rotation.y = hmiPose(panelA*180/Math.PI, panelYaw*180/Math.PI, bodyHalf,K).yaw - armPose.angle - armPose.elbow;
       geometry.updateGeometry?.({doorK,panelA,panelYaw});
       let busy = false;
       if (ex && c.running && !ex.S.alarm && !ex.S.done && !ex.S.paused) {
@@ -584,6 +351,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (T !== curT) { curT = T; buildTool(tl); pockets.forEach((pk, i) => { pk.visible = i + 1 !== T; }); }
       yG.position.z = -p.m[1] * U; xG.position.x = p.m[0] * U; zG.position.y = PY + (p.m[2] + Lt) * U;
       aG.rotation.x = p.a * Math.PI / 180; cG.rotation.y = p.c * Math.PI / 180;
+      geometry.updateAxes?.();
       const spinOn = S && S.dir && S.spin > 0 && !S.alarm && (c.running || false);
       spinA += spinOn ? dt * Math.min(60, S.spin / 60 * 2 * Math.PI) * 0.15 * (S.dir || 1) : 0; toolG.rotation.y = spinA;
       const change = S && prog?.moves[S.idx]?.kind === 'tc' ? prog.moves[S.idx] : null;
@@ -644,6 +412,13 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   const freePocket = Array.from({length:MC.mag},(_,i)=>i+1).find(t=>!tools.some(tool=>tool.t===t));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
   const parts = hermleParts();
+  if(!rxu){
+    const dims=MC.id==='c42'?'800 × 800 × 550':'650 × 650 × 500',depth=MC.id==='c42'?630:540;
+    const axis=parts.find(p=>p.key==='osi');axis.desc=L(`Tri lineárne osi nesie vreteno; priečnik Y jazdí po stenách minerálneho lôžka. Dráhy ${dims} mm, rýchloposuv 45 / 45 / 40 m/min.`,`The spindle carries all three linear axes; the Y crossbeam travels on the mineral-cast bed walls. Travel ${dims} mm, rapid 45 / 45 / 40 m/min.`);
+    const table=parts.find(p=>p.key==='stol');table.name=L(`Otočno-sklopný stôl Ø${MC.table} × ${depth} mm`,`Swivelling rotary table Ø${MC.table} × ${depth} mm`);
+    const spindle=parts.find(p=>p.key==='vreteno');spindle.desc=L(`18 000 ot/min, ${MC.pmax} kW / ${MC.mmax} Nm (20 % ED), HSK-A63.`,`18,000 rpm, ${MC.pmax} kW / ${MC.mmax} Nm (20% duty), HSK-A63.`);
+    const magazine=parts.find(p=>p.key==='zasobnik');magazine.desc=L(`${MC.mag} miest v karuseli integrovanom do lôžka. Obvodové držiaky, nosný bubon, bočný pohon a vedenia nad prstencom. Výmena pick-up priamo vretenom.`,`${MC.mag} pockets in a carousel integrated into the bed. Perimeter forks, support drum, side drive and guideways above the ring. Direct spindle pick-up tool change.`);
+  }
   if(rxu){
     const detail={kabina:['Pracovná kabína RXU','Ľavé bočné pozorovacie okno a červené čelné dvere posúvané doprava po spodnej koľajnici.','Left observation window and red front door sliding to the right along its lower rail.'],lozko:['QUADROGUIDE','Masívne lôžko, priame pohony a teplotná stabilizácia.','Massive bed, direct drives and thermal stabilisation.'],osi:['QUADROGUIDE · X/Y/Z','Dráhy 800 × 855 × 500 mm; štyri vedenia v rohoch osi Z.','800 × 855 × 500 mm travel; four guide rails at the corners of Z.'],vreteno:['HSK-A63 · 24 000 ot/min','Štandardné vreteno 67 Nm S1, nástroj max. Ø35 mm.','Standard spindle 67 Nm S1, tool max. Ø35 mm.'],stol:['A/C · Ø600 mm','Obojstranné uloženie, A ±115°, C neobmedzene; nosnosť 800 kg.','Two-sided support, A ±115°, continuous C; 800 kg load.'],zasobnik:['24 miest / pockets','Štandardný rotačný zásobník. Čas výmeny v simulácii je odhad.','Standard rotary magazine. Simulated tool-change timing is estimated.'],panel:['Röders RMS6','Výukové ISO rozhranie; nejde o emuláciu proprietárneho RMS6.','Training ISO interface; not an emulation of proprietary RMS6.']};
     for(const [key,v] of Object.entries(detail)){const part=parts.find(p=>p.key===key);if(part){part.name=v[0];part.desc=L(v[1],v[2]);}}

@@ -1,5 +1,33 @@
 # Presné obrábanie a elektroerózia – zdroje modelov
 
+## Hermle C 32 U / C 42 U
+
+Podklady dodané používateľom:
+
+- `671527777-Catalogo-Hermle-Brochure-C32-EN.pdf`: PDF strany 4–8 (čelo, odkrytý stroj, ergonómia), 18 (technické údaje), 20 (rozmerový layout). Jedna PDF strana spravidla obsahuje dve tlačené strany.
+- `490488889-201611-Hermle-C42-EN.pdf`: PDF strany 10–11 (čelo), 15 (lôžko a lineárne osi), 19 (dvere a HMI), 22–23 (stoly), 34–35 (zásobník), 46–48 (technické údaje), 50 (štandardný layout).
+- Dodatočné obrázky odkrytého lôžka, karusela s bočným pohonom a stola Torque Ø800 × 630 mm s tandemovým pohonom A. Tieto obrázky určujú zvolený variant C 42.
+- [Používateľom odporúčané video](https://www.youtube.com/watch?v=2DWQGW74FJc). Prístup k YouTube bol v pracovnom prostredí zablokovaný; video sa nepoužíva ako overený zdroj rozmerov ani pohybov.
+
+| Parameter modelu | C 32 U | C 42 U |
+| --- | --- | --- |
+| Kabína – šírka / celková hĺbka | 2270 / 3680 mm | 2450 / 4000 mm |
+| Výška kabíny / horného pohonu | 2660 / 3190 mm | 2650 / 3290 mm |
+| Svetlý otvor dverí | 758 mm | 940 mm |
+| Nakladacia výška | 950 mm | 950 mm |
+| Stôl / T-drážky | Ø650 × 540 mm / 7 × 14 H7 | Ø800 × 630 mm / 9 × 14 H7 |
+| Zvolený pohon stola | závitovkový C, A 25 / C 30 ot/min | Torque C, tandem A 25 / C 65 ot/min |
+| Dráhy X/Y/Z | 650 / 650 / 500 mm | 800 / 800 / 550 mm |
+| Rýchloposuv X/Y/Z | 45 / 45 / 40 m/min | 45 / 45 / 40 m/min |
+| Vreteno HSK-A63 | 18 000 ot/min, 42 kW / 148 Nm | 18 000 ot/min, 20 kW / 180 Nm |
+| Pick-up zásobník | 36 miest | 42 miest |
+
+Výkon a moment vretena sú katalógové špičkové údaje pri 20 % ED, nie konštantný výkon v celom rozsahu otáčok. Interné výškové offsety osí, presná kinematika pohonu zásobníka a výkonový model zostávajú výučbovou aproximáciou.
+
+`src/machines/cnc/hermleModel.js` obsahuje samostatnú geometriu a rozmerové profily oboch modelov. Kabína a HMI už nepoužívajú plošné zväčšenie C 32. Pohyblivé dvere, osi, stôl, nástroje a ovládače zostávajú pripojené na spoločné CNC jadro. Číselné rozmery stolov, ich nakladacia výška, svetlý otvor dverí a zhoda polohy pick-up s CNC súradnicami sa overujú geometrickými testami.
+
+Karusel má pevný rebrovaný bubon, indexovaný prstenec s 36/42 otvorenými vidlicami, obvodové ozubenie a bočný pohon pod tvarovaným krytom. Dlhá základňa nad prstencom nesie dvojicu vedení a skrutku. Lôžko má šikmé čelá nosných stien, nerezové žľaby a prepážku s otvorom pre pick-up. Krátke lichobežníkové lamelové kryty majú priestorové sklady, šikmé krajné lišty a menia šírku s osou X. Kolíska je priestorový odliatok s rozšírenou spodnou vaňou a úzkymi stúpajúcimi ramenami pri dvoch odkrytých prírubách; stôl má sploštené okraje a fyzické rovnobežné drážky. Neokótované detaily sú rekonštrukcia fotografií; model neslúži na výrobu dielov ani montážnu kontrolu kolízií.
+
 ## Röders RXU 1001 DSH
 
 Podklad: používateľom dodaný katalóg `884756316-roders-rxu-1001-dsh-katalogu-729.pdf` (2016), PDF strany 58–59. Fotografia, diagramy obojstranného uloženia stola a údaje DSH sú na týchto stranách; pôdorys základného RXU 1001 je na strane 57. Katalóg na strane 59 uvádza, že rozloženie DSH je **veľmi podobné** RXU 1001. Pôdorys zo strany 57 preto určuje vzájomné polohy blokov, nie zameniteľnosť všetkých rozmerov oboch variantov. Používateľ doplnil rovnakú fotografiu a pôdorys a upresnil ľavé pozorovacie okno, zadnejšiu ľavú polohu HMI a otváranie dverí doprava.

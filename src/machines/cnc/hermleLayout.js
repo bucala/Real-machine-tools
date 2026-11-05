@@ -1,5 +1,5 @@
 // Scene units = 100 mm. Exterior width from C42 brochure layout (2450 mm).
-export const cabinHalfWidth = (model) => model.id === 'c42' ? 12.25 : 11.4;
+export const cabinHalfWidth = (model) => model.id === 'c42' ? 12.25 : 11.35;
 export const HMI_LINKS = [4.6, 6.8];
 export function hmiPose(angle, trim = 0, halfWidth = 11.4, scale = 1) {
   const sweep = Math.max(0, Math.min(180, angle)) * Math.PI / 180;
