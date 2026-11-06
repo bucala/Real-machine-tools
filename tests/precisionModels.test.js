@@ -31,6 +31,24 @@ describe('Manufacturer-specific machine geometry',()=>{
     expect(after.min.y).toBeCloseTo(before.min.y);expect(m.doors[0].quaternion.equals(q)).toBe(true);
     expect(ctx.root.getObjectByName('right-hinged-loading-door')).toBeUndefined();
   });
+  it('aligns the side door and glass bevels with the blunt hood underside, leaving a rebate',()=>{
+    const ctx=setup();createRoedersModel(ctx);
+    const door=ctx.root.getObjectByName('left-window-sheet-metal').geometry.parameters.shapes.getPoints();
+    const glass=ctx.root.getObjectByName('left-observation-window').geometry.parameters.shapes.getPoints();
+    const hood=ctx.root.getObjectByName('left-window-blunt-hood').geometry;
+    const p=hood.attributes.position;
+    const undersideSlope=(p.getY(1)-p.getY(0))/(p.getZ(1)-p.getZ(0));
+    const slope=(a,b)=>(b.y-a.y)/(b.x-a.x);
+    expect(slope(door[5],door[4])).toBeCloseTo(undersideSlope);
+    expect(slope(glass[4],glass[3])).toBeCloseTo(undersideSlope);
+    expect(p.getY(0)-door[5].y).toBeGreaterThan(.12);
+    const doorHeightAtGlass=door[5].y+(glass[4].x-door[5].x)*undersideSlope;
+    expect(doorHeightAtGlass-glass[4].y).toBeGreaterThan(1);
+    hood.computeBoundingBox();
+    // Rear wall now reaches the short clipped end instead of leaving a long tip.
+    expect(hood.boundingBox.min.x).toBeGreaterThan(-13);
+    expect(hood.boundingBox.min.z).toBeGreaterThan(2);
+  });
   it('retains the stepped p57 footprint and leaves the rear service recess empty',()=>{
     const ctx=setup();createRoedersModel(ctx);ctx.root.updateMatrixWorld(true);
     // A solid rectangular rear block was the original layout error. Neither its
