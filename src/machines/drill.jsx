@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -455,26 +456,26 @@ function DrillSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Vrták', 'Drill')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Vrták', 'Drill')}</h2><SectionInfo title={L('Vrták', 'Drill')}><p className="text-xs muted">{L(`Pre oceľ je vhodná rezná rýchlosť 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min. Vrták sa mení len pri stojacom vretene.`, `For steel use a cutting speed of 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}. Drills are changed only with the spindle stopped.`)}</p></SectionInfo></div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {DRILL_SIZES.map((d) => <button key={d} type="button" className={`btn ${ui.bit === d ? 'active' : ''}`} aria-pressed={ui.bit === d} onClick={() => set('bit', d)}>Ø{d}</button>)}
           </div>
-          <p className="text-xs muted">{L(`Pre oceľ je vhodná rezná rýchlosť 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min. Vrták sa mení len pri stojacom vretene.`, `For steel use a cutting speed of 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}. Drills are changed only with the spindle stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2><SectionInfo title={L('Posuvy', 'Feeds')}><p className="text-xs muted">{L('Pri vŕtaní je posuv obmedzený na 0,12 mm/ot – rýchlejšie ako vrták reže, pinola nepôjde.', 'While drilling the feed is limited to 0.12 mm/rev – the quill will not go faster than the drill cuts.')}</p></SectionInfo></div>
           <Slider id="dq" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={100} step={0.5} value={ui.quill} actual={tele.quill} digits={1} onChange={(v) => set('quill', v)} />
           <Slider id="dt" label={L('Výška stola', 'Table height')} unit="mm" min={0} max={500} step={1} value={ui.table} actual={tele.table} onChange={(v) => set('table', v)} />
           <SegRow label={L('Zrýchlenie vŕtania', 'Drilling acceleration')} value={ui.timeScale} options={[[1, '1×'], [5, '5×'], [20, '20×']]} onChange={(v) => set('timeScale', v)} />
-          <p className="text-xs muted">{L('Pri vŕtaní je posuv obmedzený na 0,12 mm/ot – rýchlejšie ako vrták reže, pinola nepôjde.', 'While drilling the feed is limited to 0.12 mm/rev – the quill will not go faster than the drill cuts.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h2><SectionInfo title={L('Poloha obrobku', 'Workpiece position')}><p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p></SectionInfo></div>
           <Slider id="du" label={L('Posun dosky X', 'Plate offset X')} unit="mm" min={-60} max={60} step={1} value={ui.u} onChange={(v) => set('u', v)} />
           <Slider id="dv" label={L('Posun dosky Y', 'Plate offset Y')} unit="mm" min={-50} max={50} step={1} value={ui.v} onChange={(v) => set('v', v)} />
-          <p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p>
+
         </div>
 
         <div className="sec">
@@ -498,7 +499,7 @@ function DrillSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Kľuka pinoly', 'Capstan')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
 import { createRoedersCover } from './roedersCover';
+import { createRoedersDetails } from './roedersDetails';
 import { createRmsPanel } from './rmsPanel';
 import { createToolModel } from '../cnc/toolModel';
 import { RXU_LAYOUT as L, RXU_PLAN } from './roedersLayout';
@@ -13,6 +14,7 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   M.red.color.setHex(0x9d182f).convertSRGBToLinear();
   M.lamp=new THREE.MeshStandardMaterial({color:0xeaf5ff,emissive:0xeaf5ff,emissiveIntensity:3});
   M.brush=M.inox;M.yellow=new THREE.MeshStandardMaterial({color:0xf4c32b});
+  M.bellows=new THREE.MeshStandardMaterial({color:0x101214,roughness:.92,metalness:.08});M.bellows.color.convertSRGBToLinear();
   const shape=(points,holes=[])=>{
     const s=new THREE.Shape(points.map(p=>new THREE.Vector2(...p)));
     holes.forEach(h=>s.holes.push(new THREE.Path(h.map(p=>new THREE.Vector2(...p)))));return s;
@@ -56,25 +58,12 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   const machiningFrame=group('RXU-machining-frame');machiningFrame.position.set(...L.workCentre);
   const structure=group('mineral-cast-support',machiningFrame);structure.userData.part='lozko';
   box(structure,0,8.0,0,14,1.5,12.7,M.anth);
-  for(const x of [-5.5,5.5]){
-    const pedestal=plate(structure,'A-bearing-pedestal',[[-2.2,0],[-2.2,4.8],[-1.5,5.8],[1.5,5.8],[2.2,4.8],[2.2,0]],1.45,M.cab2);
-    pedestal.rotation.y=Math.PI/2;pedestal.position.set(x-.72,8.2,0);
-    cyl(structure,x,PY,0,2.25,1.6,M.table,'x');
-    cyl(structure,x+(x<0?.86:-.86),PY,0,2.0,.16,M.steelD,'x');
-    for(let i=0;i<12;i++){const a=i*Math.PI/6;cyl(structure,x+(x<0?.97:-.97),PY+1.8*Math.sin(a),1.8*Math.cos(a),.07,.055,M.steel,'x');}
-  }
   // Sloped stainless collection floor, with two screw channels at the edges.
   for(const z of [-4.4,4.4]){
     const chute=box(structure,0,8.35,z,13,.1,2.8,M.inox);chute.rotation.x=z<0?-.28:.28;
     cyl(structure,0,7.8,z, .28,13,M.steelD,'x');
   }
   const aG=group('A-cradle',part('stol',machiningFrame));aG.position.y=PY;
-  plate(aG,'contoured-two-sided-cradle',[
-    [-5.3,1.1],[-4.65,1.1],[-4.1,-.9],[-2.1,-2.35],[2.1,-2.35],[4.1,-.9],[4.65,1.1],[5.3,1.1],
-    [5.3,-1.3],[2.5,-3.2],[-2.5,-3.2],[-5.3,-1.3],
-  ],4.5,M.table).position.z=-2.25;
-  for(const x of [-4.9,4.9])cyl(aG,x,0,0,1.7,1.05,M.table,'x');
-  cyl(aG,0,-1.85,0,2.65,1.05,M.cab2);
   const cG=group('C-direct-drive',aG);cG.position.y=-MC.hA*.01;
   const tableOutline=[],flatAngle=Math.asin(2.6/3);
   for(let i=0;i<=32;i++){const a=-flatAngle+i*2*flatAngle/32;tableOutline.push([Math.cos(a)*3,Math.sin(a)*3]);}
@@ -89,6 +78,7 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   // Four corner rails and two carriages per rail. The upper portal fits UNDER the roof.
   for(const x of [-6.8,6.8]){
     box(ax,x,21.9,0,1.2,3.8,13,M.anth);
+    plate(ax,'fixed-guideway-shroud',[[x-.7,24.1],[x+.7,24.1],[x+.7,20.1],[x+.3,19.7],[x-.7,20.1]],13.1,M.cab2,[],.025).position.z=-6.55;
     for(const dx of [-.36,.36])box(ax,x+dx,24,0,.17,.2,12.8,M.steel);
   }
   for(const z of [-2.1,2.1])box(yG,0,24.35,z,14.9,.65,.5,M.cab2);
@@ -113,7 +103,7 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   // Telescopic stainless way covers, not a wall of exposed vertical fins.
   const covers=[];
   for(const s of [-1,1])for(let i=0;i<9;i++){
-    const fold=box(yG,0,23.55,2.1,.4,.16,3.0,i%2?M.inox:M.cab2);fold.userData={side:s,index:i};covers.push(fold);
+    const fold=box(yG,0,22.15,-.2,.4,.07,6.9,M.bellows);fold.rotation.x=.528;fold.name='sloped-gantry-bellows';fold.userData={side:s,index:i};covers.push(fold);
   }
   const chain=group('Y-energy-chain',ax);
   for(let i=0;i<24;i++){const t=i/23;box(chain,-6.1,25+Math.sin(t*Math.PI)*.9,-5.2+t*10,.45,.23,.39,M.black);}
@@ -149,12 +139,8 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   const wall=(x,y,z,w,h,d,mat=M.cab)=>box(cab,x,y,z,w,h,d,mat);
   const shoulderCentre=(L.shoulderLeft+L.right)/2,shoulderWidth=L.right-L.shoulderLeft;
   wall(L.shoulderLeft,21.3,-11.65,.16,28.1,22.3);
-  // Long right skin with the small glazed service inspection hatch from the side photo.
-  wall(L.right,21.3,-15,.16,28.1,15.6);
-  wall(L.right,21.3,-1.5,.16,28.1,3);
-  wall(L.right,8.6,-5.1,.16,2.7,4.2);
-  wall(L.right,25.425,-5.1,.16,19.85,4.2);
-  const rightGlass=new THREE.Mesh(new THREE.PlaneGeometry(4.2,5.5),M.glass);rightGlass.rotation.y=Math.PI/2;rightGlass.position.set(11.05,12.75,-5.1);rightGlass.name='right-service-inspection-window';cab.add(rightGlass);
+  // The continuous side skin and its hatch opening are built with the cover.
+  const rightGlass=new THREE.Mesh(new THREE.PlaneGeometry(4.2,5.5),M.glass);rightGlass.rotation.y=Math.PI/2;rightGlass.position.set(11.09,12.75,-5.1);rightGlass.name='right-service-inspection-window';cab.add(rightGlass);
   for(const z of [-7.2,-3])box(cab,11.08,12.75,z,.09,5.8,.12,M.steelD);
   for(const y of [10,15.5])box(cab,11.08,y,-5.1,.09,.12,4.35,M.steelD);
   box(cab,11.18,12.2,-2.6,.13,1,.18,M.black);
@@ -186,7 +172,6 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   const cover=createRoedersCover({cab,M,group,box,cyl,rod,label,bolts,plate,foldedShell});
   plate(cab,'front-left-cheek',[[-11.1,7.1],[-11.1,28.2],[-8.55,28.2],[-8.55,7.1]],.55,M.cab).position.z=10.65;
   plate(cab,'right-service-fascia',[[3.35,7.1],[11.07,7.1],[11.07,28.2],[3.35,28.2]],.35,M.cab).position.z=10.76;
-  wall(11.07,17.2,7.5,.16,20.2,7.4);
   const door=group('right-sliding-loading-door',cab);door.userData.s=1;
   const doorShape=[[0,0],[11.7,0],[11.7,19.9],[11.15,20.85],[.25,20.85],[0,20.2]];
   const doorWindow=[[1.85,2.5],[10.05,2.5],[10.05,15.4],[1.85,15.4]];
@@ -273,6 +258,7 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   equipment.visible=false;
   const lampPositions=[[-8.5,24.7,5.4],[2.5,24.7,5.4]];
   lampPositions.forEach(([x,y,z])=>box(cab,x,y,z,.28,.2,3.7,M.lamp));
+  createRoedersDetails({structure,aG,cG,xG,zG,sp,cab,bed,M,group,box,cyl,rod,label,plate,foldedShell,tube,PY});
   const machinePoint=p=>new THREE.Vector3(...p).add(machiningFrame.position);
   return {...cover,cab,aG,cG,yG,xG,zG,sp,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm:hmi.display,covers:[],clampPins,doors:[door],loadMagazine,machiningFrame,machinePoint,
     lighting:{lampPositions,targets:[[-2.6,PY-.4,3.2],[-2.6,PY-.4,3.2]],bounds:[[-10.65,7.4,-.3],[10.6,27.3,10.7]]},
@@ -285,7 +271,7 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
       door.position.set(L.door.left+doorK*L.door.travel,L.door.bottom,L.door.z);door.rotation.y=0;
       // Sweep out into the operator aisle. The complete monitor stays left of the chassis.
       armPivot.rotation.y=-panelA*.18;armElbow.rotation.y=panelA*.08;panG.rotation.y=panelA*.10+panelYaw;
-      covers.forEach(o=>{const {side,index}=o.userData,x=xG.position.x,lo=side<0?-7.4:x+1.9,hi=side<0?x-1.9:7.4,w=Math.max(.1,hi-lo)/9;o.position.x=lo+(index+.5)*w;o.scale.x=w/.4;o.position.y=23.55+index*.025;});
+      covers.forEach(o=>{const {side,index}=o.userData,x=xG.position.x,lo=side<0?-7.4:x+3.35,hi=side<0?x-3.35:7.4,w=Math.max(.1,hi-lo)/9;o.position.x=lo+(index+.5)*w;o.scale.x=w/.4;o.position.y=22.15+index*.025;});
     },
     updateTransfer(change,phase,tls,T){
       const k=!change?0:phase<.3?Math.max(0,(phase-.18)/.12):phase<.4?1:phase<.55?1-(phase-.4)/.15:phase<.7?(phase-.55)/.15:1-(phase-.7)/.3;

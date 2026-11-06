@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -391,7 +392,7 @@ function BandSawSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'running', items: SAW_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted">{L(`Pre ${mat.sk.toLowerCase()} je najvyššia vhodná rýchlosť ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. Rýchlosť sa mení len pri stojacom stroji.`, `For ${mat.en.toLowerCase()} the highest suitable speed is ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. The speed is changed only with the machine stopped.`)}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
             onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); }}>
             {ui.running ? L('■ Stop píly', '■ Stop saw') : L('▶ Štart píly', '▶ Start saw')}
@@ -403,16 +404,16 @@ function BandSawSimulator({ onBack, params }) {
             {(ui.running || tele.v > 0.05) && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Rýchlosť pásu sa mení len pri stojacom stroji (remeň na inom stupni remenice).', 'The blade speed can only be changed with the machine stopped (belt on another pulley step).')}</p>}
             <Slider id="sten" label={L('Napnutie pásu', 'Blade tension')} unit="%" min={0} max={100} step={1} value={ui.tension} actual={tele.tension} onChange={(v) => set('tension', v)} />
           </div>
-          <p className="text-xs muted">{L(`Pre ${mat.sk.toLowerCase()} je najvyššia vhodná rýchlosť ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. Rýchlosť sa mení len pri stojacom stroji.`, `For ${mat.en.toLowerCase()} the highest suitable speed is ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. The speed is changed only with the machine stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h2><SectionInfo title={L('Vodidlo a posuv', 'Guide and feed')}><p className="text-xs muted">{L('Vodidlo nastav 5 – 10 mm nad obrobok. Obrobok môžeš posúvať aj ťahaním v režime ručného ovládania.', 'Set the guide 5 – 10 mm above the work. In manual control you can also drag the workpiece.')}</p></SectionInfo></div>
           <Slider id="sgd" label={L('Výška horného vodidla nad stolom', 'Upper guide height above the table')} unit="mm" min={10} max={300} step={1} value={ui.guide} actual={tele.guide} onChange={(v) => set('guide', v)} />
           <Slider id="sfd" label={L('Posuv obrobku proti pásu', 'Workpiece feed against the blade')} unit="mm" min={0} max={ui.bL + 120} step={1} value={ui.feed} actual={tele.feed} onChange={(v) => set('feed', v)} />
           <Toggle on={ui.autoFeed} label={L('Rovnomerný posuv', 'Steady feed')} onClick={() => set('autoFeed', !ui.autoFeed)} />
           <Slider id="sfr" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/s" min={2} max={80} step={1} value={ui.feedRate} onChange={(v) => set('feedRate', v)} />
-          <p className="text-xs muted">{L('Vodidlo nastav 5 – 10 mm nad obrobok. Obrobok môžeš posúvať aj ťahaním v režime ručného ovládania.', 'Set the guide 5 – 10 mm above the work. In manual control you can also drag the workpiece.')}</p>
+
         </div>
 
         <BlankSection onApply={() => { const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v)); }} applyLabel={L('Položiť nový polotovar', 'Put down a new workpiece')}>
@@ -427,7 +428,7 @@ function BandSawSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Z boku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

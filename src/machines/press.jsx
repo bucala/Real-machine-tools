@@ -428,7 +428,7 @@ function PressSimulator({ onBack, params }) {
         <ExportSection machine="lis" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['nastroj', L('Nástroj', 'Tool')], ['bok', L('Zboku', 'Side')], ['rozvadzac', L('Rozvádzač', 'Cabinet')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

@@ -71,6 +71,17 @@ describe('Manufacturer-specific machine geometry',()=>{
     expect(vertical(-14,5)).toHaveLength(0);
     expect(vertical(-14,-10).length).toBeGreaterThan(0);
   });
+  it('closes the entire right cover joint while keeping its inspection window glazed',()=>{
+    const ctx=setup();createRoedersModel(ctx);ctx.root.updateMatrixWorld(true);
+    for(const z of [-.4,.5,2,2.7,3.4,4,8])for(const y of [8,15,22,27.5]){
+      const ray=new THREE.Raycaster(new THREE.Vector3(20,y,z),new THREE.Vector3(-1,0,0));
+      const hit=ray.intersectObject(ctx.G.kabina,true).find(h=>!h.object.material.transparent);
+      expect(hit?.point.x).toBeCloseTo(11.07,2);
+    }
+    const ray=new THREE.Raycaster(new THREE.Vector3(20,12,-5),new THREE.Vector3(-1,0,0));
+    const hit=ray.intersectObject(ctx.G.kabina,true)[0];
+    expect(hit.object.name).toBe('right-service-inspection-window');
+  });
   it('offsets the complete machining frame into the loading bay without separating tool and stock',()=>{
     const ctx=setup(),m=createRoedersModel(ctx);ctx.root.updateMatrixWorld(true);
     const o=m.machinePoint([0,14,0]),x=m.machinePoint([1,14,0]).sub(o),y=m.machinePoint([0,14,-1]).sub(o);

@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -286,11 +287,11 @@ function HobberSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2><SectionInfo title={L('Nastavenie', 'Setup')}><p className="text-xs muted">{L(`Stúpací uhol jednochodej frézy m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2).replace('.', ',')}°.`, `Lead angle of a single-start hob m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2)}°.`)}</p></SectionInfo></div>
           <SegRow label={L('Výmenné kolesá delenia – z', 'Index change gears – z')} value={ui.zSel} options={HOB_Z.map((z) => [z, String(z)])} onChange={(v) => { if (stopped) set('zSel', v); }} />
           <p className="text-xs muted">{gs ? L(`i = 24 / ${ui.zSel} = ${gs.a}/${gs.b}${gs.c !== 1 ? ` · ${gs.c}/${gs.d}` : ''}`, `i = 24 / ${ui.zSel} = ${gs.a}/${gs.b}${gs.c !== 1 ? ` · ${gs.c}/${gs.d}` : ''}`) : ''}</p>
           <Slider id="ha" label={L('Sklon frézy', 'Hob swivel')} unit="°" min={-5} max={5} step={0.01} value={ui.ang} digits={2} onChange={(v) => { if (stopped) set('ang', v); }} disabled={!stopped} />
-          <p className="text-xs muted">{L(`Stúpací uhol jednochodej frézy m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2).replace('.', ',')}°.`, `Lead angle of a single-start hob m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2)}°.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -318,7 +319,7 @@ function HobberSimulator({ onBack, params }) {
         <ExportSection machine="odvalovacka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail frézy', 'Hob detail')], ['zhora', L('Zhora', 'Top')], ['panel', L('Ovládanie', 'Controls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -385,7 +386,7 @@ function HorizSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'running', items: HZ_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted">{L(`Spekaný karbid v liatine 60 – 100 m/min: pre Ø${Math.round(ui.dB)} približne ${Math.round(80000 / (Math.PI * ui.dB))} ot/min.`, `Carbide in cast iron 60 – 100 m/min: about ${Math.round(80000 / (Math.PI * ui.dB))} rpm for Ø${Math.round(ui.dB)}.`)}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`} onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); if (ui.running) set('autoW', false); }}>
             {ui.running ? L('■ Stop vretena', '■ Stop spindle') : L('▶ Štart vretena', '▶ Start spindle')}
           </button>
@@ -394,7 +395,7 @@ function HorizSimulator({ onBack, params }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <div className="mt-3"><StepSelect id="hrpm" label={L('Otáčky vretena', 'Spindle speed')} unit={RPM()} values={HZ_SPEEDS} value={ui.rpm} onChange={(v) => set('rpm', v)} locked={ui.running || tele.rpm > 1} lockNote={GEAR_LOCK()} /></div>
-          <p className="text-xs muted">{L(`Spekaný karbid v liatine 60 – 100 m/min: pre Ø${Math.round(ui.dB)} približne ${Math.round(80000 / (Math.PI * ui.dB))} ot/min.`, `Carbide in cast iron 60 – 100 m/min: about ${Math.round(80000 / (Math.PI * ui.dB))} rpm for Ø${Math.round(ui.dB)}.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -410,30 +411,30 @@ function HorizSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Mikrometrická hlava a otočný stôl', 'Micrometer head and rotary table')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Mikrometrická hlava a otočný stôl', 'Micrometer head and rotary table')}</h2><SectionInfo title={L('Mikrometrická hlava a otočný stôl', 'Micrometer head and rotary table')}><p className="text-xs muted mt-2">{L('Otáča sa len uvoľnený stôl a s tyčou mimo dosahu skrine (vysuň W, odsuň Z).', 'The table turns only when released and with the bar out of reach of the box (retract W, move Z back).')}</p></SectionInfo></div>
           <Slider id="hd" label={L('Priemer vyvrtávania', 'Boring diameter')} unit="mm" min={60} max={100} step={0.005} value={ui.dB} digits={3} onChange={(v) => set('dB', v)} disabled={!stopped} />
           <div className="flex flex-wrap gap-2 mb-2">{[1, 2, 5, 0.5, 0.1, 0.01, 0.005].map((x) => <button key={x} type="button" className="btn" disabled={!stopped} onClick={() => set('dB', clamp(Math.round((ui.dB + x) * 1000) / 1000, 60, 100))}>+{L(String(x).replace('.', ','), String(x))}</button>)}</div>
           <Toggle on={ui.bLock} label={L('Otočný stôl zaaretovaný', 'Rotary table locked')} onClick={() => set('bLock', !ui.bLock)} />
           <div className="flex flex-wrap gap-2">{[0, 90, 180, 270].map((b) => <button key={b} type="button" className={`btn ${Math.round(tele.B) === b ? 'active' : ''}`} onClick={() => apiRef.current.indexB && apiRef.current.indexB(b)}>B {b}°</button>)}</div>
-          <p className="text-xs muted mt-2">{L('Otáča sa len uvoľnený stôl a s tyčou mimo dosahu skrine (vysuň W, odsuň Z).', 'The table turns only when released and with the bar out of reach of the box (retract W, move Z back).')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Meranie otvorov', 'Hole measurement')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Meranie otvorov', 'Hole measurement')}</h2><SectionInfo title={L('Meranie otvorov', 'Hole measurement')}><p className="text-xs muted mt-2">{L('Priemer otvoru vyjde o priehyb tyče menší ako nastavený: chyba ≈ 0,002 · záber · (vyloženie / 100 mm)².', 'The hole comes out smaller than set by the bar deflection: error ≈ 0.002 · cut depth · (overhang / 100 mm)².')}</p></SectionInfo></div>
           {m && m.info.length ? (
             <table className="text-xs tnum w-full" style={{ borderCollapse: 'collapse' }}>
               <thead><tr className="muted"><th className="text-left font-semibold">{L('stena', 'wall')}</th><th className="text-right font-semibold">Ø min – max</th><th className="text-right font-semibold">a / y</th></tr></thead>
               <tbody>{m.info.map((h, i) => <tr key={i}><td>{faceName(h.face)}</td><td className="text-right">{h.bored ? `${h.dMin.toFixed(3)} – ${h.dMax.toFixed(3)}` : `${L('predliaty', 'cored')} Ø${h.dMin.toFixed(0)}`}</td><td className="text-right">{h.a.toFixed(2)} / {h.y.toFixed(2)}{h.ecc > 0.001 ? ` (e ${h.ecc.toFixed(3)})` : ''}</td></tr>)}</tbody>
             </table>
           ) : null}
-          <p className="text-xs muted mt-2">{L('Priemer otvoru vyjde o priehyb tyče menší ako nastavený: chyba ≈ 0,002 · záber · (vyloženie / 100 mm)².', 'The hole comes out smaller than set by the bar deflection: error ≈ 0.002 · cut depth · (overhang / 100 mm)².')}</p>
+
           <button type="button" className="btn mt-2" onClick={() => apiRef.current.newBlank && apiRef.current.newBlank()}>{L('Nový odliatok', 'New casting')}</button>
         </div>
 
         <ExportSection machine="horizontalka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail otvoru', 'Hole detail')], ['zhora', L('Zhora', 'Top')], ['panel', L('Ovládanie', 'Controls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

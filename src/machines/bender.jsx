@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -430,7 +431,7 @@ function BenderSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Stredný valec', 'Centre roll')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Stredný valec', 'Centre roll')}</h2><SectionInfo title={L('Stredný valec', 'Centre roll')}><p className="text-xs muted">{L('Profil sa ohne trvalo, až keď krajné vlákna prekročia medzu klzu. Po odľahčení sa oblúk čiastočne narovná – preto sa nastavuje menší polomer, ako má vyjsť. Menší prísuv pri ďalšom prechode už oblúk nezmení.', 'The profile bends permanently only when the outer fibres exceed the yield point. After unloading the arc partly straightens – so a smaller radius is set than the one wanted. A smaller feed on a later pass no longer changes the arc.')}</p></SectionInfo></div>
           <Slider id="bd" label={L('Prísuv δ (hydraulika)', 'Feed δ (hydraulic)')} unit="mm" min={0} max={150} step={0.1} value={ui.dT} actual={tele.d} digits={1} onChange={(val) => set('dT', val)} />
           <div className="flex flex-wrap gap-2 mb-2">
             {[-5, -1, -0.2, 0.2, 1, 5].map((x) => <button key={x} type="button" className="btn" onClick={() => set('dT', clamp(Math.round((ui.dT + x) * 10) / 10, 0, 150))}>{x > 0 ? '+' : ''}{fmt(x, x % 1 ? 1 : 0)}</button>)}
@@ -439,14 +440,14 @@ function BenderSimulator({ onBack, params }) {
             <div>{L('Polomer v zábere', 'Radius under load')}: <b>{tele.RL ? `R ${fmt(tele.RL)} mm` : '–'}</b></div>
             <div>{L('Po odpružení (odhad)', 'After springback (estimate)')}: <b>{tele.Rf ? `R ${fmt(tele.Rf)} mm` : L('rovný – len pružný ohyb', 'straight – elastic only')}</b></div>
           </div>
-          <p className="text-xs muted">{L('Profil sa ohne trvalo, až keď krajné vlákna prekročia medzu klzu. Po odľahčení sa oblúk čiastočne narovná – preto sa nastavuje menší polomer, ako má vyjsť. Menší prísuv pri ďalšom prechode už oblúk nezmení.', 'The profile bends permanently only when the outer fibres exceed the yield point. After unloading the arc partly straightens – so a smaller radius is set than the one wanted. A smaller feed on a later pass no longer changes the arc.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Valce a vedenie', 'Rolls and guides')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Valce a vedenie', 'Rolls and guides')}</h2><SectionInfo title={L('Valce a vedenie', 'Rolls and guides')}><p className="text-xs muted">{p.rolls === 'rura' ? L('Rúra potrebuje drážkové valce, inak sa sploští.', 'A tube needs grooved rolls, otherwise it flattens.') : p.guide ? L('Tento profil sa bez vodiacich kladiek skrúti.', 'This profile twists without the guide rollers.') : L('Tento profil sa vedie vo valcoch s nákružkami.', 'This profile is guided in the flanged rolls.')}</p></SectionInfo></div>
           <SegRow label={L('Tvarové valce', 'Forming rolls')} value={ui.rolls} options={[['plocha', L('s nákružkami', 'flanged')], ['rura', L('pre rúru Ø33,7', 'tube Ø33.7')]]} onChange={(val) => { if (apiRef.current.setRolls && apiRef.current.setRolls(val)) set('rolls', val); }} />
           <Toggle on={ui.guides} label={L('Bočné vodiace kladky', 'Side guide rollers')} onClick={() => set('guides', !ui.guides)} />
-          <p className="text-xs muted">{p.rolls === 'rura' ? L('Rúra potrebuje drážkové valce, inak sa sploští.', 'A tube needs grooved rolls, otherwise it flattens.') : p.guide ? L('Tento profil sa bez vodiacich kladiek skrúti.', 'This profile twists without the guide rollers.') : L('Tento profil sa vedie vo valcoch s nákružkami.', 'This profile is guided in the flanged rolls.')}</p>
+
         </div>
 
         <div className="sec">
@@ -476,7 +477,7 @@ function BenderSimulator({ onBack, params }) {
         <ExportSection machine="profilova" apiRef={apiRef} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['valce', L('Valce', 'Rolls')], ['profil', L('Profil zhora', 'Profile from above')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

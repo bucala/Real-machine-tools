@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -458,7 +459,7 @@ function ShaperSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'run', items: SHAPER_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri pracovnom zdvihu ${fmt(v)} m/min (oceľ nožom HSS: 10 – 20 m/min). Pracovný zdvih trvá ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° otáčky kolesa.`, `Mean cutting speed on the cutting stroke ${fmt(v)} m/min (steel with HSS: 10 – 20 m/min). The cutting stroke takes ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.run ? 'stop' : 'start'}`} onClick={() => { if (!ui.run && !ui.power) set('power', true); set('run', !ui.run); }}>
             {ui.run ? L('■ Stop', '■ Stop') : L('▶ Štart', '▶ Start')}
           </button>
@@ -468,18 +469,18 @@ function ShaperSimulator({ onBack, params }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <SegRow label={L('Zdvihy/min', 'Strokes/min')} value={ui.n} options={SHAPER_SPEEDS.map((n) => [n, String(n)])} onChange={(n) => { if (!busy) set('n', n); }} />
-          <p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri pracovnom zdvihu ${fmt(v)} m/min (oceľ nožom HSS: 10 – 20 m/min). Pracovný zdvih trvá ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° otáčky kolesa.`, `Mean cutting speed on the cutting stroke ${fmt(v)} m/min (steel with HSS: 10 – 20 m/min). The cutting stroke takes ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p>
+          <p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L('Rezná rýchlosť','Cutting speed')}: {fmt(v)} m/min{busy ? ` · ${L('Prevodovka uzamknutá','Gearbox locked')}` : ''}</p>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2><SectionInfo title={L('Zdvih smykadla', 'Ram stroke')}><p className="text-xs muted">{L(`Obrobok je dlhý ${ui.bL} mm – zdvih nastav o 20 – 30 mm dlhší, aby nôž pred rezom vyšiel za obrobok. Mení sa len pri stojacom stroji.`, `The work is ${ui.bL} mm long – set the stroke 20 – 30 mm longer so that the tool clears the work before each cut. Only changed with the machine stopped.`)}</p></SectionInfo></div>
           <Slider id="shs" label={L('Dĺžka zdvihu', 'Stroke length')} unit="mm" min={20} max={500} step={5} value={ui.S} onChange={(val) => set('S', val)} disabled={busy} />
           <Slider id="shp" label={L('Poloha zdvihu (stred voči zveráku)', 'Stroke position (centre to vise)')} unit="mm" min={-150} max={150} step={5} value={ui.pos} onChange={(val) => set('pos', val)} disabled={busy} />
-          <p className="text-xs muted">{L(`Obrobok je dlhý ${ui.bL} mm – zdvih nastav o 20 – 30 mm dlhší, aby nôž pred rezom vyšiel za obrobok. Mení sa len pri stojacom stroji.`, `The work is ${ui.bL} mm long – set the stroke 20 – 30 mm longer so that the tool clears the work before each cut. Only changed with the machine stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nôž a posuvy', 'Tool and feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nôž a posuvy', 'Tool and feeds')}</h2><SectionInfo title={L('Nôž a posuvy', 'Tool and feeds')}><p className="text-xs muted">{L('Posuv sa urobí na začiatku každého pracovného zdvihu. Ubieracím nožom 0,5 – 1 mm, hladiacim do 6 mm; drážkovacím nožom posuv vypni a prisúvaj nôž.', 'The feed happens at the start of each cutting stroke. Roughing tool 0.5 – 1 mm, finishing tool up to 6 mm; with the slotting tool switch the feed off and feed the tool down.')}</p></SectionInfo></div>
           <div className="grid grid-cols-2 gap-1.5 mb-3">
             {TOOL_LIST.map(([id, sk, en]) => (
               <button key={id} type="button" className={`tool-slot ${ui.tool === id ? 'on' : ''}`} aria-pressed={ui.tool === id} disabled={busy}
@@ -496,7 +497,7 @@ function ShaperSimulator({ onBack, params }) {
           <Toggle on={ui.autoF} label={L('Západkový posuv stola', 'Ratchet table feed')} onClick={() => set('autoF', !ui.autoF)} />
           <SegRow label={L('Smer', 'Direction')} value={ui.fdir} options={[[-1, L('← k stojanu', '← to column')], [1, L('od stojana →', 'away →')]]} onChange={(val) => set('fdir', val)} />
           <Slider id="shf" label={L('Posuv na zdvih', 'Feed per stroke')} unit="mm" min={0.2} max={4} step={0.1} value={ui.feed} digits={1} onChange={(val) => set('feed', val)} />
-          <p className="text-xs muted">{L('Posuv sa urobí na začiatku každého pracovného zdvihu. Ubieracím nožom 0,5 – 1 mm, hladiacim do 6 mm; drážkovacím nožom posuv vypni a prisúvaj nôž.', 'The feed happens at the start of each cutting stroke. Roughing tool 0.5 – 1 mm, finishing tool up to 6 mm; with the slotting tool switch the feed off and feed the tool down.')}</p>
+
         </div>
 
         <div className="sec">
@@ -520,7 +521,7 @@ function ShaperSimulator({ onBack, params }) {
         <ExportSection machine="obrazacka" apiRef={apiRef} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Detail noža', 'Tool detail')], ['kulisa', L('Kulisa', 'Slotted link')], ['zhora', L('Zhora', 'Top')], ['panel', L('Rozvádzač', 'Control box')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

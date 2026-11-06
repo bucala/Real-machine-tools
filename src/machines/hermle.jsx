@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
@@ -472,9 +473,9 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       <aside className="panel"><fieldset className="hermle-settings" disabled={ui.unclamped}>
         <div className="sec">
           <p className="sec-title" style={{ letterSpacing: '.14em' }}>{L('Moderné stroje · 5-osé CNC', 'Modern machines · 5-axis CNC')}</p>
-          <h1 className="app-title mt-2" tabIndex={-1}>{brand} {MC.name}</h1>
+          <div className="section-heading"><h1 className="app-title mt-2" tabIndex={-1}>{brand} {MC.name}</h1><SectionInfo title={L('Informácie o stroji','Machine information')}><p className="text-xs muted">{rxu?L('QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · stôl Ø600 mm (katalógový variant), 800 kg · HSK-A63, 24 000 ot/min, 67 Nm S1 · 24 miest. Výučbové ISO rozhranie pre RMS6; čas výmeny, dynamika rotačných osí a zaťaženie sú odhady.','QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · Ø600 mm table (catalogue variant), 800 kg · HSK-A63, 24,000 rpm, 67 Nm S1 · 24 pockets. Educational ISO interface for RMS6; change time, rotary dynamics and load are estimates.'):L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Prídavné zariadenia sa zapínajú samostatne nižšie.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Optional equipment can be enabled separately below.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p></SectionInfo></div>
           {!rxu&&<div className="mt-2"><SegRow label={L('Model', 'Model')} value={model} options={Object.values(MODELS).map((x) => [x.id, x.name])} onChange={(v) => { if (!tele.run) setModel(v); }} /></div>}
-          <p className="text-xs muted">{rxu?L('QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · stôl Ø600 mm (katalógový variant), 800 kg · HSK-A63, 24 000 ot/min, 67 Nm S1 · 24 miest. Výučbové ISO rozhranie pre RMS6; čas výmeny, dynamika rotačných osí a zaťaženie sú odhady.','QUADROGUIDE · X 800 / Y 855 / Z 500 mm · A ±115° · Ø600 mm table (catalogue variant), 800 kg · HSK-A63, 24,000 rpm, 67 Nm S1 · 24 pockets. Educational ISO interface for RMS6; change time, rotary dynamics and load are estimates.'):L(`5-osé obrábacie centrum: dráhy ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, otočno-sklopný stôl Ø${MC.table} (A ±130°, C 360°), vreteno ${MC.smax} ot/min HSK-A63, ${MC.pmax} kW, ${MC.mag} miest v zásobníku, Heidenhain TNC 640. Prídavné zariadenia sa zapínajú samostatne nižšie.`, `5-axis machining centre: travels ${MC.X[1] * 2} × ${MC.Y[1] * 2} × ${MC.nose[1] - MC.nose[0]} mm, swivelling rotary table Ø${MC.table} (A ±130°, C 360°), ${MC.smax} rpm HSK-A63 spindle, ${MC.pmax} kW, ${MC.mag} magazine pockets, Heidenhain TNC 640. Optional equipment can be enabled separately below.`)}{MC.approx ? L(' Údaje C 42 U sú orientačné.', ' C 42 U data are approximate.') : ''}</p>
+
           <div className="cnc-dro mt-3">
             <div className="cnc-dro-col">
               <span className="cnc-dro-h">{L('Stroj', 'Machine')}</span>
@@ -497,7 +498,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Prevádzka', 'Operation')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Prevádzka', 'Operation')}</h2><SectionInfo title={L('Prevádzka', 'Operation')}><p className="text-xs muted mb-2">{rxu?L('Rameno 0–180°.', '0–180° arm swing.'):L('Poloha 0–100 % medzi krajnými polohami pevného ramena.', 'Position 0–100% between the rigid arm endpoints.')} {L('Panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel. Dvojklik na displej otvorí HMI cez celé okno.', 'The panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel. Double-click the display for full-screen HMI.')}</p></SectionInfo></div>
           <div className="cnc-run">
             <button type="button" className="btn-run start" onClick={start}>▶ {L('Štart cyklu', 'Cycle start')}</button>
             <button type="button" className="btn" onClick={() => { apiRef.current.hold && apiRef.current.hold(); set('running', false); }}>❚❚ {L('Stop posuvu', 'Feed hold')}</button>
@@ -521,15 +522,15 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             </fieldset>
             <button type="button" className="btn mb-2" onClick={() => apiRef.current.view?.('panel')}>{L('Pohľad na HMI', 'HMI view')}</button>
             {ui.manual&&<button type="button" className="btn mb-2 ml-2" onClick={()=>{if(ctl.current.manual)setHmiOpen(true);}}>{L('HMI cez celé okno','Full-screen HMI')}</button>}
-            <p className="text-xs muted mb-2">{rxu?L('Rameno 0–180°.', '0–180° arm swing.'):L('Poloha 0–100 % medzi krajnými polohami pevného ramena.', 'Position 0–100% between the rigid arm endpoints.')} {L('Panel sa natočí k operátorovi automaticky. Korekcia umožňuje vlastné natočenie o 360°. V ručnom ovládaní potiahni panel; Shift + potiahnutie otáča iba panel. Dvojklik na displej otvorí HMI cez celé okno.', 'The panel automatically faces the operator. Trim allows a full 360° manual adjustment. In manual mode, drag the panel; Shift + drag rotates only the panel. Double-click the display for full-screen HMI.')}</p>
+
             <Toggle on={ui.cabin} label={L('Zobraziť kabínu', 'Show the cabin')} onClick={() => set('cabin', !ui.cabin)} />
           </div>
         </div>
 
-        {rxu&&<div className="sec"><h2 className="sec-title mb-2">{L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}</h2><select className="sel" aria-label={L('Vybavenie Röders','Röders equipment')} value={ui.accessorySetup} onChange={e=>set('accessorySetup',e.target.value)}><option value="none">{L('Vypnuté','Off')}</option><option value="cooling">{L('Chladiaca jednotka 1050 × 750 mm','Cooling unit 1050 × 750 mm')}</option><option value="filter">{L('Chladenie + pásový filter 1523 × 1380 mm','Cooling + band filter 1523 × 1380 mm')}</option></select><button className="btn mt-2" onClick={()=>apiRef.current.view?.('vybavenie')}>{L('Pohľad na vybavenie','Equipment view')}</button><p className="text-xs muted mt-2">{L('Predvolene vypnuté. Pôdorysné rozmery z katalógu; výšky a vnútorné diely sú vizuálny odhad.','Off by default. Plan dimensions follow the catalogue; heights and internal parts are visual estimates.')}</p></div>}
+        {rxu&&<div className="sec"><div className="section-heading"><h2 className="sec-title mb-2">{L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}</h2><SectionInfo title={L('Prídavné vybavenie podľa pôdorysu','Optional equipment from layout')}><p className="text-xs muted mt-2">{L('Predvolene vypnuté. Pôdorysné rozmery z katalógu; výšky a vnútorné diely sú vizuálny odhad.','Off by default. Plan dimensions follow the catalogue; heights and internal parts are visual estimates.')}</p></SectionInfo></div><select className="sel" aria-label={L('Vybavenie Röders','Röders equipment')} value={ui.accessorySetup} onChange={e=>set('accessorySetup',e.target.value)}><option value="none">{L('Vypnuté','Off')}</option><option value="cooling">{L('Chladiaca jednotka 1050 × 750 mm','Cooling unit 1050 × 750 mm')}</option><option value="filter">{L('Chladenie + pásový filter 1523 × 1380 mm','Cooling + band filter 1523 × 1380 mm')}</option></select><button className="btn mt-2" onClick={()=>apiRef.current.view?.('vybavenie')}>{L('Pohľad na vybavenie','Equipment view')}</button></div>}
         {!rxu&&<>
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Optional equipment')}</h2><SectionInfo title={L('Prídavné vybavenie', 'Optional equipment')}><p className="text-xs muted mt-2">{L('Prídavné vybavenie je predvolene vypnuté. Zostavy podľa katalógu sa navzájom nahrádzajú; chladiace jednotky sú znázornené vizuálne.', 'Optional equipment is off by default. Catalogue configurations replace one another; coolant units are represented visually.')}</p></SectionInfo></div>
           <label className="text-sm font-semibold" htmlFor="hermle-accessories">{L('Katalógová zostava', 'Catalogue configuration')}</label>
           <select id="hermle-accessories" className="sel mt-2" value={ui.accessorySetup} onChange={(e) => { set('accessorySetup', e.target.value); apiRef.current.view?.('celok'); }}>
             <option value="none">{L('Základ – zásuvka na triesky', 'Basic – chip drawer')}</option>
@@ -538,7 +539,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             <option value="ics80">{L('Dopravník + vnútorné chladenie ICS 80', 'Conveyor + internal coolant ICS 80')}</option>
             <option value="ics80cooler">{L('Dopravník + ICS 80 + dochladzovacia jednotka', 'Conveyor + ICS 80 + recooling unit')}</option>
           </select>
-          <p className="text-xs muted mt-2">{L('Prídavné vybavenie je predvolene vypnuté. Zostavy podľa katalógu sa navzájom nahrádzajú; chladiace jednotky sú znázornené vizuálne.', 'Optional equipment is off by default. Catalogue configurations replace one another; coolant units are represented visually.')}</p>
+
           <button type="button" className="btn mt-2" onClick={() => apiRef.current.view && apiRef.current.view('vybavenie')}>{L('Pohľad na vybavenie', 'Equipment view')}</button>
         </div>
 
@@ -569,7 +570,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Polotovar a upnutie', 'Blank and clamping')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Polotovar a upnutie', 'Blank and clamping')}</h2><SectionInfo title={L('Polotovar a upnutie', 'Blank and clamping')}><p className="text-xs muted">{L('Upnutie na nulovom systéme Ø70 × 50 mm, nulový bod G54 v strede hornej plochy. Jemnejšia sieť = presnejší povrch, ale pomalší výpočet.', 'Clamped on a Ø70 × 50 mm zero-point system, datum G54 at the centre of the top face. A finer mesh = a more accurate surface but slower computation.')}</p></SectionInfo></div>
           <SegRow label={L('Materiál', 'Material')} value={ui.mat} options={Object.entries(MATERIALS).map(([k, v]) => [k, v.name().split(' ')[0]])} onChange={(v) => set('mat', v)} />
           {check.stock ? <p className="text-xs muted mb-2">{L('Rozmery z BLK FORM programu', 'Dimensions from the program BLK FORM')}: {check.stock.max[0] - check.stock.min[0]} × {check.stock.max[1] - check.stock.min[1]} × {check.stock.max[2] - check.stock.min[2]} mm</p> : (
             <div className="grid grid-cols-3 gap-2 mb-2">
@@ -577,17 +578,17 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             </div>
           )}
           <SegRow label={L('Jemnosť siete', 'Mesh resolution')} value={ui.res} options={[[1.0, '1 mm'], [0.7, '0,7 mm'], [0.5, '0,5 mm']]} onChange={(v) => set('res', v)} />
-          <p className="text-xs muted">{L('Upnutie na nulovom systéme Ø70 × 50 mm, nulový bod G54 v strede hornej plochy. Jemnejšia sieť = presnejší povrch, ale pomalší výpočet.', 'Clamped on a Ø70 × 50 mm zero-point system, datum G54 at the centre of the top face. A finer mesh = a more accurate surface but slower computation.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nástroje', 'Tools')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nástroje', 'Tools')}</h2><SectionInfo title={L('Nástroje', 'Tools')}><p className="text-xs muted">{L('Rozmery sa upravujú v skrinke. Nový nástroj najprv ulož do skrinky a potom ho vyber pre miesto T v zásobníku.','Edit dimensions in the cabinet. Save a new tool there first, then choose it for a magazine pocket T.')}</p></SectionInfo></div>
           <div className="flex flex-wrap gap-2 mb-2">
             <button type="button" className="btn" disabled={!canEditTools} onClick={()=>openToolPicker(freePocket||1)}>{L('Vybrať nástroj zo skrinky…','Choose a tool from cabinet…')}</button>
             <button type="button" className="btn" onClick={()=>{setLibraryPocket(undefined);setLibraryTab('cabinet');}}>{L('Spravovať skrinku…','Manage cabinet…')}</button>
           </div>
           <div className="flex flex-wrap gap-2 mb-2"><button type="button" className="btn" onClick={()=>setLibraryTab('detect')}>{L('Detekovať nástroje z NC…','Detect tools from NC…')}</button><button type="button" className="btn" onClick={()=>setLibraryTab('powermill')}>PowerMill / CAM</button></div>
-          <p className="text-xs muted">{L('Rozmery sa upravujú v skrinke. Nový nástroj najprv ulož do skrinky a potom ho vyber pre miesto T v zásobníku.','Edit dimensions in the cabinet. Save a new tool there first, then choose it for a magazine pocket T.')}</p>
+
           <ul className="cnc-installed-tools" aria-label={L('Osadené nástroje','Installed tools')}>
             {tools.map(tool=><li key={tool.t} className={tool.t===tele.T?'cur':''}>
               <b className="cnc-pocket">T{tool.t}</b><CncToolPreview tool={tool} fit/>
@@ -612,7 +613,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Program z CAM', 'Program from CAM')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Program z CAM', 'Program from CAM')}</h2><SectionInfo title={L('Program z CAM', 'Program from CAM')}>
           <div className="text-xs" style={{ lineHeight: 1.55 }}>
             <p>{L('Simulátor číta výstup postprocesorov CAM (PowerMill, Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):', 'The simulator reads CAM post-processor output (PowerMill, Fusion 360, Mastercam, hyperMILL, SolidCAM, NX …):')}</p>
             <ul className="ctl-list" style={{ marginTop: 4 }}>
@@ -622,11 +623,12 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
               <li>{L('Komentáre nástrojov typu „T3 D=10. CR=0. - flat end mill“ skontroluj cez Detekovať nástroje z NC; doplň chýbajúce rozmery a osaď ich cez knižnicu.', 'Review tool comments such as “T3 D=10. CR=0. - flat end mill” in Detect tools from NC; fill in missing dimensions and install them through the library.')}</li>
             </ul>
           </div>
+          </SectionInfo></div>
         </div>
 
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')], ['zasobnik', L('Zásobník', 'Magazine')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

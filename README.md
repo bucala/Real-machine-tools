@@ -408,7 +408,9 @@ flowchart LR
 
 ### Stiahnutie modelu stroja
 
-Tlačidlo **Stiahnuť model** v hornej lište každého simulátora otvorí výber **OBJ**, **STEP/STP** alebo **STL**. Exportuje aktuálne polohy dielov a viditeľné príslušenstvo bez obrobku, podlahy, svetiel a neviditeľných ovládacích zón. Pri skrytej kabíne sa exportuje zobrazená vnútorná zostava. Hermle C 32 / C 42, varianty sústruhu TOS a zváracie pracoviská majú rozlíšené názvy súborov.
+Tlačidlo **Stiahnuť model** na konci menu každého simulátora otvorí výber **OBJ**, **STEP/STP** alebo **STL**. Exportuje aktuálne polohy dielov a viditeľné príslušenstvo bez obrobku, podlahy, svetiel a neviditeľných ovládacích zón. Pri skrytej kabíne sa exportuje zobrazená vnútorná zostava. Hermle C 32 / C 42, varianty sústruhu TOS a zváracie pracoviská majú rozlíšené názvy súborov.
+
+Technické údaje a vysvetlenia nastavení sú dostupné cez **i** pri názve stroja alebo príslušnej sekcie menu. Okno sa zatvára krížikom, klávesom Esc alebo kliknutím mimo neho; po zatvorení sa ovládanie klávesnicou vráti na pôvodné tlačidlo. Aktuálne hodnoty, stav procesu a chybové hlásenia zostávajú priamo pri ovládaní.
 
 Všetky formáty používajú milimetre, os Y nahor a počiatok v strede spodnej plochy zostavy. OBJ zachováva pomenované diely bez textúr; STL je binárna trojuholníková sieť. STEP AP214 obsahuje ploškové telesá a otvorené povrchy podľa geometrie simulátora, bez parametrickej histórie. Výpočet beží lokálne v samostatnom workeri, dá sa zrušiť a nemení živý model. Počas prehliadky odopnutého obrobku sa najprv treba vrátiť k stroju.
 

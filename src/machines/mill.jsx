@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -849,7 +850,7 @@ function MillSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nástroj', 'Tool')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nástroj', 'Tool')}</h2><SectionInfo title={L('Nástroj', 'Tool')}><p>{L('Nástroj sa mení len pri stojacom vretene a mimo obrobku. Odporúčané vc pre oceľ: 25 – 35 m/min (HSS), 120 – 180 m/min (SK).', 'Tools are changed only with the spindle stopped and clear of the work. Recommended vc for steel: 25 – 35 m/min (HSS), 120 – 180 m/min (carbide).')}</p></SectionInfo></div>
           <SegRow label={L('Druh', 'Type')} value={curKind} options={kinds}
             onChange={(k) => { const first = MILL_TOOL_LIST.find((x) => x.kind === k && x.d === (k === 'face' ? 63 : k === 'ball' ? 10 : 20)) || MILL_TOOL_LIST.find((x) => x.kind === k); set('tool', first.id); }} />
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -857,11 +858,11 @@ function MillSimulator({ onBack, params }) {
               <button key={x.id} type="button" className={`btn ${ui.tool === x.id ? 'active' : ''}`} aria-pressed={ui.tool === x.id} onClick={() => set('tool', x.id)}>Ø{x.d}</button>
             ))}
           </div>
-          <p className="text-xs muted">{L('Upnutá', 'Clamped')}: <b className="ink">{millToolName(MILL_TOOLS[tele.tool])}</b>{tele.changing ? ` · ${L('výmena…', 'changing…')}` : ''}. {L('Nástroj sa mení len pri stojacom vretene a mimo obrobku. Odporúčané vc pre oceľ: 25 – 35 m/min (HSS), 120 – 180 m/min (SK).', 'Tools are changed only with the spindle stopped and clear of the work. Recommended vc for steel: 25 – 35 m/min (HSS), 120 – 180 m/min (carbide).')}</p>
+          <p className="text-xs muted">{L('Upnutá', 'Clamped')}: <b className="ink">{millToolName(MILL_TOOLS[tele.tool])}</b>{tele.changing ? ` · ${L('výmena…', 'changing…')}` : ''}</p>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2><SectionInfo title={L('Posuvy', 'Feeds')}><p className="text-xs muted">{L('Automatický posuv stola beží len pri otáčajúcom sa vretene. Pri X = 400 a Y = 120 je os frézy nad stredom 100 mm širokého obrobku.', 'The table power feed only runs while the spindle turns. At X = 400 and Y = 120 the cutter axis is above the centre of a 100 mm wide workpiece.')}</p></SectionInfo></div>
           <Slider id="mx" label={L('Stôl pozdĺžne X', 'Table X')} unit="mm" min={0} max={800} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} />
           <Slider id="my" label={L('Sane priečne Y', 'Saddle Y')} unit="mm" min={0} max={300} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
           <Slider id="mz" label={L('Konzola zvisle Z', 'Knee Z')} unit="mm" min={0} max={420} step={0.5} value={ui.z} actual={tele.z} digits={1} onChange={(v) => set('z', v)} />
@@ -874,11 +875,11 @@ function MillSimulator({ onBack, params }) {
           <StepSelect id="mfeed" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/min" values={MILL_FEEDS} value={ui.feed} onChange={(v) => set('feed', v)}
             fmt={(v) => L(String(v).replace('.', ','), String(v))} />
           <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
-          <p className="text-xs muted">{L('Automatický posuv stola beží len pri otáčajúcom sa vretene. Pri X = 400 a Y = 120 je os frézy nad stredom 100 mm širokého obrobku.', 'The table power feed only runs while the spindle turns. At X = 400 and Y = 120 the cutter axis is above the centre of a 100 mm wide workpiece.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Meranie', 'Measuring')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Meranie', 'Measuring')}</h2><SectionInfo title={L('Meranie', 'Measuring')}><p>{L('Hĺbkomer meria úber oproti pôvodnej hornej ploche polotovaru. Polohu merania zvoľ posuvníkmi.', 'The depth gauge measures removal relative to the original top face of the blank. Select the measuring position with the sliders.')}</p>{(pinfo) && <><p className="text-xs muted mt-2">{L(`Hĺbka pod pôvodnou hornou plochou. Sieť merania ${pinfo.dX.toFixed(1).replace('.', ',')} × ${pinfo.dZ.toFixed(1).replace('.', ',')} mm.`, `Depth below the original top surface. Measuring grid ${pinfo.dX.toFixed(1)} × ${pinfo.dZ.toFixed(1)} mm.`)}</p></>}</SectionInfo></div>
           <Toggle on={ui.probe} label={L('Hĺbkomer na obrobku', 'Depth gauge on the workpiece')} onClick={() => set('probe', !ui.probe)} />
           {pinfo && (<div className="mt-2">
             <Slider id="mpx" label={L('Poloha pozdĺž (od ľavej hrany)', 'Position along (from the left edge)')} unit="mm" min={0} max={Math.round(pinfo.L)} step={0.5} value={Math.min(ui.px, pinfo.L)} digits={1} onChange={(v) => set('px', v)} />
@@ -887,7 +888,6 @@ function MillSimulator({ onBack, params }) {
               <div className="dro-row"><span>{L('hĺbka', 'depth')}</span><b style={{ fontSize: 22 }}>{pinfo.depthAt(Math.min(ui.px, pinfo.L), Math.min(ui.pz, pinfo.Wd)).toFixed(2)}</b></div>
               <div className="dro-sub"><span>{L('najväčšia', 'max')} {pinfo.maxDep.toFixed(2)} mm</span><span>{L('obrobené', 'machined')} {Math.round(pinfo.cover * 100)} %</span></div>
             </div>
-            <p className="text-xs muted mt-2">{L(`Hĺbka pod pôvodnou hornou plochou. Sieť merania ${pinfo.dX.toFixed(1).replace('.', ',')} × ${pinfo.dZ.toFixed(1).replace('.', ',')} mm.`, `Depth below the original top surface. Measuring grid ${pinfo.dX.toFixed(1)} × ${pinfo.dZ.toFixed(1)} mm.`)}</p>
           </div>)}
         </div>
 
@@ -895,7 +895,7 @@ function MillSimulator({ onBack, params }) {
           const p = indexPlan(ui.divZ), deg = ((tele.phi * 180 / Math.PI) % 360 + 360) % 360;
           return (
             <div className="sec">
-              <h2 className="sec-title mb-2">{L('Deliaci prístroj', 'Dividing head')}</h2>
+              <div className="section-heading"><h2 className="sec-title mb-2">{L('Deliaci prístroj', 'Dividing head')}</h2><SectionInfo title={L('Deliaci prístroj', 'Dividing head')}><p className="text-xs muted mt-1">{L('Pri frézovaní musí byť vreteno zaistené. Na delenie odsuň frézu od obrobku. V ručnom ovládaní sa dá točiť aj kľukou (1 otáčka = 9°).', 'The spindle must be locked while milling. Move the cutter clear before indexing. In manual control the crank can be turned too (1 turn = 9°).')}</p></SectionInfo></div>
               <SegRow label={L('Počet dielov z', 'Divisions z')} value={ui.divZ} options={DIVISIONS.map((z) => [z, String(z)])} onChange={(z) => { if (!tele.indexing) set('divZ', z); }} />
               <div className="desc" style={{ marginTop: 0 }}>
                 <div className="font-semibold">n = 40 / {ui.divZ} = {p.turns}{p.holes ? ` ${p.holes}/${p.circle}` : ''} {L('otáčky kľuky', 'crank turns')}</div>
@@ -907,7 +907,7 @@ function MillSimulator({ onBack, params }) {
               </div>
               <p className="text-sm tnum mt-2">{L('Dielik', 'Division')} <b>{tele.idx + 1} / {ui.divZ}</b> · {L('uhol', 'angle')} <b>{L(deg.toFixed(1).replace('.', ','), deg.toFixed(1))}°</b>{tele.indexing ? ` · ${L('delí sa…', 'indexing…')}` : ''}</p>
               <Toggle on={ui.divLock} label={L('Aretácia vretena zaistená', 'Spindle lock engaged')} onClick={() => set('divLock', !ui.divLock)} />
-              <p className="text-xs muted mt-1">{L('Pri frézovaní musí byť vreteno zaistené. Na delenie odsuň frézu od obrobku. V ručnom ovládaní sa dá točiť aj kľukou (1 otáčka = 9°).', 'The spindle must be locked while milling. Move the cutter clear before indexing. In manual control the crank can be turned too (1 turn = 9°).')}</p>
+
             </div>
           );
         })()}
@@ -930,7 +930,7 @@ function MillSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail frézy', 'Cutter detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Rozvádzač', 'Cabinet')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

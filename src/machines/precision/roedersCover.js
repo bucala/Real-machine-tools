@@ -25,7 +25,7 @@ export function createRoedersCover({cab,M,group,box,cyl,rod,label,bolts,plate,fo
     box(cover,(a+b)/2,(7.2+R.lowerY)/2,R.rearZ,b-a,R.lowerY-7.2,.12,M.cab);
   }
   const sideProfile=[[-.5,7.2],[R.rearZ,7.2],[R.rearZ,R.lowerY],[R.frontZ,R.upperY],[R.frontZ,R.top],[-.5,R.top]];
-  for(const x of [R.left,R.right]){
+  for(const x of [R.left]){
     const g=group('tower-profile-return',cover);g.position.x=x;g.rotation.y=-Math.PI/2;
     plate(g,'STEP-tower-side-profile',sideProfile,.12,M.cab,[],0);
   }
@@ -53,7 +53,12 @@ export function createRoedersCover({cab,M,group,box,cyl,rod,label,bolts,plate,fo
   plate(upperRim,'left-cheek-above-wedge',[[4.14389,28.5],[10.65,28.5],[10.65,28.26],[4.3,28.26],[4.08778,26.072968],[5.411864,22.902651],[5.261864,23.022651],[3.93778,25.992968]],.10,M.cab,[],0);
   sheet('front-hood-roof',[[R.cheek,28.5,R.frontZ],[R.right,28.5,R.frontZ],[R.right,28.5,10.65],[R.cheek,28.5,10.65]]);
   sheet('front-hood-roof-fold',[[R.cheek,28.5,10.65],[R.right,28.5,10.65],[R.right,28.2,11.2],[R.cheek,28.2,11.2]]);
-  box(cover,R.right,27.9,7.4,.12,1.2,7.6,M.cab);
+  // One continuous right skin, including the tall tower and lower front hood.
+  // The previous separate boxes left a 131 mm slot behind the front fascia.
+  const right=group('continuous-right-enclosure',cab);right.position.x=R.right;right.rotation.y=-Math.PI/2;
+  plate(right,'right-enclosure-skin',[[-22.8,7.1],[11.2,7.1],[11.2,28.2],[10.65,28.5],[R.frontZ,28.5],[R.frontZ,R.top],[-22.8,R.top]],.16,M.cab,[[[-7.2,10],[-3,10],[-3,15.5],[-7.2,15.5]]],0);
+  for(const y of [7.3,28.2])rod(right,[-22.6,y,.17],[-.6,y,.17],.025,M.cab2);
+  for(const z of [-21,-12,-1])for(const y of [8,18,27,34])cyl(right,z,y,-.025,.04,.035,M.steelD,'z');
 
   // The white side door wraps around both folds; the glass has the same lower
   // slope, then a vertical step into its taller front viewing pane (photo).
@@ -63,6 +68,10 @@ export function createRoedersCover({cab,M,group,box,cyl,rod,label,bolts,plate,fo
   const hinge=group('left-access-door-hinge',cab);hinge.position.set(R.cheek-.04,0,10.2);
   const side=group('left-window-cheek',hinge);side.position.z=-10.2;side.rotation.y=-Math.PI/2;
   plate(side,'left-window-sheet-metal',outline,.10,M.cab,[aperture],.015);
+  // Recessed rebate closes the edge joints while leaving the entire door clear.
+  const rebate=group('left-door-inner-rebate',cab);rebate.position.set(R.cheek+.1,0,0);rebate.rotation.y=-Math.PI/2;
+  const inside=outline.map(([z,y])=>[z+(6.4-z)*.065,y+(17.7-y)*.025]);
+  plate(rebate,'continuous-left-door-frame',outline,.12,M.cab2,[inside],0);
   const glass=new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(aperture.map(p=>new THREE.Vector2(...p)))),M.glass);
   glass.name='left-observation-window';glass.position.z=.115;side.add(glass);
   for(let i=0;i<aperture.length;i++)rod(side,[...aperture[i],.14],[...aperture[(i+1)%aperture.length],.14],.055,M.black);

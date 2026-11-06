@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -468,7 +469,7 @@ function RadialSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Rameno a vreteník', 'Arm and head')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Rameno a vreteník', 'Arm and head')}</h2><SectionInfo title={L('Rameno a vreteník', 'Arm and head')}><p className="text-xs muted">{L('Poloha vretena od stredu dosky je na displeji (X doprava, Y od obsluhy). Presúva sa len pri uvoľnených pákach a s vrtákom mimo obrobku.', 'The spindle position from the plate centre is on the display (X to the right, Y away from you). It moves only with the levers released and the drill out of the work.')}</p></SectionInfo></div>
           <Toggle on={ui.colLock} label={L('Stĺp upnutý (rameno sa neotáča ani nezdvíha)', 'Column clamped (the arm neither swings nor rises)')} onClick={() => set('colLock', !ui.colLock)} />
           <Toggle on={ui.headLock} label={L('Vreteník upnutý na ramene', 'Head clamped on the arm')} onClick={() => set('headLock', !ui.headLock)} />
           <Slider id="ra" label={L('Natočenie ramena α', 'Arm angle α')} unit="°" min={-95} max={95} step={0.01} value={ui.a} actual={tele.a} digits={2} onChange={(v) => set('a', v)} disabled={ui.colLock} />
@@ -476,13 +477,13 @@ function RadialSimulator({ onBack, params }) {
           <Slider id="rr" label={L('Vyloženie vreteníka R', 'Head reach R')} unit="mm" min={RA.RMIN * 100} max={RA.RMAX * 100} step={0.1} value={ui.R} actual={tele.R} digits={1} onChange={(v) => set('R', v)} disabled={ui.headLock} />
           <div className="flex flex-wrap gap-2 mb-2">{[-10, -1, -0.1, 0.1, 1, 10].map((x) => <button key={x} type="button" className="btn" disabled={ui.headLock} onClick={() => nud('R', x, RA.RMIN * 100, RA.RMAX * 100, 1)}>R {x > 0 ? '+' : ''}{fmt(x, x % 1 ? 1 : 0)}</button>)}</div>
           <Slider id="rh" label={L('Výška ramena (motor)', 'Arm height (motor)')} unit="mm" min={RA.HMIN * 100} max={RA.HMAX * 100} step={10} value={ui.H} actual={tele.H} digits={0} onChange={(v) => set('H', v)} disabled={ui.colLock} />
-          <p className="text-xs muted">{L('Poloha vretena od stredu dosky je na displeji (X doprava, Y od obsluhy). Presúva sa len pri uvoľnených pákach a s vrtákom mimo obrobku.', 'The spindle position from the plate centre is on the display (X to the right, Y away from you). It moves only with the levers released and the drill out of the work.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Vrták a posuv', 'Drill and feed')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Vrták a posuv', 'Drill and feed')}</h2><SectionInfo title={L('Vrták a posuv', 'Drill and feed')}><p className="text-xs muted mb-2">{L(`Pre oceľ 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min.`, `For steel 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}.`)}</p></SectionInfo></div>
           <div className="flex flex-wrap gap-1.5 mb-2">{RADIAL_SIZES.map((d) => <button key={d} type="button" className={`btn ${ui.bit === d ? 'active' : ''}`} aria-pressed={ui.bit === d} onClick={() => set('bit', d)}>Ø{d}</button>)}</div>
-          <p className="text-xs muted mb-2">{L(`Pre oceľ 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min.`, `For steel 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}.`)}</p>
+
           <Slider id="rq" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={RA.QMAX * 100} step={0.5} value={ui.quill} actual={tele.quill} digits={1} onChange={(v) => set('quill', v)} />
           <Toggle on={ui.autoF} label={L('Automatický posuv pinoly', 'Quill power feed')} onClick={() => set('autoF', !ui.autoF)} />
           <SegRow label={L('Posuv mm/ot', 'Feed mm/rev')} value={ui.feed} options={RADIAL_FEEDS.map((f) => [f, fmt(f, 2)])} onChange={(v) => set('feed', v)} />
@@ -509,7 +510,7 @@ function RadialSimulator({ onBack, params }) {
         <ExportSection machine="radialka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['zhora', L('Zhora', 'Top')], ['rameno', L('Rameno', 'Arm')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

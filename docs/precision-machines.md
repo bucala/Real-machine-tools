@@ -90,6 +90,10 @@ Pôdorys modelu má čelo široké 2190 mm, odsadené širšie ľavé rameno, za
 
 Pracovná zostava je posunutá do prednej ľavej časti kabíny ako celok: stôl, upínač, polotovar, lineárne osi a vreteno zdieľajú rovnaký súradnicový rámec. Tvarovaná kolíska A/C a dve ložiskové podpery vychádzajú z rezov a fotografie na stranách 58–59. Osvetlenie aj detailné pohľady sledujú skutočnú polohu tejto zostavy.
 
+Pravý kryt tvorí jeden profil s otvorom pre kontrolné sklo, takže medzi vežou a predným panelom nezostáva priebežná štrbina. Ľavé dvierka majú zapustený obvodový rám. Detail interiéru dopĺňa fazetované lôžko s radmi zapustených spojov, osemuholníkové podpery A s prírubami, zaoblená kolíska a centrálna misa pohonu C. Šikmé teleskopické kryty reagujú na os X; plášť portálovej hlavy má priechod pre pinolu so štyrmi vodiacimi stĺpmi. Vreteno má rozdeľovač chladiacej kvapaliny, dýzy a vedenia. Nerezové žľaby, skrutky, odvetranie základne a vzduchová hadica dopĺňajú model podľa fotografií. Tieto detaily sú vizuálna rekonštrukcia v `roedersDetails.js`.
+
+[Detail vretena a naklonenej kolísky](img/roeders-interior.png)
+
 ## OSCARMAX EX 500
 
 Podklady: [stránka výrobcu EX 500](https://www.oscaredm.com/en-US/p182-die-sinker-electrical-discharge-machine-ex-500), jej fotografie a tabuľky dodané používateľom; následne katalóg `346ce9ffaa88.pdf`, PDF strana 6 (tlačené strany 10–11), pôdorys a vonkajšie rozmery na PDF strane 10. Starší dodaný súbor `2023OSCAR_pdf_3247285_134929_7818263.pdf` opisuje EXD vŕtačky a SD ZNC, nepoužíva sa pre parametre EX 500.

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { L, PrefsCtx } from '../core/i18n';
 import { logNear } from '../core/util';
 import { MachineDownload } from './machineDownload';
+import { SectionInfo } from './sectionInfo';
 
 // ---------- spoločné prvky rozhrania ----------
 // telemetria pre panel: nový stav sa nastaví len pri skutočnej zmene – stojaci stroj panel neprekresľuje
@@ -237,7 +238,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
           {!workBelowModes && workButton}
         </div>
         {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
-        <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}<MachineDownload apiRef={apiRef} disabled={inspect} /></div>
+        <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}</div>
         </div>
       </div>
     </div>
@@ -263,8 +264,7 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
         <PrefBar sound={false} />
       </div>
-      <h1 className="app-title mt-3" tabIndex={-1}>{title}</h1>
-      <p className="text-xs muted mt-1">{sub}</p>
+      <div className="section-heading mt-3"><h1 className="app-title" tabIndex={-1}>{title}</h1><SectionInfo title={title}><p>{sub}</p></SectionInfo></div>
       <div className="dro mt-3 tnum">
         {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
         <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
@@ -295,7 +295,7 @@ function PartsSection({ parts, selected, selectPart }) {
   return (
     <div className="sec">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2>
+        <div className="section-heading"><h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2><SectionInfo title={L('Časti stroja', 'Machine parts')}><p>{L('Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.', 'Pick a part from the list or click it in the model – it is highlighted and its description is shown.')}</p></SectionInfo></div>
         {selected && <button type="button" className="text-xs muted underline" onClick={() => selectPart(selected)}>{L('Zrušiť výber', 'Clear selection')}</button>}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -303,10 +303,7 @@ function PartsSection({ parts, selected, selectPart }) {
           <button key={p.key} type="button" className={`part-btn ${selected === p.key ? 'active' : ''}`} onClick={() => selectPart(p.key)}>{p.short}</button>
         ))}
       </div>
-      <div className="desc">
-        {sel ? (<><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></>)
-          : <span className="muted">{L('Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.', 'Pick a part from the list or click it in the model – it is highlighted and its description is shown.')}</span>}
-      </div>
+      {sel && <div className="desc"><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></div>}
     </div>
   );
 }
@@ -318,10 +315,9 @@ const mkParts = (rows) => rows.map(([key, ss, se, ns, ne, ds, de]) => ({ key, sh
 function BlankSection({ title, children, onApply, applyLabel, note }) {
   return (
     <div className="sec">
-      <h2 className="sec-title mb-2">{title || L('Polotovar', 'Workpiece')}</h2>
+      <div className="section-heading"><h2 className="sec-title">{title || L('Polotovar', 'Workpiece')}</h2>{note && <SectionInfo title={title || L('Polotovar', 'Workpiece')}><p>{note}</p></SectionInfo>}</div>
       {children}
       <button type="button" className="btn mt-1 w-full" onClick={onApply}>{applyLabel || L('Upnúť nový polotovar', 'Clamp a new workpiece')}</button>
-      {note && <p className="text-xs muted mt-2">{note}</p>}
     </div>
   );
 }
@@ -336,11 +332,10 @@ function SegRow({ label, value, options, onChange, noParam }) {
   );
 }
 
-function HelpFooter() {
+function HelpFooter({ apiRef, ui }) {
   return (
-    <div className="sec text-xs muted" style={{ borderBottom: 0 }}>
-      {L('Ovládanie kamery, ručné ovládanie prvkov stroja a tipy nájdeš pod ikonou „i“ vľavo hore v scéne. Kláves M prepína kameru a ručné ovládanie.',
-        'Camera control, manual control of the machine and tips are under the “i” icon at the top left of the scene. The M key switches between camera and manual control.')}
+    <div className="sec machine-download-footer" style={{ borderBottom: 0 }}>
+      <MachineDownload apiRef={apiRef} disabled={ui.unclamped} className="btn" />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { L } from '../core/i18n';
 import './machineDownload.css';
 
-export function MachineDownload({ apiRef, disabled }) {
+export function MachineDownload({ apiRef, disabled, className = 'btn' }) {
   const dialog = useRef(null), task = useRef(null);
   const [format, setFormat] = useState('obj'), [busy, setBusy] = useState(false), [note, setNote] = useState('');
   useEffect(() => () => task.current?.abort(), []);
@@ -28,7 +28,7 @@ export function MachineDownload({ apiRef, disabled }) {
     } finally { if (task.current === controller) { task.current = null; setBusy(false); } }
   };
   return <>
-    <button type="button" className="scene-btn" disabled={disabled} onClick={() => { setNote(''); dialog.current.showModal(); }}
+    <button type="button" className={className} disabled={disabled} onClick={() => { setNote(''); dialog.current.showModal(); }}
       title={disabled ? L('Najprv sa vráť z pohľadu na obrobok.', 'Return from the workpiece view first.') : undefined}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>
       {L('Stiahnuť model', 'Download model')}

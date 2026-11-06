@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -295,13 +296,13 @@ function FolderSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Ohýbanie', 'Bending')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Ohýbanie', 'Bending')}</h2><SectionInfo title={L('Ohýbanie', 'Bending')}><p className="text-xs muted mt-2">{L(`Plech po uvoľnení odpruží o ${fmt(sb)}°, preto treba lištu vykývnuť o kúsok ďalej, ako je cieľový uhol.`, `After release the sheet springs back by ${fmt(sb)}°, so swing the beam slightly past the target angle.`)}</p></SectionInfo></div>
           <Slider id="fbeam" label={L('Uhol ohýbacej lišty', 'Folding beam angle')} unit="°" min={0} max={130} step={0.5} value={ui.beam} actual={tele.beam} digits={1} onChange={(v) => set('beam', v)} />
           <div className="flex flex-wrap gap-2">
             {[45, 90, 120].map((a) => <button key={a} type="button" className="btn" onClick={() => set('beam', a + sb)}>{a}° (+{fmt(sb)}°)</button>)}
             <button type="button" className="btn" onClick={() => set('beam', 0)}>{L('Sklopiť', 'Lower')}</button>
           </div>
-          <p className="text-xs muted mt-2">{L(`Plech po uvoľnení odpruží o ${fmt(sb)}°, preto treba lištu vykývnuť o kúsok ďalej, ako je cieľový uhol.`, `After release the sheet springs back by ${fmt(sb)}°, so swing the beam slightly past the target angle.`)}</p>
+
         </div>
 
         <BlankSection onApply={() => apiRef.current.newBlank && apiRef.current.newBlank()} applyLabel={L('Vložiť nový rovný plech', 'Insert a new flat sheet')}>
@@ -313,7 +314,7 @@ function FolderSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail ohybu', 'Bend detail')], ['bok', L('Z boku', 'Side')], ['spredu', L('Spredu', 'Front')], ['zadu', L('Zozadu', 'Rear')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

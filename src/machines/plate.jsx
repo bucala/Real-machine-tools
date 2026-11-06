@@ -361,7 +361,7 @@ function PlateRollSimulator({ onBack, params }) {
         <ExportSection machine="zakruzovacka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['koniec', L('Odklopné ložisko', 'Drop-end')], ['bok', L('Zboku', 'Side')], ['valce', L('Valce', 'Rolls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

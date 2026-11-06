@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -452,7 +453,7 @@ function GrinderSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2><SectionInfo title={L('Polohy', 'Positions')}><p className="text-xs muted mt-2">{L(`Obrobok je vysoký ${ui.bH} mm. Prisúvaj po 0,01 – 0,05 mm; viac ako 0,1 mm na prechod stroj nedovolí.`, `The workpiece is ${ui.bH} mm high. Feed in 0.01 – 0.05 mm steps; the machine refuses more than 0.1 mm per pass.`)}</p></SectionInfo></div>
           <Slider id="gx" label={L('Stôl X', 'Table X')} unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} disabled={ui.autoX} />
           {ui.autoX && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Pri zapnutom pohybe stola tam a späť sa stôl ručne neposúva – vypni ho nižšie.', 'With table reciprocation on, the table cannot be moved by hand – switch it off below.')}</p>}
           <Slider id="gy" label={L('Sane Y', 'Saddle Y')} unit="mm" min={0} max={240} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
@@ -460,7 +461,7 @@ function GrinderSimulator({ onBack, params }) {
           <div className="flex flex-wrap gap-2">
             {[-0.1, -0.02, -0.01, 0.01, 0.1, 1].map((d) => <button key={d} type="button" className="btn" onClick={() => set('z', Math.round((ui.z + d) * 1000) / 1000)}>{d > 0 ? '+' : ''}{L(String(d).replace('.', ','), String(d))}</button>)}
           </div>
-          <p className="text-xs muted mt-2">{L(`Obrobok je vysoký ${ui.bH} mm. Prisúvaj po 0,01 – 0,05 mm; viac ako 0,1 mm na prechod stroj nedovolí.`, `The workpiece is ${ui.bH} mm high. Feed in 0.01 – 0.05 mm steps; the machine refuses more than 0.1 mm per pass.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -498,7 +499,7 @@ function GrinderSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail kotúča', 'Wheel detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );

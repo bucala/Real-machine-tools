@@ -1,3 +1,4 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
@@ -320,11 +321,11 @@ function ShearSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2><SectionInfo title={L('Nastavenie', 'Setup')}><p className="text-xs muted">{L(`Pre plech ${ui.t} mm je vhodná vôľa približne ${gapIdeal(ui.t).toFixed(2).replace('.', ',')} mm.`, `For ${ui.t} mm sheet the recommended clearance is about ${gapIdeal(ui.t).toFixed(2)} mm.`)}</p></SectionInfo></div>
           <Slider id="sg" label={L('Zadný doraz (šírka pásu)', 'Back gauge (strip width)')} unit="mm" min={5} max={750} step={0.1} value={ui.gauge} digits={1} onChange={(v) => set('gauge', v)} />
           <div className="flex flex-wrap gap-2 mb-2">{[-10, -1, -0.1, 0.1, 1, 10].map((x) => <button key={x} type="button" className="btn" onClick={() => set('gauge', clamp(Math.round((ui.gauge + x) * 10) / 10, 5, 750))}>{x > 0 ? '+' : ''}{x}</button>)}</div>
           <Slider id="sv" label={L('Vôľa nožov', 'Blade clearance')} unit="mm" min={0.03} max={0.8} step={0.01} value={ui.gap} digits={2} onChange={(v) => set('gap', v)} />
-          <p className="text-xs muted">{L(`Pre plech ${ui.t} mm je vhodná vôľa približne ${gapIdeal(ui.t).toFixed(2).replace('.', ',')} mm.`, `For ${ui.t} mm sheet the recommended clearance is about ${gapIdeal(ui.t).toFixed(2)} mm.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -354,7 +355,7 @@ function ShearSimulator({ onBack, params }) {
         <ExportSection machine="noznice" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Nôž', 'Blade')], ['zhora', L('Zhora', 'Top')], ['zboku', L('Zboku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
+        <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>
     </div>
   );
