@@ -82,6 +82,8 @@ Prepravný vozík na triesky je pri zadnej ľavej časti, napojený na dva výst
 
 Pravý bok má malé kontrolné okno a rozdelené servisné panely; chladenie má ventilátory na hornej ploche. Vnútorné odovzdávanie nástroja medzi rotačným zásobníkom a vretenom je schematická animácia; katalóg neobsahuje výrobný výkres tejto mechaniky.
 
+Detailná fotografia ľavého čela dopĺňa tvar horného opláštenia: dve nadväzujúce skosené plochy prechádzajú cez celú šírku čela, ľavý horný panel nadväzuje na rovinu bočného okna a spodný zalomený kryt sa zbieha do jedného ihlanového hrotu. Plochy majú spoločné hrany, samostatné normály a nahrádzajú pôvodné úzke naklonené kvádre. Neokótované uhly a rozmery záhybov sú rekonštrukciou fotografie.
+
 Pôdorys modelu má čelo široké 2190 mm, odsadené širšie ľavé rameno, zadnú pravú servisnú skriňu a priečny zadný blok s voľným servisným výrezom. HMI je pri ľavom ramene za bočným oknom; jeho držiak je pripojený ku skrini. Rozmer 4814 mm na strane 57 patrí základnému RXU 1001; údaj 5300 mm v tabuľke DSH je potrebný inštalačný priestor. Nie je použitý ako automatické predĺženie jednotlivých panelov. Tieto vzťahy sú sústredené v `src/machines/precision/roedersLayout.js`. Detailné výšky krytov, šírka okien a zdvih dverí sú rekonštrukcia podľa fotografie.
 
 Pracovná zostava je posunutá do prednej ľavej časti kabíny ako celok: stôl, upínač, polotovar, lineárne osi a vreteno zdieľajú rovnaký súradnicový rámec. Tvarovaná kolíska A/C a dve ložiskové podpery vychádzajú z rezov a fotografie na stranách 58–59. Osvetlenie aj detailné pohľady sledujú skutočnú polohu tejto zostavy.

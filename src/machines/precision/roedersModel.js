@@ -24,6 +24,19 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
     // Shape's Y maps to -world Z after rotating the extrusion into the floor.
     const o=plate(p,name,points.map(([x,z])=>[x,-z]),h,mat,[],0);o.rotation.x=-Math.PI/2;o.position.y=y;return o;
   };
+  // Explicit flat folds: unlike rotated boxes these share their arrises exactly,
+  // and a triangular end can converge to a single tip without a square end cap.
+  const foldedShell=(parent,name,vertices,faces,mat=M.cab)=>{
+    const positions=[];
+    for(const face of faces)for(let i=1;i<face.length-1;i++){
+      for(const j of [face[0],face[i],face[i+1]])positions.push(...vertices[j]);
+    }
+    const geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.computeVertexNormals();
+    const mesh=new THREE.Mesh(geometry,mat);mesh.name=name;
+    mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+  };
   const tube=(p,points,r=.06,mat=M.black)=>{const path=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v)));const o=new THREE.Mesh(new THREE.TubeGeometry(path,32,r,8,false),mat);o.castShadow=true;p.add(o);return o;};
   const rim=(p,points,mat=M.dark,r=.045)=>{for(let i=0;i<points.length;i++)rod(p,points[i],points[(i+1)%points.length],r,mat);};
   const bed=part('lozko');
@@ -181,25 +194,41 @@ export function createRoedersModel({root,G,M,tex,MC,PY}){
   for(let i=0;i<15;i++)box(cab,6,21+i*.14,-37.12,5,.055,.04,M.dark);
 
   // Front: narrow white left cheek, red sliding leaf, wide right service fascia.
-  // Small folded top faces create the characteristic chamfers instead of box corners.
-  const frontProfile=[[-10.95,7.1],[-10.95,27.1],[-10.3,28.2],[-8.55,28.2],[-8.55,7.1]];
+  // The upper front fold runs across the whole machine, not diagonally across
+  // each fascia's X/Y corner. Its two pitches are in the side-window Y/Z plane.
+  const frontProfile=[[-10.95,7.1],[-10.95,28.2],[-8.55,28.2],[-8.55,7.1]];
   plate(cab,'front-left-cheek',frontProfile,.55,M.cab).position.z=10.65;
-  const rightProfile=[[3.35,7.1],[10.95,7.1],[10.95,26.9],[10.4,27.5],[3.35,27.5]];
+  const rightProfile=[[3.35,7.1],[10.95,7.1],[10.95,28.2],[3.35,28.2]];
   plate(cab,'right-service-fascia',rightProfile,.35,M.cab).position.z=10.76;
   wall(10.95,17.2,5.35,.16,20.2,11.7);
-  wall(0,27.75,5.05,21.6,.22,11.1);
+  const roofProfile=[[-.5,28.9,-13],[6.4,28.692,-10.96],[11.2,28.2,-10.96]]; // [Z,Y,left X]
+  const roofVertices=roofProfile.flatMap(([z,y,left])=>[[left,y,z],[10.95,y,z]]);
+  roofVertices.push(...roofVertices.map(([x,y,z])=>[x,y-.12,z]));
+  foldedShell(cab,'full-width-double-fold-roof',roofVertices,[
+    [0,2,3,1],[2,4,5,3], // two separately shaded, full-width slopes
+    [6,7,9,8],[8,9,11,10], // underside
+    [0,1,7,6],[4,10,11,5],[0,6,8,2],[2,8,10,4],[1,3,9,7],[3,5,11,9],
+  ]);
+  // Close the right return up to the same roof profile; no stepped flat lid.
+  const roofReturn=group('right-roof-return',cab);roofReturn.position.x=11.03;roofReturn.rotation.y=-Math.PI/2;
+  plate(roofReturn,'right-upper-return',[[-.5,27.25],[11.2,27.25],[11.2,28.2],[6.4,28.692],[-.5,28.9]],.16,M.cab,[],0);
   // Actual side window: polygon cut out of the folded cheek, with a separate glass.
   const side=group('left-window-cheek',cab);side.position.set(-10.96,0,0);side.rotation.y=-Math.PI/2;
-  const sideOutline=[[-.5,7.1],[11.2,7.1],[11.2,27.1],[10.3,28.2],[7.8,28.2],[6.4,23.8],[-.5,20.5]];
+  const sideOutline=[[-.5,7.1],[11.2,7.1],[11.2,28.2],[6.4,28.692],[6.4,23.8],[-.5,20.5]];
   const aperture=[[2.0,11.1],[9.0,11.1],[9.0,22.2],[3.4,22.2],[2.0,20.5]];
   plate(side,'left-window-sheet-metal',sideOutline,.14,M.cab,[aperture]);
   const sideGlass=new THREE.Mesh(new THREE.ShapeGeometry(shape(aperture)),M.glass);sideGlass.name='left-observation-window';sideGlass.position.z=.16;side.add(sideGlass);
   rim(side,aperture.map(([x,y])=>[x,y,.18]),M.dark,.055);
-  for(const z of [2.7,8.7])for(const y of [8.5,25.6])box(side,z,y,.22,.19,.3,.15,M.black);
-  // Folded hood above the side window follows the change of height towards the tower.
-  for(const [a,b] of [[[-.5,20.5],[6.4,23.8]],[[6.4,23.8],[7.8,28.2]]]){
-    const dz=b[0]-a[0],dy=b[1]-a[1],p=box(cab,-12.3,(a[1]+b[1])/2,(a[0]+b[0])/2,2.8,.12,Math.hypot(dz,dy),M.cab);p.rotation.x=-Math.atan2(dy,dz);
-  }
+  for(const [z,y] of [[2.7,8.5],[8.7,8.5],[8.7,25.6]])box(side,z,y,.22,.19,.3,.15,M.black);
+  // Broad upper cheek and the lower window hood are distinct sheet-metal folds.
+  // Both follow the side-window plane. The lower hood fans out to ONE rear-left
+  // apex, as in the close-up, rather than terminating as a rectangular overhang.
+  foldedShell(cab,'left-upper-cheek-fold',[
+    [-10.96,23.8,6.4],[-10.96,28.692,6.4],[-13,28.9,-.5],[-13,23.0,-.5],
+  ],[[0,1,2],[0,2,3],[2,1,0],[3,2,0]]);
+  foldedShell(cab,'left-window-pyramidal-hood',[
+    [-10.96,20.5,-.5],[-10.96,23.8,6.4],[-14.5,20.5,-.5],[-13,23.0,-.5],
+  ],[[0,1,2],[0,2,3],[2,1,3],[0,3,1]]);
   const door=group('right-sliding-loading-door',cab);door.userData.s=1;
   const doorShape=[[0,0],[11.7,0],[11.7,19.9],[11.15,20.85],[.25,20.85],[0,20.2]];
   const doorWindow=[[1.85,2.5],[10.05,2.5],[10.05,15.4],[1.85,15.4]];
