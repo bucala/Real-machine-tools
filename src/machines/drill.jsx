@@ -77,6 +77,7 @@ function DrillSimulator({ onBack, params }) {
     };
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, crank, face } = makeKit(M);
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Stĺpová vŕtačka' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);

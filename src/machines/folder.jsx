@@ -55,6 +55,7 @@ function FolderSimulator({ onBack, params }) {
     const M = { ...baseMats(0x9dc58b, 0x82ab70, 0x5f8253), sheet: std(0xb4bcc4, 0.35, 0.75, { side: THREE.DoubleSide }), screw: std(0x3b3d40, 0.45, 0.7) };
     const { add, box, cylX, cylY, cylZ, handwheel, rod } = makeKit(M);
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Ohýbačka plechu' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);

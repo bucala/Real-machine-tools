@@ -37,6 +37,7 @@ export default function OscarSimulator({onBack}){
     const c=ctl.current,mount=mountRef.current;
     const {scene,camera,renderer,snapshot,dispose:disposeStage}=createStage(mount,{far:400,floorSize:300,gridSize:200,fogNear:150,fogFar:350});
     const snd=createSound('mill'),dom=renderer.domElement,root=new THREE.Group();scene.add(root);
+    apiRef.current.machineModel = { root, name: 'OSCARMAX EX 500' };
     const mat=(color,metal=.25,rough=.5)=>new THREE.MeshStandardMaterial({color:new THREE.Color(color).convertSRGBToLinear(),metalness:metal,roughness:rough});
     const M={cab:mat(0xc2c6c7,.4),cab2:mat(0xb0b5b8,.4),steel:mat(0xc8ced2,.8,.25),steelD:mat(0x646c72,.8),inox:mat(0xc5c8ca,.7,.3),table:mat(0xa8afb4,.75),black:mat(0x12191d),dark:mat(0x343e43),red:mat(0xc9242d),blue:mat(0x2854a0),yellow:mat(0xe5df43),green:mat(0x299d75),brass:mat(0xb49b57,.7),copper:mat(0xb77848,.8,.3),oil:new THREE.MeshStandardMaterial({color:0x8a9878,transparent:true,opacity:.18,roughness:.16,metalness:.15,depthWrite:false,side:THREE.DoubleSide})};
     const tex=(w,h,draw)=>{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;const redraw=()=>{draw(cv.getContext('2d'),w,h);tx.needsUpdate=true;};redraw();return {tx,redraw};};

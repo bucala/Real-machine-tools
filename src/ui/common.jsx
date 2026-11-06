@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { L, PrefsCtx } from '../core/i18n';
 import { logNear } from '../core/util';
+import { MachineDownload } from './machineDownload';
 
 // ---------- spoločné prvky rozhrania ----------
 // telemetria pre panel: nový stav sa nastaví len pri skutočnej zmene – stojaci stroj panel neprekresľuje
@@ -236,7 +237,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
           {!workBelowModes && workButton}
         </div>
         {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
-        {(tools || (workBelowModes && workButton)) && <div className={`flex ${workBelowModes ? 'flex-nowrap' : 'flex-wrap'} justify-end gap-2`} style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}</div>}
+        <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}<MachineDownload apiRef={apiRef} disabled={inspect} /></div>
         </div>
       </div>
     </div>

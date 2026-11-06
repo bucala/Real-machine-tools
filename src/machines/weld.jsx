@@ -226,6 +226,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     const kit = makeKit(M);
     const { add, box, cylY, cylZ, hitProxy, face } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: MIG ? 'Fronius TPS 450 MIG MAG' : 'Zváracie pracovisko MMA' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
 

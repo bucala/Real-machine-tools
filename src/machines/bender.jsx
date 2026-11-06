@@ -89,6 +89,7 @@ function BenderSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { box, cylY, cylZ, ball, hitProxy } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Ohýbačka profilov' };
     const mach = new THREE.Group(); root.add(mach);
     const G = {};
     const grp = (k, parent = mach) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };

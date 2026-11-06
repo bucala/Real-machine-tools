@@ -168,6 +168,7 @@ function LatheCore({ onBack, params, model, onModel }) {
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, pivotLeverY, pivotLeverX, detents, handwheel } = kit;
 
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: `TOS ${MD.name}` };
     // veľkosť stroja: celý model sa zmenší / zväčší, obrobok a nože majú v mm stále skutočné rozmery (U mm na jednotku)
     root.scale.setScalar(S); root.position.y = MD.axisH - AXIS_Y * S; root.updateMatrixWorld(true);
     const lift = root.position.y / S;                                    // predĺženie podstavcov (miestne jednotky)

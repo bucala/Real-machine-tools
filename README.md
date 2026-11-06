@@ -406,6 +406,12 @@ flowchart LR
 | [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
 
 
+### Stiahnutie modelu stroja
+
+Tlačidlo **Stiahnuť model** v hornej lište každého simulátora otvorí výber **OBJ**, **STEP/STP** alebo **STL**. Exportuje aktuálne polohy dielov a viditeľné príslušenstvo bez obrobku, podlahy, svetiel a neviditeľných ovládacích zón. Pri skrytej kabíne sa exportuje zobrazená vnútorná zostava. Hermle C 32 / C 42, varianty sústruhu TOS a zváracie pracoviská majú rozlíšené názvy súborov.
+
+Všetky formáty používajú milimetre, os Y nahor a počiatok v strede spodnej plochy zostavy. OBJ zachováva pomenované diely bez textúr; STL je binárna trojuholníková sieť. STEP AP214 obsahuje ploškové telesá a otvorené povrchy podľa geometrie simulátora, bez parametrickej histórie. Výpočet beží lokálne v samostatnom workeri, dá sa zrušiť a nemení živý model. Počas prehliadky odopnutého obrobku sa najprv treba vrátiť k stroju.
+
 ### Prehliadka a CAD export aktuálneho obrobku
 
 Všetkých 19 simulátorov má tlačidlo **Pozrieť obrobok**. Prehliadka umožňuje diel vybrať, otáčať a priblížiť; **Upnúť späť** obnoví jeho uloženie a režim ovládania. Pri strojoch, ktoré vyžadujú zastavenie alebo odsunutie nástroja, sa najprv zobrazí príslušný pokyn. Pri zakružovačke sa pred vybratím otvorí odklopné ložisko. Nožnice ukážu posledný odstrihnutý pás, ak je dostupný, inak plech na stole. Nastavenia sú počas prehliadky zablokované. Zakružovačka používa spoločnú podlahu s mriežkou ako ostatné stroje; samostatná svetlá podkladová doska je odstránená. Tlačidlá chodu vpred/vzad a Stop používajú rovnaké plné zelené a červené tlačidlá ako ostatné pohony.

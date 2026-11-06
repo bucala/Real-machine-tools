@@ -25,7 +25,7 @@ export function createOscarModel({root,G,M,tex}){
   label(gate,'⚠  EDM · DIELECTRIC',2.5,1.3,.14,3,.35,{color:'#161b20',background:'#d4d7d8'});
   for(const x of [-5.4,5.4]){box(tank,x,10.8,3.8,.25,4.5,.3,M.steelD);for(let i=0;i<7;i++)box(tank,x,9.2+i*.4,4,.35,.12,.12,M.inox);}
   // Fluid is separate from the workpiece and excluded from exports.
-  const oil=new THREE.Mesh(new THREE.PlaneGeometry(11.05,7.9),M.oil);oil.rotation.x=-Math.PI/2;oil.position.z=-.6;oil.userData.excludeFromExport=true;tank.add(oil);
+  const oil=new THREE.Mesh(new THREE.PlaneGeometry(11.05,7.9),M.oil);oil.rotation.x=-Math.PI/2;oil.position.z=-.6;oil.userData.excludeFromExport=true;oil.userData.excludeFromMachineExport=true;tank.add(oil);
   const table=part('stol');table.position.y=9;
   const slideY=group('Y-slide',table),slideX=group('X-slide',slideY);
   box(slideY,0,-.45,0,10,.5,6.5,M.dark);box(slideX,0,-.1,0,8.5,.3,4.5,M.table);

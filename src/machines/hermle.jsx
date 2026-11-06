@@ -80,6 +80,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       tool: std(0x7b8087, 0.3, 0.9), coat: std(0xb08a3c, 0.3, 0.85), holder: std(0x9aa0a6, 0.25, 0.9), flute: new THREE.LineBasicMaterial({ color: 0x4d4431 }),
     };
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: `${brand} ${MC.name}` };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const tex = (w, h, draw) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const g = cv.getContext('2d'); const redraw = () => { draw(g, w, h); tx.needsUpdate = true; }; redraw(); return { tx, redraw, g }; };

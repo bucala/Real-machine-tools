@@ -7,6 +7,7 @@ const real = n => {
   return s.includes('.') || s.includes('E') ? s : `${s}.`;
 };
 const refs = ids => ids.map(id => `#${id}`).join(',');
+const stepString = text => String(text).replace(/[^\x20-\x7e]/g, '_').replace(/'/g, "''");
 
 async function snapshot(obj) {
   obj.updateWorldMatrix(true, true);
@@ -51,7 +52,7 @@ async function snapshot(obj) {
   return out;
 }
 
-export async function exportStep(obj) {
+export async function exportStep(obj, { name = 'workpiece', description = 'Current machined workpiece; faceted geometry in mm' } = {}) {
   if (!obj) return null;
   const geometries = await snapshot(obj), bounds = new THREE.Box3(), v = new THREE.Vector3();
   for (const geo of geometries) { geo.computeBoundingBox(); bounds.union(geo.boundingBox); }
@@ -60,7 +61,7 @@ export async function exportStep(obj) {
   const lines = [], add = value => { lines.push(`#${lines.length + 1}=${value};`); return lines.length; };
   const app = add("APPLICATION_CONTEXT('automotive_design')");
   add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,#${app})`);
-  const pc = add(`PRODUCT_CONTEXT('',#${app},'mechanical')`), product = add(`PRODUCT('workpiece','Workpiece snapshot','Current machining state',(#${pc}))`);
+  const pc = add(`PRODUCT_CONTEXT('',#${app},'mechanical')`), product = add(`PRODUCT('${stepString(name)}','${stepString(name)}','${stepString(description)}',(#${pc}))`);
   const form = add(`PRODUCT_DEFINITION_FORMATION('1','',#${product})`), dc = add(`PRODUCT_DEFINITION_CONTEXT('part definition',#${app},'design')`);
   const pd = add(`PRODUCT_DEFINITION('design','',#${form},#${dc})`), ps = add(`PRODUCT_DEFINITION_SHAPE('','',#${pd})`);
   const length = add('(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))'), angle = add('(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.))');
@@ -100,12 +101,13 @@ export async function exportStep(obj) {
     faces.forEach((face, i) => { const root = find(i); if (!groups.has(root)) groups.set(root, []); groups.get(root).push(face.id); });
     for (const [root, ids] of groups) {
       const closed = faces[root].closed, shell = add(`${closed ? 'CLOSED' : 'OPEN'}_SHELL('',(${refs(ids)}))`);
-      shapes.push(add(closed ? `FACETED_BREP('',#${shell})` : `SHELL_BASED_SURFACE_MODEL('',(#${shell}))`));
+      const label = stepString(geo.userData.exportName || '');
+      shapes.push(add(closed ? `FACETED_BREP('${label}',#${shell})` : `SHELL_BASED_SURFACE_MODEL('${label}',(#${shell}))`));
     }
     geo.dispose();
   }
   if (!shapes.length) return null;
   const rep = add(`SHAPE_REPRESENTATION('',(${refs(shapes)}),#${context})`);
   add(`SHAPE_DEFINITION_REPRESENTATION(#${ps},#${rep})`);
-  return new Blob([`ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Current machined workpiece; faceted geometry in mm'),'2;1');\nFILE_NAME('workpiece.stp','${new Date().toISOString()}',(''),(''),'Real machine tools','','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n`, lines.join('\n'), '\nENDSEC;\nEND-ISO-10303-21;\n'], { type: 'application/step' });
+  return new Blob([`ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('${stepString(description)}'),'2;1');\nFILE_NAME('${stepString(name)}.stp','${new Date().toISOString()}',(''),(''),'Real machine tools','','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n`, lines.join('\n'), '\nENDSEC;\nEND-ISO-10303-21;\n'], { type: 'application/step' });
 }
