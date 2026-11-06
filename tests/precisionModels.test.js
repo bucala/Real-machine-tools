@@ -31,23 +31,34 @@ describe('Manufacturer-specific machine geometry',()=>{
     expect(after.min.y).toBeCloseTo(before.min.y);expect(m.doors[0].quaternion.equals(q)).toBe(true);
     expect(ctx.root.getObjectByName('right-hinged-loading-door')).toBeUndefined();
   });
-  it('aligns the side door and glass bevels with the blunt hood underside, leaving a rebate',()=>{
+  it('uses the STEP wedge slope for the stepped side window and door clearance',()=>{
     const ctx=setup();createRoedersModel(ctx);
     const door=ctx.root.getObjectByName('left-window-sheet-metal').geometry.parameters.shapes.getPoints();
     const glass=ctx.root.getObjectByName('left-observation-window').geometry.parameters.shapes.getPoints();
-    const hood=ctx.root.getObjectByName('left-window-blunt-hood').geometry;
-    const p=hood.attributes.position;
-    const undersideSlope=(p.getY(1)-p.getY(0))/(p.getZ(1)-p.getZ(0));
-    const slope=(a,b)=>(b.y-a.y)/(b.x-a.x);
-    expect(slope(door[5],door[4])).toBeCloseTo(undersideSlope);
-    expect(slope(glass[4],glass[3])).toBeCloseTo(undersideSlope);
-    expect(p.getY(0)-door[5].y).toBeGreaterThan(.12);
-    const doorHeightAtGlass=door[5].y+(glass[4].x-door[5].x)*undersideSlope;
-    expect(doorHeightAtGlass-glass[4].y).toBeGreaterThan(1);
-    hood.computeBoundingBox();
-    // Rear wall now reaches the short clipped end instead of leaving a long tip.
-    expect(hood.boundingBox.min.x).toBeGreaterThan(-13);
-    expect(hood.boundingBox.min.z).toBeGreaterThan(2);
+    const slope=(a,b)=>(b.y-a.y)/(b.x-a.x),reference=(2300.2651-2130.1843)/(1782.9366-1505.7501);
+    expect(slope(door[6],door[5])).toBeCloseTo(reference,5);
+    expect(slope(glass[5],glass[4])).toBeCloseTo(reference,5);
+    expect(glass[3].y-glass[4].y).toBeGreaterThan(2); // higher front viewing pane
+    expect(21.321843+(door[6].x-2.49)*reference-door[6].y).toBeGreaterThan(.1);
+    const n=ctx.root.getObjectByName('sloped-portal-fascia--16.1').geometry.attributes.normal;
+    expect(Math.abs(n.getY(0))).toBeCloseTo(.296,3);
+    expect(Math.abs(n.getZ(0))).toBeCloseTo(.9552,3);
+  });
+  it('leaves the inclined portal hollow and opens the glazed side door outwards',()=>{
+    const ctx=setup(),m=createRoedersModel(ctx);ctx.root.updateMatrixWorld(true);
+    const cover=ctx.root.getObjectByName('STEP-derived-upper-cover');
+    for(const y of [22,24,26]){
+      const ray=new THREE.Raycaster(new THREE.Vector3(-2.6,y,8),new THREE.Vector3(0,0,-1),0,8);
+      expect(ray.intersectObject(cover,true)).toHaveLength(0);
+    }
+    const glass=ctx.root.getObjectByName('left-observation-window');
+    const before=new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
+    expect(m.serviceOpen()).toBe(false);m.serviceDoors[0].open=true;
+    expect(m.serviceOpen()).toBe(true);m.updateServiceDoors(10);ctx.root.updateMatrixWorld(true);
+    const after=new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
+    expect(after.x).toBeLessThan(before.x-3);
+    m.serviceDoors[0].open=false;expect(m.serviceOpen()).toBe(true);
+    m.updateServiceDoors(10);expect(m.serviceOpen()).toBe(false);
   });
   it('retains the stepped p57 footprint and leaves the rear service recess empty',()=>{
     const ctx=setup();createRoedersModel(ctx);ctx.root.updateMatrixWorld(true);
