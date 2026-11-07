@@ -2,7 +2,7 @@
 import React, { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, HermleArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, HermleArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, ShuangliArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
@@ -20,6 +20,7 @@ const PressSimulator = lazy(() => import('./machines/press'));
 const HermleSimulator = lazy(() => import('./machines/hermle'));
 const RoedersSimulator = lazy(() => import('./machines/roeders'));
 const OscarSimulator = lazy(() => import('./machines/oscar'));
+const ShuangliSimulator = lazy(() => import('./machines/shuangli'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -122,6 +123,10 @@ const MODERN = [
     meta:L('5-osé HSC · QUADROGUIDE','5-axis HSC · QUADROGUIDE'),name:'Röders RXU 1001 DSH',model:'Röders RXU 1001 DSH',
     desc:L('Presné vysokorýchlostné frézovanie s priamymi pohonmi, obojstranne uloženým stolom A/C a štyrmi vedeniami osi Z. ISO program, skrinka nástrojov, úber materiálu a prehliadka obrobku.','Precision high-speed milling with direct drives, a two-sided A/C trunnion and four Z guideways. ISO program, tool cabinet, material removal and workpiece inspection.'),
     specs:['800 / 855 / 500 mm · Ø600 mm','A ±115° · C 360°','24 000 rpm · HSK-A63 · 24 T']})},
+  {id:'shuangli',Art:ShuangliArt,Comp:ShuangliSimulator,t:()=>({
+    meta:L('CNC hĺbkové vŕtanie','CNC deep hole drilling'),name:'ShuangliCNC ZJA13-2013F',model:'ZJA13-2013F · Siemens Edition',
+    desc:L('Vodorovné vŕtanie s dlhým jednobritým vrtákom, vodiacimi podperami a tlakovým chladením. Posuvné presklené dvere, odkrytý mechanizmus, živé HMI a export modelu aj obrobku. Vizuálna rekonštrukcia podľa rodiny ZJA13.','Horizontal drilling with a long single-lip drill, guide supports and pressure coolant. Glazed sliding doors, exposed mechanism, live HMI and machine/workpiece export. Visual reconstruction of the ZJA13 family.'),
+    specs:[L('3 osi · vodorovné vreteno','3 axes · horizontal spindle'),'Siemens Edition',L('Parametre výučbového modelu v info','Training model parameters in info')]})},
   {id:'oscarmax',Art:OscarArt,Comp:OscarSimulator,t:()=>({
     meta:L('Hĺbiaca elektroerózia','Die-sinking EDM'),name:'OSCARMAX EX 500',model:'OSCARMAX EX 500',
     desc:L('Tvarová medená elektróda hĺbi dutiny v oceli bez otáčania. Pohyblivý stĺp, dielektrická nádrž, výplach a generátor 60 A. Viac operácií, aktuálna geometria dutín a export prerušeného procesu.','A shaped copper electrode sinks cavities in steel without rotation. Moving column, dielectric tank, flushing and 60 A generator. Multiple operations, actual cavity geometry and paused-process export.'),
@@ -275,7 +280,7 @@ function ModernMenu({ onOpen, onBack }) {
         <p className="modern-kicker mt-8">Real machine tools · {L('Moderné stroje', 'Modern machines')}</p>
         <h1 className="menu-title modern-title" tabIndex={-1}>{L('Presné obrábanie a elektroerózia', 'Precision machining & EDM')}</h1>
         <p className="menu-lead">{L('Moderné výrobné technológie v spoločnom rozhraní. Vyber dostupný stroj, priprav nástroj a program a sleduj jeho pracovný proces v 3D.', 'Modern manufacturing technologies in a shared interface. Select an available machine, prepare a tool and program, and explore its working process in 3D.')}</p>
-        <div className="modern-category-visual"><PrecisionArt/><div><span>01 · CNC</span><span>02 · HSC</span><span>03 · EDM</span></div></div>
+        <div className="modern-category-visual"><PrecisionArt/><div><span>01 · CNC</span><span>02 · HSC</span><span>03 · EDM</span><span>04 · DEEP DRILLING</span></div></div>
         <div className="modern-machine-grid grid gap-6 mt-8 lg:grid-cols-2">
           {MODERN.map((m) => {
             const tx = m.t();

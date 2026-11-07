@@ -120,6 +120,24 @@ Rýchlosť servo-prísuvu `0,012 + 0,0012 × prúd` mm/s a opotrebenie elektród
 
 Skrinka elektród používa lokálny kľúč `rmt-edm-electrodes-v1`; JSON má tvar `{ "version": 1, "electrodes": [{ "id": "cu20", "name": "Cu 20 × 15", "shape": "box", "w": 20, "d": 15, "length": 100 }] }`. Rozmery sú v mm. Import zlúči podľa ID, overí rozmery a nikdy neosadí elektródu automaticky.
 
+## ShuangliCNC ZJA13-2013F · Siemens Edition
+
+Podklady dodané používateľom: fotografia kompletného bieleho stroja s červeným pásom, obrázok odkrytého vodorovného vŕtacieho mechanizmu, fotografie interiéru, okrytovania a snímka tabuľky z Made-in-China. Tabuľka aj nápis na referenčnej kabíne uvádzajú **Zonjet ZJA13-1610**. Používateľ požaduje názov **ShuangliCNC ZJA13-2013F**. Bez technického listu tejto konkrétnej verzie sa údaje neprenášajú ako jej garantovaná špecifikácia.
+
+| Podklad | Údaje / spôsob použitia |
+| --- | --- |
+| Tabuľka ZJA13-1610 | 3 osi, vodorovná konštrukcia, výška 2 800 mm, max. hĺbka 1 300 mm, priemer <50 mm, 12 t, nosnosť 10 t; uvedené iba ako príbuzná referencia |
+| Fotografie | rozdelenie kabíny, presklenie, červený pás, čierny sokel, odkryté vedenia, dlhý vrták a dopravník |
+| Geometria simulátora | rozmery panelov, drážkovaný stôl 1 300 × 2 000 mm, vedenia, dvere a príslušenstvo sú vizuálne odhady; nie výrobné CAD dáta |
+| Výučbový rozsah | vrták Ø8–40 mm, 100–6 000 ot/min, posuv 5–400 mm/min, tlak 0–80 bar (cyklus vyžaduje ≥10 bar) |
+| Výučbový polotovar | 500 × 160 × 240 mm, voxelová sieť 2 mm; slepé otvory s rezervou 5 mm pred zadným čelom |
+
+Tri predné listy sa teleskopicky presúvajú doprava, ľavé dvere sa otáčajú von. Odkrytie mechanizmu je vizuálna funkcia, nemení stav dverových zámkov. X posúva stôl priečne k vrtáku; Y dvíha nosník a Z posúva vreteník po vodorovných vedeniach. Dlhý nástroj má priamu drážku, pevnú prednú vodiacu oporu a dve pohyblivé podpery. Vedenia majú priechodný otvor; rám nepretína os nástroja.
+
+Program zadáva súradnice X/Y na vstupnom čele a hĺbku Z. Postupuje cez polohovanie, nájazd, súvislé vŕtanie a vytiahnutie. Kontroluje všetky modelované dvere, upnutie, STOP a chladenie. Hold zachová materiál aj miesto v cykle. Prehliadka odtiahne nástroj; pokračovanie dokončí aktuálny otvor. Úber používa valcový obal nástroja, takže dno je zjednodušené na rovinu; mikrometrická presnosť, ohyb, opotrebenie a tvorba triesky sa nepočítajú.
+
+Siemens Edition používa jeden živý canvas pre monitor aj zväčšené HMI. Rozhranie je inšpirované SINUMERIK, neimplementuje firmvér ani import Siemens NC programov. OBJ/STL/STEP export stroja je v päte menu; samostatný export obrobku zachová aktuálny úber. Testy `deepDrill.test.js` overujú interlocky, hlboké slepé otvory, indexovanie až po vytiahnutí, zachovanie rozpracovaného stavu, polohu vrtáka voči obrobku, priechodnosť podpier a otváranie dverí.
+
 ## Spoločné ovládanie a overenie
 
 Kategória `#moderne` je tmavosivá; simulátory používajú pôvodné rozloženie a farebný akcent značky. Konvenčné stroje zachovávajú pôvodné vzhľady. Zvuk je pri novom načítaní vypnutý.

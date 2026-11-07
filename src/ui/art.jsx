@@ -346,6 +346,14 @@ function PrecisionArt() {
   </svg>;
 }
 
+function ShuangliArt(){
+  return <svg viewBox="0 0 320 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    <path d="M25 151V48h76v103M101 57h173v94H25M25 151v15h249v-15M105 57l8-14h85l13 14" fill="currentColor" fillOpacity=".12"/>
+    <path d="M25 141h249" stroke="#d12b40" strokeWidth="4"/><path d="M43 69h39v60H43zM112 73h42v57h-42zM161 73h42v57h-42zM210 73h42v57h-42z" fill="currentColor" fillOpacity=".08"/>
+    <path d="M59 109h69m-2-4h91v9h-91zm48-28v49m6-49v49M41 157h34M287 141l12-17v-9m-23 39h14l9-14"/><rect x="254" y="81" width="17" height="39" fill="#526b77"/><path d="M258 86h9v10h-9M258 102h9m-9 5h9M20 168h285"/>
+  </svg>;
+}
+
 function OscarArt(){
   return <svg viewBox="0 0 320 180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
     <path d="M54 165V94h175v71z" fill="currentColor" fillOpacity=".12"/><path d="M113 92V13h28v79m0-46h36v48" fill="currentColor" fillOpacity=".15"/>
@@ -420,4 +428,4 @@ function ShearArt() {
   );
 }
 
-export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HermleArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };
+export { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HermleArt, HobberArt, HorizArt, LatheArt, MigArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, ShuangliArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt };

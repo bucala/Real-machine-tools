@@ -275,3 +275,5 @@ html[data-machine="oscarmax"] .seg button.on{color:var(--on-accent)}
 .hermle-screen-bezel{position:relative;aspect-ratio:6.2/4.72;border:0;outline:1px solid #6d767e;background:linear-gradient(120deg,#c4c9cc,#a3abb0);box-shadow:-5px 0 #c82735,5px 0 #c82735}
 .hermle-screen-bezel canvas{object-fit:fill;position:absolute;left:8.2258%;top:11.4407%;width:83.5484%;height:73.3051%;outline:8px solid #131719}
 .hmi-monitor-key{position:absolute;transform:translate(-50%,-50%);background:#41494f;border:1px solid #737b7f;border-radius:1px;box-shadow:0 1px #42494d}
+
+html[data-mode="modern"][data-machine="shuangli"]{--accent:#008e96;--accent-soft:#123b40;--on-accent:#ffffff;--dro-ink:#a8e8e7;--dro-glow:#008e9644}

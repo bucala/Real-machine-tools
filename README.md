@@ -253,7 +253,7 @@ Kliknutím na snímku otvoríš príslušný simulátor. Všetky stroje majú ru
 
 ### 🏭 Presné obrábanie a elektroerózia (`#moderne`)
 
-Samostatná kategória má moderný tmavosivý vstup a tri rodiny strojov. Simulátory zachovávajú spoločné ovládanie: kamera / ručne, zvuk predvolene vypnutý, prehliadka obrobku, živé HMI a export aktuálneho obrobku. Každá značka má vlastný akcent: Hermle červený, Röders vínovočervený, OSCARMAX žltý s modrými detailmi.
+Samostatná kategória má moderný tmavosivý vstup a štyri rodiny strojov. Simulátory zachovávajú spoločné ovládanie: kamera / ručne, zvuk predvolene vypnutý, prehliadka obrobku, živé HMI a export aktuálneho obrobku. Každá značka má vlastný akcent: Hermle červený, Röders vínovočervený, OSCARMAX žltý s modrými detailmi, ShuangliCNC tyrkysový.
 
 ![Kategória presného obrábania a elektroerózie](docs/img/precision-menu.png)
 
@@ -262,6 +262,7 @@ Samostatná kategória má moderný tmavosivý vstup a tri rodiny strojov. Simul
 | Hermle C 32 U / C 42 U | 5-osé CNC | 650 / 650 / 500; 800 / 800 / 550 mm | Ø650 / Ø800 mm | [Hermle](https://real-machine-tools.marcel-bucala.workers.dev/#hermle) |
 | Röders RXU 1001 DSH | 5-osé HSC · QUADROGUIDE | 800 / 855 / 500 mm | Ø600 mm, A ±115° | [Röders](https://real-machine-tools.marcel-bucala.workers.dev/#roeders) |
 | OSCARMAX EX 500 | Hĺbiaca EDM, pohyblivý stĺp | 500 / 400 / 450 mm | 850 × 450 mm | [OSCARMAX](https://real-machine-tools.marcel-bucala.workers.dev/#oscarmax) |
+| ShuangliCNC ZJA13-2013F | CNC hĺbkové vŕtanie · Siemens Edition | Výučbové parametre, neoverené zdvihy 2013F | Odhad podľa rodiny ZJA13 | [ShuangliCNC](https://real-machine-tools.marcel-bucala.workers.dev/#shuangli) |
 
 Katalóg Röders označuje dodaný stroj **RXU 1001 DSH**, preto používa toto meno aj simulátor. EX 500 je hĺbiaca EDM, nezamieňa sa s EDM vŕtačkami EXD z pôvodného katalógu. [Zdroje, presné údaje a zjednodušenia modelov →](docs/precision-machines.md)
 
@@ -322,12 +323,21 @@ Katalóg Röders označuje dodaný stroj **RXU 1001 DSH**, preto používa toto 
 
 [![OSCARMAX EX 500 – hĺbiaci EDM stroj s PC terminálom a dielektrickou nádržou](docs/img/oscarmax-ex500.png)](https://real-machine-tools.marcel-bucala.workers.dev/#oscarmax)
 
-- Samostatná strieborná konštrukcia s modro-žltými pásmi, PC monitorom a klávesnicou, nádržou so zostupnými dverami, UV snímačom, hasiacim zariadením, tryskami a zadnou skriňou generátora.
+- Detailná strieborná konštrukcia: súvislý štíhly stĺp s modro-žltými pásmi, šikmý C rám, čierne skladané kryty Z, hadice na ramene, obruba a vedenia spúšťacej steny nádrže, skrine s lamelami, pántmi a závesnými okami. Mobilný PC terminál má šikmú pätku, kolieska, klávesnicu, madlo a ručný pendant.
 - **Pohyblivý stĺp** nesie elektródu v X/Y; stôl 850 × 450 mm a obrobok zostávajú na mieste. Elektróda sa pri hĺbení netočí.
 - Postup: zavri nádrž → napusť dielektrikum → zapni výplach → spusti cyklus. Hladina musí byť najmenej 40 mm nad obrobkom. Dvere, nízka hladina, vypnutý výplach a STOP zastavia proces.
 - Skrinka medených elektród: jednoduchý výber uloženého hranola/valca; samostatná správa umožňuje pridať alebo upraviť elektródu a importovať/exportovať JSON. Uloženie nemení elektródu v stroji.
 - Program hĺbenia obsahuje polohy X/Y a hĺbku. Medzi dutinami prebehne odtiahnutie, presun a nový prísuv. Geometria odoberá materiál podľa tvaru elektródy a medzery; po Stop zostáva zachovaný aktuálny rozpracovaný stav.
 - Ručné fyzické tlačidlá, dvojklik na monitor pre živé HMI, zámok natočenia panela, prehliadka s vypustením nádrže a odtiahnutím elektródy, STL/STEP a PNG. Výučbový proces nepoužíva obrábacie M3/M5 ani postprocesor frézky.
+
+**ShuangliCNC ZJA13-2013F · Siemens Edition** (`#shuangli`)
+
+[![ShuangliCNC – vodorovné hĺbkové vŕtanie s posuvnými dverami](docs/img/shuangli-zja13.png)](https://real-machine-tools.marcel-bucala.workers.dev/#shuangli)
+
+- Vizuálna rekonštrukcia rodiny ZJA13: biele okrytovanie s červeným pásom a čiernym soklom, tri teleskopické presklené dvere, ľavé otočné dvere, kryt s vetraním, dopravník a vozík na triesky.
+- Odkrytý mechanizmus: priečny drážkovaný stôl X, zvislé vedenia Y, vodorovný posuv Z, dlhý jednobritý vrták s priamou drážkou, vodiace puzdrá a podpery. Živý displej Siemens Edition v 3D aj fullscreen používa rovnaký zdroj údajov.
+- Výučbový cyklus viacerých slepých otvorov so skutočným úberom. Dvere, odopnutý obrobok, chladenie pod 10 bar a núdzový STOP blokujú obrábanie. Prerušenie, pokračovanie, prehliadka a export zachovávajú rozpracovaný obrobok.
+- Dodaná tabuľka **Zonjet ZJA13-1610** je referenciou príbuzného stroja, nie overenou špecifikáciou **ShuangliCNC ZJA13-2013F**. Odhady geometrie a výučbové limity sú uvedené pod ikonou „i“ a v [zdrojoch modelov](docs/precision-machines.md).
 
 ### 🎓 Výučba
 
@@ -352,7 +362,7 @@ Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie pr
 
 ```mermaid
 flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle / #roeders / #oscarmax · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
+  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle / #roeders / #oscarmax / #shuangli · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
   subgraph core["Spoločné jadro"]
     stage["createStage<br/>renderer, svetlá, podlaha, skin"]
     kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]

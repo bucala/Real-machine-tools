@@ -66,7 +66,7 @@ export default function OscarSimulator({onBack}){
       g.fillStyle=S.alarm?'#bc3445':S.run?'#258c6a':'#526a7e';g.fillRect(0,h-60,w,60);g.fillStyle='#fff';g.font='18px sans-serif';g.fillText((S.alarm||L('Stav','State')+': '+S.phase).slice(0,90),16,h-25);
     });model.display.material.map=screen.tx;
     const v=(x,y,z)=>new THREE.Vector3(x,y,z);
-    const views={celok:()=>[[38,29,53],[0,14,-1]],priestor:()=>[[9,17,17],[0,10.3,0],true],obrobok:()=>[[2.4,11.8,3.6],[0,9.7,0],true],panel:()=>{const p=model.panelPivot.getWorldPosition(v(0,0,0)).add(v(0,11,0)),d=v(3,3,13).applyAxisAngle(v(0,1,0),model.panelPivot.rotation.y);return [p.clone().add(d).toArray(),p.toArray()];},zhora:()=>[[.01,70,-1],[0,10,-1],true]};
+    const views={celok:()=>[[29,23,40],[0,13,-1]],priestor:()=>[[9,17,17],[0,10.3,0],true],obrobok:()=>[[2.4,11.8,3.6],[0,9.7,0],true],panel:()=>{const p=model.panelPivot.getWorldPosition(v(0,0,0)).add(v(0,11,0)),d=v(3,3,13).applyAxisAngle(v(0,1,0),model.panelPivot.rotation.y);return [p.clone().add(d).toArray(),p.toArray()];},zhora:()=>[[.01,70,-1],[0,10,-1],true]};
     const anchors=Object.fromEntries(Object.keys(G).map(k=>[k,()=>G[k].getWorldPosition(v(0,0,0)).add(v(0,4,0))]));
     const insp=createInspector({dom,mount,camera,root,G,anchors,views,labelEls:[...layerRef.current.querySelectorAll('[data-part]')],enabled:()=>!c.manual&&!c.unclamped,onPick:k=>apiRef.current.onPick(k),blockPick:()=>ctrl.isUsed()||c.unclamped,onHL:()=>ctrl.invalidate(),orbitOptions:{maxDistance:180,maxTargetY:45}});
     const ctrl=createControls({dom,mount,camera,root,tipEl:tipRef.current,c,getT:()=>t,getHL:insp.hl});
