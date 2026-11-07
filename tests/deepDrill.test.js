@@ -53,6 +53,7 @@ describe('Shuangli ZJA13-family geometry',()=>{
     const c=ctx(),m=createShuangliModel(c),S={x:0,y:0,depth:-30,run:false};m.update({S,door:0});c.root.updateMatrixWorld(true);
     const door=m.doors[0],before=new THREE.Box3().setFromObject(door),glass=c.root.getObjectByName('front-door-1-glass');
     const center=glass.getWorldPosition(new THREE.Vector3());const hits=new THREE.Raycaster(center.clone().add(new THREE.Vector3(0,0,3)),new THREE.Vector3(0,0,-1)).intersectObject(door,true).filter(h=>!h.object.material.transparent);expect(hits).toHaveLength(0);
+    m.update({S,cover:false});expect(new THREE.Raycaster(center.clone().add(new THREE.Vector3(0,0,3)),new THREE.Vector3(0,0,-1)).intersectObject(m.cab,true)).toHaveLength(0);
     m.update({S,door:1});c.root.updateMatrixWorld(true);const after=new THREE.Box3().setFromObject(door);expect(after.min.x-before.min.x).toBeCloseTo(17);expect(after.min.z).toBeCloseTo(before.min.z);
     m.serviceDoors[0].open=true;expect(m.serviceOpen()).toBe(true);m.update({S,dt:1});m.serviceDoors[0].open=false;expect(m.serviceOpen()).toBe(true);m.update({S,dt:1});expect(m.serviceOpen()).toBe(false);
   });

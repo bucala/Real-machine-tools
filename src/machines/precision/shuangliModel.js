@@ -58,6 +58,8 @@ export function createShuangliModel({root,G,M,tex}){
   const verticalBellows=[];for(let i=0;i<34;i++)verticalBellows.push(box(axes,7.5,0,-3.2,3.2,.12,.5,i%2?M.black:M.dark));
   // White enclosure with real cut-out windows and a continuous lower red stripe.
   const cab=part('kabina'),doors=[],serviceDoors=[];
+  // Raycaster otherwise visits invisible descendants and selects the hidden cover.
+  cab.raycast=()=>cab.visible?undefined:false;
   const windowPanel=(p,n,w,h,ww,wh,wx=0,wy=.4)=>{
     const s=new THREE.Shape();s.moveTo(-w/2,-h/2);s.lineTo(w/2,-h/2);s.lineTo(w/2,h/2);s.lineTo(-w/2,h/2);s.closePath();
     const hole=new THREE.Path();hole.moveTo(wx-ww/2,wy-wh/2);hole.lineTo(wx-ww/2,wy+wh/2);hole.lineTo(wx+ww/2,wy+wh/2);hole.lineTo(wx+ww/2,wy-wh/2);hole.closePath();s.holes.push(hole);
