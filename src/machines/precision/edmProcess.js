@@ -7,6 +7,7 @@ export function validateEdmJob({rows,electrode,current,gap,oilLevel,fixtureHeigh
   if(!electrode||!['box','round'].includes(electrode.shape)||![electrode.w,electrode.d,electrode.length].every(v=>within(v,[1,200])))throw new Error('Neplatná elektróda / Invalid electrode.');
   if(!within(oilLevel,[stock.max[2]+40,EX500.tankHeight]))throw new Error('Dielektrikum musí byť ≥40 mm nad obrobkom / Dielectric must cover the workpiece by ≥40 mm.');
   for(const r of rows){
+    if(r.feed!=null&&!within(r.feed,[.001,100]))throw new Error('Neplatný posuv / Invalid feed.');
     if(!within(r.x,EX500.X)||!within(r.y,EX500.Y))throw new Error('Poloha mimo dráh X/Y / X/Y travel exceeded.');
     if(!within(r.depth,[.1,stock.max[2]-stock.min[2]-.5]))throw new Error('Hĺbka zasahuje do upnutia / Depth intersects the fixture.');
     const low=fixtureHeight+stock.max[2]-r.depth+electrode.length;
@@ -35,12 +36,12 @@ export function createEdmProcess(stock){
     let left=Math.min(dt,120),steps=0;
     while(left>1e-8&&S.run&&steps++<600){
       const h=Math.min(left,.2);left-=h;S.t+=h;
-      const row=job.rows[S.row];
+      const row=job.rows[S.row];S.line=row.line||null;
       if(S.phase==='position'){
         const dist=Math.hypot(row.x-S.x,row.y-S.y),k=Math.min(1,h*100/Math.max(.001,dist));S.x+=(row.x-S.x)*k;S.y+=(row.y-S.y)*k;
         if(dist<.01){S.x=row.x;S.y=row.y;S.phase='burn';}
       }else if(S.phase==='burn'){
-        const speed=.012+.0012*job.current; // explicitly estimated training feed, mm/s
+        const speed=Math.min(.012+.0012*job.current,row.feed==null?Infinity:row.feed/60); // explicitly estimated training feed, mm/s
         S.depth=Math.min(row.depth,S.depth+h*(S.depth<0?4:speed));
         if(S.depth>0){
           const e=job.electrode,z=stock.max[2]-S.depth,rx=e.w/2+job.gap,ry=e.d/2+job.gap;
@@ -51,7 +52,7 @@ export function createEdmProcess(stock){
         if(S.depth>=row.depth)S.phase='retract';
       }else if(S.phase==='retract'){
         S.depth=Math.max(-5,S.depth-h*8);
-        if(S.depth<=-5){S.row++;if(S.row>=job.rows.length){S.done=true;S.run=false;S.phase='done';S.row=job.rows.length-1;}else S.phase='position';}
+        if(S.depth<=-5){S.row++;if(S.row>=job.rows.length){S.done=true;S.run=false;S.phase='done';S.row=job.rows.length-1;S.line=job.ncCommands?.endLine||row.line||null;}else S.phase='position';}
       }
     }
   };

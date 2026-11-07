@@ -181,6 +181,22 @@ Terminál má tvarovaný oranžovo-sivý stojan, čierny rám, biely spodný úc
 
 [Model 320/4300](img/bystronic-xpert-pro-320.png) · [Nástroje a ohnutý plech](img/bystronic-bend.png)
 
+## HMI terminály a pracovný priestor
+
+Röders používa červený terminál so strieborným rámom, PC klávesnicou, otočnými korekciami, myšou a samostatným ručným panelom. Obraz RMS6 má červený titulok, modré bloky menu a živé NC riadky a súradnice. OSCARMAX má čierny širokouhlý monitor, bielu klávesnicovú policu, myš, predné tlačidlá, podstavec monitora a spodné madlo. Jeho svetlé zeleno-sivé PC rozhranie zobrazuje skutočné polohy, dutiny, elektródu, generátor, NC blok a výsledok. Nečitateľné položky fotografií sú výučbovou rekonštrukciou, nejde o firmvér výrobcov.
+
+Modely a fullscreen používajú rovnaký živý canvas bez nezávislého vykresľovania obrazovky (`machineScreens.js`). PC klávesnice zdieľajú kresbu `terminalKeyboard.js`. Fullscreen zachováva farebné rámy a ovládacie prvky oboch terminálov.
+
+Všetky fullscreen HMI (Hermle, Röders, OSCARMAX, Bystronic aj zachovaný Shuangli) majú hore tlačidlo **Pracovný priestor**. Otvorí samostatné modálne okno s kamerou bez ovládania. Rovnaká živá scéna sa vykresľuje vlastným rendererom do 800 × 500 px približne 10-krát za sekundu. Otvorenie, ťahanie v okne ani zatvorenie nemení hlavnú kameru, režim ovládania, dvere či rozpracovaný cyklus. Esc zavrie najprv detail a vráti fokus do HMI; ďalší Esc zavrie HMI. Renderer sa pri zatvorení uvoľní. OSCARMAX pracovný pohľad je vpredu v nádrži a mieri na elektródu a upnutie.
+
+[Röders HMI](img/roeders-hmi.png) · [OSCARMAX HMI](img/oscarmax-hmi.png) · [Pracovný pohľad EX500](img/oscarmax-working-area.png)
+
+## OSCARMAX – G-kód a grafitové elektródy
+
+Program hĺbenia prepína medzi pôvodnými operáciami a **G-kód / ISO**. Editor otvorí NC/TAP/TXT/ISO do 256 kB, ponúka ukážku a kontrolu s číslom chybného riadku. Podporuje G0/G1, G21, G90/G91, G54, G94, F v mm/min, M3/M5, M8/M9 a M2/M30. G54 Z0 je horná plocha polotovaru; záporné Z je hĺbka dutiny. Pred XY a na konci programu musí byť elektróda vytiahnutá aspoň na Z5. Výučbový proces realizuje zvislé hĺbenie a automatické bezpečné vytiahnutie medzi dutinami; nejde o všeobecné kontúrové frézovanie. Nepodporované kódy, oblúky, rýchloposuv do materiálu, XY v materiáli, chybné posuvy a neukončené hĺbenie sa odmietnu. F obmedzuje pôvodný odhad servo-prísuvu, nezvyšuje ho nad model generátora. M8 pri novom štarte zapne výplach; koncové M9 ho po dokončení vypne. Ručné vypnutie výplachu preruší cyklus a samotné pokračovanie ho neobíde. Existujúce kontroly nádrže, dielektrika, STOP a výplachu platia aj pre NC. Hold/Resume zachová materiál, miesto v operácii a zdrojový riadok.
+
+Skrinka obsahuje štyri grafitové hranoly **8 × 8, 12 × 12, 20 × 15 a 30 × 20 mm**, všetky L100 mm. Doplňujú sa aj do už uložených knižníc; pôvodné záznamy sa nemažú. JSON v1 rozširuje nepovinné `material: "copper" | "graphite"`; staré záznamy bez materiálu ostávajú medené. Materiál sa prenáša pri uložení, importe a osadení. Grafit má tmavý matný povrch, Cu pôvodný kovový medený. Nie sú zavedené neoverené technologické rozdiely úberu alebo opotrebenia grafitu. `edmGcode.test.js` overuje kompiláciu, zamietnutie nebezpečných blokov, reálny úber a doplnenie grafitu do starých knižníc.
+
 ## Spoločné ovládanie a overenie
 
 Kategória `#moderne` je tmavosivá; simulátory používajú pôvodné rozloženie a farebný akcent značky. Konvenčné stroje zachovávajú pôvodné vzhľady. Zvuk je pri novom načítaní vypnutý.

@@ -1,25 +1,22 @@
+import { drawTerminalKeyboard } from './terminalKeyboard';
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
 // Supplied close-up: silver square monitor in a red case, controls ABOVE the
 // black keyboard, mouse to the right, separate pendant clipped beside the display.
 export function createRmsPanel(parent,M,tex){
-  const {box,cyl,rod,group}=modelKit(parent,M,tex),controls={buttons:{},knobs:{},duplicates:{}};
+  const {box,cyl,rod,group,label}=modelKit(parent,M,tex),controls={buttons:{},knobs:{},duplicates:{}};
   box(parent,0,13.4,0,6.6,5.2,.65,M.red);
+  for(const x of [-3.15,3.15])box(parent,x,13.4,.34,.08,4.9,.08,M.steelD);
   box(parent,-.35,13.55,.35,5.65,4.65,.12,M.cab2);
   box(parent,-.35,13.55,.42,4.75,3.75,.04,M.black);
-  const display=new THREE.Mesh(new THREE.PlaneGeometry(4.48,3.48),new THREE.MeshBasicMaterial({toneMapped:false}));display.position.set(-.35,13.55,.45);parent.add(display);
+  const display=new THREE.Mesh(new THREE.PlaneGeometry(4.48,3.36),new THREE.MeshBasicMaterial({toneMapped:false}));display.position.set(-.35,13.55,.45);parent.add(display);
+  for(const x of [-3.12,3.12])for(const y of [11.02,15.8])cyl(parent,x,y,.35,.028,.025,M.steelD,'z');
   for(let i=0;i<5;i++)cyl(parent,1.18+i*.15,11.46,.43,.045,.04,M.steelD,'z');
   const deck=group('RMS-keyboard-shelf',parent);deck.position.set(0,10.87,.36);deck.rotation.x=.19;
   box(deck,0,0,1.7,7.3,.32,4.8,M.red);
   box(deck,-.45,.2,2.15,5.7,.16,2.35,M.black);
   // Draw a readable PC keyboard as a single texture over the raised key field.
-  const keys=tex(1024,420,(g,W,H)=>{
-    g.fillStyle='#272b2e';g.fillRect(0,0,W,H);g.font='19px sans-serif';g.textAlign='center';g.textBaseline='middle';
-    ['ESC F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12','1 2 3 4 5 6 7 8 9 0 - = DEL','Q W E R T Y U I O P [ ]','A S D F G H J K L ; ENTER','Z X C V B N M , . / SHIFT','CTRL ALT SPACE ALT CTRL ← ↓ →'].forEach((row,r)=>{
-      const names=row.split(' '),w=(W-24)/names.length;
-      names.forEach((name,i)=>{const x=12+i*w,y=8+r*67;g.fillStyle='#484d50';g.fillRect(x,y,w-5,59);g.fillStyle='#202426';g.fillRect(x+2,y+2,w-9,53);g.fillStyle='#ccd0d2';g.fillText(name,x+(w-5)/2,y+29);});
-    });
-  });
+  const keys=tex(1024,420,drawTerminalKeyboard);
   const keyFace=new THREE.Mesh(new THREE.PlaneGeometry(5.5,2.21),new THREE.MeshStandardMaterial({map:keys.tx,roughness:.85}));keyFace.rotation.x=-Math.PI/2;keyFace.position.set(-.45,.295,2.15);deck.add(keyFace);
   box(deck,2.86,.19,.94,1.05,.05,1.3,M.steelD);
   const mouse=new THREE.Mesh(new THREE.SphereGeometry(.37,18,12),M.black);mouse.scale.set(1,.38,1.45);mouse.position.set(2.86,.29,.92);deck.add(mouse);
@@ -43,6 +40,8 @@ export function createRmsPanel(parent,M,tex){
     box(remote,x,-.2,.29,.23,.23,.08,M.steelD);const b=box(remote,x,-.2,.35,.16,.16,.06,material);controls.duplicates[id]=[{object:b,axis:'z'}];
   }
   for(const y of [.64,-.55])for(const x of [-.2,.2])cyl(remote,x,y,.33,.105,.1,M.steelD,'z');
+  label(remote,'röders TEC',0,.92,.32,.65,.24,{color:'#1e2527',background:'#a9b2b5',size:90});
+  for(let i=0;i<16;i++){const a=i*Math.PI/8;cyl(remote,Math.sin(a)*.32,-1.05+Math.cos(a)*.32,.31,.015,.025,M.steelD,'z');}
   cyl(remote,0,-1.05,.32,.29,.14,M.black,'z');cyl(remote,.12,-1.1,.46,.065,.13,M.black,'z');
   // White shelf/metal bracket attach to the articulated arm, with cable below.
   box(parent,0,10.1,1.4,7.0,.3,3.7,M.cab2);box(parent,0,9.9,.45,4.4,.25,1.5,M.steelD);

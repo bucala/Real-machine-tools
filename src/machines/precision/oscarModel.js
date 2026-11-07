@@ -1,3 +1,4 @@
+import { drawTerminalKeyboard } from './terminalKeyboard';
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
 import { accordionGeometry,oscarDecals } from './oscarDetails';
@@ -157,9 +158,10 @@ export function createOscarModel({root,G,M,tex}){
   const deck=group('PC-keyboard-deck',panelPivot);deck.position.set(0,9.8,0);deck.rotation.x=.12;
   profile(deck,'folded-keyboard-tray',[[-1.3,-.25],[1.35,-.25],[1.35,.05],[1.13,.28],[-1.3,.28]],5.7,M.cab);
   box(deck,-.3,.3,0,4.25,.14,1.42,M.black);
-  const keys=new THREE.InstancedMesh(new THREE.BoxGeometry(.18,.045,.17),M.steelD,80);let ki=0;
-  for(let r=0;r<5;r++)for(let c=0;c<16;c++)keys.setMatrixAt(ki++,new THREE.Matrix4().makeTranslation(-2+c*.21,.4,-.6+r*.23));deck.add(keys);
-  box(deck,-.4,.42,.53,1.55,.04,.16,M.steelD);box(deck,2,.32,.25,.35,.15,.55,M.black);
+  const keyTexture=tex(1024,420,drawTerminalKeyboard);
+  const keyboard=new THREE.Mesh(new THREE.PlaneGeometry(4.15,1.35),new THREE.MeshStandardMaterial({map:keyTexture.tx,roughness:.85}));keyboard.rotation.x=-Math.PI/2;keyboard.position.set(-.3,.385,0);deck.add(keyboard);
+  const mouse=new THREE.Mesh(new THREE.SphereGeometry(.22,18,12),M.black);mouse.scale.set(1,.48,1.6);mouse.position.set(2,.36,.25);deck.add(mouse);
+  tube(deck,'mouse-cable',[[2,.34,-.1],[2.2,.33,-.6],[1.7,.32,-1]],.018);
   for(const x of [-2.65,2.65])for(const z of [-1.05,1.05])cyl(deck,x,.3,z,.035,.018,M.steelD);
   const controls={buttons:{},knobs:{}};
   for(const [id,x,color] of [['start',.5,M.green],['hold',1.1,M.red],['reset',-.2,M.steelD],['light',-1,M.steel],['coolant',-1.7,M.blue]]){
@@ -168,17 +170,19 @@ export function createOscarModel({root,G,M,tex}){
   cyl(deck,2.45,.36,-.65,.19,.08,M.yellow);controls.buttons.emergency=cyl(deck,2.45,.49,-.65,.13,.19,M.red);
   tube(panelPivot,'push-handle',[[-1.6,9.4,.9],[-1.6,8.9,1.55],[-1.35,8.75,1.65],[1.35,8.75,1.65],[1.6,8.9,1.55],[1.6,9.4,.9]],.095,M.steel);
   const monitor=group('EX500-monitor',panelPivot);monitor.position.set(0,10.3,-.9);monitor.rotation.x=-.12;
-  box(monitor,0,1.65,0,5.8,3.7,.3,M.black);box(monitor,0,1.65,.17,5.4,3.3,.04,M.steelD);box(monitor,0,1.6,-.35,1.4,1.5,.5,M.black);
+  box(monitor,0,1.65,0,5.8,3.7,.3,M.black);box(monitor,0,1.65,.17,5.45,3.46,.04,M.steelD);box(monitor,0,1.6,-.35,1.4,1.5,.5,M.black);
   label(monitor,'OSCARMAX',0,-.075,.176,1.15,.13,{color:'#b4bdc1',background:'#151b1e',size:105});
   cyl(monitor,2.65,-.075,.18,.026,.012,M.green,'z');
-  const display=new THREE.Mesh(new THREE.PlaneGeometry(5.2,3.1),new THREE.MeshBasicMaterial({toneMapped:false}));display.position.set(0,1.65,.2);monitor.add(display);
+  const display=new THREE.Mesh(new THREE.PlaneGeometry(5.28,3.3),new THREE.MeshBasicMaterial({toneMapped:false}));display.position.set(0,1.65,.2);monitor.add(display);
+  box(panelPivot,0,10.15,-.9,1.2,.18,1,M.black);
+  cyl(panelPivot,0,10.55,-1.1,.13,1.05,M.black);
   tube(panelPivot,'console-cable',[[0,9.8,-1.3],[0,8,-1.8],[.7,1,-1.4],[2,1,-2]],.07);
   const pendant=group('remote-pendant',panelPivot);pendant.position.set(-3,8.5,0);pendant.rotation.z=-.16;box(pendant,0,0,0,.7,1.45,.32,M.dark);box(pendant,0,.3,.17,.52,.53,.03,M.black);
   for(let i=0;i<6;i++)cyl(pendant,-.18+(i%2)*.36,-.12-Math.floor(i/2)*.2,.19,.065,.05,i===0?M.red:M.steel,'z');
   tube(panelPivot,'pendant-lead',[[-3,7.8,0],[-3,6.8,-.2],[-2.3,6.4,-.5],[-1,7.9,-1]],.045);
   const lamp=new THREE.PointLight(0xeaf5ff,45,12,2);lamp.position.set(0,13,-3.8);root.add(lamp);
   return {gate,oil,slideX,slideY,ram,electrode,stockMount,panelPivot,display,controls,lamp,bellows,xBoots,lightBars,
-    buildElectrode(e){clear(electrode);if(e.shape==='round')cyl(electrode,0,-e.length*.005,0,e.w*.005,e.length*.01,M.copper);else box(electrode,0,-e.length*.005,0,e.w*.01,e.length*.01,e.d*.01,M.copper);},
+    buildElectrode(e){clear(electrode);const material=e.material==='graphite'?M.graphite:M.copper;if(e.shape==='round')cyl(electrode,0,-e.length*.005,0,e.w*.005,e.length*.01,material);else box(electrode,0,-e.length*.005,0,e.w*.01,e.length*.01,e.d*.01,material);},
     update({S,oilLevel,door,light,hmiAngle}){
       gate.position.set(0,10.7-door*3.4,3.65);oil.position.y=9+oilLevel*.01;oil.visible=oilLevel>2;
       axes.position.x=S.x*.01;axes.position.z=-S.y*.01;

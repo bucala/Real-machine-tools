@@ -1,3 +1,5 @@
+import { drawRmsScreen } from '../ui/machineScreens';
+import { workAreaFeed } from '../core/workAreaFeed';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -92,7 +94,8 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     let scr = null;
     const geometry = rxu ? createRoedersModel({root,G,M,tex,MC,PY}) : createHermleModel({root,G,M,tex,MC,PY});
     const {cab,aG,cG,yG,xG,zG,toolG,buildTool,pockets,magG,driveShaft,saddle,magY,magZ,panG,armPivot,armElbow,hmi,sm,covers,clampPins,doors,loadMagazine,accessories}=geometry;
-    const screen = tex(640, 460, (g, w, h) => {
+    const screen = tex(rxu?1024:640, rxu?768:460, (g, w, h) => {
+      if(rxu){drawRmsScreen(g,w,h,scr);return;}
       g.fillStyle = '#e9edf0'; g.fillRect(0, 0, w, h); g.fillStyle = '#292e33'; g.fillRect(0, 0, w, 34);
       g.fillStyle = '#fff'; g.font = 'bold 18px monospace'; g.fillText(`${controller} · ${scr ? scr.title : 'Ready'}`, 12, 23);
       if (!scr) return;
@@ -226,6 +229,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       zhora: () => [[0.01, 90 * K, -6 * K], [0, 10 * K, -6 * K], true],
     };
     Object.assign(views,geometry.viewOverrides||{});
+    apiRef.current.mountWorkArea=workAreaFeed({scene,camera,renderer,view:views.priestor});
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
       orbitOptions: { maxDistance: 180, maxTargetY: 45 },
@@ -404,7 +408,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { c, lighting, chipPan:accessories.chipPan, chipCart:accessories.chipCart, equipment: accessories.equipment, root, camera, serviceDoors:geometry.serviceDoors, serviceOpen:geometry.serviceOpen, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { api:apiRef.current,c, lighting, chipPan:accessories.chipPan, chipCart:accessories.chipCart, equipment: accessories.equipment, root, camera, serviceDoors:geometry.serviceDoors, serviceOpen:geometry.serviceOpen, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
     return () => { cancelAnimationFrame(raf); dom.removeEventListener('dblclick',openHmi);dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 

@@ -1,3 +1,4 @@
+import { WorkAreaButton } from './workAreaWindow';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { L } from '../core/i18n';
@@ -10,7 +11,7 @@ export function DeepDrillHmi({apiRef,onClose}){
     return()=>{cancelAnimationFrame(raf);d.close();if(previous?.isConnected)previous.focus({preventScroll:true});};
   },[]);
   return createPortal(<dialog ref={dialog} className="deep-hmi" aria-label="ShuangliCNC Siemens Edition HMI" onCancel={e=>{e.preventDefault();onClose();}} onKeyDown={e=>e.stopPropagation()}>
-    <header><strong>ShuangliCNC · Siemens Edition</strong><button className="btn" autoFocus onClick={onClose}>{L('Späť k stroju','Back to machine')} · Esc</button></header>
+    <header><strong>ShuangliCNC · Siemens Edition</strong><WorkAreaButton apiRef={apiRef}/><button className="btn" autoFocus onClick={onClose}>{L('Späť k stroju','Back to machine')} · Esc</button></header>
     <canvas ref={canvas} width="960" height="600" aria-label={L('Živý displej vŕtacieho cyklu','Live drilling-cycle display')}/>
     <div className="deep-hmi-controls">{[['start','▶ CYCLE START'],['hold','■ FEED HOLD'],['reset','RESET'],['emergency','EMERGENCY STOP']].map(([id,text])=><button className={`btn ${id==='start'?'deep-start':''}`} key={id} onClick={()=>apiRef.current.hmiAction(id)}>{text}</button>)}</div>
   </dialog>,document.body);

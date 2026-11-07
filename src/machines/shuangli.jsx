@@ -1,3 +1,4 @@
+import { workAreaFeed } from '../core/workAreaFeed';
 import { useEffect,useRef,useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
@@ -51,6 +52,7 @@ export default function ShuangliSimulator({onBack}){
     apiRef.current.exportStep=async()=>{if(process.S.run)throw new Error(L('Najprv zastav cyklus.','Stop the cycle first.'));flush();return exportStep(stockG);};
     const v=(x,y,z)=>new THREE.Vector3(x,y,z);
     const views={celok:()=>[[64,43,75],[2,12,0]],priestor:()=>[[-5,21,35],[-5,12,0],true],mechanizmus:()=>[[37,29,38],[5,12,0],true],obrobok:()=>[[-2,16,7],[-10.5,10.2,0],true],panel:()=>[[22.2,16,25],[22.2,16,14],true],zhora:()=>[[0,90,.01],[0,8,0],true]};
+    apiRef.current.mountWorkArea=workAreaFeed({scene,camera,renderer,view:views.priestor});
     const anchors=Object.fromEntries(Object.keys(G).map(k=>[k,()=>new THREE.Box3().setFromObject(G[k]).getCenter(v(0,0,0))]));
     const insp=createInspector({dom,mount,camera,root,G,anchors,views,labelEls:[...layerRef.current.querySelectorAll('[data-part]')],enabled:()=>!c.manual&&!c.unclamped,onPick:k=>apiRef.current.onPick(k),blockPick:()=>ctrl.isUsed()||c.unclamped,onHL:()=>ctrl.invalidate(),orbitOptions:{maxDistance:230,maxTargetY:50}});
     const ctrl=createControls({dom,mount,camera,root,tipEl:tipRef.current,c,getT:()=>time,getHL:insp.hl});

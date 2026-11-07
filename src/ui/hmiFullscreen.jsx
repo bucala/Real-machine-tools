@@ -1,3 +1,5 @@
+import { TerminalDeck } from './terminalDeck';
+import { WorkAreaButton } from './workAreaWindow';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { L } from '../core/i18n';
@@ -34,6 +36,7 @@ export function HmiFullscreen({apiRef,ui,tele,model,onClose,brand='HERMLE',contr
     const previous=document.activeElement,overflow=document.body.style.overflow;
     document.body.style.overflow='hidden';closeRef.current?.focus({preventScroll:true});
     const keydown=e=>{
+      if(document.querySelector('.work-area-dialog[open]'))return;
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();return;}
       if(e.key!=='Tab')return;
       const els=[...rootRef.current.querySelectorAll('button,input,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
@@ -56,10 +59,10 @@ export function HmiFullscreen({apiRef,ui,tele,model,onClose,brand='HERMLE',contr
   const override=(id,key,min,max)=><Override label={id==='feed'?L('Korekcia posuvu','Feed override'):L('Korekcia rýchloposuvu','Rapid override')} value={ui[key]} min={min} max={max} onChange={v=>apiRef.current.setHmiOverride?.(key,v)} />;
   const mainButton=id=><button type="button" className={`hmi-machine-button hmi-${id}`} aria-label={names[id]} title={names[id]} aria-pressed={id==='emergency'?ui.estop:undefined} onClick={()=>act(id)}>{id==='start'?'▶':id==='hold'?'■':'STOP'}</button>;
   const message=tele.alarm?.text||tele.msg||((ui.door||tele.serviceDoorOpen)?L('Dvere otvorené','Doors open'):tele.run?L('Chod programu','Program running'):L('Pripravený','Ready'));
-  return createPortal(<div ref={rootRef} className="hmi-fullscreen" role="dialog" aria-modal="true" aria-labelledby="hmi-full-title" onKeyDown={e=>e.stopPropagation()}>
-    <header className="hmi-full-toolbar"><strong id="hmi-full-title">{brand} {model} <span>{controller}</span></strong><span className={`hmi-full-message ${tele.alarm?'alarm':''}`} role="status">{message}</span><SoundToggle className="scene-btn" /><button ref={closeRef} type="button" className="scene-btn" onClick={onClose}>{L('Späť k stroju','Back to machine')} <kbd>Esc</kbd></button></header>
-    <section className="hmi-live-display" aria-label={L('Displej HMI','HMI display')}><div className={`hmi-screen-bezel ${compactOnly?'':'hermle-screen-bezel'}`} >{!compactOnly&&monitor.keys.map((k,i)=><span key={i} className="hmi-monitor-key" style={{left:`${(k.x/monitor.width+.5)*100}%`,top:`${(1-k.y/monitor.height)*100}%`,width:`${k.width/monitor.width*100}%`,height:`${k.height/monitor.height*100}%`}} aria-hidden="true" />)}<canvas ref={canvasRef} width="640" height="460" role="img" aria-label={L('Živý displej HMI – program a súradnice stroja','Live HMI display – program and machine coordinates')} /></div></section>
-    <section className={`hmi-full-controls ${compactOnly?'rms-controls':''}`} aria-label={L('Ovládacie prvky HMI','HMI controls')}>
+  return createPortal(<div ref={rootRef} className={`hmi-fullscreen ${compactOnly?'rms-fullscreen':''}`} role="dialog" aria-modal="true" aria-labelledby="hmi-full-title" onKeyDown={e=>e.stopPropagation()}>
+    <header className="hmi-full-toolbar"><strong id="hmi-full-title">{brand} {model} <span>{controller}</span></strong><span className={`hmi-full-message ${tele.alarm?'alarm':''}`} role="status">{message}</span><WorkAreaButton apiRef={apiRef}/><SoundToggle className="scene-btn" /><button ref={closeRef} type="button" className="scene-btn" onClick={onClose}>{L('Späť k stroju','Back to machine')} <kbd>Esc</kbd></button></header>
+    <section className="hmi-live-display" aria-label={L('Displej HMI','HMI display')}><div className={`hmi-screen-bezel ${compactOnly?'rms-reference-bezel':'hermle-screen-bezel'}`} >{!compactOnly&&monitor.keys.map((k,i)=><span key={i} className="hmi-monitor-key" style={{left:`${(k.x/monitor.width+.5)*100}%`,top:`${(1-k.y/monitor.height)*100}%`,width:`${k.width/monitor.width*100}%`,height:`${k.height/monitor.height*100}%`}} aria-hidden="true" />)}<canvas ref={canvasRef} width="640" height="460" role="img" aria-label={L('Živý displej HMI – program a súradnice stroja','Live HMI display – program and machine coordinates')} /></div>{compactOnly&&<aside className="rms-reference-pendant" aria-label={L('Ručný panel Röders','Röders hand pendant')}><button className="reference-key emergency" aria-label={names.emergency} aria-pressed={ui.estop} onClick={()=>act('emergency')}>STOP</button><strong>röders<small>TEC</small></strong><div><button aria-label={names.start} onClick={()=>act('start')}>▶</button><button aria-label={names.hold} onClick={()=>act('hold')}>■</button><button aria-label={names.reset} onClick={()=>act('reset')}>↺</button><button aria-label={names.light} onClick={()=>act('light')}>☼</button></div><i aria-hidden="true"/></aside>}</section>
+    {compactOnly?<section className="rms-reference-controls"><TerminalDeck apiRef={apiRef} ui={ui} rms/></section>:<section className={`hmi-full-controls ${compactOnly?'rms-controls':''}`} aria-label={L('Ovládacie prvky HMI','HMI controls')}>
       <div className="hmi-console-deck">
         {hmiKeyLayout().map((k,i)=>{
           const style={...position(k),width:`${k.w/layout.width*100}%`,height:`${k.d/layout.depth*100}%`};
@@ -72,6 +75,6 @@ export function HmiFullscreen({apiRef,ui,tele,model,onClose,brand='HERMLE',contr
 
       </div>
       <div className="hmi-compact-controls"><div className="hmi-compact-buttons">{['start','hold','emergency'].map(id=><span key={id}>{mainButton(id)}</span>)}{['reset','light','single','coolant'].map(id=><button key={id} type="button" className="hmi-key" aria-label={names[id]} aria-pressed={active[id]} onClick={()=>act(id)}>{names[id]}</button>)}</div>{override('feed','fo',0,150)}{override('rapid','ro',5,100)}</div>
-    </section>
+    </section>}
   </div>,document.body);
 }

@@ -1,3 +1,4 @@
+import { workAreaFeed } from '../core/workAreaFeed';
 import { useEffect,useRef,useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
@@ -53,6 +54,7 @@ export default function BystronicSimulator({onBack}){
       stl:()=>process.S.run?null:exportStl(model.stock),exportStep:async()=>{if(process.S.run)throw new Error(L('Najprv zastav cyklus.','Stop the cycle first.'));return exportStep(model.stock);}};
     const v=(x,y,z)=>new THREE.Vector3(x,y,z);
     const views={celok:()=>[[49,29,63],[0,15,0]],celo:()=>[[0,19,79],[0,15,1]],nastroje:()=>[[20,18,35],[0,12,2],true],dorazy:()=>[[8,17,-29],[0,10,-4],true],zadok:()=>[[-58,31,-67],[0,16,-5]],stop:()=>[[18,10,30],[12,5.8,14],true],panel:()=>{const p=model.consolePivot.getWorldPosition(v(0,0,0)).add(v(0,12,0));return [p.clone().add(v(1,2,16)).toArray(),p.toArray(),true];},plech:()=>[[16,19,30],[0,11,4],true]};
+    apiRef.current.mountWorkArea=workAreaFeed({scene,camera,renderer,view:views.nastroje});
     const anchors=Object.fromEntries(Object.keys(G).map(k=>[k,()=>G[k].getWorldPosition(v(0,0,0)).add(v(0,10,0))]));
     const insp=createInspector({dom,mount,camera,root,G,anchors,views,labelEls:[...layerRef.current.querySelectorAll('[data-part]')],enabled:()=>!c.manual&&!c.unclamped,onPick:k=>apiRef.current.onPick(k),blockPick:()=>ctrl.isUsed()||c.unclamped,onHL:()=>ctrl.invalidate(),orbitOptions:{maxDistance:240,maxTargetY:55}});
     const ctrl=createControls({dom,mount,camera,root,tipEl:tipRef.current,c,getT:()=>t,getHL:insp.hl});
