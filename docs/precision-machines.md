@@ -114,6 +114,10 @@ Podklady: [stránka výrobcu EX 500](https://www.oscaredm.com/en-US/p182-die-sin
 
 Nádrž má spúšťaciu nakladaciu stenu; automatické riadenie dverí je katalógová možnosť, v simulátore ide o používateľom ovládanú animáciu. Stĺp a elektróda sa pohybujú v XY; stôl ani polotovar neposkakujú spolu s nimi. Foto predlohy určuje strieborné opláštenie, žlto-modré pásy a PC terminál. Neokótované diely, elektroinštalácia a hadice sú vizuálna rekonštrukcia.
 
+Aktualizácia podľa dvoch doplnených výstavných fotografií EX500: nižšie, miernejšie skosené zadné rameno, stĺp zarovnaný s osou elektródy, úzka príruba nad mechom, nadväzujúce rohové piliere vane a ľavá horná polica. Z a priečne kryty majú uzavretú skladanú geometriu, ktorá pri pohybe zachováva oba konce. Doplnený je odkrytý kovový upínač, výplachové hadice s koncovkami, držiaky hasiacej fľaše, zapínateľné svetelné lišty, tesnenia, odtok, skrutky a servisné panely. Potlač používa biele EX / červené 500 na tmavom štítku a súbežné žlto-bielo-sivo-modré pásy na stĺpe. Drobné nečitateľné štítky sú schematické; nejde o reprodukciu certifikácie ani bezpečnostnej dokumentácie výrobcu. Menu obsahuje aj pohľady **Ľavý bok** a **Detail hlavy**.
+
+[Aktualizovaný model EX500](img/oscarmax-ex500.png) · [Detail hlavy, mechu a výplachu](img/oscarmax-head.png)
+
 Proces je zjednodušená **hĺbiaca elektroerózia**, nie frézovanie ani EDM vŕtanie. Má hranolovú alebo valcovú Cu elektródu, výbojovú medzeru 0,01–0,20 mm a prúd 1–60 A. Polotovar je oceľový 100 × 80 × 30 mm. Kontrola vyžaduje ponorenie aspoň 40 mm nad obrobkom, zatvorené dvere, zapnutý výplach a uvoľnený STOP. Odber materiálu používa rovnaké voxelové pole a surface nets ako CNC; hranol odoberá hranolovú dutinu. Sieť má 0,7 mm, preto nezobrazuje mikrometrovú drsnosť ani presnosť reálnej EDM.
 
 Rýchlosť servo-prísuvu `0,012 + 0,0012 × prúd` mm/s a opotrebenie elektródy 0,8 % odobratého objemu sú **výučbové odhady**. Negarantujú technologický čas, kvalitu povrchu alebo reálnu spotrebu elektródy. UV snímač a hasiaci prvok sú modelované vizuálne; ich elektronika, generátorové impulzy, adaptívne riadenie APC a OSCARPGM sa neemulujú.

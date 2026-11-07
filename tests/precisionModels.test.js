@@ -124,4 +124,36 @@ describe('Manufacturer-specific machine geometry',()=>{
     // 850 × 450 mm table has exact geometry, independently of exterior reconstruction.
     expect(m.slideX.children.some(o=>o.geometry?.parameters.width===8.5&&o.geometry.parameters.depth===4.5)).toBe(true);
   });
+  it('keeps the EX500 accordion covers attached through XY moves and electrode changes',()=>{
+    const ctx=setup(),m=createOscarModel(ctx);
+    for(const length of [80,100,180])for(const x of [-40,0,40])for(const depth of [-5,25]){
+      m.electrode.userData.length=length;
+      m.update({S:{x,y:30,depth},oilLevel:0,door:1,light:true,hmiAngle:0});ctx.root.updateMatrixWorld(true);
+      const boot=new THREE.Box3().setFromObject(m.bellows);
+      expect(boot.max.y).toBeCloseTo(15.07,5);
+      expect(boot.min.y).toBeCloseTo(m.ram.position.y+.99,5);
+      const left=new THREE.Box3().setFromObject(m.xBoots[0]),right=new THREE.Box3().setFromObject(m.xBoots[1]);
+      expect(left.min.x).toBeCloseTo(-6.65,5);expect(right.max.x).toBeCloseTo(6.65,5);
+      expect(left.max.x).toBeCloseTo(x*.01-1.7,5);expect(right.min.x).toBeCloseTo(x*.01+1.7,5);
+      // The chuck must stay exposed below the boot instead of inside a solid ram box.
+      const ray=new THREE.Raycaster(new THREE.Vector3(x*.01,m.ram.position.y+.55,4),new THREE.Vector3(0,0,-1));
+      const hit=ray.intersectObject(m.ram,true).find(h=>h.object.material===ctx.M.steel);
+      expect(hit?.point.z).toBeGreaterThan(.15);
+    }
+    m.update({S:{x:0,y:0,depth:-5},oilLevel:0,door:1,light:false,hmiAngle:0});
+    expect(m.lightBars.every(o=>o.material.emissiveIntensity===0)).toBe(true);
+  });
+  it('exports EX500 folds as closed shells with outward winding',()=>{
+    const ctx=setup(),m=createOscarModel(ctx);
+    for(const mesh of [m.bellows,...m.xBoots]){
+      const p=mesh.geometry.attributes.position,edges=new Map();let volume=0;
+      const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+      const key=i=>[p.getX(i),p.getY(i),p.getZ(i)].map(v=>v.toFixed(6)).join(',');
+      for(let i=0;i<p.count;i+=3){
+        a.fromBufferAttribute(p,i);b.fromBufferAttribute(p,i+1);c.fromBufferAttribute(p,i+2);volume+=a.dot(b.cross(c))/6;
+        for(const [u,v] of [[i,i+1],[i+1,i+2],[i+2,i]]){const edge=[key(u),key(v)].sort().join('|');edges.set(edge,(edges.get(edge)||0)+1);}
+      }
+      expect(volume).toBeGreaterThan(0);expect([...edges.values()].every(n=>n===2)).toBe(true);
+    }
+  });
 });

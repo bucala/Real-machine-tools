@@ -40,7 +40,7 @@ export default function OscarSimulator({onBack}){
     const snd=createSound('mill'),dom=renderer.domElement,root=new THREE.Group();scene.add(root);
     apiRef.current.machineModel = { root, name: 'OSCARMAX EX 500' };
     const mat=(color,metal=.25,rough=.5)=>new THREE.MeshStandardMaterial({color:new THREE.Color(color).convertSRGBToLinear(),metalness:metal,roughness:rough});
-    const M={cab:mat(0xc2c6c7,.4),cab2:mat(0xb0b5b8,.4),steel:mat(0xc8ced2,.8,.25),steelD:mat(0x646c72,.8),inox:mat(0xc5c8ca,.7,.3),table:mat(0xa8afb4,.75),black:mat(0x12191d),dark:mat(0x343e43),red:mat(0xc9242d),blue:mat(0x2854a0),yellow:mat(0xe5df43),green:mat(0x299d75),brass:mat(0xb49b57,.7),copper:mat(0xb77848,.8,.3),oil:new THREE.MeshStandardMaterial({color:0x8a9878,transparent:true,opacity:.18,roughness:.16,metalness:.15,depthWrite:false,side:THREE.DoubleSide})};
+    const M={cab:mat(0xbdc5c1,.25,.44),cab2:mat(0xa9b2ae,.3,.5),steel:mat(0xd6dad8,.7,.23),steelD:mat(0x747d80,.55,.4),inox:mat(0xc2c7c6,.48,.38),table:mat(0xb1b9b9,.65,.3),black:mat(0x151b1c,.04,.8),dark:mat(0x343e40,.18,.65),red:mat(0xcc2431,.15,.32),blue:mat(0x2854a0),yellow:mat(0xf0df36),green:mat(0x299d75),brass:mat(0xb49b57,.7),copper:mat(0xb77848,.8,.3),oil:new THREE.MeshStandardMaterial({color:0x8a9878,transparent:true,opacity:.18,roughness:.16,metalness:.15,depthWrite:false,side:THREE.DoubleSide})};
     const tex=(w,h,draw)=>{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;const redraw=()=>{draw(cv.getContext('2d'),w,h);tx.needsUpdate=true;};redraw();return {tx,redraw};};
     const G={},model=createOscarModel({root,G,M,tex});
     const stockG=new THREE.Group();stockG.userData.part='obrobok';stockG.userData.stepJoin=true;stockG.rotation.x=-Math.PI/2;stockG.scale.setScalar(.01);model.stockMount.add(stockG);G.obrobok=stockG;
@@ -66,7 +66,7 @@ export default function OscarSimulator({onBack}){
       g.fillStyle=S.alarm?'#bc3445':S.run?'#258c6a':'#526a7e';g.fillRect(0,h-60,w,60);g.fillStyle='#fff';g.font='18px sans-serif';g.fillText((S.alarm||L('Stav','State')+': '+S.phase).slice(0,90),16,h-25);
     });model.display.material.map=screen.tx;
     const v=(x,y,z)=>new THREE.Vector3(x,y,z);
-    const views={celok:()=>[[29,23,40],[0,13,-1]],priestor:()=>[[9,17,17],[0,10.3,0],true],obrobok:()=>[[2.4,11.8,3.6],[0,9.7,0],true],panel:()=>{const p=model.panelPivot.getWorldPosition(v(0,0,0)).add(v(0,11,0)),d=v(3,3,13).applyAxisAngle(v(0,1,0),model.panelPivot.rotation.y);return [p.clone().add(d).toArray(),p.toArray()];},zhora:()=>[[.01,70,-1],[0,10,-1],true]};
+    const views={celok:()=>[[25,21,43],[0,13,-1]],priestor:()=>[[-9,16,17],[0,11.5,-1],true],lavy:()=>[[-31,22,32],[0,13,-3]],hlava:()=>[[-8,15,16],[0,14,0],true],obrobok:()=>[[2.4,11.8,3.6],[0,9.7,0],true],panel:()=>{const p=model.panelPivot.getWorldPosition(v(0,0,0)).add(v(0,11,0)),d=v(3,3,13).applyAxisAngle(v(0,1,0),model.panelPivot.rotation.y);return [p.clone().add(d).toArray(),p.toArray()];},zhora:()=>[[.01,70,-1],[0,10,-1],true]};
     const anchors=Object.fromEntries(Object.keys(G).map(k=>[k,()=>G[k].getWorldPosition(v(0,0,0)).add(v(0,4,0))]));
     const insp=createInspector({dom,mount,camera,root,G,anchors,views,labelEls:[...layerRef.current.querySelectorAll('[data-part]')],enabled:()=>!c.manual&&!c.unclamped,onPick:k=>apiRef.current.onPick(k),blockPick:()=>ctrl.isUsed()||c.unclamped,onHL:()=>ctrl.invalidate(),orbitOptions:{maxDistance:180,maxTargetY:45}});
     const ctrl=createControls({dom,mount,camera,root,tipEl:tipRef.current,c,getT:()=>t,getHL:insp.hl});
@@ -125,7 +125,7 @@ export default function OscarSimulator({onBack}){
 
       </div>
       <div className="sec"><h2 className="sec-title mb-2">{L('Výsledok','Result')}</h2><p className="text-sm tnum">{L('Čas','Time')} {Math.floor(tele.t/60)}:{String(Math.floor(tele.t%60)).padStart(2,'0')} · {L('Úber','Removed')} {(tele.removed/1000).toFixed(3)} cm³</p><p className="text-xs muted">{L('Odhad opotrebenia elektródy','Estimated electrode wear')}: {tele.wear.toFixed(3)} mm · {L('Sieť','Mesh')}: 0,7 mm</p><div className="flex flex-wrap gap-2 mt-2"><button className="btn" disabled={tele.run} onClick={()=>save(apiRef.current.stl?.(),'oscarmax-ex500.stl')}>STL</button><StepDownloadButton machine="oscarmax-ex500" apiRef={apiRef}/><button className="btn" onClick={()=>apiRef.current.snapshot?.(b=>save(b,'oscarmax-ex500.png'))}>PNG</button></div></div>
-      <ViewSection apiRef={apiRef} views={[["celok",L('Celok','Overview')],["priestor",L('Pracovný priestor','Working area')],["obrobok",L('Obrobok','Workpiece')],["panel","HMI"],["zhora",L('Zhora','Top')]]}/><PartsSection parts={p} {...{selected,selectPart}}/><HelpFooter apiRef={apiRef} ui={ui}/>
+      <ViewSection apiRef={apiRef} views={[["celok",L('Celok','Overview')],["priestor",L('Pracovný priestor','Working area')],["lavy",L('Ľavý bok','Left side')],["hlava",L('Detail hlavy','Head detail')],["obrobok",L('Obrobok','Workpiece')],["panel","HMI"],["zhora",L('Zhora','Top')]]}/><PartsSection parts={p} {...{selected,selectPart}}/><HelpFooter apiRef={apiRef} ui={ui}/>
     </aside>
   </div>;
 }
