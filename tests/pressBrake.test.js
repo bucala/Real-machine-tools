@@ -60,4 +60,13 @@ describe('Xpert Pro 320/4300 press brake',()=>{
     m.stock.position.set(4,5,6);m.update({S:{y:0,beta:0},c:{...cfg,unclamped:true},guardAngle:1.1});
     expect(m.stock.position.toArray()).toEqual([4,5,6]);expect(Math.abs(m.guardPivots[0].rotation.y)).toBeCloseTo(1.1);
   });
+  it('leaves the operator frame and hand grip open as in the reference',()=>{
+    const {m,root}=model();root.updateMatrixWorld(true);
+    const ray=new THREE.Raycaster(new THREE.Vector3(12,4,20),new THREE.Vector3(0,0,-1));
+    expect(ray.intersectObject(m.pedal,true)).toHaveLength(0);
+    const origin=m.operatorFace.localToWorld(new THREE.Vector3(0,-1.13,2));
+    const direction=new THREE.Vector3(0,0,-1).transformDirection(m.operatorFace.matrixWorld);
+    ray.set(origin,direction);expect(ray.intersectObject(m.operatorFace,true)).toHaveLength(0);
+  });
+
 });
