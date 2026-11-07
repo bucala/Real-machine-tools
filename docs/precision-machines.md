@@ -171,6 +171,12 @@ Baran sa priblíži, vytvorí ohyb, podrží zaťaženie a zdvihne sa s uvoľnen
 
 Mobilné HMI a monitor v 3D zdieľajú jeden živý displej. Ide o výučbové ovládanie, nie implementáciu ByVision. Ručné ovládanie zahŕňa oba pedále, STOP, bočné kryty a monitor. Po zdvihnutí barana sa dá rovnaký plech odopnúť, otočiť, vrátiť a exportovať ako STL/STEP. Stroj má samostatný export OBJ/STL/STEP aktuálnej polohy a viditeľných dielov, bez plechu a podlahy; STEP je plošková CAD geometria bez parametrickej histórie.
 
+HMI má päť funkčných obrazoviek: **Diel** upravuje prírez a cieľový uhol, ukladá pomenované nastavenia a načítava ich spolu s tromi predvoľbami. **Nástroje** menia skutočnú V-matricu, odporúčajú V približne 8 × hrúbka a nastavujú R. **Ohýbanie** zobrazuje aktuálny tvar, fázu, osi, silu a počítadlá. **Stroj** ovláda hydrauliku, osvetlenie, kryty, simulovanú prekážku, odkrytie, natočenie terminálu a rýchlosť. **Diagnostika** ukazuje päť blokovaní, potvrdzuje odstránené hlásenia a exportuje JSON so stavom a poslednými 40 udalosťami. Nastavenia dielov sa ukladajú pod `rmt-bystronic-recipes-v1`, maximálne 20, bez hardvérových a bezpečnostných prepínačov. Načítanie prejde validáciou pred zmenou modelu a počas rozpracovaného cyklu je blokované.
+
+Terminál má tvarovaný oranžovo-sivý stojan, čierny rám, biely spodný úchop, zadný držiak, káble a dva funkčné spínače so stavovými kontrolkami. Samostatný STOP panel má šikmú ovládaciu plochu, šesť tlačidiel, červený hríbik so žltým prstencom, spodný úchop a dva nezávislé pedále pod krytom. Fyzické tlačidlá, bočné menu aj HMI volajú spoločný kontrolér. STOP sa zaistí okamžite, zachová ohyb a po uvoľnení ani potvrdení hlásenia automaticky neobnoví pohyb. Nový pohyb vyžaduje výslovný štart. Testy `brakeControl.test.js` overujú tento priebeh, zamknutie nastavení, okamžité zastavenie hydrauliky, počítanie prerušených cyklov a uložené programy.
+
+[Interaktívne HMI](img/bystronic-hmi.png) · [STOP panel](img/bystronic-stop-panel.png)
+
 `tests/pressBrake.test.js` overuje vybraný stĺpec technického listu, silu a jej škálovanie, limity, ochranné blokovania, pause/resume, predčasný návrat, uhol po odpružení, rozvinutú dĺžku, kontakt nástroja, V-dutinu matrice, polohu dorazu a zachovanie vybraného plechu. Prehliadačové overenie pokrýva mobilné rozloženie, info okná, HMI, prehliadku plechu a všetky exporty. STEP stroja aj ohnutého plechu je overený načítaním cez OpenCascade a kontrolou BRep.
 
 [Model 320/4300](img/bystronic-xpert-pro-320.png) · [Nástroje a ohnutý plech](img/bystronic-bend.png)

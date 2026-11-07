@@ -41,7 +41,7 @@ export function sheetSection(c,beta){
 }
 
 export function createBrakeProcess(){
-  const S={phase:'idle',run:false,paused:false,done:false,complete:false,y:0,beta:0,peak:0,force:0,t:0,alarm:null};let job=null,dwell=0;
+  const S={phase:'idle',run:false,paused:false,done:false,complete:false,y:0,beta:0,peak:0,force:0,maxForce:0,t:0,alarm:null};let job=null,dwell=0;
   const safetyError=s=>s.estop?'Núdzový STOP / Emergency STOP':!s.hydraulic?'Zapni hydrauliku. / Enable hydraulics.':s.guardOpen?'Zatvor bočné kryty. / Close side guards.':s.obstructed?'Prekážka v ochrannom poli. / Safety field obstructed.':s.unclamped?'Vráť plech k nástroju. / Return sheet to tooling.':null;
   const stop=alarm=>{S.run=false;S.paused=!!job&&!S.done;S.alarm=alarm||null;};
   const start=(c,s)=>{
@@ -51,7 +51,7 @@ export function createBrakeProcess(){
     S.run=true;S.paused=false;S.alarm=null;return true;
   };
   const retract=s=>{if(s.estop||!s.hydraulic||s.unclamped){stop(safetyError(s));return false;}if(!job||S.y===0)return false;S.phase='return';S.run=true;S.paused=false;S.alarm=null;return true;};
-  const reset=()=>{if(S.run||S.y>.01)return false;job=null;dwell=0;Object.assign(S,{phase:'idle',paused:false,done:false,complete:false,y:0,beta:0,peak:0,force:0,t:0,alarm:null});return true;};
+  const reset=()=>{if(S.run||S.y>.01)return false;job=null;dwell=0;Object.assign(S,{phase:'idle',paused:false,done:false,complete:false,y:0,beta:0,peak:0,force:0,maxForce:0,t:0,alarm:null});return true;};
   const advance=(dt,s)=>{
     if(!S.run)return;
     const err=safetyError(s);if(err){stop(err);return;}
@@ -63,7 +63,7 @@ export function createBrakeProcess(){
       }else if(S.phase==='bend'){
         S.y=Math.min(job.target,S.y+8*h);let lo=0,hi=job.beta;
         for(let i=0;i<25;i++){const b=(lo+hi)/2;if(supportDepth(job,b)<S.y-job.contact)lo=b;else hi=b;}
-        S.beta=(lo+hi)/2;S.peak=Math.max(S.peak,S.beta);S.force=job.force*Math.sin(S.beta)/Math.sin(job.beta);
+        S.beta=(lo+hi)/2;S.peak=Math.max(S.peak,S.beta);S.force=job.force*Math.sin(S.beta)/Math.sin(job.beta);S.maxForce=Math.max(S.maxForce,S.force);
         if(S.y===job.target){S.beta=job.beta;S.peak=job.beta;S.complete=true;S.phase='dwell';dwell=0;}
       }else if(S.phase==='dwell'){dwell+=h;if(dwell>=.8)S.phase='return';}
       else if(S.phase==='return'){
@@ -74,5 +74,5 @@ export function createBrakeProcess(){
       }
     }
   };
-  return {S,start,hold:()=>stop(),retract,reset,advance,get job(){return job;}};
+  return {S,start,hold:alarm=>stop(alarm),acknowledge:s=>{const error=safetyError(s);if(error){stop(error);return false;}S.alarm=null;return true;},retract,reset,advance,get job(){return job;}};
 }

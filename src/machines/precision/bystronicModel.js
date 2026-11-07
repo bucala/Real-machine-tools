@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
+import { createBystronicControls } from './bystronicControls';
 import { XPERT320,OPEN_TIP,sheetSection,supportDepth } from './pressBrakeProcess';
 
 export const BRAKE_DIE_TOP=11;
 // Millimetres from the supplied 320/4300 data sheet, converted at 1 unit = 100 mm.
 // Covers, optional supports and controls are reconstructed from the photographs.
 export function createBystronicModel({root,G,M,tex}){
-  const {group,box,cyl,rod,label,bolts,clear}=modelKit(root,M,tex);
+  const kit=modelKit(root,M,tex),{group,box,cyl,rod,label,bolts,clear}=kit;
   const part=k=>{const g=group(k);g.userData.part=k;G[k]=g;return g;};
   const profile=(p,name,points,width,mat,x=0)=>{
     const s=new THREE.Shape();points.forEach(([z,y],i)=>i?s.lineTo(-z,y):s.moveTo(-z,y));s.closePath();
@@ -112,24 +113,7 @@ export function createBystronicModel({root,G,M,tex}){
     box(ram,side*21.95,14.5,3.7,.65,.8,1.05,M.black);box(ram,side*21.95,14.5,4.25,.5,.48,.05,M.glass);
     const m=cyl(ram,side*21.95,14.5,4.31,.1,.04,M.green,'z');laser.push(m);
   }
-  // Mobile ByVision-style touch terminal and the separate bent pedal pedestal.
-  const panel=part('panel'),consolePivot=group('mobile-touch-console',panel);consolePivot.position.set(29.2,0,13);
-  box(consolePivot,0,.35,0,5.5,.2,4.7,M.dark);
-  for(const x of [-2.25,2.25])for(const z of [-1.85,1.85]){cyl(consolePivot,x,.15,z,.32,.3,M.black);cyl(consolePivot,x,.48,z,.24,.09,M.red);}
-  for(const x of [-.7,.7]){rod(consolePivot,[x,.5,0],[x,10.9,-1.1],.15,M.red);box(consolePivot,x,5.8,-.6,.26,10.5,.32,M.red);}
-  box(consolePivot,0,7.1,-.75,1.1,6,.3,M.steel);box(consolePivot,0,8.1,1.05,5,.1,2.2,M.dark);
-  const monitor=group('ByVision-touchscreen',consolePivot);monitor.position.set(0,11,-1);monitor.rotation.x=-.23;
-  box(monitor,0,1.2,0,7.4,4.5,.35,M.black);box(monitor,0,1.2,-.25,3.8,2.7,.2,M.anth);
-  const display=new THREE.Mesh(new THREE.PlaneGeometry(7,4.06),new THREE.MeshBasicMaterial({toneMapped:false}));display.position.set(0,1.2,.19);monitor.add(display);
-  label(monitor,'Bystronic',-2.7,3.2,.2,1.1,.16,{color:'#fff',background:'#181b1f',size:100});
-  const pedal=part('pedal');pedal.position.set(12,0,14);
-  profile(pedal,'bent-pedal-pedestal',[[-1,.2],[1.4,.2],[1.4,.6],[.2,6.3],[.9,7.6],[-1,8.5],[-1.6,7.9],[-.5,6.4]],1.45,M.cab);
-  profile(pedal,'orange-pedal-edge',[[-1,.25],[1.2,.25],[0,6.3],[.7,7.6],[-1,8.3],[-1.25,8.05],[-.1,7.55],[-.5,6.4]],.15,M.red,.8);
-  box(pedal,0,.35,1.4,2.6,.5,2,M.dark);box(pedal,0,7.65,-.2,1.1,.18,1.4,M.dark);
-  const controls={buttons:{}};controls.buttons.start=box(pedal,-.52,.65,1.5,.85,.16,1.1,M.steelD);controls.buttons.retract=box(pedal,.52,.65,1.5,.85,.16,1.1,M.steelD);
-  for(const [id,x,mat] of [['hold',-.3,M.red],['reset',.28,M.green]])controls.buttons[id]=cyl(pedal,x,7.84,-.15,.1,.08,mat);
-  cyl(consolePivot,0,10.2,0,.25,.1,M.yellow,'z');controls.buttons.emergency=cyl(consolePivot,0,10.2,.13,.17,.2,M.red,'z');
-  tube(panel,[[29.2,.4,12],[33,.25,11],[34,.2,6],[28,.15,5],[25,.5,0]],.06);tube(pedal,[[0,.3,0],[3,.15,-1],[5,.15,-4],[6,.3,-8]],.055);
+  const {pedal,consolePivot,monitor,display,operatorFace,controls,indicators}=createBystronicControls({part,kit,M,tex});
   const light=new THREE.PointLight(0xddeeff,90,30,2);light.position.set(0,13.8,-1);frame.add(light);
   const cutawayParts=[hood,back,rearWall];
   for(const o of cutawayParts){const raycast=o.raycast;o.raycast=function(...args){if(!this.visible)return false;return raycast.apply(this,args);};}
@@ -142,7 +126,7 @@ export function createBystronicModel({root,G,M,tex}){
     const g=new THREE.ExtrudeGeometry(s,{depth:c.length,bevelEnabled:false});g.translate(0,0,-c.length/2);g.rotateY(Math.PI/2);g.scale(.01,.01,.01);
     const mesh=new THREE.Mesh(g,M.sheet);mesh.castShadow=true;mesh.receiveShadow=true;stock.add(mesh);
   };
-  return {ram,punch,die,xSlide,rSlide,fingers,stock,consolePivot,display,controls,guardPivots,light,cutawayParts,
+  return {ram,punch,die,xSlide,rSlide,fingers,stock,pedal,consolePivot,monitor,display,operatorFace,controls,guardPivots,light,cutawayParts,
     update({S,c,guardAngle}){
       cutawayParts.forEach(o=>{o.visible=!c.cutaway;});
       ram.position.y=-S.y*.01;
@@ -155,6 +139,7 @@ export function createBystronicModel({root,G,M,tex}){
       laser.forEach(m=>{m.material=c.obstructed?M.red:M.green;});light.visible=c.light;lightMat.emissiveIntensity=c.light?1.4:0;
       if(!c.unclamped){rebuildSheet(c,S.beta);stock.position.set(0,BRAKE_DIE_TOP+(c.thickness/2-supportDepth(c,S.beta))*.01,2);}
       consolePivot.rotation.y=c.hmiAngle*Math.PI/180;
+      for(const {key,mesh} of indicators){mesh.material.color.setHex(c[key]?0x58cf61:0x26312b);mesh.material.emissive.setHex(c[key]?0x16551b:0);}
     },
     nominal:XPERT320,openTip:OPEN_TIP,
   };
