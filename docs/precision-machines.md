@@ -126,6 +126,8 @@ Skrinka elektród používa lokálny kľúč `rmt-edm-electrodes-v1`; JSON má t
 
 ## ShuangliCNC ZJA13-2013F · Siemens Edition
 
+Na žiadosť používateľa je zariadenie skryté z verejného výberu. Priamy odkaz `#shuangli` zobrazí menu moderných strojov. Zdrojový simulátor, geometria, konfigurácia a testy zostávajú zachované; skrytie neodstraňuje uložené údaje. Návrat do ponuky sa riadi príznakom `hidden` v registri `MODERN`.
+
 Podklady dodané používateľom: fotografia kompletného bieleho stroja s červeným pásom, obrázok odkrytého vodorovného vŕtacieho mechanizmu, fotografie interiéru, okrytovania a snímka tabuľky z Made-in-China. Tabuľka aj nápis na referenčnej kabíne uvádzajú **Zonjet ZJA13-1610**. Používateľ požaduje názov **ShuangliCNC ZJA13-2013F**. Bez technického listu tejto konkrétnej verzie sa údaje neprenášajú ako jej garantovaná špecifikácia.
 
 | Podklad | Údaje / spôsob použitia |
@@ -141,6 +143,37 @@ Tri predné listy sa teleskopicky presúvajú doprava, ľavé dvere sa otáčaj�
 Program zadáva súradnice X/Y na vstupnom čele a hĺbku Z. Postupuje cez polohovanie, nájazd, súvislé vŕtanie a vytiahnutie. Kontroluje všetky modelované dvere, upnutie, STOP a chladenie. Hold zachová materiál aj miesto v cykle. Prehliadka odtiahne nástroj; pokračovanie dokončí aktuálny otvor. Úber používa valcový obal nástroja, takže dno je zjednodušené na rovinu; mikrometrická presnosť, ohyb, opotrebenie a tvorba triesky sa nepočítajú.
 
 Siemens Edition používa jeden živý canvas pre monitor aj zväčšené HMI. Rozhranie je inšpirované SINUMERIK, neimplementuje firmvér ani import Siemens NC programov. OBJ/STL/STEP export stroja je v päte menu; samostatný export obrobku zachová aktuálny úber. Testy `deepDrill.test.js` overujú interlocky, hlboké slepé otvory, indexovanie až po vytiahnutí, zachovanie rozpracovaného stavu, polohu vrtáka voči obrobku, priechodnosť podpier a otváranie dverí.
+
+## Bystronic Xpert Pro 320/4300
+
+Používateľ zvolil **320/4300 v štandardnej výške**. Parametre vychádzajú zo štvrtej strany dodaného [technického listu Xpert Pro](references/bystronic-xpert-pro-technical-data.pdf), zo stĺpca **320/4300**, nie **320/4300 Extended**. Fotografie modelov 150 a 320 slúžia pre tvar a členenie okrytovania, nástrojov a príslušenstva.
+
+| Parameter | Štandard 320/4300 |
+| --- | --- |
+| Lisovacia sila / pracovná dĺžka | 3 200 kN / 4 300 mm |
+| Rozmery L × W × H | 5 260 × 2 000 × 3 170 mm |
+| Zdvih / otvorenie bez nástrojov | 250 / 640 mm |
+| Vzdialenosť medzi stojanmi / vyloženie | 3 750 / 400 mm |
+| Šírka stola | 74 mm |
+| Rozsah dorazu X / zdvih saní X | 1 050 / 600 mm |
+| Zdvih R / dráha Z | 250 / 2 900 mm |
+| Presnosť Y podľa technického listu | 0,004 mm |
+| Olej / hmotnosť | 600 l / 24,3 t |
+| Príkon ByTower / Servo Dynamic | 34 / 31 kW |
+
+Model má bočné C-rámy, tvarovaný čierny horný kryt, oranžový firemný výstupok a pás, segmentovaný horný nástroj a spodnú V-matricu so skutočným výrezom. Obsahuje upínacie prvky a stupnice, vodiace lišty, zadné dorazy X/R/Z, valčekové predné podpery, pomocnú podperu s mechom, bočné presklené kryty, zadné servisné dvere s lamelami, hydraulické valce a hadice, laserové hlavy, mobilný dotykový terminál a samostatný pedál. Neokótované detaily a príslušenstvo sú rekonštrukciou fotografií. Celková obálka s terminálom a pedálom presahuje rozmery hlavného rámu.
+
+Pohľad **Dorazy** odkryje zadné opláštenie; prepínač **Odkryť mechanizmus** funguje nezávisle od ochranných dverí. Skryté kryty nezachytávajú výber myšou. Celok, Čelo a Zadná časť obnovia opláštenie. Info okná pri jednotlivých sekciách obsahujú opis a obmedzenia; export stroja je v päte menu.
+
+Proces predstavuje jeden ohyb vo vzduchu. Zadáva sa materiál, hrúbka, dĺžka ohybu, hĺbka prírezu, zadné rameno X, vnútorný uhol a otvorenie V. Výpočet `F = 1,42 × Rm × L × t² / V / 1000` používa mm, MPa a výsledok v kN. Materiálové pevnosti (oceľ 450, nehrdzavejúca oceľ 700, hliník 250 MPa), polomer, odpruženie a rýchlosti sú **výučbové odhady**. Osadený nástroj má pri zdvihnutom barane 180 mm medzeru nad matricou; nejde o katalógové otvorenie bez nástrojov. Nie je implementovaná všeobecná analýza kolízií zložitých dielov ani viacnásobné ohyby.
+
+Baran sa priblíži, vytvorí ohyb, podrží zaťaženie a zdvihne sa s uvoľnením odpruženia. Priečny profil plechu zachováva rozvinutú dĺžku, hrúbku a polomer. Pause zachová rozpracovaný tvar; predčasné zdvihnutie ho neoznačí za dokončený ohyb. Nový plech sa vloží až pri stojacom a zdvihnutom barane. Kontroly blokujú otvorené kryty, prekážku v ochrannom poli, vypnutú hydrauliku, STOP, vybraný plech, prekročenú silu, nevhodnú matricu, príliš krátke rameno a prekročené vyloženie rámu pri širokom príreze. Pre tento plochý prírez musí byť doraz R v základnej polohe.
+
+Mobilné HMI a monitor v 3D zdieľajú jeden živý displej. Ide o výučbové ovládanie, nie implementáciu ByVision. Ručné ovládanie zahŕňa oba pedále, STOP, bočné kryty a monitor. Po zdvihnutí barana sa dá rovnaký plech odopnúť, otočiť, vrátiť a exportovať ako STL/STEP. Stroj má samostatný export OBJ/STL/STEP aktuálnej polohy a viditeľných dielov, bez plechu a podlahy; STEP je plošková CAD geometria bez parametrickej histórie.
+
+`tests/pressBrake.test.js` overuje vybraný stĺpec technického listu, silu a jej škálovanie, limity, ochranné blokovania, pause/resume, predčasný návrat, uhol po odpružení, rozvinutú dĺžku, kontakt nástroja, V-dutinu matrice, polohu dorazu a zachovanie vybraného plechu. Prehliadačové overenie pokrýva mobilné rozloženie, info okná, HMI, prehliadku plechu a všetky exporty. STEP stroja aj ohnutého plechu je overený načítaním cez OpenCascade a kontrolou BRep.
+
+[Model 320/4300](img/bystronic-xpert-pro-320.png) · [Nástroje a ohnutý plech](img/bystronic-bend.png)
 
 ## Spoločné ovládanie a overenie
 
