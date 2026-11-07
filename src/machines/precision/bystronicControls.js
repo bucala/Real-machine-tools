@@ -6,7 +6,7 @@ export function createBystronicControls({part,kit,M,tex}){
   const {group,box,cyl,rod,label}=kit;
   const profile=(p,name,points,width,mat,x=0)=>{
     const shape=new THREE.Shape(),vertices=points.map(([z,y])=>new THREE.Vector2(-z,y));
-    vertices.forEach((v,i)=>{const a=vertices[(i+vertices.length-1)%vertices.length],b=vertices[(i+1)%vertices.length],r=Math.min(.18,v.distanceTo(a)*.25,v.distanceTo(b)*.25),before=v.clone().add(a.clone().sub(v).normalize().multiplyScalar(r)),after=v.clone().add(b.clone().sub(v).normalize().multiplyScalar(r));if(i)shape.lineTo(before.x,before.y);else shape.moveTo(before.x,before.y);shape.quadraticCurveTo(v.x,v.y,after.x,after.y);});shape.closePath();
+    vertices.forEach((v,i)=>{const a=vertices[(i+vertices.length-1)%vertices.length],b=vertices[(i+1)%vertices.length],r=Math.min(.35,v.distanceTo(a)*.35,v.distanceTo(b)*.35),before=v.clone().add(a.clone().sub(v).normalize().multiplyScalar(r)),after=v.clone().add(b.clone().sub(v).normalize().multiplyScalar(r));if(i)shape.lineTo(before.x,before.y);else shape.moveTo(before.x,before.y);shape.quadraticCurveTo(v.x,v.y,after.x,after.y);});shape.closePath();
     const geo=new THREE.ExtrudeGeometry(shape,{depth:width,bevelEnabled:false});geo.translate(0,0,-width/2);geo.rotateY(Math.PI/2);
     const mesh=new THREE.Mesh(geo,mat);mesh.position.x=x;mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;p.add(mesh);return mesh;
   };
@@ -46,7 +46,7 @@ export function createBystronicControls({part,kit,M,tex}){
   // The operator face is tilted towards the user. The STOP mushroom is here,
   // surrounded by a yellow collar, rather than floating below the HMI screen.
   const pedal=part('pedal');pedal.position.set(12,0,14);
-  const stem=[[-.6,.35],[.45,.35],[-.35,5.8],[-.25,6.5],[.8,7.6],[-.6,10.05],[-1.2,9.75],[-1.7,8.9],[-.9,6.6],[-1.25,5.8]];
+  const stem=[[-.6,.35],[.45,.35],[-.35,5.8],[-.25,6.5],[1.6,7.4],[-.32,9.8],[-.75,9.9],[-1.1,9.45],[-.9,6.6],[-1.25,5.8]];
   // Separate bent side rails leave the centre open down to the foot enclosure.
   for(const x of [-.9,.9]){
     profile(pedal,'open-operator-side-rail',stem,.32,M.cab,x);
@@ -54,11 +54,11 @@ export function createBystronicControls({part,kit,M,tex}){
   }
   box(pedal,0,.65,.1,1.85,.16,.65,M.steelD);
   box(pedal,0,.38,.8,2.8,.32,2.7,M.anth);
-  const operatorFace=group('inclined-STOP-control-face',pedal);operatorFace.position.set(0,8.65,.5);operatorFace.rotation.x=-.45;
-  const faceShape=new THREE.Shape();faceShape.moveTo(-1.125,-1.525);faceShape.lineTo(1.125,-1.525);faceShape.lineTo(1.125,1.525);faceShape.lineTo(-1.125,1.525);faceShape.closePath();
-  const gripHole=new THREE.Path();gripHole.moveTo(-.78,-1.37);gripHole.lineTo(-.78,-.94);gripHole.lineTo(.78,-.94);gripHole.lineTo(.78,-1.37);gripHole.closePath();faceShape.holes.push(gripHole);
+  const operatorFace=group('inclined-STOP-control-face',pedal);operatorFace.position.set(0,8.65,.7);operatorFace.rotation.x=-.7;
+  const rounded=(x,y,w,h,r)=>{const s=new THREE.Shape();s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;};
+  const faceShape=rounded(-1.125,-1.64,2.25,3.165,.17),gripHole=rounded(-.83,-1.43,1.66,.58,.12);faceShape.holes.push(gripHole);
   const faceGeo=new THREE.ExtrudeGeometry(faceShape,{depth:.12,bevelEnabled:false});faceGeo.translate(0,0,-.06);const faceMesh=new THREE.Mesh(faceGeo,M.steelD);faceMesh.name='operator-face-with-open-hand-grip';operatorFace.add(faceMesh);
-  for(const x of [-1.14,1.14])box(operatorFace,x,0,.04,.08,3.2,.18,M.cab);
+  for(const x of [-1.14,1.14])rod(operatorFace,[x,-1.46,.04],[x,1.34,.04],.065,M.cab);
   const layout=[['hold',-.65,.93,'Ⅱ'],['acknowledge',0,.93,'ACK'],['reset',.65,.93,'NEW'],['startPanel',-.65,.35,'▼'],['retractPanel',.65,.35,'▲']];
   for(const [id,x,y,text] of layout)button(operatorFace,id,x,y,.09,text);
   cyl(operatorFace,0,-.35,.105,.29,.06,M.yellow,'z');
@@ -66,8 +66,8 @@ export function createBystronicControls({part,kit,M,tex}){
   cyl(stop,0,0,.015,.13,.12,M.dark,'z');cyl(stop,0,0,.12,.22,.12,M.red,'z');cyl(stop,0,0,.19,.19,.025,M.red,'z');controls.buttons.emergency=stop;
   label(stop,'↻',0,0,.207,.26,.18,{color:'#fff',background:'#f44d34',size:90});
   label(operatorFace,'STOP',0,-.82,.075,.48,.16,{color:'#fff',background:'#737e86',size:100});
-  for(const x of [-.82,.82])rod(operatorFace,[x,-1.4,.04],[x,-1.4,.3],.075,M.steel);
-  rod(operatorFace,[-.82,-1.4,.3],[.82,-1.4,.3],.1,M.steel);
+  for(const x of [-.82,.82])rod(operatorFace,[x,-1.52,.04],[x,-1.52,.3],.075,M.steel);
+  rod(operatorFace,[-.82,-1.52,.3],[.82,-1.52,.3],.1,M.steel);
   for(const x of [-1,1])for(const y of [-1.38,1.38])cyl(operatorFace,x,y,.09,.035,.04,M.steel,'z');
   // Two independent foot pads under a protective hood, with front access.
   for(const x of [-1.32,1.32])box(pedal,x,.84,1,.14,.84,2.4,M.anth);box(pedal,0,1.22,.7,2.8,.13,1.8,M.anth);
