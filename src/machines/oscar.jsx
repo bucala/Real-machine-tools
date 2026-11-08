@@ -949,7 +949,7 @@ export default function OscarSimulator({ onBack, params }) {
         </div>
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prevádzka', 'Operation')}</h2>
-          <div className="cnc-run">
+          <div className="cnc-run" data-running={String(!!tele.run)}>
             <button className="btn-run start" disabled={ui.unclamped} onClick={() => apiRef.current.start?.()}>
               ▶ {L('Štart cyklu', 'Cycle start')}
             </button>
@@ -999,6 +999,7 @@ export default function OscarSimulator({ onBack, params }) {
               [20, '×20'],
               [80, '×80'],
             ]}
+            shortcut="speed"
             onChange={(v) => set('speed', v)}
           />
           <fieldset disabled={ui.hmiLocked} className="hermle-hmi-position">

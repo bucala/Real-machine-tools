@@ -660,7 +660,7 @@ export default function BystronicSimulator({ onBack, params }) {
         </div>
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prevádzka', 'Operation')}</h2>
-          <div className="cnc-run">
+          <div className="cnc-run" data-running={String(!!tele.run)}>
             <button
               className="btn-run brake-start"
               disabled={ui.unclamped || !!setup.error}
@@ -718,6 +718,7 @@ export default function BystronicSimulator({ onBack, params }) {
               [4, '×4'],
               [10, '×10'],
             ]}
+            shortcut="speed"
             onChange={(v) => change('speed', v)}
           />
         </div>

@@ -791,7 +791,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
                 </p>
               </SectionInfo>
             </div>
-            <div className="cnc-run">
+            <div className="cnc-run" data-running={String(!!tele.run)}>
               <button type="button" className="btn-run start" onClick={start}>
                 ▶ {L('Štart cyklu', 'Cycle start')}
               </button>
@@ -838,6 +838,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
                   [20, '×20'],
                   [80, '×80'],
                 ]}
+                shortcut="speed"
                 onChange={(v) => set('speed', v)}
               />
               <SegRow

@@ -476,6 +476,7 @@ function LatheCore({ onBack, params, model, onModel }) {
                   [10, '10×'],
                   [50, '50×'],
                 ]}
+                shortcut="speed"
                 onChange={(v) => set('timeScale', v)}
               />
             </div>

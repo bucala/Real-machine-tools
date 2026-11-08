@@ -946,6 +946,7 @@ function HobberSimulator({ onBack, params }) {
                 [10, '10×'],
                 [50, '50×'],
               ]}
+              shortcut="speed"
               onChange={(v) => set('timeScale', v)}
             />
           </div>

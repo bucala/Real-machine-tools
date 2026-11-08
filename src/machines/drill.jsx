@@ -1151,6 +1151,7 @@ function DrillSimulator({ onBack, params }) {
                 [5, '5×'],
                 [20, '20×'],
               ]}
+              shortcut="speed"
               onChange={(v) => set('timeScale', v)}
             />
           </div>
