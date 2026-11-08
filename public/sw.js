@@ -1,7 +1,7 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
 // Pri inštalácii uloží menu a 3D jadro. Každý otvorený stroj sa uloží pri prvom otvorení; všetky stroje
 // naraz uloží správa {type: 'cache-all'} (tlačidlo v menu). Po novej verzii sa nezmenené súbory prenesú.
-const CACHE = 'rmt-b5d225133bc5';
+const CACHE = 'rmt-673a9a4a47dd';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -24,8 +24,8 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/index-ByLY2gY9.css",
-  "/assets/index-lQwYheac.js",
+  "/assets/index-AugA9E_E.js",
+  "/assets/index-DSV3cOkd.css",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
   "/assets/util-BIqoJFFx.js"
 ];
@@ -39,8 +39,8 @@ const ALL = [
   "/icon-512.png",
   "/icon-maskable-512.png",
   "/manifest.webmanifest",
+  "/assets/CncCore-C5RDNUFp.js",
   "/assets/CncCore-CKtQMyTm.css",
-  "/assets/CncCore-XiikxipG.js",
   "/assets/barlow-condensed-latin-600-normal-DepVgxBB.woff2",
   "/assets/barlow-condensed-latin-700-normal-v1xN8_Wq.woff2",
   "/assets/barlow-condensed-latin-ext-600-normal-18ESti3H.woff2",
@@ -53,57 +53,65 @@ const ALL = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/bender-Dk0KHv9G.js",
+  "/assets/bender-CnSpoATT.js",
   "/assets/benderMath-d1cNdKwu.js",
-  "/assets/bystronic-CNkpKe2u.js",
-  "/assets/bystronic-CNtSkLmt.css",
+  "/assets/bystronic-CdnOqepr.js",
+  "/assets/bystronic-D01xmsYH.css",
   "/assets/core3d-Blm2qdoL.js",
-  "/assets/cylgrind-BrfPc1jW.js",
-  "/assets/drill-yhud7ZEo.js",
-  "/assets/folder-eo8B0NmA.js",
-  "/assets/grinder-Cv_r5Id3.js",
-  "/assets/hermle-C0U0BbCX.js",
+  "/assets/cylgrind-CCrNZqm2.js",
+  "/assets/drill-cKWnvN-z.js",
+  "/assets/edmProcess-DoWeQLUh.js",
+  "/assets/folder-8VS4khn8.js",
+  "/assets/grinder-CVIKt4Vc.js",
+  "/assets/hermle-CXM_2X2Q.js",
   "/assets/hfMath-B0JgUNbA.js",
-  "/assets/hob-CveCTnxu.js",
-  "/assets/horiz-DgHrpqZy.js",
-  "/assets/index-ByLY2gY9.css",
-  "/assets/index-lQwYheac.js",
-  "/assets/lathe-4bbnFmr0.js",
+  "/assets/hob-DByzUpqJ.js",
+  "/assets/horiz-BuWhP3NG.js",
+  "/assets/index-AugA9E_E.js",
+  "/assets/index-DSV3cOkd.css",
+  "/assets/lathe-BNhYQOEM.js",
   "/assets/machineExport-BFVO8pCN.js",
   "/assets/machineExport.worker-Csk2pWCh.js",
-  "/assets/machineWorkInspect-EHmA44tm.js",
-  "/assets/mill-C2qVsqZr.js",
+  "/assets/machineWorkInspect-HluaLNej.js",
+  "/assets/mill-Dr35Il4e.js",
   "/assets/modelKit-BKD3in3Z.js",
-  "/assets/oscar-DQyaxepK.js",
-  "/assets/plate-DShB05Gp.js",
-  "/assets/press-6YMdVcJf.js",
-  "/assets/profiles-Cujqx7ur.js",
-  "/assets/profiles-K4q7Vx22.css",
-  "/assets/radial--kpe6siz.js",
-  "/assets/roeders-DjHtTLIH.js",
-  "/assets/saw-DKUL8W6h.js",
+  "/assets/modernTasks-Dyx9cFMj.js",
+  "/assets/oscar-Dsg-yv8v.js",
+  "/assets/plate-B7DX39yR.js",
+  "/assets/press-Ca0SXvAG.js",
+  "/assets/radial-BqSOaRtc.js",
+  "/assets/roeders-B3FTUjjS.js",
+  "/assets/saw-B-tWX6cf.js",
   "/assets/shaperMath-BfNySK0Q.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/shear-DFIXpmJO.js",
+  "/assets/shear-PF7QP-Ya.js",
   "/assets/shopMath-B3CAL8Sc.js",
-  "/assets/sketch-CAU7qFbN.js",
-  "/assets/slotter-DMpJqBoO.js",
+  "/assets/sketch-Bt7XimPP.js",
+  "/assets/slotter-B2Yc31Kp.js",
   "/assets/src-makANGAR.js",
-  "/assets/tools-B0vcbbls.js",
+  "/assets/toolPicker-DgPamHGF.js",
+  "/assets/toolPicker-K4q7Vx22.css",
+  "/assets/tools-By-aTATA.js",
   "/assets/util-BIqoJFFx.js",
-  "/assets/voxel-BpIlcVgH.js",
-  "/assets/weld-QlKZeXiS.js",
-  "/assets/workAreaWindow-BKO46YuZ.js",
-  "/assets/workAreaWindow-DSwhnhmE.css"
+  "/assets/voxel-4jXdE2SQ.js",
+  "/assets/weld-DUQT6vd-.js",
+  "/assets/workAreaWindow-BA6uDAbA.js",
+  "/assets/workAreaWindow-DKrtHLja.css"
 ];
-const FULL = '/__rmt-offline-all';                  // značka: používateľ si uložil všetky stroje
+const FULL = '/__rmt-offline-all'; // značka: používateľ si uložil všetky stroje
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(PRECACHE))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 const cacheAll = async (report) => {
-  const c = await caches.open(CACHE), missing = [];
+  const c = await caches.open(CACHE),
+    missing = [];
   for (const f of ALL) if (!(await c.match(f))) missing.push(f);
   let done = ALL.length - missing.length;
   report?.(done, ALL.length);
@@ -116,31 +124,40 @@ const cacheAll = async (report) => {
 };
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil((async () => {
-    const keys = (await caches.keys()).filter((k) => k.startsWith('rmt-') && k !== CACHE);
-    const cache = await caches.open(CACHE), wanted = new Set(ALL);
-    let full = false;
-    for (const k of keys) {
-      const old = await caches.open(k);
-      // hashované súbory, ktoré sa nezmenili, netreba sťahovať znova
-      for (const req of await old.keys()) {
-        const path = new URL(req.url).pathname;
-        if (path === FULL) full = true;
-        else if (path !== '/' && wanted.has(path) && !(await cache.match(req))) await cache.put(req, await old.match(req));
+  e.waitUntil(
+    (async () => {
+      const keys = (await caches.keys()).filter((k) => k.startsWith('rmt-') && k !== CACHE);
+      const cache = await caches.open(CACHE),
+        wanted = new Set(ALL);
+      let full = false;
+      for (const k of keys) {
+        const old = await caches.open(k);
+        // hashované súbory, ktoré sa nezmenili, netreba sťahovať znova
+        for (const req of await old.keys()) {
+          const path = new URL(req.url).pathname;
+          if (path === FULL) full = true;
+          else if (path !== '/' && wanted.has(path) && !(await cache.match(req)))
+            await cache.put(req, await old.match(req));
+        }
+        await caches.delete(k);
       }
-      await caches.delete(k);
-    }
-    await self.clients.claim();
-    if (full) cacheAll().catch(() => { /* bez siete – doplní sa pri ďalšej návšteve */ });
-  })());
+      await self.clients.claim();
+      if (full)
+        cacheAll().catch(() => {
+          /* bez siete – doplní sa pri ďalšej návšteve */
+        });
+    })(),
+  );
 });
 
 self.addEventListener('message', (e) => {
   if (e.data?.type !== 'cache-all') return;
   const reply = (msg) => e.source?.postMessage(msg);
-  e.waitUntil(cacheAll((done, total) => reply({ type: 'cache-all-progress', done, total }))
-    .then(() => reply({ type: 'cache-all-done', ok: true }))
-    .catch(() => reply({ type: 'cache-all-done', ok: false })));
+  e.waitUntil(
+    cacheAll((done, total) => reply({ type: 'cache-all-progress', done, total }))
+      .then(() => reply({ type: 'cache-all-done', ok: true }))
+      .catch(() => reply({ type: 'cache-all-done', ok: false })),
+  );
 });
 
 self.addEventListener('fetch', (e) => {
@@ -150,14 +167,31 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) return;
   // stránka: najprv sieť (nová verzia po nasadení), bez siete uložená kópia
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req)
-      .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('/', copy)); } return res; })
-      .catch(() => caches.match('/')));
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('/', copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match('/')),
+    );
     return;
   }
   // ostatné súbory: z vyrovnávacej pamäte, inak zo siete (hashované súbory sa uložia – otvorený stroj funguje offline)
-  e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-    if (res.ok && url.pathname.startsWith('/assets/')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
-    return res;
-  })));
+  e.respondWith(
+    caches.match(req).then(
+      (hit) =>
+        hit ||
+        fetch(req).then((res) => {
+          if (res.ok && url.pathname.startsWith('/assets/')) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        }),
+    ),
+  );
 });
