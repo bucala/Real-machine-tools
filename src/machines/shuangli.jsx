@@ -28,6 +28,7 @@ import { StepDownloadButton } from '../ui/tools';
 import { DeepDrillHmi, drawDeepHmi } from '../ui/deepDrillHmi';
 import '../ui/deepDrill.css';
 import { createStock } from './cnc/voxel';
+import { createStockMesh } from './cnc/stockMesh';
 import { createDeepDrillProcess, DEEP_BLANK } from './precision/deepDrillProcess';
 import { createShuangliModel } from './precision/shuangliModel';
 const parts = () =>
@@ -206,7 +207,6 @@ export default function ShuangliSimulator({ onBack }) {
     stockG.userData.stepJoin = true;
     model.stockMount.add(stockG);
     G.obrobok = stockG;
-    const chunks = new Map();
     let stock,
       process,
       gate = 1,
@@ -216,42 +216,15 @@ export default function ShuangliSimulator({ onBack }) {
       time = 0,
       teleTime = 0,
       saved = {};
-    const flush = () => {
-      for (const p of stock.takeDirty()) {
-        let me = chunks.get(p.id);
-        if (!p.idx.length) {
-          if (me) {
-            me.geometry.dispose();
-            stockG.remove(me);
-            chunks.delete(p.id);
-          }
-          continue;
-        }
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(p.pos, 3));
-        geo.setAttribute('normal', new THREE.BufferAttribute(p.nor, 3));
-        geo.setIndex(new THREE.BufferAttribute(p.idx, 1));
-        geo.computeBoundingSphere();
-        if (me) {
-          me.geometry.dispose();
-          me.geometry = geo;
-        } else {
-          me = new THREE.Mesh(geo, M.steel);
-          me.castShadow = true;
-          me.receiveShadow = true;
-          stockG.add(me);
-          chunks.set(p.id, me);
-        }
-      }
-    };
+    // obrobok: povrch po blokoch, do GPU zlúčený po 2 × 2 × 2 blokoch (cnc/stockMesh.js)
+    let stockMesh = null;
+    const flush = () => stockMesh.apply(stock.takeDirty());
+
     const reset = () => {
       if (c.unclamped) return;
-      for (const m of chunks.values()) {
-        m.geometry.dispose();
-        stockG.remove(m);
-      }
-      chunks.clear();
       stock = createStock(DEEP_BLANK);
+      if (stockMesh) stockMesh.reset(stock);
+      else stockMesh = createStockMesh({ group: stockG, material: M.steel, stock, castShadow: true });
       process = createDeepDrillProcess(stock);
       c.running = false;
       flush();
@@ -449,7 +422,7 @@ export default function ShuangliSimulator({ onBack }) {
       }
       if (render) renderer.render(scene, camera);
     };
-    const sceneOpt = optimizeMachine({ root, scene, renderer });
+    const sceneOpt = optimizeMachine({ root, scene, renderer, refs: { model, G }, controls: ctrl });
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000);

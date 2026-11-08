@@ -18,20 +18,33 @@ export const edmVdi = (I) => 20 * Math.log10(edmRa(I) / 0.1); // VDI 3400
 export const edmMrr = (e, I) => matOf(e).k * I; // mm³/min
 export const edmFeed = (e, I) => edmMrr(e, I) / edmArea(e); // mm/min do hĺbky
 export const edmRelWear = (e) => matOf(e).wear; // objem elektródy / objem obrobku
-export function validateEdmJob({ rows, electrode, current, gap, oilLevel, fixtureHeight = 0 }, stock) {
+// operácia môže mať vlastnú elektródu (tool 1 = electrode, 2 = electrode2) a prúd; medzera sa potom určí z prúdu
+export const rowElectrode = (job, r) => (r.tool === 2 ? job.electrode2 : job.electrode);
+export const rowCurrent = (job, r) => (r.current != null ? r.current : job.current);
+export const rowGap = (job, r) => (r.current != null ? edmGap(r.current) : job.gap);
+const validElectrode = (e) =>
+  e && ['box', 'round'].includes(e.shape) && [e.w, e.d, e.length].every((v) => within(v, [1, 200]));
+export function validateEdmJob(job, stock) {
+  const { rows, electrode, current, gap, oilLevel, fixtureHeight = 0 } = job;
   if (!Array.isArray(rows) || !rows.length || rows.length > 100)
     throw new Error(L('Zadaj 1–100 operácií.', 'Enter 1–100 operations.'));
   if (!within(current, [1, EX500.current])) throw new Error(L('Generátor: 1–60 A.', 'Generator: 1–60 A.'));
   if (!within(gap, [0.01, 0.3])) throw new Error(L('Medzera: 0,01–0,30 mm.', 'Gap: 0.01–0.30 mm.'));
-  if (
-    !electrode ||
-    !['box', 'round'].includes(electrode.shape) ||
-    ![electrode.w, electrode.d, electrode.length].every((v) => within(v, [1, 200]))
-  )
-    throw new Error(L('Neplatná elektróda.', 'Invalid electrode.'));
+  if (!validElectrode(electrode)) throw new Error(L('Neplatná elektróda.', 'Invalid electrode.'));
+  if (rows.some((r) => r.tool === 2) && !validElectrode(job.electrode2))
+    throw new Error(
+      L(
+        'Operácia používa elektródu E2, ktorá nie je zvolená.',
+        'An operation uses electrode E2, which is not selected.',
+      ),
+    );
   if (!within(oilLevel, [stock.max[2] + 40, EX500.tankHeight]))
     throw new Error(L('Dielektrikum musí byť ≥40 mm nad obrobkom.', 'Dielectric must cover the workpiece by ≥40 mm.'));
   for (const r of rows) {
+    const electrode = rowElectrode(job, r),
+      gap = rowGap(job, r);
+    if (r.current != null && !within(r.current, [1, EX500.current]))
+      throw new Error(L('Prúd operácie: 1–60 A.', 'Operation current: 1–60 A.'));
     if (r.feed != null && !within(r.feed, [0.001, 100])) throw new Error(L('Neplatný posuv.', 'Invalid feed.'));
     if (!within(r.x, EX500.X) || !within(r.y, EX500.Y))
       throw new Error(L('Poloha mimo dráh X/Y.', 'X/Y travel exceeded.'));
@@ -61,6 +74,8 @@ export function createEdmProcess(stock) {
     removed: 0,
     wear: 0,
     ra: 0,
+    tool: 1,
+    electrode: null,
     run: false,
     done: false,
     alarm: null,
@@ -78,6 +93,8 @@ export function createEdmProcess(stock) {
     if (!job) {
       job = structuredClone(config);
       S.phase = 'position';
+      S.tool = job.rows[0].tool || 1;
+      S.electrode = rowElectrode(job, job.rows[0]);
     }
     S.alarm = null;
     S.run = true;
@@ -90,6 +107,24 @@ export function createEdmProcess(stock) {
   const stop = (message) => {
     hold();
     S.alarm = message;
+  };
+  // podiel plochy čela (s medzerou), pod ktorým je ešte materiál – servo prechádza prázdnym priestorom rýchlo
+  // a rýchlosť hĺbenia = úber / plocha v zábere (dokončenie po hrubovaní neberie znova celú plochu)
+  const engaged = (e, gap, z) => {
+    const N = 16,
+      rx = e.w / 2 + gap,
+      ry = (e.shape === 'round' ? e.w : e.d) / 2 + gap;
+    let hit = 0,
+      tot = 0;
+    for (let i = 0; i < N; i++)
+      for (let j = 0; j < N; j++) {
+        const u = -1 + (2 * i + 1) / N,
+          v = -1 + (2 * j + 1) / N;
+        if (e.shape === 'round' && u * u + v * v > 1) continue;
+        tot++;
+        if (stock.sdfAt([S.x + u * rx, S.y + v * ry, z]) > 0) hit++;
+      }
+    return tot ? hit / tot : 0;
   };
   const advance = (dt, { door = false, oilLevel = 0, flushing = true, estop = false } = {}) => {
     S.sparking = false;
@@ -125,27 +160,42 @@ export function createEdmProcess(stock) {
           S.y = row.y;
           S.phase = 'burn';
         }
+      } else if (S.phase === 'change') {
+        // výmena elektródy v bezpečnej výške (obsluha alebo menič), ~15 s
+        S.changeT = (S.changeT || 0) + h;
+        if (S.changeT >= 15) {
+          S.changeT = 0;
+          S.phase = 'position';
+        }
       } else if (S.phase === 'burn') {
-        const speed = Math.min(edmFeed(job.electrode, job.current) / 60, row.feed == null ? Infinity : row.feed / 60); // mm/s podľa úberu a plochy
+        const e = rowElectrode(job, row),
+          I = rowCurrent(job, row),
+          gap = rowGap(job, row),
+          zFace = stock.max[2] - Math.max(0, S.depth) - gap - 0.02,
+          f = S.depth < 0 ? 0 : engaged(e, gap, zFace);
+        // mm/s: úber / plocha v zábere; bez materiálu pod čelom rýchly prísuv 2 mm/s
+        const burn = f > 0 ? edmFeed(e, I) / 60 / Math.max(f, 0.02) : 2,
+          speed = Math.min(2, burn, row.feed == null ? Infinity : row.feed / 60);
+        const before = stock.removed();
         S.depth = Math.min(row.depth, S.depth + h * (S.depth < 0 ? 4 : speed));
         if (S.depth > 0) {
-          const e = job.electrode,
-            z = stock.max[2] - S.depth,
-            rx = e.w / 2 + job.gap,
-            ry = e.d / 2 + job.gap;
-          if (e.shape === 'box')
-            stock.cutBox([S.x - rx, S.y - ry, z - job.gap], [S.x + rx, S.y + ry, stock.max[2] + 1]);
+          const z = stock.max[2] - S.depth,
+            rx = e.w / 2 + gap,
+            ry = (e.shape === 'round' ? e.w : e.d) / 2 + gap;
+          if (e.shape === 'box') stock.cutBox([S.x - rx, S.y - ry, z - gap], [S.x + rx, S.y + ry, stock.max[2] + 1]);
           else
-            stock.cut([S.x, S.y, z - job.gap], [0, 0, 1], {
+            stock.cut([S.x, S.y, z - gap], [0, 0, 1], {
               kind: 'mill',
-              d: e.w + 2 * job.gap,
+              d: e.w + 2 * gap,
               cr: 0,
               lc: stock.max[2] - stock.min[2] + 10,
             });
-          S.sparking = true;
+          S.sparking = f > 0;
           S.removed = stock.removed();
-          S.wear = (S.removed * edmRelWear(e)) / edmArea(e);
-          S.ra = edmRa(job.current);
+          S.wearBy = S.wearBy || {};
+          S.wearBy[S.tool] = (S.wearBy[S.tool] || 0) + ((S.removed - before) * edmRelWear(e)) / edmArea(e);
+          S.wear = S.wearBy[S.tool];
+          if (f > 0) S.ra = edmRa(I);
         }
         if (S.depth >= row.depth) S.phase = 'retract';
       } else if (S.phase === 'retract') {
@@ -158,7 +208,12 @@ export function createEdmProcess(stock) {
             S.phase = 'done';
             S.row = job.rows.length - 1;
             S.line = job.ncCommands?.endLine || row.line || null;
-          } else S.phase = 'position';
+          } else {
+            const tool = job.rows[S.row].tool || 1;
+            S.phase = tool !== S.tool ? 'change' : 'position';
+            S.tool = tool;
+            S.electrode = rowElectrode(job, job.rows[S.row]);
+          }
         }
       }
     }

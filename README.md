@@ -121,6 +121,8 @@ M30
 
 Výučbový model generátora: úber je úmerný prúdu (meď ≈ 7, grafit ≈ 10 mm³/(A·min)), rýchlosť hĺbenia je úber delený plochou čela elektródy, takže veľká elektróda hĺbi pomalšie. Prúd určuje aj výbojovú medzeru (bočný a čelný presah dutiny) a drsnosť dna Ra / VDI 3400; panel ich zobrazuje pri nastavení prúdu. Koeficienty sú orientačné tabuľkové hodnoty, nie údaje OSCARMAX.
 
+Operácia si môže zvoliť elektródu **E1** (hrubovacia) alebo **E2** (dokončovacia) a vlastný prúd; pri zmene elektródy sa vloží výmena (~15 s). Servo prechádza prázdnym priestorom rýchlo a rýchlosť hĺbenia počíta z plochy čela, ktorá je v zábere – dokončenie po hrubovaní tak neodoberá znova celú hĺbku.
+
 Iskrenie schematicky zvýrazňuje aktívnu výbojovú zónu. Je viazané na prebiehajúce hĺbenie a vypne sa pri holde, STOP, otvorení nádrže alebo strate výplachu; dá sa vypnúť aj samostatne. Úberová rýchlosť, opotrebenie a svetelný efekt sú výučbové odhady.
 
 ### Bystronic: ohýbanie plechu
@@ -143,7 +145,7 @@ Konvenčné aj moderné stroje ponúkajú úlohy s kótovaným náčrtom, priebe
 | Stroj | Úlohy |
 | --- | --- |
 | Hermle C 32 / C 42, Röders RXU | kapsa 40 × 30 × 5 ±0,1 mm (doplniť program), oprava chybného zápichu G0, 3+2 šikmá plocha 30° (G68.2) |
-| OSCARMAX EX 500 | dutina 20,3 × 15,3 × 6,00 mm (prúd podľa medzery, hĺbka zmenšená o čelnú medzeru), dokončenie Ra ≤ 1,6 µm |
+| OSCARMAX EX 500 | dutina 20,3 × 15,3 × 6,00 mm (prúd podľa medzery, hĺbka zmenšená o čelnú medzeru), dokončenie Ra ≤ 1,6 µm, hrubovanie E1 a dokončenie E2 |
 | Bystronic Xpert Pro 320 | uholník 90° (V = 6 – 10 × t), ohyb 6 mm × 3 m do 50 % sily lisu |
 
 Rozmery CNC a EDM obrobku sa merajú priamo z voxelového poľa vzdialeností (`src/machines/cnc/measure.js`).
@@ -216,7 +218,11 @@ npm run check
 
 Po zmene zdrojov preto najprv zostav aplikáciu a zahrň nový `public/` do commitu. Testy Vitest pokrývajú výpočty strojov, NC, úber materiálu, kolízie a blokovania, knižnice, exporty aj vybrané geometrické vzťahy. Zmeny scény a HMI treba overiť aj v prehliadači na počítači a v mobilnom rozložení; porovnať snímky a vyskúšať reálny proces, nielen načítanie stránky.
 
-Na slabšom hardvéri scéna priebežne znižuje kvalitu vykresľovania. Diagnostické parametre `?debug` a `?hq` sú určené na kontrolu scény; `?hq` vypne automatické znižovanie kvality. Pokles výkonu pri split-screen ovplyvňuje počet vykreslených snímok.
+Na slabšom hardvéri scéna priebežne znižuje kvalitu vykresľovania. Diagnostické parametre `?debug` a `?hq` sú určené na kontrolu scény; `?hq` vypne automatické znižovanie kvality, `?noopt` vypne zlučovanie sietí moderných strojov (porovnanie vzhľadu a výkonu).
+
+### Test výkonu na školskom počítači
+
+V ľubovoľnom stroji otvor Pomocník „i“ → **Meranie výkonu (FPS)** alebo pridaj do adresy `?perf`, napr. `https://real-machine-tools.marcel-bucala.workers.dev/?perf#hermle`. Panel ukazuje živé FPS, počet vykreslení a trojuholníkov; **Spustiť test (12 s)** otáča kamerou ako pri ťahaní myšou a vypíše priemerné a najnižšie FPS, 95. percentil času snímku, GPU a prehliadač. **Kopírovať výsledok** ho vloží do schránky – stačí ho poslať. Orientačne: nad 45 FPS plynulé, 25 – 45 použiteľné, pod 25 trhané. Pokles výkonu pri split-screen ovplyvňuje počet vykreslených snímok.
 
 ## Štruktúra repozitára
 

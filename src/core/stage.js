@@ -8,6 +8,17 @@ THREE.ColorManagement.enabled = false;
 const LIGHT_K = Math.PI;
 import { clamp } from './util';
 
+// práve zobrazená scéna – pre meranie výkonu (ui/perfOverlay.jsx číta globalThis.__rmtStage, aby menu
+// nemuselo načítať three.js)
+const activeStage = {
+  get current() {
+    return globalThis.__rmtStage || null;
+  },
+  set current(v) {
+    globalThis.__rmtStage = v;
+  },
+};
+
 // ---------- ovládanie kamery ----------
 function createOrbit(camera, dom, onUser, enabled, { maxDistance = 50, maxTargetY = 16 } = {}) {
   dom.style.touchAction = 'none';
@@ -312,6 +323,7 @@ function createStage(mount, { far = 200, floorSize = 140, gridSize = 80, fogNear
     forceNext = false;
     rawRender(s, c);
     drawCount++;
+    last = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, at: now };
     adapt(active && prevActive ? gap : -1);
     prevActive = active;
   };
@@ -357,7 +369,8 @@ function createStage(mount, { far = 200, floorSize = 140, gridSize = 80, fogNear
     if (slowMs > 3000) degrade();
   }
   let drawCount = 0;
-  const stats = () => ({ draws: drawCount, quality });
+  let last = { calls: 0, triangles: 0, at: 0 };
+  const stats = () => ({ draws: drawCount, quality, ...last });
   // snímka obrazovky: vykreslí sa hneď a obsah plátna sa prečíta v tej istej úlohe
   const snapshot = (cb) => {
     scene.updateMatrixWorld();
@@ -378,6 +391,7 @@ function createStage(mount, { far = 200, floorSize = 140, gridSize = 80, fogNear
     });
     envRT.dispose();
     pmrem.dispose();
+    if (activeStage.current && activeStage.current.renderer === renderer) activeStage.current = null;
     renderer.dispose();
     try {
       renderer.forceContextLoss();
@@ -391,6 +405,7 @@ function createStage(mount, { far = 200, floorSize = 140, gridSize = 80, fogNear
   } catch (err) {
     /* ignorované */
   }
+  activeStage.current = { renderer, scene, camera, dom: renderer.domElement, stats };
   return { renderer, scene, camera, dispose, stats, snapshot };
 }
 

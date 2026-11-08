@@ -4,6 +4,7 @@ import { L, PrefsCtx } from '../core/i18n';
 import { logNear } from '../core/util';
 import { MachineDownload } from './machineDownload';
 import { SectionInfo } from './sectionInfo';
+import { PerfOverlay } from './perfOverlay';
 
 // ---------- spoločné prvky rozhrania ----------
 // telemetria pre panel: nový stav sa nastaví len pri skutočnej zmene – stojaci stroj panel neprekresľuje
@@ -288,7 +289,7 @@ function HelpRows({ rows }) {
     </dl>
   );
 }
-function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, workLabels }) {
+function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, workLabels, onPerf }) {
   useEffect(() => {
     const key = (e) => {
       if (e.key === 'Escape') onClose();
@@ -305,6 +306,11 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
           ×
         </button>
       </div>
+      {onPerf && (
+        <button type="button" className="btn mb-2" onClick={onPerf}>
+          {L('Meranie výkonu (FPS)', 'Performance test (FPS)')}
+        </button>
+      )}
       <h3>{L('Ovládanie kamery', 'Camera control')}</h3>
       {cam ? (
         <ul>
@@ -367,6 +373,13 @@ function SceneView({
   const wrapRef = useRef(null);
   const [narrow, setNarrow] = useState(false);
   const [more, setMore] = useState(false);
+  const [perf, setPerf] = useState(() => {
+    try {
+      return /[?&]perf\b/.test(window.location.search);
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
     const el = wrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
@@ -426,6 +439,7 @@ function SceneView({
       </div>
       {overlay}
       {ui.manual && <div className="manual-frame" />}
+      {perf && <PerfOverlay onClose={() => setPerf(false)} />}
       <div ref={tipRef} className="ctl-tip" />
       <div className="absolute left-3 top-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
         <div className="flex flex-col items-start gap-2" style={{ minWidth: 0 }}>
@@ -471,6 +485,10 @@ function SceneView({
               tips={tips}
               canUnclamp={canUnclamp}
               workLabels={workLabels}
+              onPerf={() => {
+                setPerf(true);
+                setHelp(false);
+              }}
             />
           )}
         </div>

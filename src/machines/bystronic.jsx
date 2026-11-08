@@ -485,7 +485,7 @@ export default function BystronicSimulator({ onBack, params }) {
       if (render) renderer.render(scene, camera);
     };
     tick(0);
-    const sceneOpt = optimizeMachine({ root, scene, renderer });
+    const sceneOpt = optimizeMachine({ root, scene, renderer, refs: { model, G }, controls: ctrl });
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000);
