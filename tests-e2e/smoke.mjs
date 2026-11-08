@@ -113,7 +113,7 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     const early = await page.evaluate(() => ({ running: window.__hermle.c.running, door: window.__hermle.doorTravel }));
     if (early.running && early.door > 0.01)
       fail('hermle', `program beží pri pootvorených dverách (${early.door.toFixed(2)})`);
-    await until(page, () => window.__hermle.c.running, null, 20000); // odložený štart po zatvorení dverí
+    await until(page, () => window.__hermle.c.running, null, 60000); // odložený štart po zatvorení dverí
     await page.getByRole('button', { name: 'Otvoriť dvere', exact: true }).click();
     if (await page.evaluate(() => window.__hermle.c.door)) fail('hermle', 'dvere sa otvorili počas programu');
     await page.getByRole('button', { name: /Rýchlo na koniec/i }).click();

@@ -920,7 +920,12 @@ export function createCncScene({
       c.manual = false;
     }
     if (manualDoor !== null) doorK = manualDoor;
-    else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
+    else {
+      // dvere dobiehajú plynulo a posledné 2 % dosadnú naraz (zámok dverí reaguje na úplné zatvorenie)
+      const target = c.door ? 1 : 0;
+      doorK += (target - doorK) * Math.min(1, dt * 4);
+      if (Math.abs(target - doorK) < 0.02) doorK = target;
+    }
     if (pendingStart && !c.door && doorK <= 0.01 && apiRef.current.start() === 'ok') ctrl.push('running', true);
     wi.update(dt);
     clampPins.forEach((pin) => {
