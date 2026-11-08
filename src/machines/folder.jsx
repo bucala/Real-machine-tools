@@ -150,7 +150,7 @@ function FolderSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, handwheel, rod } = makeKit(M);
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Ohýbačka plechu' };
+    apiRef.current.machineModel = { root, name: L('Ohýbačka plechu', 'Sheet metal folder') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

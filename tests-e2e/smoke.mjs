@@ -26,8 +26,13 @@ const TYPES = {
 };
 // identifikátory strojov priamo z App.jsx – nový stroj sa do testu dostane automaticky
 const MACHINES = [
-  ...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{ ?id: ?'([a-z]+)'/g),
+  ...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{\s*id:\s*'([a-z]+)'/g),
 ].map((m) => m[1]);
+// poistka: po preformátovaní App.jsx výraz raz nenašiel žiadny stroj a test „všetky stroje“ prešiel naprázdno
+if (MACHINES.length < 15) {
+  console.error(`Test nenašiel stroje v App.jsx (${MACHINES.length}) – skontroluj regulárny výraz.`);
+  process.exit(1);
+}
 
 const server = http.createServer(async (req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);

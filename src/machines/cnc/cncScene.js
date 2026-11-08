@@ -620,7 +620,7 @@ export function createCncScene({
         type: 'button',
         still: true,
         tooltip: false,
-        label: L(d.label, 'Service door'),
+        label: L(d.label, d.labelEn || 'Service door'),
         guard: doorFree,
         action: () => {
           d.open = !d.open;

@@ -240,7 +240,7 @@ function RadialSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, handwheel } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Radiálna vŕtačka' };
+    apiRef.current.machineModel = { root, name: L('Radiálna vŕtačka', 'Radial drill') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

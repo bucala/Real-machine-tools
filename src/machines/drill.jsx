@@ -223,7 +223,7 @@ function DrillSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, crank, face } = makeKit(M);
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Stĺpová vŕtačka' };
+    apiRef.current.machineModel = { root, name: L('Stĺpová vŕtačka', 'Pillar drill') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

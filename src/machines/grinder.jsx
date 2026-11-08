@@ -207,7 +207,7 @@ function GrinderSimulator({ onBack, params }) {
     const { add, box, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel, orient } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Rovinná brúska' };
+    apiRef.current.machineModel = { root, name: L('Rovinná brúska', 'Surface grinder') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

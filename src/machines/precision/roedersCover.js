@@ -276,7 +276,13 @@ export function createRoedersCover({ cab, M, group, box, cyl, rod, label, bolts,
   rod(side, [3.0, 13, 0.32], [3.0, 15, 0.32], 0.075, M.black);
   for (const y of [13, 15]) rod(side, [3, y, 0.12], [3, y, 0.32], 0.065, M.steelD);
   label(side, 'CAUTION', 7.7, 9.0, 0.17, 2.2, 0.35, { size: 100, background: '#e6e8ea' });
-  const door = { hinge, label: 'Ľavé dvierka pracovného priestoru', open: false, angle: 0 };
+  const door = {
+    hinge,
+    label: 'Ľavé dvierka pracovného priestoru',
+    labelEn: 'Left work-area door',
+    open: false,
+    angle: 0,
+  };
   return {
     serviceDoors: [door],
     serviceOpen: () => door.open || Math.abs(door.angle) > 0.01,

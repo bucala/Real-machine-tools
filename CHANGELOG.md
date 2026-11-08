@@ -6,6 +6,16 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
 ## 8. 11. 2026
 
+- Sprievodca krok za krokom pre sústruh, frézku, vŕtačku, zváranie MMA, Hermle, Röders, OSCARMAX a Bystronic:
+  zvýraznený diel v scéne a ovládač v paneli, krok sa splní podľa stavu stroja.
+- Dotykové HMI Hermle (TNC 640) a Röders (RMS6): záložky stránok, posuvníky rýchlosti simulácie a korekcie posuvu
+  na displeji, grafy zaťaženia vretena a úberu.
+- Jednotné klávesové skratky: medzerník štart / stop, 1 – 9 pohľady, + / − zrýchlenie, L názvy častí, I Pomocník.
+- Rozpracovaná práca na moderných strojoch (program, nastavenie, obrobok) sa uloží v prehliadači a ponúkne
+  „Pokračovať“.
+- Balík Hermle 129 → 16 kB (kolíska sa načíta zvlášť), sústruh, frézka a zváranie rozdelené na panel, scénu a dáta.
+- Test v prehliadači znova otvára všetky stroje (od preformátovania kódu ich nenachádzal), nové postupy na
+  sústruhu, frézke a pri zváraní; test, že slovenské texty majú anglický ekvivalent.
 - OSCARMAX: živé dotykové HMI – stránky MACHINE, PROGRAM, TOOL, GENERATOR, MONITOR a HELP (prúd generátora,
   dielektrikum a výplach, softvérové tlačidlá cyklu, graf hĺbky a úberu, kontrola podmienok štartu); posuvník
   rýchlosti simulácie je v stavovom riadku displeja, ovládanie aj klávesmi 1 – 6 a šípkami; núdzový STOP okrúhly.

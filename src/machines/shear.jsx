@@ -206,7 +206,7 @@ function ShearSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, hitProxy, handwheel } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Tabuľové nožnice' };
+    apiRef.current.machineModel = { root, name: L('Tabuľové nožnice', 'Guillotine shear') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

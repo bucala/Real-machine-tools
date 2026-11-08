@@ -59,7 +59,10 @@ export function createWeldScene({ MIG, apiRef, ctl, flashRef, glassRef, layerRef
   const { add, box, cylY, cylZ, hitProxy, face } = kit;
   const root = new THREE.Group();
   scene.add(root);
-  apiRef.current.machineModel = { root, name: MIG ? 'Fronius TPS 450 MIG MAG' : 'Zváracie pracovisko MMA' };
+  apiRef.current.machineModel = {
+    root,
+    name: MIG ? 'Fronius TPS 450 MIG MAG' : L('Zváracie pracovisko MMA', 'MMA welding station'),
+  };
   const G = {};
   const grp = (k, parent = root) => {
     const g = new THREE.Group();

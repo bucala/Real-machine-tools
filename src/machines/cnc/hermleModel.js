@@ -742,7 +742,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
   });
   // Thin hinged leaves in real openings. Local +Z is the outside of each wall.
   const serviceDoors = [];
-  const serviceDoor = (parent, { name, label, x, y = 1.5, z, width, height, side = 1 }) => {
+  const serviceDoor = (parent, { name, label, labelEn, x, y = 1.5, z, width, height, side = 1 }) => {
     const hinge = new THREE.Group();
     hinge.name = name;
     hinge.position.set(x, y, z);
@@ -751,7 +751,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
     for (const yy of [0.8, height - 0.8]) box(hinge, -0.09, 0.09, yy, yy + 0.35, -0.02, 0.12, M.steelD);
     const hx = side * (width - 0.35);
     box(hinge, hx - 0.07, hx + 0.07, height * 0.5 - 0.35, height * 0.5 + 0.35, 0.02, 0.15, M.black);
-    const d = { hinge, label, side, width, height, open: false, angle: 0 };
+    const d = { hinge, label, labelEn, side, width, height, open: false, angle: 0 };
     serviceDoors.push(d);
     return d;
   };
@@ -859,6 +859,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
       const d = serviceDoor(wall, {
         name: `service-${sign < 0 ? 'left' : 'right'}-${side}`,
         label: sign < 0 ? 'Ľavé servisné dvere' : 'Pravé servisné dvere',
+        labelEn: sign < 0 ? 'Left service door' : 'Right service door',
         x: centreX + side * (span / 2 - 0.06),
         y: 7.44,
         z: 0.01,
@@ -1330,6 +1331,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
     const d = serviceDoor(rearFrame, {
       name: `rear-service-${sign}`,
       label: 'Zadné servisné dvere',
+      labelEn: 'Rear service door',
       x: sign * (rearWidth - 0.03),
       y: 1.5,
       z: 0,

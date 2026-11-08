@@ -116,15 +116,23 @@ export function PerfOverlay({ onClose }) {
     const r = result,
       c = stage()?.renderer.domElement;
     return [
-      `Real machine tools – test výkonu (${new Date().toLocaleString()})`,
-      `Stroj: ${window.location.hash.replace('#', '') || 'menu'}${/[?&]noopt\b/.test(window.location.search) ? ' (bez optimalizácie)' : ''}`,
+      `Real machine tools – ${L('test výkonu', 'performance test')} (${new Date().toLocaleString()})`,
+      `${L('Stroj', 'Machine')}: ${window.location.hash.replace('#', '') || 'menu'}${/[?&]noopt\b/.test(window.location.search) ? L(' (bez optimalizácie)', ' (no optimisation)') : ''}`,
       `GPU: ${gpuName()}`,
-      `Prehliadač: ${navigator.userAgent}`,
-      `Plátno: ${c ? `${c.width} × ${c.height}` : '?'} px, devicePixelRatio ${window.devicePixelRatio}`,
+      `${L('Prehliadač', 'Browser')}: ${navigator.userAgent}`,
+      `${L('Plátno', 'Canvas')}: ${c ? `${c.width} × ${c.height}` : '?'} px, devicePixelRatio ${window.devicePixelRatio}`,
       r
-        ? `FPS priemer ${r.fps.toFixed(1)} · min ${r.minFps.toFixed(1)} · 95 % snímok do ${r.p95.toFixed(1)} ms · ${r.frames} snímok`
+        ? L(
+            `FPS priemer ${r.fps.toFixed(1)} · min ${r.minFps.toFixed(1)} · 95 % snímok do ${r.p95.toFixed(1)} ms · ${r.frames} snímok`,
+            `FPS average ${r.fps.toFixed(1)} · min ${r.minFps.toFixed(1)} · 95 % of frames within ${r.p95.toFixed(1)} ms · ${r.frames} frames`,
+          )
         : '',
-      r ? `Vykreslenia (draw calls) ${r.calls} · trojuholníky ${r.tris} · úroveň zníženia kvality ${r.quality}` : '',
+      r
+        ? L(
+            `Vykreslenia (draw calls) ${r.calls} · trojuholníky ${r.tris} · úroveň zníženia kvality ${r.quality}`,
+            `Draw calls ${r.calls} · triangles ${r.tris} · quality reduction level ${r.quality}`,
+          )
+        : '',
     ]
       .filter(Boolean)
       .join('\n');

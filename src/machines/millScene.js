@@ -59,7 +59,7 @@ export function createMillScene({ apiRef, ctl, layerRef, mountRef, setTele, setU
   const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, detents, handwheel, crank, face } = kit;
   const root = new THREE.Group();
   scene.add(root);
-  apiRef.current.machineModel = { root, name: 'Frézka' };
+  apiRef.current.machineModel = { root, name: L('Frézka', 'Milling machine') };
   const G = {};
   const grp = (k, parent = root) => {
     const g = new THREE.Group();

@@ -524,6 +524,7 @@ export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
     {
       hinge: coolerDoor,
       label: 'Servisné dvere dochladzovača',
+      labelEn: 'Recooler service door',
       side: 1,
       width: 7.1,
       height: 15.3,

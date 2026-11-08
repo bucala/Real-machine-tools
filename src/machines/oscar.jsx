@@ -1139,7 +1139,7 @@ export default function OscarSimulator({ onBack, params }) {
                     />
                   </label>
                 </div>
-                <SectionInfo title="G-kód / ISO">
+                <SectionInfo title={L('G-kód / ISO', 'G-code / ISO')}>
                   <p>
                     G0 / G1 · G21 · G90 / G91 · G54 · G94 · F (mm/min) · M3/M5 · M8/M9 · M2/M30.{' '}
                     {L(

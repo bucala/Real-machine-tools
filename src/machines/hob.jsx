@@ -187,7 +187,7 @@ function HobberSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, handwheel } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Odvaľovacia frézka' };
+    apiRef.current.machineModel = { root, name: L('Odvaľovacia frézka', 'Gear hobbing machine') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();
