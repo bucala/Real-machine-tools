@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
 import { createBystronicControls } from './bystronicControls';
-import { XPERT320, OPEN_TIP, sheetSection, supportDepth } from './pressBrakeProcess';
+import { XPERT320, OPEN_TIP, profileSection, supportDepth } from './pressBrakeProcess';
 
 export const BRAKE_DIE_TOP = 11;
 // Millimetres from the supplied 320/4300 data sheet, converted at 1 unit = 100 mm.
@@ -368,12 +368,14 @@ export function createBystronicModel({ root, G, M, tex }) {
   stock.name = 'bent-sheet';
   stock.userData.stepJoin = true;
   let sheetKey;
-  const rebuildSheet = (c, beta) => {
-    const key = [c.length, c.depth, c.flange, c.thickness, c.v, beta.toFixed(5)].join(':');
+  const rebuildSheet = (c, beta, prog) => {
+    const key = [c.length, c.depth, c.flange, c.thickness, c.v, beta.toFixed(5), prog ? JSON.stringify(prog) : ''].join(
+      ':',
+    );
     if (key === sheetKey) return;
     sheetKey = key;
     clear(stock);
-    const points = sheetSection(c, beta),
+    const points = profileSection(c, beta, prog),
       t = c.thickness / 2,
       poly = [
         ...points.map((p) => [-p.z + t * Math.sin(p.t), p.y + t * Math.cos(p.t)]),
@@ -408,7 +410,7 @@ export function createBystronicModel({ root, G, M, tex }) {
     guardPivots,
     light,
     cutawayParts,
-    update({ S, c, guardAngle }) {
+    update({ S, c, guardAngle, prog = null }) {
       cutawayParts.forEach((o) => {
         o.visible = !c.cutaway;
       });
@@ -450,7 +452,7 @@ export function createBystronicModel({ root, G, M, tex }) {
       light.visible = c.light;
       lightMat.emissiveIntensity = c.light ? 1.4 : 0;
       if (!c.unclamped) {
-        rebuildSheet(c, S.beta);
+        rebuildSheet(c, S.beta, prog);
         stock.position.set(0, BRAKE_DIE_TOP + (c.thickness / 2 - supportDepth(c, S.beta)) * 0.01, 2);
       }
       consolePivot.rotation.y = (c.hmiAngle * Math.PI) / 180;

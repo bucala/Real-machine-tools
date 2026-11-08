@@ -6,6 +6,11 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
 ## 8. 11. 2026
 
+- Zložité dlhé programy pre moderné stroje: Hermle – príruba s kupolou (8 nástrojov, 3+2 aj simultánne 5-osé
+  s TCP, ~2 800 blokov), Röders – forma s voľnou plochou (HSC rastre, ~5 200 blokov), OSCARMAX – vložka formy
+  3 × 3 (27 hĺbení, E1 + E2, G-kód s T1/T2 M6 a prúdom S), Bystronic – program ohybov C-profilu s lemami
+  (4 ohyby s otáčaním dielu, hotové ohyby zostávajú na plechu).
+- HMI cez celé okno na telefóne: bez prázdnych pásov okolo displeja, celé popisy korekcií na termináli Röders.
 - Sprievodca krok za krokom pre sústruh, frézku, vŕtačku, zváranie MMA, Hermle, Röders, OSCARMAX a Bystronic:
   zvýraznený diel v scéne a ovládač v paneli, krok sa splní podľa stavu stroja.
 - Dotykové HMI Hermle (TNC 640) a Röders (RMS6): záložky stránok, posuvníky rýchlosti simulácie a korekcie posuvu

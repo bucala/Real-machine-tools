@@ -172,3 +172,38 @@ describe('Xpert Pro 320/4300 press brake', () => {
     expect(ray.intersectObject(m.operatorFace, true)).toHaveLength(0);
   });
 });
+
+describe('program ohybov', () => {
+  it('prierez bez hotových ohybov sa zhoduje s jedným ohybom', async () => {
+    const { profileSection, sheetSection } = await import('../src/machines/precision/pressBrakeProcess.js');
+    const c = { material: 'steel', thickness: 3, length: 1500, depth: 360, flange: 25, v: 24, angle: 90 };
+    const a = sheetSection(c, 0.7),
+      b = profileSection(c, 0.7, { bends: [], cur: 25, side: 'A' });
+    expect(b.length).toBe(a.length);
+    b.forEach((p, i) => {
+      expect(p.z).toBeCloseTo(a[i].z, 6);
+      expect(p.y).toBeCloseTo(a[i].y, 6);
+    });
+  });
+  it('C-profil: štyri ohyby riadi ovládanie lisu a hotové ohyby zostanú v priereze', async () => {
+    const { createBrakeControl } = await import('../src/machines/precision/brakeControl.js');
+    const { profileSection } = await import('../src/machines/precision/pressBrakeProcess.js');
+    const c = { hydraulic: true, estop: false, guardOpen: false, obstructed: false, unclamped: false, r: 0, speed: 1 };
+    const ctl = createBrakeControl({ c });
+    expect(ctl.loadProgram('cprofil')).toBe(true);
+    for (let i = 0; i < 4; i++) {
+      expect(ctl.action('start')).toBe(true);
+      for (let k = 0; k < 2000 && !ctl.process.S.done; k++) ctl.advance(0.05);
+      expect(ctl.process.S.complete).toBe(true);
+      expect(ctl.snapshot().program.index).toBe(i);
+      expect(c.flange).toBe(i < 2 ? 25 : 95);
+    }
+    expect(ctl.action('start')).toBe(false); // program je dokončený
+    const prog = ctl.profile();
+    expect(prog.bends).toHaveLength(3);
+    const pts = profileSection(c, ctl.process.S.beta, prog);
+    // oba konce (lemy) sú nad matricou a smerujú k sebe – uzavretý C-profil
+    expect(pts[0].y).toBeGreaterThan(50);
+    expect(pts.at(-1).y).toBeGreaterThan(50);
+  });
+});
