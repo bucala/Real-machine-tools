@@ -305,45 +305,55 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       const sideRows=[[[sign*bodyHalf,7.4,rear],[sign*bodyHalf,7.4,front]],[[sign*(bodyHalf-1.8),4.65,rear],[sign*(bodyHalf-1.8),4.65,front-2.2]],[[sign*(bodyHalf-1.8),4.45,rear],[sign*(bodyHalf-1.8),4.45,front-2.2]]];
       if(sign>0)sideRows.forEach(row=>row.reverse());
       const sideFold=sheet(cabS,sideRows,[-sign*.14,0,0]);sideFold.name=sign<0?'left-side-lower-fold':'right-side-lower-fold';
-      if(sign>0)box(wall,-sideLength/2,sideLength/2,19.4,P.roof,-.22,0,M.cab);
+      if(sign>0){const a=sign*((front+rear)/2-rear),b=sign*((front+rear)/2-.4);box(wall,a,b,19.4,P.roof,-.22,0,M.cab);}
       else box(wall,-sideLength/2,sideLength/2,P.roof-.15,P.roof,-.22,0,M.cab);
       // Service access is behind the work area; the front flank stays fixed
       // for the heat exchanger and HMI. No leaf sweeps through those fittings.
       const endZ=.4,midZ=(front+rear)/2,centreX=sign*(midZ-(rear+endZ)/2),span=endZ-rear,width=span/2-.12;
+      let frontServiceLeaf;
       for(const side of [-1,1]){
         const d=serviceDoor(wall,{name:`service-${sign<0?'left':'right'}-${side}`,label:sign<0?'Ľavé servisné dvere':'Pravé servisné dvere',x:centreX+side*(span/2-.06),y:7.44,z:.01,width,height:sign<0?P.roof-7.64:11.9,side:-side});
+        if(side===-sign)frontServiceLeaf=d.hinge;
         if(sign<0){
           box(d.hinge,0,-side*width,11.92,11.96,0,.012,M.steelD);
           if(side<0){
             // Tall folded cooling cover on the rear left service leaf.
             // The annotated photo shows a smooth recessed face, not a flat wall.
-            const cover=new THREE.Group();cover.name='left-service-cooling-cover';cover.position.set(width/2,.28,.2);d.hinge.add(cover);
-            profile(cover,[[-2.5,.3],[-2.2,0],[2.2,0],[2.5,.3],[2.5,16.65],[2.05,17.2],[-2.1,17.4],[-2.5,17]],0,.88,M.cab,.09).name='left-cooling-folded-shell';
-            profile(cover,[[-.25,1],[1.82,1],[2.12,1.32],[2.12,16.26],[1.76,16.7],[-.25,16.9]],.91,.045,M.cab2,.06).name='left-cooling-recessed-face';
-            box(cover,-2.12,-.45,8.05,8.58,.985,1.015,M.black).name='left-cooling-label-band';
-            for(let i=0;i<7;i++)box(cover,-2.12,-1.73,5.85+i*.3,6.02+i*.3,.985,1.01,M.steelD);
-            bolts(cover,[[-2.25,.55,1.015],[2.25,.55,1.015],[-2.25,16.8,1.015],[2.15,16.6,1.015]],.045);
+            const cover=new THREE.Group();cover.name='left-service-cooling-cover';cover.position.set(width/2,1.15,.2);d.hinge.add(cover);
+            profile(cover,[[-2.5,.3],[-2.2,0],[2.2,0],[2.5,.3],[2.5,11.9],[2.05,12.4],[-2.1,12.6],[-2.5,12.2]],0,.7,M.cab,.09).name='left-cooling-folded-shell';
+            profile(cover,[[-.25,1],[1.82,1],[2.12,1.32],[2.12,11.45],[1.76,11.9],[-.25,12.1]],.73,.045,M.cab2,.06).name='left-cooling-recessed-face';
+            box(cover,-2.12,-.45,5.4,5.9,.805,.835,M.black).name='left-cooling-label-band';
+            for(let i=0;i<7;i++)box(cover,-2.12,-1.73,3.2+i*.3,3.37+i*.3,.805,.83,M.steelD);
+            bolts(cover,[[-2.25,.55,.835],[2.25,.55,.835],[-2.25,12.1,.835],[2.15,11.9,.835]],.045);
           }
         }
       }
-      box(wall,sign*(midZ-front),sign*(midZ-endZ),7.4,19.4,-.22,0,M.cab);
-      if(sign<0)box(wall,sign*(midZ-front),sign*(midZ-endZ),19.4,P.roof-.15,-.22,0,M.cab);
+      // Fixed front flank: a real glazed opening on BOTH sides, above the cooler.
+      const x0=Math.min(sign*(midZ-front),sign*(midZ-endZ)),x1=Math.max(sign*(midZ-front),sign*(midZ-endZ));
+      const skin=new THREE.Shape();skin.moveTo(x0,7.4);skin.lineTo(x1,7.4);skin.lineTo(x1,P.roof-.15);skin.lineTo(x0,P.roof-.15);skin.closePath();
+      const outline=[[2.1,20.1],[5.5,18.95],[5.5,13.6],[2.1,13.6]].map(([z,y])=>[sign*(midZ-z),y]);
+      const hole=new THREE.Path();outline.forEach(([x,y],i)=>i?hole.lineTo(x,y):hole.moveTo(x,y));hole.closePath();skin.holes.push(hole);
+      const skinGeometry=new THREE.ExtrudeGeometry(skin,{depth:.22,bevelEnabled:false});skinGeometry.translate(0,0,-.22);const flank=new THREE.Mesh(skinGeometry,M.cab);flank.name=`${sign<0?'left':'right'}-windowed-flank`;wall.add(flank);
+      const pane=new THREE.Shape();outline.forEach(([x,y],i)=>i?pane.lineTo(x,y):pane.moveTo(x,y));pane.closePath();
+      const glass=new THREE.Mesh(new THREE.ExtrudeGeometry(pane,{depth:.04,bevelEnabled:false}),M.glass.clone());glass.material.opacity=.2;glass.material.depthWrite=false;glass.material.roughness=.12;glass.material.metalness=.05;glass.material.color.setHex(0x273b43);glass.position.z=-.09;glass.name=`${sign<0?'left':'right'}-side-inspection-glass`;wall.add(glass);
+      for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];rod(wall,[a[0],a[1],.018],[b[0],b[1],.018],.045,M.black);}
       for(const x of [centreX-span/2,centreX,centreX+span/2]){
         box(wall,x-.025,x+.025,7.4,P.roof,-.22,.006,M.steelD);
         bolts(wall,[[x-.12,19.58,.025],[x+.12,19.58,.025],[x-.12,P.roof-.25,.025]],.04);
       }
-      if(sign>0)box(wall,-sideLength/2,sideLength/2,19.36,19.4,-.1,.008,M.steelD);
-      const sideLogo=face(wall,logo.tx,3.2,.8,0,19.5,.025);sideLogo.material.transparent=true;
+      if(sign>0)box(wall,centreX-span/2,centreX+span/2,19.36,19.4,-.1,.008,M.steelD);
+      const sideLogo=face(wall,logo.tx,7.2,1.8,sign*(midZ+2.4),22.1,.03);sideLogo.name=`${sign<0?'left':'right'}-hermle-logo`;sideLogo.material.transparent=true;if(sign<0)frontServiceLeaf.attach(sideLogo);
       bolts(wall,[[-sideLength/2+.3,7.7,.04],[sideLength/2-.3,7.7,.04],[-sideLength/2+.3,25.6,.04],[sideLength/2-.3,25.6,.04]]);
       box(cabS,sign*half,sign*bodyHalf,7.4,P.roof,front-.25,front,M.cab);
       fascia(cabS,Math.min(sign*half,sign*bodyHalf),Math.max(sign*half,sign*bodyHalf),front);
     }
-    // Side heat exchanger: perforated folded cover beside the swivel terminal.
-    box(cabS,bodyHalf,bodyHalf+1,3.8,12.5,2.7,5.5,M.cab2);
-    face(cabS,ventTexture.tx,2.35,8,bodyHalf+1.015,8.1,4.1,Math.PI/2);
-    for(const z of [2.9,5.3])bolts(cabS,[[bodyHalf+1.03,4.05,z],[bodyHalf+1.03,12.2,z]],.04,'x');
-    profile(cabS,[[bodyHalf,12.5],[bodyHalf+1,12.5],[bodyHalf,13.1]],2.7,2.8,M.cab2).name='heat-exchanger-sloping-cap';
-    const ventTop=face(cabS,ventTexture.tx,Math.hypot(1,.6),2.7,bodyHalf+.5,12.815,4.1);ventTop.rotation.z=-Math.atan(.6);ventTop.rotateX(-Math.PI/2);
+    // Photo: compact solid cover BELOW the side window, perforations at the top.
+    const exchanger=box(cabS,bodyHalf,bodyHalf+.85,7.6,12.7,.8,4.4,M.cab2);exchanger.name='right-side-heat-exchanger';
+    box(cabS,bodyHalf+.85,bodyHalf+.9,7.8,12.1,.98,4.22,M.cab).name='heat-exchanger-solid-front';
+    face(cabS,ventTexture.tx,3.1,.45,bodyHalf+.915,12.35,2.6,Math.PI/2);
+    for(const z of [1.03,4.17])bolts(cabS,[[bodyHalf+.93,8,z],[bodyHalf+.93,12,z]],.04,'x');
+    profile(cabS,[[bodyHalf,13.15],[bodyHalf+.85,12.7],[bodyHalf,12.7]],.8,3.6,M.cab2).name='heat-exchanger-sloping-cap';
+    const ventTop=face(cabS,ventTexture.tx,Math.hypot(.85,.45),3.1,bodyHalf+.43,12.96,2.6);ventTop.rotation.z=-Math.atan(.45/.85);ventTop.rotateX(-Math.PI/2);
     box(cabS,-bodyHalf,bodyHalf,1.1,1.35,rear,drawerRear,M.cab2);
     box(cabS,-bodyHalf,bodyHalf,1.1,1.35,drawerFront,front-1.95,M.cab2);
     box(cabS,(CHIP_DRAWER.innerX+.3)*drawerScale,bodyHalf,1.1,1.35,drawerRear,drawerFront,M.cab2);
@@ -357,7 +367,7 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
     box(cabS,-6.5,6.5,P.roof-.3,P.roof,6.5,front,M.cab);
     box(cabS,-6.5,6.5,P.roof-.3,P.roof,rear,-10.8,M.cab);
     for(const sign of [-1,1])box(cabS,sign*(bodyHalf-.15),sign*bodyHalf,P.roof,P.roof+.15,rear,front,M.cab2);
-    const frontLogo=face(cabS,logo.tx,4.6,1.15,-bodyHalf+2.8,19.4,front+.035);frontLogo.name='front-hermle-logo';frontLogo.material.transparent=true;
+    const frontLogo=face(cabS,logo.tx,5.4,1.35,-bodyHalf+3.2,20.6,front+.035);frontLogo.name='front-hermle-logo';frontLogo.material.transparent=true;
     const stripeX=bodyHalf-1.6;
     const label=face(cabS,modelLabel.tx,1.6,P.roof-7.4,stripeX,(P.roof+7.4)/2,front+.04);label.name='fixed-model-stripe';label.material.transparent=true;
     const stripeFold=sheet(cabS,[[[stripeX-.3,7.4,front+.045],[stripeX+.3,7.4,front+.045]],[[stripeX-2.1,4.65,front-2.155],[stripeX-1.5,4.65,front-2.155]]],[0,0,-.01],M.red);stripeFold.name='model-stripe-lower-fold';
@@ -508,6 +518,8 @@ export function createHermleModel({root,G,M,tex,MC,PY}) {
       celok:()=>Object.values(accessories.equipment).some(g=>g.visible)?[[-65,43,60],[-8,13,-7],false]:[[39,28,46],[0,13,-4],false],
       panel:()=>{const p=new THREE.Vector3(0,9.1,-2.6).applyMatrix4(panG.matrixWorld),direction=new THREE.Vector3(12,4,18).transformDirection(panG.matrixWorld).multiplyScalar(37);return [p.clone().add(direction).toArray(),p.toArray(),true];},
       vybavenie:()=>Object.values(accessories.equipment).some(g=>g.visible)?[[-54,27,35],[-25,7,-10],false]:[[-49,31,32],[-7,12,-5],false],
+      lavy:()=>[[-48,24,15],[-6,14,-3],false],
+      pravy:()=>[[48,24,15],[6,14,-3],false],
       spredu:()=>[[0,16,48],[0,14,0],false],
       zhora:()=>[[.01,78,-6],[0,9,-6],true],
     };

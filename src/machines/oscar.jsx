@@ -1,3 +1,4 @@
+import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen } from '../ui/machineScreens';
 import { compileEdmGcode,EDM_GCODE_SAMPLE } from './precision/edmGcode';
 import { workAreaFeed } from '../core/workAreaFeed';
@@ -34,7 +35,7 @@ const parts=()=>mkParts([
 const save=(blob,name)=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);};
 export default function OscarSimulator({onBack}){
   const mountRef=useRef(null),layerRef=useRef(null),tipRef=useRef(null);
-  const {ctl,ui,set,setUi,selected,selectPart,apiRef}=useMachine({ncMode:'operations',ncText:EDM_GCODE_SAMPLE,manual:false,door:true,fill:false,light:true,flushing:true,estop:false,hmiLocked:false,hmiAngle:0,speed:20,current:30,gap:.05,electrode:{shape:'box',w:20,d:15,length:100},rows:[{x:-20,y:0,depth:8},{x:20,y:0,depth:5}]});
+  const {ctl,ui,set,setUi,selected,selectPart,apiRef}=useMachine({sparks:true,ncMode:'operations',ncText:EDM_GCODE_SAMPLE,manual:false,door:true,fill:false,light:true,flushing:true,estop:false,hmiLocked:false,hmiAngle:0,speed:20,current:30,gap:.05,electrode:{shape:'box',w:20,d:15,length:100},rows:[{x:-20,y:0,depth:8},{x:20,y:0,depth:5}]});
   const [tele,setTele]=useTele({phase:'idle',run:false,started:false,done:false,row:0,x:0,y:0,depth:-5,t:0,removed:0,wear:0,oilLevel:0,alarm:null,sparking:false});
   const [hmiOpen,setHmiOpen]=useState(false),[notice,setNotice]=useState(''),[library,setLibrary]=useState(null);
   useEffect(()=>{
@@ -45,7 +46,7 @@ export default function OscarSimulator({onBack}){
     const mat=(color,metal=.25,rough=.5)=>new THREE.MeshStandardMaterial({color:new THREE.Color(color).convertSRGBToLinear(),metalness:metal,roughness:rough});
     const M={cab:mat(0xbdc5c1,.25,.44),cab2:mat(0xa9b2ae,.3,.5),steel:mat(0xd6dad8,.7,.23),steelD:mat(0x747d80,.55,.4),inox:mat(0xc2c7c6,.48,.38),table:mat(0xb1b9b9,.65,.3),black:mat(0x151b1c,.04,.8),dark:mat(0x343e40,.18,.65),red:mat(0xcc2431,.15,.32),blue:mat(0x2854a0),yellow:mat(0xf0df36),green:mat(0x299d75),brass:mat(0xb49b57,.7),copper:mat(0xb77848,.8,.3),graphite:mat(0x303235,.05,.95),oil:new THREE.MeshStandardMaterial({color:0x8a9878,transparent:true,opacity:.18,roughness:.16,metalness:.15,depthWrite:false,side:THREE.DoubleSide})};
     const tex=(w,h,draw)=>{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;const redraw=()=>{draw(cv.getContext('2d'),w,h);tx.needsUpdate=true;};redraw();return {tx,redraw};};
-    const G={},model=createOscarModel({root,G,M,tex});
+    const G={},model=createOscarModel({root,G,M,tex}),sparks=createEdmSparks(root);
     const stockG=new THREE.Group();stockG.userData.part='obrobok';stockG.userData.stepJoin=true;stockG.rotation.x=-Math.PI/2;stockG.scale.setScalar(.01);model.stockMount.add(stockG);G.obrobok=stockG;
     const stockMat=mat(0x899299,.7,.4),chunks=new Map();let stock,process,ncCommands=null,ncEndApplied=false;
     const flush=()=>{for(const p of stock.takeDirty()){let me=chunks.get(p.id);if(!p.idx.length){if(me){stockG.remove(me);me.geometry.dispose();chunks.delete(p.id);}continue;}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p.pos,3));g.setAttribute('normal',new THREE.BufferAttribute(p.nor,3));g.setIndex(new THREE.BufferAttribute(p.idx,1));g.computeBoundingSphere();if(me){me.geometry.dispose();me.geometry=g;}else{me=new THREE.Mesh(g,stockMat);me.castShadow=true;me.receiveShadow=true;stockG.add(me);chunks.set(p.id,me);}}};
@@ -88,14 +89,14 @@ export default function OscarSimulator({onBack}){
       const e=JSON.stringify(c.electrode);if(e!==signature){signature=e;model.buildElectrode(c.electrode);model.electrode.userData.length=c.electrode.length;}
       depth+=((c.unclamped?-5:process.S.depth)-depth)*Math.min(1,dt*15);
       model.update({S:{...process.S,depth},oilLevel,door:gate,light:c.light,hmiAngle:c.hmiAngle});
-      flush();wi.update(dt);insp.update(t,c);ctrl.update(dt);
+      sparks.update({S:process.S,c,t});flush();wi.update(dt);insp.update(t,c);ctrl.update(dt);
       if(Object.keys(ctrl.pend).length){const next={...ctrl.pend};for(const k of Object.keys(ctrl.pend))delete ctrl.pend[k];setUi(u=>({...u,...next}));}
       snd.update({motor:process.S.run?.08:0,cut:process.S.sparking?.05:0});
       if(t-teleT>.15){teleT=t;screen.redraw();setTele({...process.S,oilLevel,started:!!process.job});}
       if(render)renderer.render(scene,camera);
     };
     const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
-    if(/[?&]debug/.test(window.location.search))window.__oscar={c,root,camera,model,stockG,insp,ctrl,wi,advance:dt=>tick(dt,false),api:apiRef.current,get process(){return process;},get stock(){return stock;}};
+    if(/[?&]debug/.test(window.location.search))window.__oscar={c,root,camera,model,sparks,stockG,insp,ctrl,wi,advance:dt=>tick(dt,false),api:apiRef.current,get process(){return process;},get stock(){return stock;}};
     return()=>{cancelAnimationFrame(raf);dom.removeEventListener('dblclick',openHmi);snd.dispose();ctrl.dispose();wi.dispose();insp.dispose();delete window.__oscar;disposeStage();};
   },[]);
   const p=parts(),locked=tele.run||tele.started||ui.unclamped;
@@ -115,7 +116,7 @@ export default function OscarSimulator({onBack}){
       <div className="sec"><h2 className="sec-title mb-2">{L('Prevádzka','Operation')}</h2><div className="cnc-run"><button className="btn-run start" disabled={ui.unclamped} onClick={()=>apiRef.current.start?.()}>▶ {L('Štart cyklu','Cycle start')}</button><button className="btn" onClick={()=>apiRef.current.hold?.()}>❚❚ {L('Stop posuvu','Feed hold')}</button><button className="btn" disabled={ui.unclamped} onClick={()=>apiRef.current.reset?.()}>↺ Reset</button></div>
         <div className="flex gap-2 flex-wrap mt-2"><button className={`btn ${ui.estop?'active':''}`} onClick={()=>apiRef.current.hmiAction?.('emergency')}>{ui.estop?L('Uvoľniť STOP','Release STOP'):L('Núdzový STOP','Emergency STOP')}</button><button className="btn" disabled={ui.unclamped} onClick={()=>{set('door',!ui.door);if(!ui.door)set('fill',false);}}>{ui.door?L('Zatvoriť nádrž','Close tank'):L('Otvoriť nádrž','Open tank')}</button></div>
         <Toggle on={ui.fill} label={L('Napustiť dielektrikum','Fill dielectric')} onClick={()=>{if(ui.door||ui.unclamped){setNotice(L('Najprv zatvor nádrž.','Close the tank first.'));return;}setNotice('');set('fill',!ui.fill);}}/>
-        <Toggle on={ui.flushing} label={L('Výplach elektródy','Electrode flushing')} onClick={()=>set('flushing',!ui.flushing)}/><Toggle on={ui.light} label={L('Pracovné osvetlenie','Work light')} onClick={()=>set('light',!ui.light)}/>
+        <Toggle on={ui.sparks} label={L('Iskrenie erózie','EDM discharge effect')} onClick={()=>set('sparks',!ui.sparks)}/><Toggle on={ui.flushing} label={L('Výplach elektródy','Electrode flushing')} onClick={()=>set('flushing',!ui.flushing)}/><Toggle on={ui.light} label={L('Pracovné osvetlenie','Work light')} onClick={()=>set('light',!ui.light)}/>
         <SegRow label={L('Rýchlosť simulácie','Simulation speed')} value={ui.speed} options={[[1,'×1'],[20,'×20'],[80,'×80']]} onChange={v=>set('speed',v)}/>
         <fieldset disabled={ui.hmiLocked} className="hermle-hmi-position"><Slider id="ex-hmi" label={L('Natočenie HMI','HMI rotation')} min={-110} max={110} value={ui.hmiAngle} unit="°" onChange={v=>set('hmiAngle',v)}/></fieldset><button className="btn" onClick={()=>apiRef.current.view?.('panel')}>{L('Pohľad na HMI','HMI view')}</button>{ui.manual&&<button className="btn ml-2" onClick={()=>setHmiOpen(true)}>{L('HMI cez celé okno','Full-screen HMI')}</button>}
       </div>

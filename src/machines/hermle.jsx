@@ -630,7 +630,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
           </SectionInfo></div>
         </div>
 
-        <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')], ['zasobnik', L('Zásobník', 'Magazine')]]} />
+        <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['priestor', L('Pracovný priestor', 'Working area')], ['obrobok', L('Obrobok', 'Workpiece')], ['nastroj', L('Nástroj', 'Tool')], ['zhora', L('Zhora', 'Top')], ['zasobnik', L('Zásobník', 'Magazine')],...(!rxu?[["lavy",L('Ľavý bok','Left side')],["pravy",L('Pravý bok','Right side')]]:[])]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
         <HelpFooter apiRef={apiRef} ui={ui} />
       </fieldset></aside>

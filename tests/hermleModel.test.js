@@ -67,7 +67,7 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
       expect(m.serviceOpen()).toBe(false);
     }
   });
-  it('models the tall left cooling cover above the fixed tank and carries it with its service leaf',()=>{
+  it('models the shortened left cooling cover above the fixed tank and carries it with its service leaf',()=>{
     const {root,model:m,MC}=setup(id),half=cabinHalfWidth(MC);
     const cover=root.getObjectByName('left-service-cooling-cover');
     expect(cover.getObjectByName('left-cooling-folded-shell').geometry.type).toBe('ExtrudeGeometry');
@@ -75,11 +75,11 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     expect(cover.getObjectByName('left-cooling-label-band')).toBeTruthy();
     root.updateMatrixWorld(true);
     const bounds=new THREE.Box3().setFromObject(cover),size=bounds.getSize(new THREE.Vector3());
-    expect(size.y).toBeGreaterThan(16);expect(size.y/size.z).toBeGreaterThan(3);
+    expect(size.y).toBeGreaterThan(12);expect(size.y).toBeLessThan(14);expect(size.y/size.z).toBeGreaterThan(2);
     expect(bounds.min.x).toBeLessThan(-half-.9);expect(bounds.max.x).toBeLessThan(-half);
     expect(bounds.min.y).toBeGreaterThan(7.4);expect(bounds.max.y).toBeLessThan(HERMLE_ENVELOPES[id].roof);
     expect(bounds.max.z).toBeLessThan(-4);
-    const origin=cover.localToWorld(new THREE.Vector3(-1,8.3,3)),direction=new THREE.Vector3(0,0,-1).transformDirection(cover.matrixWorld);
+    const origin=cover.localToWorld(new THREE.Vector3(-1,5.65,3)),direction=new THREE.Vector3(0,0,-1).transformDirection(cover.matrixWorld);
     expect(new THREE.Raycaster(origin,direction).intersectObject(cover,true)[0].object.name).toBe('left-cooling-label-band');
     const door=m.serviceDoors.find(d=>d.hinge===cover.parent);
     expect(cover.position.x-size.z/2).toBeGreaterThan(0);
@@ -89,6 +89,18 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     root.updateMatrixWorld(true);
     expect(cover.getWorldPosition(new THREE.Vector3()).distanceTo(before)).toBeGreaterThan(2);
     expect(new THREE.Box3().setFromObject(cover).max.x).toBeLessThan(-half);
+  });
+  it('has real side windows, raised logos and a compact cooler below the glass',()=>{
+    const {root}=setup(id);root.updateMatrixWorld(true);
+    for(const side of ['left','right']){
+      const flank=root.getObjectByName(side+'-windowed-flank'),glass=root.getObjectByName(side+'-side-inspection-glass'),logo=root.getObjectByName(side+'-hermle-logo');
+      expect(flank.geometry.parameters.shapes.holes).toHaveLength(1);expect(glass.material.transparent).toBe(true);
+      glass.geometry.computeBoundingBox();const centre=glass.geometry.boundingBox.getCenter(new THREE.Vector3()),origin=glass.localToWorld(centre.clone().add(new THREE.Vector3(0,0,2))),direction=new THREE.Vector3(0,0,-1).transformDirection(glass.matrixWorld);
+      const ray=new THREE.Raycaster(origin,direction);expect(ray.intersectObject(flank)).toHaveLength(0);expect(ray.intersectObject(glass).length).toBeGreaterThan(0);expect(logo.getWorldPosition(new THREE.Vector3()).y).toBeGreaterThan(21);
+      expect(logo.geometry.parameters.width).toBeGreaterThan(5);
+    }
+    const cooler=new THREE.Box3().setFromObject(root.getObjectByName('right-side-heat-exchanger')),glass=new THREE.Box3().setFromObject(root.getObjectByName('right-side-inspection-glass'));
+    expect(cooler.max.y).toBeLessThan(glass.min.y);expect(cooler.min.y).toBeGreaterThan(7);
   });
   it('keeps the model stripe fixed and mirrors the notched transparent door openings',()=>{
     const {root,model:m}=setup(id),label=root.getObjectByName('fixed-model-stripe');
