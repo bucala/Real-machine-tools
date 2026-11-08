@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { L } from '../core/i18n';
 import { SoundToggle } from './common';
+import { useTouchScreen } from './touchScreen';
+import { cncScreenLabel } from '../machines/cnc/cncScreen';
 import {
   HMI_CONTROL_LAYOUT as layout,
   HMI_MONITOR_LAYOUT as monitor,
@@ -147,6 +149,12 @@ export function HmiFullscreen({
   const rootRef = useRef(null),
     closeRef = useRef(null),
     canvasRef = useRef(null);
+  const paint = () => {
+    const source = apiRef.current.getHmiCanvas?.(),
+      canvas = canvasRef.current;
+    if (source && canvas) canvas.getContext('2d').drawImage(source, 0, 0);
+  };
+  const touch = useTouchScreen(apiRef, paint);
   useEffect(() => {
     const previous = document.activeElement,
       overflow = document.body.style.overflow;
@@ -282,16 +290,7 @@ export function HmiFullscreen({
                 aria-hidden="true"
               />
             ))}
-          <canvas
-            ref={canvasRef}
-            width="640"
-            height="460"
-            role="img"
-            aria-label={L(
-              'Živý displej HMI – program a súradnice stroja',
-              'Live HMI display – program and machine coordinates',
-            )}
-          />
+          <canvas ref={canvasRef} width="640" height="460" {...touch} aria-label={cncScreenLabel()} />
         </div>
         {compactOnly && (
           <aside className="rms-reference-pendant" aria-label={L('Ručný panel Röders', 'Röders hand pendant')}>

@@ -106,6 +106,10 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   const { page, ctx, problems } = await open('hermle', { debug: true });
   try {
     await until(page, () => window.__hermle?.ex);
+    // dotykový displej TNC: stránka POSITION z klávesnice displeja
+    await page.evaluate(() => window.__hermle.api.hmiKey('2'));
+    if ((await page.evaluate(() => window.__hermle.c.scrTab)) !== 'position')
+      fail('hermle', 'stránka displeja sa neprepla');
     await page.getByRole('button', { name: 'Zatvoriť dvere', exact: true }).click();
     await page
       .getByRole('button', { name: /Štart cyklu/i })
@@ -197,7 +201,7 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     await until(page, () => window.__oscar?.process);
     await page.getByRole('button', { name: 'Ručné ovládanie' }).click();
     await page.getByRole('button', { name: 'HMI cez celé okno' }).click();
-    const screen = page.locator('.edm-touch-screen');
+    const screen = page.locator('.hmi-touch-screen');
     await screen.waitFor();
     if (await page.locator('#edm-full-speed').count()) fail('oscarmax HMI', 'posuvník rýchlosti mimo displeja');
     const box = await screen.boundingBox(),

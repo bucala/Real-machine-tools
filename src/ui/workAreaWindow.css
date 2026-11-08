@@ -481,11 +481,11 @@
   font-size: 6px;
 }
 /* dotykový displej EX 500 */
-.hmi-fullscreen .edm-touch-screen {
+.hmi-fullscreen .hmi-touch-screen {
   touch-action: none;
   cursor: default;
 }
-.hmi-fullscreen .edm-touch-screen:focus-visible {
+.hmi-fullscreen .hmi-touch-screen:focus-visible {
   outline: 3px solid #e8d740;
   outline-offset: 2px;
 }
