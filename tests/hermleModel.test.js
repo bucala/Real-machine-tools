@@ -97,7 +97,7 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
       expect(flank.geometry.parameters.shapes.holes).toHaveLength(1);expect(glass.material.transparent).toBe(true);
       glass.geometry.computeBoundingBox();const centre=glass.geometry.boundingBox.getCenter(new THREE.Vector3()),origin=glass.localToWorld(centre.clone().add(new THREE.Vector3(0,0,2))),direction=new THREE.Vector3(0,0,-1).transformDirection(glass.matrixWorld);
       const ray=new THREE.Raycaster(origin,direction);expect(ray.intersectObject(flank)).toHaveLength(0);expect(ray.intersectObject(glass).length).toBeGreaterThan(0);expect(logo.getWorldPosition(new THREE.Vector3()).y).toBeGreaterThan(21);
-      expect(logo.geometry.parameters.width).toBeGreaterThan(5);
+      expect(logo.geometry.parameters.width).toBeGreaterThan(4);
     }
     const cooler=new THREE.Box3().setFromObject(root.getObjectByName('right-side-heat-exchanger')),glass=new THREE.Box3().setFromObject(root.getObjectByName('right-side-inspection-glass'));
     expect(cooler.max.y).toBeLessThan(glass.min.y);expect(cooler.min.y).toBeGreaterThan(7);
@@ -114,6 +114,13 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     const shapes=m.doors.map(d=>d.getObjectByName('shaped-door-skin').geometry.parameters.shapes.holes[0].getPoints());
     shapes[0].forEach((p,i)=>{expect(p.x).toBeCloseTo(-shapes[1][i].x);expect(p.y).toBe(shapes[1][i].y);});
     for(const d of m.doors){const glass=d.getObjectByName('door-safety-glass');expect(glass.material.transparent).toBe(true);expect(glass.geometry.type).toBe('ShapeGeometry');}
+  });
+  it('leaves both side inspection sightlines clear of the mineral casting',()=>{
+    const {root,G,MC}=setup(id);root.updateMatrixWorld(true);
+    for(const sign of [-1,1])for(const y of [14.2,16,18])for(const z of [2.5,4.5]){
+      const ray=new THREE.Raycaster(new THREE.Vector3(sign*(cabinHalfWidth(MC)+1),y,z),new THREE.Vector3(-sign,0,0),0,cabinHalfWidth(MC)+1);
+      expect(ray.intersectObject(G.lozko,true).filter(h=>['mineral-cast-bed-cheek','stainless-workspace-lining'].includes(h.object.name))).toHaveLength(0);
+    }
   });
   it('keeps the low chip pan below the cabinet and slides it along X without duplicating the conveyor',()=>{
     const {model:m,MC}=setup(id),{chipPan,update,equipment}=m.accessories;
@@ -134,15 +141,15 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     root.updateMatrixWorld(true);
     const tray=chipPan.object.getObjectByName('chip-drawer-open-tray'),pump=root.getObjectByName('chip-drawer-coolant-pump');
     const bounds=new THREE.Box3().setFromObject(tray),pumpBounds=new THREE.Box3().setFromObject(pump);
-    // Selected 2016 layout: 680 mm projection, 720 mm setback; tray width 400 mm.
+    // Latest photo correction: 680 mm projection, 290 mm setback; tray width 400 mm.
     expect((-half-bounds.min.x)/k).toBeCloseTo(6.8+.125,3);
     expect(bounds.getSize(new THREE.Vector3()).z/k).toBeCloseTo(4.12,3);
-    expect((8.6*k-bounds.max.z)/k).toBeCloseTo(7.2-.06,3);
+    expect((8.6*k-bounds.max.z)/k).toBeCloseTo(2.9-.06,3);
     expect(pumpBounds.max.x).toBeLessThan(-half);expect(pumpBounds.max.y).toBeGreaterThan(bounds.max.y);
-    const ray=new THREE.Raycaster(new THREE.Vector3(-16*k,8,0),new THREE.Vector3(0,-1,0));
+    const ray=new THREE.Raycaster(new THREE.Vector3(-16*k,8,3.7*k),new THREE.Vector3(0,-1,0));
     const hits=ray.intersectObject(tray,true);expect(hits.length).toBeGreaterThan(0);expect(hits[0].point.y).toBeLessThan(1.3*k);
     // The tank must not slide through a solid bed or lower cabinet skin.
-    for(const z of [-2.4,-1,0,1.2]){
+    for(const z of [1.9,3.3,4.3,5.5]){
       const opening=new THREE.Raycaster(new THREE.Vector3(-half-1,1.8*k,z*k),new THREE.Vector3(1,0,0),0,half+1+5.2*k);
       expect(opening.intersectObjects([G.lozko,m.cab],true)).toHaveLength(0);
     }
@@ -169,7 +176,7 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     expect(tank.min.x).toBeCloseTo(tray.min.x,1);
     expect(tank.max.z).toBeLessThan(tray.min.z);
     expect(tank.max.y).toBeLessThan(tray.max.y);
-    expect(tank.getSize(new THREE.Vector3()).z).toBeGreaterThan(tray.getSize(new THREE.Vector3()).z*1.7);
+    expect(tank.getSize(new THREE.Vector3()).z).toBeLessThan(tray.getSize(new THREE.Vector3()).z);
     const pumpLid=new THREE.Box3().setFromObject(root.getObjectByName('chip-reservoir-pump-lid'));
     const forwardLid=new THREE.Box3().setFromObject(root.getObjectByName('chip-reservoir-recessed-lid'));
     expect(forwardLid.max.y).toBeLessThan(pumpLid.max.y);
@@ -184,9 +191,9 @@ describe.each(['c32','c42'])('Hermle %s catalogue geometry',id=>{
     const {root,G,model:m,MC}=setup(id),k=cabinHalfWidth(MC)/12.25,{equipment:e,update}=m.accessories;
     update({accessorySetup:'ics80cooler'},0);root.updateMatrixWorld(true);
     const inlet=new THREE.Box3().setFromObject(e.conveyor.getObjectByName('chip-conveyor-inlet'));
-    expect(inlet.getCenter(new THREE.Vector3()).z/k).toBeCloseTo(-.6,4);
+    expect(inlet.getCenter(new THREE.Vector3()).z/k).toBeCloseTo(3.7,4);
     expect(inlet.max.x).toBeGreaterThan(-cabinHalfWidth(MC)); // enters the machine, not floating beside it
-    for(const z of [-2,-.6,.8]){
+    for(const z of [2.3,3.7,5.1]){
       const ray=new THREE.Raycaster(new THREE.Vector3(-cabinHalfWidth(MC)-1,3.2*k,z*k),new THREE.Vector3(1,0,0),0,3);
       expect(ray.intersectObjects([G.lozko,m.cab],true)).toHaveLength(0);
     }

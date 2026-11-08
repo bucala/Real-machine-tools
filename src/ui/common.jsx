@@ -257,6 +257,10 @@ function DirRun({ value, onChange, labels }) {
   );
 }
 
+function PartLabelsButton({ui,set}) {
+  return <button type="button" className={`btn part-labels-toggle ${ui.labels?'active':''}`} aria-pressed={!!ui.labels} title={L('Názvy častí stroja','Machine part names')} onClick={()=>{if(!ui.labels&&ui.manual)set('manual',false);set('labels',!ui.labels);}}>{L('Názvy častí','Part names')}</button>;
+}
+
 function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
   return (
     <div className="sec">
@@ -264,15 +268,13 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
         <PrefBar sound={false} />
       </div>
-      <div className="section-heading mt-3"><h1 className="app-title" tabIndex={-1}>{title}</h1><SectionInfo title={title}><p>{sub}</p></SectionInfo></div>
+      <div className="section-heading mt-3"><h1 className="app-title" tabIndex={-1}>{title}</h1><PartLabelsButton ui={ui} set={set}/><SectionInfo title={title}><p>{sub}</p></SectionInfo></div>
       <div className="dro mt-3 tnum">
         {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
         <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
       </div>
       <div className={`msg msg-${status.kind}`} role="status" aria-live={status.kind === 'run' || status.kind === 'idle' ? 'off' : 'polite'}><span className="lamp" />{status.text}</div>
-      <div className="mt-2">
-        <Toggle noParam on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
-      </div>
+
     </div>
   );
 }
@@ -340,4 +342,4 @@ function HelpFooter({ apiRef, ui }) {
   );
 }
 
-export { BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, SoundToggle, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
+export { PartLabelsButton, BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, SoundToggle, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };

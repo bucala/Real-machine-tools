@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
-// User-selected C42 standard layout (2016 PDF p. 50): 680 mm outboard,
-// 720 mm behind the front; 1700 mm ADDITIONAL withdrawal space.
+// Photo-adjusted front chip drawer: 680 mm outboard,
+// 290 mm behind the front; 1700 mm ADDITIONAL withdrawal space.
 // The matching tray is 400 mm wide along Z (explicit in the newer PDF p. 52).
 // Sheet thicknesses, internal length and pump details are photo estimates.
-export const CHIP_DRAWER={outerX:-19.05,innerX:5.15,z:-.6,depth:4,rim:2.65,travel:17};
+export const CHIP_DRAWER={outerX:-19.05,innerX:5.15,z:3.7,depth:4,rim:2.65,travel:17};
 
 // C42 layout, in 100 mm units: cabin 2450 mm, conveyor reach 1710 mm,
 // ICS footprint 1110 × 1630 mm, recooler 740 × 950 mm. C32 scales by cabin width.
@@ -72,6 +72,8 @@ export function createAccessories(parent, M, scale, halfWidth = 11.4 * scale) {
   rod(pump,[.2,3.12,.4],[1,3.12,.4],.1);
   rod(pump,[.82,3.25,.17],[.82,3.25,.63],.065,M.red);
   hose(pump,[[.6,3.1,.4],[1.25,2.9,.55],[1.45,2,.8]],.09);
+  // Compact rear motor reservoir; its front meets the relocated drawer.
+  reservoir.scale.z=k*.3;reservoir.position.z=(tankFront*(1-.3))*k;pump.scale.set(.8,.8,.8/.3);
   // Compact wheel forks sit under the reservoir, rather than hovering on rails.
   for(const x of [panOuter+.65,panInner-.65])for(const z of [panZ-panDepth/2+.55,panZ+panDepth/2-.55]){
     const fork=new THREE.Group();fork.name='chip-drawer-wheel';fork.position.set(x,0,z);drawer.add(fork);

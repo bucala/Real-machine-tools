@@ -70,6 +70,8 @@ Vodorovná obrážačka zostáva v zdrojoch, ale je skrytá z hlavného výberu.
 
 Zvuk sa zapína ikonou reproduktora. Moderné stroje majú vlastné farebné akcenty; dostupné vzhľady sa prepínajú v menu. Vybrané knižnice, nastavenia a uložené obrobky používajú lokálne úložisko prehliadača; nejde o spoločné cloudové úložisko.
 
+Tlačidlo **Názvy častí** pri názve každého stroja zapína popisy v 3D scéne. Zapnutý stav je farebne zvýraznený; kliknutie na popis vyberie príslušnú časť.
+
 ## HMI a živý pracovný priestor
 
 HMI sa otvára tlačidlom **HMI cez celé okno** alebo ovládaním displeja v ručnom režime podľa stroja. Röders a OSCARMAX zdieľajú medzi monitorom v 3D a fullscreen rovnaký živý canvas. Hermle a Shuangli tiež zrkadlia svoj displej; Bystronic má interaktívne obrazovky prepojené s rovnakým kontrolérom a údajmi v 3D termináli.

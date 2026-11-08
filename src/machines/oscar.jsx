@@ -1,3 +1,4 @@
+import { PartLabelsButton } from '../ui/common';
 import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen } from '../ui/machineScreens';
 import { compileEdmGcode,EDM_GCODE_SAMPLE } from './precision/edmGcode';
@@ -108,7 +109,7 @@ export default function OscarSimulator({onBack}){
     {library&&<ElectrodeLibrary mode={library} canApply={!locked} onClose={()=>setLibrary(null)} onChoose={e=>{if(!e||ctl.current.running||ctl.current.unclamped)throw new Error(L('Najprv zastav stroj a upni obrobok.','Stop the machine and clamp the workpiece first.'));set('electrode',e);setLibrary(null);}}/>}
     {hmiOpen&&<EdmFullscreen {...{apiRef,ui,tele}} onClose={()=>setHmiOpen(false)}/>}
     <aside className="panel">
-      <div className="sec"><p className="sec-title">{L('Moderné stroje · hĺbiaca EDM','Modern machines · sinker EDM')}</p><div className="section-heading"><h1 className="app-title mt-2" tabIndex={-1}>OSCARMAX EX 500</h1><SectionInfo title={"OSCARMAX EX 500"}><p className="text-xs muted">X 500 / Y 400 / Z 450 mm · {L('stôl','table')} 850 × 450 mm · 60 A · 10 kVA · 850 l · {L('nosnosť','capacity')} 2 300 kg.</p></SectionInfo></div>
+      <div className="sec"><p className="sec-title">{L('Moderné stroje · hĺbiaca EDM','Modern machines · sinker EDM')}</p><div className="section-heading"><h1 className="app-title mt-2" tabIndex={-1}>OSCARMAX EX 500</h1><PartLabelsButton ui={ui} set={set}/><SectionInfo title={"OSCARMAX EX 500"}><p className="text-xs muted">X 500 / Y 400 / Z 450 mm · {L('stôl','table')} 850 × 450 mm · 60 A · 10 kVA · 850 l · {L('nosnosť','capacity')} 2 300 kg.</p></SectionInfo></div>
 
         <div className="cnc-dro mt-3"><div className="cnc-dro-col">{[['X',tele.x],['Y',tele.y],['Z',-tele.depth]].map(([k,v])=><div key={k} className="cnc-dro-row"><span>{k}</span><b>{v.toFixed(3)}</b></div>)}</div><div className="cnc-dro-col"><div className="cnc-dro-row"><span>A</span><b>{tele.sparking?ui.current:0}</b></div><div className="cnc-dro-row"><span>OIL</span><b>{tele.oilLevel.toFixed(0)} mm</b></div><div className="cnc-dro-row"><span>OP</span><b>{tele.row+1}/{ui.rows.length}</b></div></div></div>
         <div className={`msg msg-${tele.alarm?'danger':tele.run?'run':'idle'}`} role="status">{tele.alarm||notice||(tele.done?L('Hĺbenie dokončené','Sinking complete'):tele.run?L('Prebieha hĺbenie','Sinking in progress'):L('Zatvor nádrž, napusť dielektrikum a spusti cyklus.','Close the tank, fill dielectric, then start the cycle.'))}</div>
