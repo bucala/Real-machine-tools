@@ -251,8 +251,9 @@ export default function OscarSimulator({ onBack, params }) {
     tipRef = useRef(null);
   const { ctl, ui, set, setUi, selected, selectPart, apiRef } = useMachine({
     sparks: true,
-    ncMode: 'operations',
-    ncText: EDM_GCODE_SAMPLE,
+    // predvolená je vložka formy 3 × 3 v G-kóde s elektródami E1 a E2
+    ncMode: 'gcode',
+    ncText: edmComplexProgram(),
     manual: false,
     door: true,
     fill: false,
@@ -265,12 +266,8 @@ export default function OscarSimulator({ onBack, params }) {
     speed: 20,
     current: 30,
     gap: 0.05,
-    electrode: { shape: 'box', w: 20, d: 15, length: 100 },
-    electrode2: { id: 'copper-prism-20-15', name: 'Cu · 20 × 15 mm', shape: 'box', w: 20, d: 15, length: 100 },
-    rows: [
-      { x: -20, y: 0, depth: 8 },
-      { x: 20, y: 0, depth: 5 },
-    ],
+    ...EDM_COMPLEX_ELECTRODES,
+    rows: compileEdmGcode(edmComplexProgram()).rows,
   });
   const [tele, setTele] = useTele({
     phase: 'idle',

@@ -315,6 +315,8 @@ export default function BystronicSimulator({ onBack, params }) {
       raf;
     const control = createBrakeControl({ c, onChange: set, guardClosed: () => guardAngle < 0.01 }),
       process = control.process;
+    // predvolený je program C-profilu so štyrmi ohybmi; jeden ohyb a úlohy ho nahradia
+    control.loadProgram('cprofil');
     const snd = createSound('bender');
     const actions = Object.fromEntries(
       ['start', 'hold', 'retract', 'reset', 'emergency', 'releaseStop', 'acknowledge', 'light', 'hydraulic'].map(

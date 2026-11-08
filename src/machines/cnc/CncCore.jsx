@@ -210,7 +210,6 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   const [programImportError, setProgramImportError] = useState('');
   const samples = rxu
     ? [
-        { id: 'rxu', name: L('ISO: kruhová kapsa', 'ISO: circular pocket'), text: RXU_PROGRAM },
         {
           id: 'rxm',
           name: L(
@@ -221,6 +220,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             return progMold();
           },
         },
+        { id: 'rxu', name: L('ISO: kruhová kapsa', 'ISO: circular pocket'), text: RXU_PROGRAM },
         ...SAMPLES().filter((s) => !['p3', 'ph', 'cx5'].includes(s.id)),
       ]
     : SAMPLES();

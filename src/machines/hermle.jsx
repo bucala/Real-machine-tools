@@ -26,8 +26,9 @@ function HermleSimulator({ onBack, params }) {
     }
     setModelS(m);
   };
-  const [progId, setProgId] = useState('p3');
-  const [text, setText] = useState(() => SAMPLES()[0].text);
+  // predvolený je zložitý diel (príruba s kupolou, 8 nástrojov, 5-osé); jednoduchšie ukážky sú v zozname
+  const [progId, setProgId] = useState('cx5');
+  const [text, setText] = useState(() => SAMPLES().find((s) => s.id === 'cx5').text);
   const [tools, setTools] = useState(defaultTools);
   return (
     <CncCore
