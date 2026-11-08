@@ -119,6 +119,8 @@ M5 M9
 M30
 ```
 
+Výučbový model generátora: úber je úmerný prúdu (meď ≈ 7, grafit ≈ 10 mm³/(A·min)), rýchlosť hĺbenia je úber delený plochou čela elektródy, takže veľká elektróda hĺbi pomalšie. Prúd určuje aj výbojovú medzeru (bočný a čelný presah dutiny) a drsnosť dna Ra / VDI 3400; panel ich zobrazuje pri nastavení prúdu. Koeficienty sú orientačné tabuľkové hodnoty, nie údaje OSCARMAX.
+
 Iskrenie schematicky zvýrazňuje aktívnu výbojovú zónu. Je viazané na prebiehajúce hĺbenie a vypne sa pri holde, STOP, otvorení nádrže alebo strate výplachu; dá sa vypnúť aj samostatne. Úberová rýchlosť, opotrebenie a svetelný efekt sú výučbové odhady.
 
 ### Bystronic: ohýbanie plechu
@@ -136,7 +138,15 @@ Vybraná verzia je **Xpert Pro 320/4300 v štandardnej výške** podľa technick
 
 ## Výučba a rozsah simulácie
 
-Podporované konvenčné stroje ponúkajú úlohy s kótovaným náčrtom, priebežné meranie, hodnotenie, kontrolné zoznamy a HTML protokol vhodný na tlač/PDF. Dostupnosť závisí od konkrétneho simulátora; moderné stroje nemajú automaticky rovnakú sadu úloh.
+Konvenčné aj moderné stroje ponúkajú úlohy s kótovaným náčrtom, priebežné meranie, hodnotenie, kontrolné zoznamy BOZP a HTML protokol vhodný na tlač/PDF. Učiteľ môže poslať odkaz na konkrétnu úlohu, napr. `#hermle/uloha=kapsa`.
+
+| Stroj | Úlohy |
+| --- | --- |
+| Hermle C 32 / C 42, Röders RXU | kapsa 40 × 30 × 5 ±0,1 mm (doplniť program), oprava chybného zápichu G0, 3+2 šikmá plocha 30° (G68.2) |
+| OSCARMAX EX 500 | dutina 20,3 × 15,3 × 6,00 mm (prúd podľa medzery, hĺbka zmenšená o čelnú medzeru), dokončenie Ra ≤ 1,6 µm |
+| Bystronic Xpert Pro 320 | uholník 90° (V = 6 – 10 × t), ohyb 6 mm × 3 m do 50 % sily lisu |
+
+Rozmery CNC a EDM obrobku sa merajú priamo z voxelového poľa vzdialeností (`src/machines/cnc/measure.js`).
 
 Geometria obrobkov používa podľa procesu profil polomeru, výškové pole, voxelové pole, prierez plechu alebo samostatný matematický model. Voxelový CNC/EDM obrobok sa mení priebežne a sieť sa aktualizuje po častiach. Kontroly kolízií a blokovania pokrývajú implementované situácie, nie všeobecnú analýzu ľubovoľnej výrobnej zostavy.
 
@@ -175,14 +185,27 @@ npm run build
 npm run preview -- --host 0.0.0.0
 ```
 
-**`public/` je zostavený výstup, ktorý sa v tomto repozitári commituje.** Zdrojové zmeny patria do `src/`; statické vstupy do `static/`. Build aktualizuje `public/` vrátane service workera a jeho zoznamu cache súborov.
+**`public/` je zostavený výstup, ktorý sa v tomto repozitári commituje.** Zdrojové zmeny patria do `src/`; statické vstupy do `static/`. Build aktualizuje `public/` vrátane service workera. Pri prvej návšteve sa uloží len menu; každý otvorený stroj sa uloží pri prvom otvorení a tlačidlo v menu uloží všetky stroje pre offline použitie.
 
 ## Kontroly a testy
 
 ```bash
 npm run lint
+npm run format:check
 npm test
 npm run build
+```
+
+Kód formátuje Prettier (`npm run format`, šírka riadku 120). Hromadné formátovanie je v `.git-blame-ignore-revs` – `git config blame.ignoreRevsFile .git-blame-ignore-revs` ho vynechá z `git blame`.
+
+Test v prehliadači otvorí menu a všetky stroje nad zostaveným `public/` (s rovnakou CSP ako na serveri), prejde celý CNC program na Hermle vrátane zámku dverí, ohyb na Bystronic a štart elektroerózie. Zlyhá pri chybe v konzole, výnimke alebo porušení CSP:
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run test:e2e
 ```
 
 Súhrnná kontrola zhodná s CI navyše overí, že pracovná verzia `public/` zodpovedá repozitáru:
@@ -200,18 +223,19 @@ Na slabšom hardvéri scéna priebežne znižuje kvalitu vykresľovania. Diagnos
 | Cesta | Úloha |
 | --- | --- |
 | [`src/App.jsx`](src/App.jsx) | Výber strojov, hash smerovanie, skryté položky a lazy načítanie simulátorov. |
-| [`src/core/`](src/core) | Scéna, kamera, fyzické ovládanie, prehliadka obrobku, zvuk a exporty. `workAreaFeed.js` vytvára samostatnú živú kameru. |
+| [`src/core/`](src/core) | Scéna, kamera, fyzické ovládanie, prehliadka obrobku, zvuk a exporty. `workAreaFeed.js` vytvára samostatnú živú kameru, `sceneOptimize.js` zlučuje statické siete moderných strojov. |
 | [`src/machines/`](src/machines) | Jednotlivé simulátory, matematické modely, proces a ovládací panel. |
-| [`src/machines/cnc/`](src/machines/cnc) | CNC jadro, kinematika, nástroje, voxelový obrobok, Hermle a príslušenstvo. |
+| [`src/machines/cnc/`](src/machines/cnc) | CNC jadro: panel `CncCore.jsx`, 3D scéna a beh programu `cncScene.js`, úlohy `cncTasks.js`, meranie obrobku, kinematika, nástroje, voxelový obrobok, model Hermle a príslušenstvo. |
 | [`src/machines/precision/`](src/machines/precision) | Röders, OSCARMAX, Bystronic, zachovaný Shuangli, procesy a podklady geometrie. |
 | [`src/ui/`](src/ui) | Spoločné ovládanie, HMI, živý split-screen, knižnice, výkresy a protokoly. |
 | [`tests/`](tests) | Automatické testy Vitest. |
+| [`tests-e2e/`](tests-e2e) | Test v prehliadači (Playwright) nad zostaveným `public/`. |
 | [`docs/`](docs) | Podklady modelov, CAM postup, snímky a audit. |
 | [`static/`](static) | Manifest PWA, ikony, HTTP hlavičky a ďalšie statické vstupy. |
 | [`sw-template.js`](sw-template.js) | Šablóna service workera doplnená pri zostavení. |
 | [`public/`](public) | Commitovaný produkčný výstup Vite. |
 | [`wrangler.jsonc`](wrangler.jsonc) | Cloudflare Workers Static Assets z `public/`. |
-| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Lint, testy, build, kontrola výstupu a nasadenie. |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Lint, formátovanie, testy, build, kontrola výstupu, test v prehliadači a nasadenie. |
 
 Technológie: React 19, three.js r186, Tailwind CSS 3, Vite 8, Vitest a Cloudflare Workers. Presné verzie sú v [package.json](package.json) a lockfile. Vybrané staršie simulátory majú aj exporty v [`src/index.js`](src/index.js); kompletným vstupom aplikácie je `App`.
 

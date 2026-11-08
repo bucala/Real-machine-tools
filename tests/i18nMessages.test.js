@@ -7,10 +7,19 @@ import { defaultTools } from '../src/machines/cnc/tooling';
 
 // hlášky musia byť v jednom jazyku podľa predvoľby, nie „slovensky / English“ naraz
 const cfg = { material: 'steel', thickness: 4, length: 2400, depth: 600, flange: 150, v: 16, angle: 90 };
-const message = (fn) => { try { fn(); } catch (e) { return e.message; } return ''; };
+const message = (fn) => {
+  try {
+    fn();
+  } catch (e) {
+    return e.message;
+  }
+  return '';
+};
 
 describe('lokalizácia hlášok procesov', () => {
-  afterEach(() => { PREFS.lang = 'sk'; });
+  afterEach(() => {
+    PREFS.lang = 'sk';
+  });
   it('ohraňovací lis hlási chybu len v zvolenom jazyku', () => {
     expect(message(() => brakeSetup(cfg))).toBe('V-matrica je príliš úzka pre hrúbku plechu.');
     PREFS.lang = 'en';

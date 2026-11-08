@@ -4,7 +4,8 @@ import { migChecks } from '../src/machines/shopMath';
 
 describe('synergia MIG/MAG', () => {
   it('prúd rastie s rýchlosťou drôtu a je v rozsahu zdroja 3 – 450 A', () => {
-    const a = migSynergic({ wire: 1, vd: 4, prog: 'std', gas: 'M21' }), b = migSynergic({ wire: 1, vd: 10, prog: 'std', gas: 'M21' });
+    const a = migSynergic({ wire: 1, vd: 4, prog: 'std', gas: 'M21' }),
+      b = migSynergic({ wire: 1, vd: 10, prog: 'std', gas: 'M21' });
     expect(b.I).toBeGreaterThan(a.I);
     expect(b.U).toBeGreaterThan(a.U);
     expect(migSynergic({ wire: 1.2, vd: 30, prog: 'std', gas: 'M21' }).I).toBeLessThanOrEqual(450);
@@ -18,14 +19,15 @@ describe('synergia MIG/MAG', () => {
     expect(migSynergic({ wire: 1, vd: 6, prog: 'pulse', gas: 'M21' }).mode).toBe('pulse');
   });
   it('korekcia mení napätie a dĺžku oblúka, CO₂ potrebuje vyššie napätie', () => {
-    const z = migSynergic({ wire: 1, vd: 8, prog: 'std', gas: 'M21' }), p = migSynergic({ wire: 1, vd: 8, prog: 'std', gas: 'M21', corr: 2 });
+    const z = migSynergic({ wire: 1, vd: 8, prog: 'std', gas: 'M21' }),
+      p = migSynergic({ wire: 1, vd: 8, prog: 'std', gas: 'M21', corr: 2 });
     expect(p.U - z.U).toBeCloseTo(2, 6);
     expect(p.la).toBeGreaterThan(z.la);
     expect(migSynergic({ wire: 1, vd: 8, prog: 'std', gas: 'C1' }).U).toBeGreaterThan(z.U);
   });
   it('nanesený kov = prierez drôtu × rýchlosť', () => {
     const s = migSynergic({ wire: 1, vd: 6, prog: 'std', gas: 'M21' });
-    expect(s.dep).toBeCloseTo(Math.PI * 0.25 * 6000 / 60 * 0.95, 6);
+    expect(s.dep).toBeCloseTo(((Math.PI * 0.25 * 6000) / 60) * 0.95, 6);
   });
   it('dlhší výlet drôtu zníži prúd', () => {
     expect(stickoutI(200, 12)).toBeCloseTo(200, 6);
@@ -39,7 +41,8 @@ describe('synergia MIG/MAG', () => {
     expect(gasCover({ valve: true, flow: 14, ctwd: 25 })).toBeLessThan(0.7);
   });
   it('odporúčaný prúd rastie s hrúbkou', () => {
-    const [l2] = migRange(2), [l8, h8] = migRange(8);
+    const [l2] = migRange(2),
+      [l8, h8] = migRange(8);
     expect(l8).toBeGreaterThan(l2);
     expect(h8).toBeGreaterThan(l8);
   });
@@ -68,16 +71,29 @@ describe('úlohy MAG', () => {
 describe('predpísané nastavenie úloh MAG je v odporúčanom rozsahu', () => {
   // rovnaké hodnoty ako setup v MIG_TASKS (weld.jsx)
   const setups = [
-    { t: 8, wire: 1, vd: 8, ctwd: 12 }, { t: 8, wire: 1, vd: 9, ctwd: 12 }, { t: 2, wire: 0.8, vd: 5, ctwd: 10 },
+    { t: 8, wire: 1, vd: 8, ctwd: 12 },
+    { t: 8, wire: 1, vd: 9, ctwd: 12 },
+    { t: 2, wire: 0.8, vd: 5, ctwd: 10 },
   ];
   it.each(setups)('plech $t mm, Ø$wire, $vd m/min', ({ t, wire, vd, ctwd }) => {
-    const I = stickoutI(migSynergic({ wire, vd, prog: 'std', gas: 'M21' }).I, ctwd), [lo, hi] = migRange(t);
+    const I = stickoutI(migSynergic({ wire, vd, prog: 'std', gas: 'M21' }).I, ctwd),
+      [lo, hi] = migRange(t);
     expect(I).toBeGreaterThanOrEqual(lo);
     expect(I).toBeLessThanOrEqual(hi);
     expect(migSynergic({ wire, vd, prog: 'std', gas: 'M21' }).mode).toBe('short');
   });
   it('rozsahy v popise úloh: 6 – 9 m/min pre 8 mm, 4 – 6 m/min pre 2 mm', () => {
-    for (const vd of [6, 9]) { const I = migSynergic({ wire: 1, vd, prog: 'std', gas: 'M21' }).I, [lo, hi] = migRange(8); expect(I).toBeGreaterThanOrEqual(lo); expect(I).toBeLessThanOrEqual(hi); }
-    for (const vd of [4, 6]) { const I = migSynergic({ wire: 0.8, vd, prog: 'std', gas: 'M21' }).I, [lo, hi] = migRange(2); expect(I).toBeGreaterThanOrEqual(lo); expect(I).toBeLessThanOrEqual(hi); }
+    for (const vd of [6, 9]) {
+      const I = migSynergic({ wire: 1, vd, prog: 'std', gas: 'M21' }).I,
+        [lo, hi] = migRange(8);
+      expect(I).toBeGreaterThanOrEqual(lo);
+      expect(I).toBeLessThanOrEqual(hi);
+    }
+    for (const vd of [4, 6]) {
+      const I = migSynergic({ wire: 0.8, vd, prog: 'std', gas: 'M21' }).I,
+        [lo, hi] = migRange(2);
+      expect(I).toBeGreaterThanOrEqual(lo);
+      expect(I).toBeLessThanOrEqual(hi);
+    }
   });
 });

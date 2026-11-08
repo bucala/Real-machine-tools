@@ -7,13 +7,19 @@ import { createExecutor } from '../src/machines/cnc/sim';
 import { defaultTools, toolsFromComments } from '../src/machines/cnc/tooling';
 import { createStock } from '../src/machines/cnc/voxel';
 
-const STOCK = { min: [-50, -40, 50], max: [50, 40, 90] }, O54 = [0, 0, 90];
+const STOCK = { min: [-50, -40, 50], max: [50, 40, 90] },
+  O54 = [0, 0, 90];
 const close = (a, b, e = 1e-6) => a.every((v, i) => Math.abs(v - b[i]) < e);
 const run = (text, res = 1.0, mach = MODELS.c32) => {
-  const tools = defaultTools(), prog = interpret(text, { o54: O54, tools, mach });
-  const stock = createStock({ ...STOCK, res }), ex = createExecutor({ moves: prog.moves, tools, o54: O54, stock, mach });
+  const tools = defaultTools(),
+    prog = interpret(text, { o54: O54, tools, mach });
+  const stock = createStock({ ...STOCK, res }),
+    ex = createExecutor({ moves: prog.moves, tools, o54: O54, stock, mach });
   let guard = 0;
-  while (!ex.S.done && !ex.S.alarm && guard++ < 200000) { ex.advance(5, { budget: 1e12 }); if (ex.S.paused) ex.S.paused = false; }
+  while (!ex.S.done && !ex.S.alarm && guard++ < 200000) {
+    ex.advance(5, { budget: 1e12 });
+    if (ex.S.paused) ex.S.paused = false;
+  }
   return { prog, ex, stock };
 };
 
@@ -24,14 +30,19 @@ describe('CNC – kinematika otočno-sklopného stola', () => {
     expect(close(toolAxisT(30, 0), [0, 0.5, Math.sqrt(3) / 2])).toBe(true);
     const s = axisToAC(toolAxisT(-40, 75), 70);
     expect(close(toolAxisT(s.a, s.c), toolAxisT(-40, 75))).toBe(true);
-    const s2 = axisToAC([0, -1, 0]); expect(Math.abs(s2.a)).toBeCloseTo(90, 6); expect(close(toolAxisT(s2.a, s2.c), [0, -1, 0])).toBe(true);
+    const s2 = axisToAC([0, -1, 0]);
+    expect(Math.abs(s2.a)).toBeCloseTo(90, 6);
+    expect(close(toolAxisT(s2.a, s2.c), [0, -1, 0])).toBe(true);
   });
 });
 
 describe('CNC – interpreter', () => {
   it('ISO: lineárne a kruhové pohyby, korekcia dĺžky a chýbajúci posuv', () => {
     const tools = defaultTools();
-    const pr = interpret('G90 G17 G21\nT3 M6\nS10000 M3\nG0 X0 Y0\nG43 H3 Z5\nG1 Z-2 F300\nG2 X20 Y0 I10 J0\nG1 X30', { o54: O54, tools });
+    const pr = interpret('G90 G17 G21\nT3 M6\nS10000 M3\nG0 X0 Y0\nG43 H3 Z5\nG1 Z-2 F300\nG2 X20 Y0 I10 J0\nG1 X30', {
+      o54: O54,
+      tools,
+    });
     expect(pr.errors).toEqual([]);
     const arc = pr.moves.find((m) => m.kind === 'arc');
     expect(arc.sweep).toBeCloseTo(-180, 6);
@@ -44,7 +55,10 @@ describe('CNC – interpreter', () => {
     expect(interpret('G0 B30', { o54: O54, tools }).errors.length).toBeGreaterThan(0);
   });
   it('ISO 3+2: G68.2 / G53.1 natočí stôl A30, pohyby sú v naklonenej rovine', () => {
-    const pr = interpret('T3 M6\nG53 G0 Z0\nG68.2 X0 Y20 Z0 I0 J-30 K0\nG53.1\nG43 H3 Z10\nG0 X0 Y0 Z0', { o54: O54, tools: defaultTools() });
+    const pr = interpret('T3 M6\nG53 G0 Z0\nG68.2 X0 Y20 Z0 I0 J-30 K0\nG53.1\nG43 H3 Z10\nG0 X0 Y0 Z0', {
+      o54: O54,
+      tools: defaultTools(),
+    });
     expect(pr.errors).toEqual([]);
     const mv = pr.moves[pr.moves.length - 1];
     expect(mv.a1).toBeCloseTo(30, 6);
@@ -59,7 +73,11 @@ describe('CNC – interpreter', () => {
     expect(pr.moves.some((m) => m.kind === 'lin' && Math.abs(m.a1 - 25) < 1e-6)).toBe(true);
   });
   it('nástroje z komentárov CAM postprocesora', () => {
-    const t = toolsFromComments(['T4 D=6. CR=3. - ZMIN=-10. - ball end mill', ' T7 D=8.5 CR=0. TAPER=118deg - drill', 'bez nástroja']);
+    const t = toolsFromComments([
+      'T4 D=6. CR=3. - ZMIN=-10. - ball end mill',
+      ' T7 D=8.5 CR=0. TAPER=118deg - drill',
+      'bez nástroja',
+    ]);
     expect(t).toHaveLength(2);
     expect(t[0]).toMatchObject({ t: 4, d: 6, cr: 3, kind: 'mill' });
     expect(t[1]).toMatchObject({ t: 7, kind: 'cone', tip: 118 });
@@ -90,13 +108,22 @@ describe('CNC – voxelový úber', () => {
     SAMPLES().forEach((s) => {
       const { prog, ex } = run(s.text, 1.2);
       expect(prog.errors).toEqual([]);
-      expect([s.id, ex.S.alarm && ex.S.alarm.text, ex.S.alarm && prog.lines[ex.S.alarm.line]]).toEqual([s.id, null, null]);
+      expect([s.id, ex.S.alarm && ex.S.alarm.text, ex.S.alarm && prog.lines[ex.S.alarm.line]]).toEqual([
+        s.id,
+        null,
+        null,
+      ]);
       expect(ex.S.done).toBe(true);
       expect(ex.S.removed).toBeGreaterThan(5000);
     });
   }, 60000);
   it('C 42 U: rovnaké programy bežia s väčšími dráhami, X 450 je mimo C 32 ale v rozsahu C 42', () => {
-    SAMPLES().forEach((s) => { const { prog, ex } = run(s.text, 1.5, MODELS.c42); expect(prog.errors).toEqual([]); expect(ex.S.alarm).toBe(null); expect(ex.S.done).toBe(true); });
+    SAMPLES().forEach((s) => {
+      const { prog, ex } = run(s.text, 1.5, MODELS.c42);
+      expect(prog.errors).toEqual([]);
+      expect(ex.S.alarm).toBe(null);
+      expect(ex.S.done).toBe(true);
+    });
     const t = 'T3 M6\nG43 H3 G0 X390 Y0 Z50';
     expect(interpret(t, { o54: O54, tools: defaultTools(), mach: MODELS.c32 }).errors.length).toBeGreaterThan(0);
     expect(interpret(t, { o54: O54, tools: defaultTools(), mach: MODELS.c42 }).errors).toEqual([]);

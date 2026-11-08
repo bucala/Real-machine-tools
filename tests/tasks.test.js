@@ -7,16 +7,32 @@ import { VC, nFromVc, vcFromN } from '../src/ui/tools';
 
 const okAll = (cs) => cs.every((c) => c.ok);
 // hranol 180 × 100 × 60 mm ako vo fréze (bunka ~1,2 mm)
-const block = () => createHeightField({ NX: 150, NZ: 83, W: 1.8, D: 1.0, H: 0.6, raw: 0x444444, cut: 0xdddddd, mat: new THREE.MeshBasicMaterial() });
-const cutBox = (hf, x0, x1, z0, z1, depthMm) => hf.cutRect(x0, x1, z0, z1, (k) => { hf.hgt[k] = Math.min(hf.hgt[k], hf.H - depthMm / 100); hf.mask[k] = 1; });
+const block = () =>
+  createHeightField({
+    NX: 150,
+    NZ: 83,
+    W: 1.8,
+    D: 1.0,
+    H: 0.6,
+    raw: 0x444444,
+    cut: 0xdddddd,
+    mat: new THREE.MeshBasicMaterial(),
+  });
+const cutBox = (hf, x0, x1, z0, z1, depthMm) =>
+  hf.cutRect(x0, x1, z0, z1, (k) => {
+    hf.hgt[k] = Math.min(hf.hgt[k], hf.H - depthMm / 100);
+    hf.mask[k] = 1;
+  });
 
 describe('fréza', () => {
   it('drážka 20 × 5 cez celú dĺžku v strede', () => {
     const hf = block();
     cutBox(hf, -0.95, 0.95, -0.1, 0.1, 5);
-    const info = hfInfo(hf), g = grooveInfo(info, 5);
+    const info = hfInfo(hf),
+      g = grooveInfo(info, 5);
     expect(g.depth).toBeCloseTo(5, 3);
-    expect(g.width).toBeGreaterThan(19); expect(g.width).toBeLessThan(21.5);
+    expect(g.width).toBeGreaterThan(19);
+    expect(g.width).toBeLessThan(21.5);
     expect(okAll(millChecks.drazka({ info }))).toBe(true);
   });
   it('plytká drážka alebo len kus dĺžky nevyhovuje', () => {
@@ -37,17 +53,29 @@ describe('fréza', () => {
 
 describe('brúska', () => {
   it('prebrúsenie o 0,1 mm s rovinnosťou do 0,01 mm', () => {
-    const hf = createHeightField({ NX: 100, NZ: 50, W: 2, D: 1, H: 0.4, raw: 0x444444, cut: 0xdddddd, mat: new THREE.MeshBasicMaterial() });
+    const hf = createHeightField({
+      NX: 100,
+      NZ: 50,
+      W: 2,
+      D: 1,
+      H: 0.4,
+      raw: 0x444444,
+      cut: 0xdddddd,
+      mat: new THREE.MeshBasicMaterial(),
+    });
     cutBox(hf, -1, 1, -1, 1, 0.105);
     expect(okAll(grindChecks.rovinnost({ info: hfInfo(hf) }))).toBe(true);
-    cutBox(hf, -0.3, 0.3, -0.2, 0.2, 0.13);                // jama 0,025 mm – rovinnosť nevyhovie
+    cutBox(hf, -0.3, 0.3, -0.2, 0.2, 0.13); // jama 0,025 mm – rovinnosť nevyhovie
     expect(grindChecks.rovinnost({ info: hfInfo(hf) })[2].ok).toBe(false);
   });
 });
 
 describe('vŕtačka, ohýbačka, píla, zváranie', () => {
   it('dve diery Ø10 naskrz s rozostupom 50 mm', () => {
-    const holes = [{ x: -25, z: 0, d: 10, depth: 25, through: true }, { x: 25.3, z: 0, d: 10, depth: 25, through: true }];
+    const holes = [
+      { x: -25, z: 0, d: 10, depth: 25, through: true },
+      { x: 25.3, z: 0, d: 10, depth: 25, through: true },
+    ];
     expect(okAll(drillChecks.dve({ holes }))).toBe(true);
     expect(drillChecks.dve({ holes: [holes[0]] })[0].ok).toBe(false);
   });
@@ -69,8 +97,14 @@ describe('vŕtačka, ohýbačka, píla, zváranie', () => {
   it('zvar V: nastavenie, vyplnenie, pokrytie, chyby, troska', () => {
     const stats = { cov: 0.98, off: 0.05, fill: 0.95, width: 9, cold: 0, longArc: 0.3, fast: 0, wrongDir: 0, sag: 0 };
     expect(okAll(weldChecks.vpa({ stats, type: 'V', t: 8, pos: 'PA', slag: false }))).toBe(true);
-    expect(weldChecks.vpa({ stats, type: 'V', t: 8, pos: 'PA', slag: true }).find((c) => c.key === 'slag').ok).toBe(false);
-    expect(weldChecks.vpa({ stats: { ...stats, longArc: 4 }, type: 'V', t: 8, pos: 'PA', slag: false }).find((c) => c.key === 'flaws').ok).toBe(false);
+    expect(weldChecks.vpa({ stats, type: 'V', t: 8, pos: 'PA', slag: true }).find((c) => c.key === 'slag').ok).toBe(
+      false,
+    );
+    expect(
+      weldChecks
+        .vpa({ stats: { ...stats, longArc: 4 }, type: 'V', t: 8, pos: 'PA', slag: false })
+        .find((c) => c.key === 'flaws').ok,
+    ).toBe(false);
     expect(okAll(weldChecks.vpa({ stats: null, type: 'V', t: 8, pos: 'PA', slag: true }))).toBe(false);
   });
 });

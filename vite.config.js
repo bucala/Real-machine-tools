@@ -13,19 +13,34 @@ function serviceWorker() {
     name: 'rmt-service-worker',
     apply: 'build',
     generateBundle(_, bundle) {
-      const staticFiles = readdirSync('static').filter((f) => !['_headers', 'sw.js'].includes(f)).sort();
+      const staticFiles = readdirSync('static')
+        .filter((f) => !['_headers', 'sw.js'].includes(f))
+        .sort();
       const font = (f) => /\.woff2?$/.test(f);
-      const built = Object.keys(bundle).filter((f) => !f.endsWith('.map') && f !== 'index.html')
-        .filter((f) => !font(f) || (/-latin(-ext)?-\d+-normal-.*\.woff2$/.test(f))).sort();
+      const built = Object.keys(bundle)
+        .filter((f) => !f.endsWith('.map') && f !== 'index.html')
+        .filter((f) => !font(f) || /-latin(-ext)?-\d+-normal-.*\.woff2$/.test(f))
+        .sort();
       // menu: vstupný chunk, jeho statické importy a CSS
       const shell = new Set();
       const visit = (f) => {
-        const ch = bundle[f]; if (!ch || shell.has(f)) return; shell.add(f);
-        if (ch.type === 'chunk') { ch.imports.forEach(visit); (ch.viteMetadata?.importedCss || []).forEach((c) => shell.add(c)); }
+        const ch = bundle[f];
+        if (!ch || shell.has(f)) return;
+        shell.add(f);
+        if (ch.type === 'chunk') {
+          ch.imports.forEach(visit);
+          (ch.viteMetadata?.importedCss || []).forEach((c) => shell.add(c));
+        }
       };
-      Object.keys(bundle).filter((f) => bundle[f].type === 'chunk' && bundle[f].isEntry).forEach(visit);
+      Object.keys(bundle)
+        .filter((f) => bundle[f].type === 'chunk' && bundle[f].isEntry)
+        .forEach(visit);
       const hidden = (f) => HIDDEN_CHUNKS.some((h) => f.startsWith(`assets/${h}-`));
-      const precache = ['/', ...staticFiles.map((f) => `/${f}`), ...built.filter((f) => shell.has(f) || font(f)).map((f) => `/${f}`)];
+      const precache = [
+        '/',
+        ...staticFiles.map((f) => `/${f}`),
+        ...built.filter((f) => shell.has(f) || font(f)).map((f) => `/${f}`),
+      ];
       const all = ['/', ...staticFiles.map((f) => `/${f}`), ...built.filter((f) => !hidden(f)).map((f) => `/${f}`)];
       const h = createHash('sha256');
       all.forEach((f) => h.update(f));
@@ -58,7 +73,11 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             { name: 'util', test: /\/src\/core\/util\.js$/, priority: 2 },
-            { name: 'core3d', test: /\/node_modules\/three\/|\/src\/core\/(stage|kit|workInspect|particles|heightField|controls|inspector|export)\.js$/, priority: 1 },
+            {
+              name: 'core3d',
+              test: /\/node_modules\/three\/|\/src\/core\/(stage|kit|workInspect|particles|heightField|controls|inspector|export)\.js$/,
+              priority: 1,
+            },
           ],
         },
       },

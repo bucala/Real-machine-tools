@@ -2,7 +2,9 @@
 // Nič sa nesťahuje. Predvolene vypnutý; zapína sa v hornej lište (PREFS.sound), prehliadač ho pustí až po prvom kliknutí.
 import { PREFS } from './i18n';
 
-let ctx = null, master = null, noiseBuf = null;
+let ctx = null,
+  master = null,
+  noiseBuf = null;
 
 const ensure = () => {
   if (ctx) return ctx;
@@ -10,20 +12,33 @@ const ensure = () => {
   if (!AC) return null;
   try {
     ctx = new AC();
-    master = ctx.createGain(); master.gain.value = PREFS.sound ? 0.7 : 0; master.connect(ctx.destination);
+    master = ctx.createGain();
+    master.gain.value = PREFS.sound ? 0.7 : 0;
+    master.connect(ctx.destination);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  } catch (err) { ctx = null; }
+  } catch (err) {
+    ctx = null;
+  }
   return ctx;
 };
 
 // prehliadač dovolí zvuk až po interakcii používateľa
-const unlock = () => { if (PREFS.sound && ensure() && ctx.state !== 'running') ctx.resume().catch(() => {}); };
-try { ['pointerdown', 'keydown'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true })); } catch (err) { /* bez zvuku */ }
+const unlock = () => {
+  if (PREFS.sound && ensure() && ctx.state !== 'running') ctx.resume().catch(() => {});
+};
+try {
+  ['pointerdown', 'keydown'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+} catch (err) {
+  /* bez zvuku */
+}
 
 const setSoundOn = (on) => {
-  if (on) { if (!ensure()) return; ctx.resume().catch(() => {}); }
+  if (on) {
+    if (!ensure()) return;
+    ctx.resume().catch(() => {});
+  }
   if (master) master.gain.setTargetAtTime(on ? 0.7 : 0, ctx.currentTime, 0.05);
 };
 
@@ -36,36 +51,75 @@ const PROFILES = {
   saw: { motor: [50, 140], cut: 3300, q: 6, cutGain: 0.14 },
   shaper: { motor: [38, 95], cut: 1500, q: 2.5, cutGain: 0.17 },
   weld: { hum: 100, arc: true },
-  mig: { motor: [95, 210], arc: true },                                // invertor nehučí – počuť podávač drôtu a oblúk
+  mig: { motor: [95, 210], arc: true }, // invertor nehučí – počuť podávač drôtu a oblúk
   folder: {},
-  bender: { motor: [52, 118], cut: 420, q: 1.5, cutGain: 0.1 },        // prevodovka valcov a vŕzganie profilu pri ohybe
+  bender: { motor: [52, 118], cut: 420, q: 1.5, cutGain: 0.1 }, // prevodovka valcov a vŕzganie profilu pri ohybe
 };
 
 function createSound(kind) {
   const P = PROFILES[kind] || {};
-  const N = {}; let built = false, lastT = 0;
-  const noise = () => { const n = ctx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; n.start(); return n; };
-  const gain = (dst) => { const g = ctx.createGain(); g.gain.value = 0; g.connect(dst || master); return g; };
-  const filter = (type, f, q = 1) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
+  const N = {};
+  let built = false,
+    lastT = 0;
+  const noise = () => {
+    const n = ctx.createBufferSource();
+    n.buffer = noiseBuf;
+    n.loop = true;
+    n.start();
+    return n;
+  };
+  const gain = (dst) => {
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.connect(dst || master);
+    return g;
+  };
+  const filter = (type, f, q = 1) => {
+    const b = ctx.createBiquadFilter();
+    b.type = type;
+    b.frequency.value = f;
+    b.Q.value = q;
+    return b;
+  };
   const build = () => {
     if (built || !ensure()) return;
     built = true;
     if (P.motor) {
-      N.mg = gain(); N.mlp = filter('lowpass', 520, 0.8); N.mlp.connect(N.mg);
-      N.o1 = ctx.createOscillator(); N.o1.type = 'sawtooth'; N.o1.connect(N.mlp); N.o1.start();
-      N.o2 = ctx.createOscillator(); N.o2.type = 'square'; N.o2.connect(N.mlp); N.o2.start();
+      N.mg = gain();
+      N.mlp = filter('lowpass', 520, 0.8);
+      N.mlp.connect(N.mg);
+      N.o1 = ctx.createOscillator();
+      N.o1.type = 'sawtooth';
+      N.o1.connect(N.mlp);
+      N.o1.start();
+      N.o2 = ctx.createOscillator();
+      N.o2.type = 'square';
+      N.o2.connect(N.mlp);
+      N.o2.start();
     }
     if (P.cut) {
-      N.cg = gain(); N.cbp = filter('bandpass', P.cut, P.q); N.cbp.connect(N.cg);
-      N.cn = noise(); N.cn.connect(N.cbp);
+      N.cg = gain();
+      N.cbp = filter('bandpass', P.cut, P.q);
+      N.cbp.connect(N.cg);
+      N.cn = noise();
+      N.cn.connect(N.cbp);
     }
     if (P.hum) {
-      N.hg = gain(); N.hlp = filter('lowpass', 420, 0.7); N.hlp.connect(N.hg);
-      N.ho = ctx.createOscillator(); N.ho.type = 'sawtooth'; N.ho.frequency.value = P.hum; N.ho.connect(N.hlp); N.ho.start();
+      N.hg = gain();
+      N.hlp = filter('lowpass', 420, 0.7);
+      N.hlp.connect(N.hg);
+      N.ho = ctx.createOscillator();
+      N.ho.type = 'sawtooth';
+      N.ho.frequency.value = P.hum;
+      N.ho.connect(N.hlp);
+      N.ho.start();
     }
     if (P.arc) {
-      N.ag = gain(); N.ahp = filter('highpass', 1400, 0.7); N.ahp.connect(N.ag);
-      N.an = noise(); N.an.connect(N.ahp);
+      N.ag = gain();
+      N.ahp = filter('highpass', 1400, 0.7);
+      N.ahp.connect(N.ag);
+      N.an = noise();
+      N.an.connect(N.ahp);
     }
   };
   const to = (param, v, tc = 0.08) => param.setTargetAtTime(v, ctx.currentTime, tc);
@@ -79,7 +133,9 @@ function createSound(kind) {
     lastT = now;
     if (N.mg) {
       const f = P.motor[0] + motor * (P.motor[1] - P.motor[0]);
-      to(N.o1.frequency, f); to(N.o2.frequency, f * 1.503); to(N.mlp.frequency, 300 + 900 * motor);
+      to(N.o1.frequency, f);
+      to(N.o2.frequency, f * 1.503);
+      to(N.mlp.frequency, 300 + 900 * motor);
       to(N.mg.gain, motor > 0.01 ? 0.035 + 0.06 * motor : 0, 0.15);
     }
     if (N.cg) {
@@ -99,7 +155,14 @@ function createSound(kind) {
   };
   const dispose = () => {
     if (!built) return;
-    Object.values(N).forEach((n) => { try { if (n.stop) n.stop(); n.disconnect(); } catch (err) { /* ignorované */ } });
+    Object.values(N).forEach((n) => {
+      try {
+        if (n.stop) n.stop();
+        n.disconnect();
+      } catch (err) {
+        /* ignorované */
+      }
+    });
   };
   return { update, dispose };
 }

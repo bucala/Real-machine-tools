@@ -21,6 +21,8 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Formátovanie (Prettier)
+        run: npm run format:check
       - name: Testy
         run: npm test
       - name: Build

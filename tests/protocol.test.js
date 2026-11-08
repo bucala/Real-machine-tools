@@ -18,9 +18,29 @@ describe('protokol z cvičenia', () => {
     expect(score(ch, 30).pct).toBe(55);
   });
   it('protokol obsahuje zadanie, výkres, tabuľku odchýlok, nastavenia a hodnotenie; texty sú ošetrené', () => {
-    const html = buildProtocol({ machine: 'sustruh', title: 'Hrotový sústruh', sub: 'TOS SN', kicker: 'Simulátor', task: 'Zápich <6>', desc: 'Tyč Ø50', svg: '<svg></svg>', shot: null,
-      params: [{ sec: 'Pohon', l: 'Otáčky', v: '500 ot/min' }], dro: [['X', '40.00']], checks: [{ label: 'Dno drážky Ø40 ±0,1 mm', actual: 'Ø40.03', ok: true }], warns: 1, secs: 75, student: 'Jano', url: 'https://x/#sustruh/uloha=zapich', date: '4. 11. 2026' });
-    expect(html).toContain('Zápich &lt;6&gt;'); expect(html).toContain('<svg></svg>'); expect(html).toContain('+0,03');
-    expect(html).toContain('500 ot/min'); expect(html).toContain('1:15'); expect(html).toContain('známka 1');
+    const html = buildProtocol({
+      machine: 'sustruh',
+      title: 'Hrotový sústruh',
+      sub: 'TOS SN',
+      kicker: 'Simulátor',
+      task: 'Zápich <6>',
+      desc: 'Tyč Ø50',
+      svg: '<svg></svg>',
+      shot: null,
+      params: [{ sec: 'Pohon', l: 'Otáčky', v: '500 ot/min' }],
+      dro: [['X', '40.00']],
+      checks: [{ label: 'Dno drážky Ø40 ±0,1 mm', actual: 'Ø40.03', ok: true }],
+      warns: 1,
+      secs: 75,
+      student: 'Jano',
+      url: 'https://x/#sustruh/uloha=zapich',
+      date: '4. 11. 2026',
+    });
+    expect(html).toContain('Zápich &lt;6&gt;');
+    expect(html).toContain('<svg></svg>');
+    expect(html).toContain('+0,03');
+    expect(html).toContain('500 ot/min');
+    expect(html).toContain('1:15');
+    expect(html).toContain('známka 1');
   });
 });

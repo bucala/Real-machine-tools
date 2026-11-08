@@ -3,8 +3,11 @@ import * as THREE from 'three';
 import { createAccessories } from '../src/machines/cnc/accessories';
 
 const setup = () => {
-  const root = new THREE.Group(), material = new THREE.MeshBasicMaterial();
-  const M = Object.fromEntries(['cab', 'cab2', 'steel', 'steelD', 'anth', 'dark', 'black', 'red', 'yellow'].map((k) => [k, material]));
+  const root = new THREE.Group(),
+    material = new THREE.MeshBasicMaterial();
+  const M = Object.fromEntries(
+    ['cab', 'cab2', 'steel', 'steelD', 'anth', 'dark', 'black', 'red', 'yellow'].map((k) => [k, material]),
+  );
   return { root, ...createAccessories(root, M, 1.23) };
 };
 describe('Hermle catalogue equipment', () => {
@@ -29,7 +32,9 @@ describe('Hermle catalogue equipment', () => {
   });
   it('keeps equipment above the floor with finite geometry on the scaled C42', () => {
     const { root } = setup();
-    root.traverse((m) => { if (m.geometry) expect(Array.from(m.geometry.attributes.position.array).every(Number.isFinite)).toBe(true); });
+    root.traverse((m) => {
+      if (m.geometry) expect(Array.from(m.geometry.attributes.position.array).every(Number.isFinite)).toBe(true);
+    });
     for (const g of root.children) expect(new THREE.Box3().setFromObject(g).min.y).toBeGreaterThanOrEqual(0);
   });
 });
