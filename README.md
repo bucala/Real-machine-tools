@@ -239,6 +239,7 @@ Samotné `npx wrangler deploy` používa už vytvorený `public/`. Úspešný bu
 - [Rozmery, fotografie, rekonštrukcie a obmedzenia presných strojov](docs/precision-machines.md)
 - [Výmena dát s PowerMill](docs/cam/powermill-exchange.md)
 - [Audit aplikácie](docs/AUDIT.md)
+- [Audit 2. kolo – moderné stroje (november 2026)](docs/AUDIT-2026-11.md)
 - [Technický list Bystronic Xpert Pro](docs/references/bystronic-xpert-pro-technical-data.pdf)
 - [Používateľov STEP podklad krytovania Röders](docs/references/roeders-cover-user.STEP)
 
