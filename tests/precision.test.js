@@ -54,3 +54,16 @@ describe('Sinker EDM process',()=>{
     expect(a.inside([3.5,3.5,19])).toBe(false);expect(b.inside([3.5,3.5,19])).toBe(true);expect(a.removed()).toBeGreaterThan(b.removed());
   });
 });
+
+import { edmArea, edmFeed, edmGap, edmRa, edmVdi } from '../src/machines/precision/edmProcess';
+describe('elektroerózia – fyzikálny model', () => {
+  it('rýchlosť hĺbenia klesá s plochou elektródy, medzera a drsnosť rastú s prúdom', () => {
+    const small = { shape: 'box', w: 8, d: 6 }, big = { shape: 'box', w: 30, d: 20 };
+    expect(edmArea(big)).toBe(600);
+    expect(edmFeed(small, 30) / edmFeed(big, 30)).toBeCloseTo(600 / 48, 6);
+    expect(edmFeed({ ...big, material: 'graphite' }, 30)).toBeGreaterThan(edmFeed(big, 30));
+    expect(edmGap(60)).toBeGreaterThan(edmGap(5));
+    expect(edmRa(2)).toBeLessThan(1); expect(edmRa(30)).toBeGreaterThan(5);
+    expect(edmVdi(30)).toBeGreaterThan(edmVdi(2));
+  });
+});

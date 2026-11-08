@@ -31,7 +31,7 @@ export function createStock({ min, max, res }) {
     return (z, r) => {
       let d;
       if (z < cr) { const rr = Math.max(r - (R - cr), 0), dz = z - cr; d = Math.sqrt(rr * rr + dz * dz) - cr; }
-      else d = r - R;
+      else d = Math.max(r - R, -z);                // vnútri: aj vzdialenosť k čelu – presná hĺbka dna (nie o pol voxelu hlbšie)
       return d > z - lc ? d : z - lc;
     };
   };
@@ -150,5 +150,15 @@ export function createStock({ min, max, res }) {
     if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return false;
     return f[i + nx * (j + ny * k)] > 0;
   };
-  return { cut, cutBox, hits, takeDirty, volume, inside, removed: () => removed * vox, vox, res, min, max, dims: [nx, ny, nz], chunks: [cx, cy, cz], o, field: f, boxSdf };
+  // znamienková vzdialenosť v mm (kladná v materiáli) s trilineárnou interpoláciou – na meranie obrobku
+  const sdfAt = (p) => {
+    const gx = (p[0] - o[0]) / res, gy = (p[1] - o[1]) / res, gz = (p[2] - o[2]) / res;
+    const i = Math.floor(gx), j = Math.floor(gy), k = Math.floor(gz);
+    if (i < 0 || j < 0 || k < 0 || i >= nx - 1 || j >= ny - 1 || k >= nz - 1) return -4 * res;
+    const fx = gx - i, fy = gy - j, fz = gz - k, at = (a, b, c) => f[i + a + nx * (j + b + ny * (k + c))];
+    const l = (a, b, t) => a + (b - a) * t;
+    const v = l(l(l(at(0, 0, 0), at(1, 0, 0), fx), l(at(0, 1, 0), at(1, 1, 0), fx), fy), l(l(at(0, 0, 1), at(1, 0, 1), fx), l(at(0, 1, 1), at(1, 1, 1), fx), fy), fz);
+    return v * q;
+  };
+  return { cut, cutBox, hits, takeDirty, volume, inside, sdfAt, removed: () => removed * vox, vox, res, min, max, dims: [nx, ny, nz], chunks: [cx, cy, cz], o, field: f, boxSdf };
 }

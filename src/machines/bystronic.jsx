@@ -13,7 +13,9 @@ import { exportStl } from '../core/export';
 import { exportStep } from '../core/step';
 import { HelpFooter,PartsSection,SceneView,SegRow,Slider,Toggle,ViewSection,mkParts,useMachine,useTele } from '../ui/common';
 import { SectionInfo } from '../ui/sectionInfo';
-import { StepDownloadButton } from '../ui/tools';
+import { StepDownloadButton, TaskSection } from '../ui/tools';
+import { BendDrawing } from '../ui/sketch';
+import { brakeChecks, measureBrake } from './precision/modernTasks';
 import { BystronicHmi,drawBrakeHmi } from '../ui/bystronicHmi';
 import { createBystronicModel } from './precision/bystronicModel';
 import { brakeSetup,XPERT320 } from './precision/pressBrakeProcess';
@@ -35,7 +37,19 @@ const parts=()=>mkParts([
 ]);
 const save=(blob,name)=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),4000);};
 const getSetup=c=>{try{return {value:brakeSetup(c),error:null};}catch(e){return {value:null,error:e.message};}};
-export default function BystronicSimulator({onBack}){
+// úlohy s hodnotením (kontroly v precision/modernTasks.js)
+const BRAKE_TASKS=[
+  {id:'uholnik',title:()=>L('Uholník 90° ±0,5° z plechu 3 mm','90° ±0.5° angle from 3 mm sheet'),
+    desc:()=>L('Oceľový plech 3 × 2 000 mm, hĺbka prírezu 100 mm. Ohni uholník s ramenami 50 × 50 mm (doraz X 50 mm) na vnútorný uhol 90°. Zvoľ V-matricu podľa pravidla V = 6 až 10 × t (najčastejšie 8 × t).','Steel sheet 3 × 2,000 mm, blank depth 100 mm. Bend an angle with 50 × 50 mm legs (X gauge 50 mm) to an inside angle of 90°. Choose the V die by the rule V = 6 to 10 × t (usually 8 × t).'),
+    setup:{material:'steel',thickness:3,length:2000,depth:100,flange:50,angle:135,v:40},drawing:()=><BendDrawing angle={90} flange={50} th={3}/>,
+    labels:{run:()=>L('Ohyb dokončený bez hlásenia','Bend finished without message'),sheet:()=>L('Oceľ 3 × 2 000 mm','Steel 3 × 2,000 mm'),angle:()=>L('Uhol 90 ±0,5°','Angle 90 ±0.5°'),flange:()=>L('Rameno (doraz X) 50 ±0,5 mm','Leg (X gauge) 50 ±0.5 mm'),v:()=>L('V-matrica 6 – 10 × t','V die 6 – 10 × t')}},
+  {id:'sila',title:()=>L('Ohyb 6 mm × 3 m do 50 % sily lisu','6 mm × 3 m bend within 50 % of press force'),
+    desc:()=>L('Oceľový plech 6 × 3 000 mm ohni na 90°. Lisovacia sila nesmie prekročiť polovicu kapacity (1 600 kN), aby sa šetril stroj aj nástroje. Sila F = 1,42 · Rm · L · t² / V klesá so šírkou matrice – zvoľ V tak, aby F ≤ 1 600 kN, ale nie viac ako 12 × t (veľký polomer ohybu).','Bend a steel sheet 6 × 3,000 mm to 90°. The bending force must not exceed half the capacity (1,600 kN) to spare the machine and tooling. Force F = 1.42 · Rm · L · t² / V falls with die width – choose V so that F ≤ 1,600 kN, but not more than 12 × t (large bend radius).'),
+    setup:{material:'steel',thickness:6,length:3000,depth:300,flange:150,angle:90,v:36},drawing:()=><BendDrawing angle={90} flange={150} th={6}/>,
+    labels:{run:()=>L('Ohyb dokončený bez hlásenia','Bend finished without message'),sheet:()=>L('Oceľ 6 × 3 000 mm','Steel 6 × 3,000 mm'),angle:()=>L('Uhol 90 ±0,5°','Angle 90 ±0.5°'),force:()=>L('Sila ≤ 1 600 kN (50 %)','Force ≤ 1,600 kN (50 %)'),v:()=>L('V-matrica 6 – 12 × t','V die 6 – 12 × t')}},
+].map(t=>({...t,checks:m=>brakeChecks[t.id](m).map(c=>({...c,label:t.labels[c.key]()}))}));
+
+export default function BystronicSimulator({onBack,params}){
   const mountRef=useRef(null),layerRef=useRef(null),tipRef=useRef(null);
   const {ctl,ui,set,setUi,selected,selectPart,apiRef}=useMachine({hmiTab:'bend',manual:false,hydraulic:true,estop:false,guardOpen:false,obstructed:false,cutaway:false,light:true,hmiAngle:-10,speed:1,material:'steel',thickness:4,length:2400,depth:600,flange:150,v:32,angle:90,r:0});
   const [tele,setTele]=useTele({phase:'idle',run:false,paused:false,done:false,complete:false,y:0,beta:0,force:0,t:0,alarm:null,hasJob:false});
@@ -52,6 +66,7 @@ export default function BystronicSimulator({onBack}){
     const actions=Object.fromEntries(['start','hold','retract','reset','emergency','releaseStop','acknowledge','light','hydraulic'].map(id=>[id,()=>control.action(id)]));
     actions.startPanel=actions.start;actions.retractPanel=actions.retract;actions.hmi=()=>setHmi(true);
     const screen=tex(1200,700,(g,w,h)=>drawBrakeHmi(g,w,h,{S:control.snapshot(),c,setup:getSetup(c).value}));model.display.material.map=screen.tx;
+    apiRef.current.measure=()=>measureBrake({S:process.S,c});
     apiRef.current={...apiRef.current,machineModel:{root,name:'Bystronic Xpert Pro 320-4300'},hmiAction:id=>actions[id]?.(),hmiSet:control.set,hmiLoad:control.load,getHmiCanvas:()=>screen.tx.image,snapshot,
       stl:()=>process.S.run?null:exportStl(model.stock),exportStep:async()=>{if(process.S.run)throw new Error(L('Najprv zastav cyklus.','Stop the cycle first.'));return exportStep(model.stock);}};
     const v=(x,y,z)=>new THREE.Vector3(x,y,z);
@@ -80,6 +95,8 @@ export default function BystronicSimulator({onBack}){
   },[]);
   const setup=getSetup(ui),locked=tele.hasJob||ui.unclamped,angle=180-tele.beta*360/Math.PI,p=parts();
   const change=(key,value)=>apiRef.current.hmiSet?.(key,value);
+  // úloha: nový plech a predpísané údaje (uhol, matricu a doraz nastavuje žiak)
+  const setupTask=t=>{if(tele.run||ui.unclamped)return;apiRef.current.hmiAction?.('reset');Object.entries(t.setup).forEach(([k,v])=>change(k,v));};
   const number=(key,label,min,max,step=1)=><label>{label}<input className="sel" type="number" min={min} max={max} step={step} value={ui[key]} onChange={e=>{const value=Math.min(max,Math.max(min,Number(e.target.value)||min));change(key,value);if(key==='depth'&&ui.flange>value-20)change('flange',value-20);}}/></label>;
   return <div className="machine-app modern-app hermle-app brake-app w-full flex flex-col md:flex-row">
     <SceneView {...{mountRef,layerRef,tipRef,ui,set,selected,selectPart,onBack,apiRef}} parts={p} canUnclamp workBelowModes chips={[{color:tele.run?'#34d399':'#94a3b8',text:tele.run?L('Ohýbanie','Bending'):L('Stojí','Stopped')},{color:ui.guardOpen?'#f5b64d':'#34d399',text:ui.guardOpen?L('Kryty otvorené','Guards open'):L('Kryty zatvorené','Guards closed')}]}
@@ -94,6 +111,7 @@ export default function BystronicSimulator({onBack}){
         <Toggle on={ui.hydraulic} label={L('Hydraulika','Hydraulics')} onClick={()=>change('hydraulic',!ui.hydraulic)}/><Toggle on={ui.light} label={L('Pracovné osvetlenie','Work light')} onClick={()=>change('light',!ui.light)}/><Toggle on={ui.guardOpen} label={L('Otvoriť bočné kryty','Open side guards')} onClick={()=>change('guardOpen',!ui.guardOpen)}/><Toggle on={ui.obstructed} label={L('Prekážka v ochrannom poli','Safety field obstruction')} onClick={()=>change('obstructed',!ui.obstructed)}/>
         <SegRow label={L('Rýchlosť simulácie','Simulation speed')} value={ui.speed} options={[[1,'×1'],[4,'×4'],[10,'×10']]} onChange={v=>change('speed',v)}/>
       </div>
+      <TaskSection machine="bystronic" tasks={BRAKE_TASKS} apiRef={apiRef} params={params} status={{kind:tele.alarm?'danger':'idle',text:tele.alarm||''}} onSetup={setupTask}/>
       <div className="sec"><div className="section-heading"><h2 className="sec-title">{L('Plech a ohyb','Sheet and bend')}</h2><SectionInfo title={L('Plech a ohyb','Sheet and bend')}><p>{L('Jeden ohyb vo vzduchu. Uhol je vnútorný uhol dielu (rovný plech = 180°). Doraz X určuje dĺžku zadného ramena. Po cykle sa parametre odomknú tlačidlom Nový plech.','Single air bend. The angle is the inside angle (flat sheet = 180°). X sets the rear flange length. New sheet unlocks settings after a cycle.')}</p></SectionInfo></div><fieldset disabled={locked} className="brake-fields mt-3"><label>{L('Materiál','Material')}<select className="sel" value={ui.material} onChange={e=>change('material',e.target.value)}><option value="steel">{L('Oceľ','Steel')}</option><option value="stainless">{L('Nehrdzavejúca oceľ','Stainless steel')}</option><option value="aluminium">{L('Hliník','Aluminium')}</option></select></label>{number('thickness',L('Hrúbka [mm]','Thickness [mm]'),.5,12,.5)}{number('length',L('Dĺžka ohybu [mm]','Bend length [mm]'),100,XPERT320.bendLength,10)}{number('depth',L('Hĺbka prírezu [mm]','Blank depth [mm]'),80,1400,10)}{number('flange',L('Doraz X [mm]','X back gauge [mm]'),20,Math.min(XPERT320.xRange,ui.depth-20),1)}{number('angle',L('Vnútorný uhol [°]','Inside angle [°]'),90,170,1)}</fieldset></div>
       <div className="sec"><div className="section-heading"><h2 className="sec-title">{L('Nástroje a dorazy','Tooling and gauges')}</h2><SectionInfo title={L('Nástroje a sila','Tooling and force')}><p>{L('Výučbový odhad sily F = 1,42 × Rm × L × t² / V. Polomer ohybu a odpruženie sú približné; nejde o technologický predpis. Osadenie obsahuje segmentovaný 85° horný nástroj a V-matricu. Rozsah X 1 050 mm nie je totožný so zdvihom saní X 600 mm.','Training force estimate F = 1.42 × Rm × L × t² / V. Bend radius and springback are approximate, not production instructions. Tooling comprises a segmented 85° punch and V die. The 1,050 mm X range differs from the 600 mm X carriage travel.')}</p></SectionInfo></div><fieldset disabled={locked} className="mt-3"><Slider id="brake-v" label={L('Otvorenie matrice V','Die opening V')} min={16} max={120} step={2} value={ui.v} unit="mm" onChange={v=>change('v',v)}/><Slider id="brake-r" label={L('Výška dorazu R','R gauge height')} min={0} max={250} value={ui.r} unit="mm" onChange={v=>change('r',v)}/></fieldset><p className="text-sm">{L('Odhad sily','Estimated force')}: {setup.value?.force.toFixed(0)||'—'} / 3 200 kN</p><div className="brake-force"><span style={{width:`${Math.min(100,(setup.value?.force||0)/32)}%`}}/></div></div>
       <div className="sec"><h2 className="sec-title mb-3">HMI</h2><Slider id="brake-hmi" label={L('Natočenie panela','Panel angle')} min={-80} max={80} value={ui.hmiAngle} unit="°" onChange={v=>change('hmiAngle',v)}/><button className="btn" onClick={()=>setHmi(true)}>{L('HMI cez celé okno','Fullscreen HMI')}</button></div>

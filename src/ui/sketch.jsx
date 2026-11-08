@@ -408,3 +408,29 @@ export function HubDrawing({ kind }) {
     </Svg>
   );
 }
+
+// ---------------- CNC a elektroerózia: kapsa / dutina v strede bloku ----------------
+// bx × by × bz = polotovar, px × py × depth = kapsa so stredom v strede hornej plochy (G54);
+// kóty kapsy sú mimo bloku, tolerancia v poznámke (malá kapsa by inak nebola čitateľná)
+export function PocketDrawing({ bx = 100, by = 80, bz = 40, px, py, depth, tol, label }) {
+  const k = 0.8, x0 = 34, y0 = 34, w = bx * k, h = by * k, pw = px * k, ph = py * k;
+  const pl = x0 + (w - pw) / 2, pt = y0 + (h - ph) / 2;
+  const ex = 160, ey = 44, sh = bz * k, sd = Math.max(3, depth * k), sl = ex + (w - pw) / 2, sr = sl + pw;
+  const num = (v) => String(v).replace('.', L(',', '.'));
+  return (
+    <Svg h={124} label={label || `${px} × ${py} × ${depth}`}>
+      <Cap x={x0} y={12}>{L('pohľad zhora', 'top view')}</Cap><Cap x={ex} y={12}>{L('rez', 'section')}</Cap>
+      <rect x={x0} y={y0} width={r2(w)} height={r2(h)} {...body} />
+      <rect x={r2(pl)} y={r2(pt)} width={r2(pw)} height={r2(ph)} rx={1.5} fill="var(--panel, #fff)" stroke="currentColor" strokeWidth="1.2" />
+      <DimH x1={pl} x2={pl + pw} y={y0 - 8} f1={pt} text={num(px)} />
+      <DimV y1={pt} y2={pt + ph} x={x0 - 8} f1={pl} text={num(py)} side="l" />
+      <DimH x1={x0} x2={x0 + w} y={y0 + h + 13} f1={y0 + h} text={String(bx)} />
+      <DimV y1={y0} y2={y0 + h} x={x0 + w + 9} f1={x0 + w} text={String(by)} />
+      <path d={`M${ex} ${ey}H${r2(sl)}V${r2(ey + sd)}H${r2(sr)}V${ey}H${r2(ex + w)}V${r2(ey + sh)}H${ex}Z`} {...body} />
+      <DimH x1={ex} x2={ex + w} y={ey + sh + 13} f1={ey + sh} text={String(bx)} />
+      <DimV y1={ey} y2={ey + sh} x={ex + w + 9} f1={ex + w} text={String(bz)} />
+      <DimV y1={ey} y2={ey + sd} x={sl - 7} f2={sl} text={num(depth)} side="l" ty={ey - 6} />
+      {tol && <T x={ex} y={118} a="start">{L(`kóty dutiny ±${num(tol)} mm`, `recess dimensions ±${num(tol)} mm`)}</T>}
+    </Svg>
+  );
+}

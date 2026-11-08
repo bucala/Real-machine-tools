@@ -16,13 +16,15 @@ import { exportStl } from '../core/export';
 import { exportStep } from '../core/step';
 import { createSound } from '../core/sound';
 import { HelpFooter,PartsSection,SceneView,SegRow,Slider,Toggle,ViewSection,mkParts,useMachine,useTele } from '../ui/common';
-import { StepDownloadButton } from '../ui/tools';
+import { StepDownloadButton, TaskSection } from '../ui/tools';
+import { PocketDrawing } from '../ui/sketch';
+import { EDM_SAFETY, edmChecks, measureEdm } from './precision/modernTasks';
 import { ElectrodeLibrary } from '../ui/electrodeLibrary';
 import '../ui/toolPicker.css';
 import { EdmFullscreen } from '../ui/edmFullscreen';
 import { createStock } from './cnc/voxel';
 import { EX500 } from './precision/profiles';
-import { createEdmProcess } from './precision/edmProcess';
+import { createEdmProcess, edmFeed, edmGap, edmMrr, edmRa, edmVdi, edmRelWear } from './precision/edmProcess';
 import { createOscarModel } from './precision/oscarModel';
 const parts=()=>mkParts([
   ['lozko','Lôžko','Bed','EX 500 · masívne lôžko','EX 500 · massive bed','Stroj 3 000 kg, nosnosť obrobku 2 300 kg. Obrysy plechov podľa fotografií výrobcu.','3,000 kg machine, 2,300 kg workpiece capacity. Sheet-metal contours follow manufacturer photographs.'],
@@ -35,11 +37,39 @@ const parts=()=>mkParts([
   ['obrobok','Obrobok','Workpiece','Hĺbená dutina','Sunk cavity','Tvar elektródy a výbojová medzera určujú geometriu dutiny. Export zachová aj prerušené hĺbenie.','Electrode shape and discharge gap determine the cavity. Export also preserves a paused cut.'],
 ]);
 const save=(blob,name)=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);};
-export default function OscarSimulator({onBack}){
+// technologické údaje generátora podľa prúdu a elektródy (výučbový model v edmProcess.js)
+function EdmReadout({electrode,current}){
+  if(!electrode)return null;
+  const rows=[[L('Výbojová medzera (podľa prúdu)','Discharge gap (from current)'),`${edmGap(current).toFixed(3)} mm`],
+    [L('Úber','Removal rate'),`${edmMrr(electrode,current).toFixed(0)} mm³/min`],
+    [L('Rýchlosť hĺbenia (úber / plocha)','Sinking rate (removal / area)'),`${edmFeed(electrode,current).toFixed(2)} mm/min`],
+    [L('Drsnosť dna','Floor roughness'),`Ra ≈ ${edmRa(current).toFixed(1)} µm · VDI ${edmVdi(current).toFixed(0)}`],
+    [L('Relatívne odhorenie elektródy','Relative electrode wear'),`${(edmRelWear(electrode)*100).toFixed(1)} %`]];
+  return <dl className="text-xs mt-2" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'2px 12px'}} data-param={L('Generátor','Generator')} data-val={`${current} A`}>
+    {rows.map(([k,v])=><div key={k} style={{display:'contents'}}><dt className="muted">{k}</dt><dd className="tnum" style={{textAlign:'right'}}>{v}</dd></div>)}
+    <dd className="muted" style={{gridColumn:'1 / -1',marginTop:4}}>{L('Vyšší prúd hĺbi rýchlejšie, ale zväčší medzeru a drsnosť – na dokončenie znížte prúd.','Higher current sinks faster but widens the gap and roughness – reduce the current to finish.')}</dd>
+  </dl>;
+}
+
+// úlohy s hodnotením (kontroly v precision/modernTasks.js)
+const EDM_TASKS=[
+  {id:'dutina',title:()=>L('Dutina 20,3 × 15,3 × 6,00 mm','Cavity 20.3 × 15.3 × 6.00 mm'),
+    desc:()=>L('Medená elektróda 20 × 15 mm, jedna operácia v strede obrobku. Dutina je väčšia o výbojovú medzeru na každej strane a hlbšia o čelnú medzeru. Zvoľ prúd tak, aby medzera bola 0,15 mm (dutina 20,3 × 15,3 ±0,05), a hĺbku operácie zmenši o medzeru, aby dno bolo presne 6,00 ±0,03 mm.','Copper electrode 20 × 15 mm, one operation at the centre of the workpiece. The cavity is larger by the discharge gap on each side and deeper by the frontal gap. Choose the current so the gap is 0.15 mm (cavity 20.3 × 15.3 ±0.05) and reduce the operation depth by the gap so the floor is exactly 6.00 ±0.03 mm.'),
+    setup:{current:12,depth:6},drawing:()=><PocketDrawing bx={100} by={80} bz={30} px={20.3} py={15.3} depth={6} tol={0.05}/>,
+    labels:{run:()=>L('Hĺbenie dokončené bez hlásenia','Sinking finished without message'),depth:()=>L('Hĺbka 6,00 ±0,03 mm','Depth 6.00 ±0.03 mm'),x:()=>L('Dĺžka 20,3 ±0,05 mm','Length 20.3 ±0.05 mm'),y:()=>L('Šírka 15,3 ±0,05 mm','Width 15.3 ±0.05 mm')}},
+  {id:'dokoncenie',title:()=>L('Dokončenie: Ra ≤ 1,6 µm, hĺbka 2,00 mm','Finishing: Ra ≤ 1.6 µm, depth 2.00 mm'),
+    desc:()=>L('Dno dutiny má mať drsnosť najviac Ra 1,6 µm (VDI 24). Drsnosť určuje prúd generátora – zníž ho, kým odhad Ra v paneli neklesne pod 1,6 µm. Hĺbenie bude pomalšie; hĺbku operácie zmenši o medzeru, aby dno bolo 2,00 ±0,03 mm.','The cavity floor must have a roughness of at most Ra 1.6 µm (VDI 24). The generator current sets the roughness – lower it until the Ra estimate in the panel drops below 1.6 µm. Sinking will be slower; reduce the operation depth by the gap so the floor is 2.00 ±0.03 mm.'),
+    setup:{current:20,depth:2},drawing:()=><PocketDrawing bx={100} by={80} bz={30} px={20} py={15} depth={2} tol={0.03}/>,
+    labels:{run:()=>L('Hĺbenie dokončené bez hlásenia','Sinking finished without message'),ra:()=>L('Drsnosť dna Ra ≤ 1,6 µm','Floor roughness Ra ≤ 1.6 µm'),depth:()=>L('Hĺbka 2,00 ±0,03 mm','Depth 2.00 ±0.03 mm')}},
+].map(t=>({...t,checks:m=>edmChecks[t.id](m).map(c=>({...c,label:t.labels[c.key]()}))}));
+
+export default function OscarSimulator({onBack,params}){
   const mountRef=useRef(null),layerRef=useRef(null),tipRef=useRef(null);
   const {ctl,ui,set,setUi,selected,selectPart,apiRef}=useMachine({sparks:true,ncMode:'operations',ncText:EDM_GCODE_SAMPLE,manual:false,door:true,fill:false,light:true,flushing:true,estop:false,hmiLocked:false,hmiAngle:0,speed:20,current:30,gap:.05,electrode:{shape:'box',w:20,d:15,length:100},rows:[{x:-20,y:0,depth:8},{x:20,y:0,depth:5}]});
   const [tele,setTele]=useTele({phase:'idle',run:false,started:false,done:false,row:0,x:0,y:0,depth:-5,t:0,removed:0,wear:0,oilLevel:0,alarm:null,sparking:false});
   const [hmiOpen,setHmiOpen]=useState(false),[notice,setNotice]=useState(''),[library,setLibrary]=useState(null);
+  // úloha: nový obrobok, medená elektróda 20 × 15, jedna operácia v strede, východiskový prúd
+  const setupTask=t=>{if(tele.run||ui.unclamped)return;apiRef.current.reset?.();set('ncMode','operations');set('electrode',{id:'copper-prism-20-15',name:'Cu · 20 × 15 mm',shape:'box',w:20,d:15,length:100});set('rows',[{x:0,y:0,depth:t.setup.depth}]);set('current',t.setup.current);};
   useEffect(()=>{
     const c=ctl.current,mount=mountRef.current;
     const {scene,camera,renderer,snapshot,dispose:disposeStage}=createStage(mount,{far:400,floorSize:300,gridSize:200,fogNear:150,fogFar:350});
@@ -54,7 +84,7 @@ export default function OscarSimulator({onBack}){
     const flush=()=>{for(const p of stock.takeDirty()){let me=chunks.get(p.id);if(!p.idx.length){if(me){stockG.remove(me);me.geometry.dispose();chunks.delete(p.id);}continue;}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p.pos,3));g.setAttribute('normal',new THREE.BufferAttribute(p.nor,3));g.setIndex(new THREE.BufferAttribute(p.idx,1));g.computeBoundingSphere();if(me){me.geometry.dispose();me.geometry=g;}else{me=new THREE.Mesh(g,stockMat);me.castShadow=true;me.receiveShadow=true;stockG.add(me);chunks.set(p.id,me);}}};
     const reset=()=>{if(c.unclamped)return;for(const me of chunks.values()){stockG.remove(me);me.geometry.dispose();}chunks.clear();stock=createStock({min:[-50,-40,0],max:[50,40,30],res:.7});process=createEdmProcess(stock);ncCommands=null;ncEndApplied=false;flush();c.running=false;setNotice('');};reset();
     let oilLevel=0,gate=1,depth=-5,last=performance.now(),t=0,teleT=0,signature='',raf;
-    const cfg=()=>({rows:c.rows,electrode:c.electrode,current:c.current,gap:c.gap,oilLevel:oilLevel-50,fixtureHeight:50,ncCommands:c.ncMode==='gcode'?ncCommands:null});
+    const cfg=()=>({rows:c.rows,electrode:c.electrode,current:c.current,gap:edmGap(c.current),oilLevel:oilLevel-50,fixtureHeight:50,ncCommands:c.ncMode==='gcode'?ncCommands:null});
     const compile=()=>{if(process.job||process.S.run||c.unclamped){setNotice(L('Najprv Reset pre nový program.','Reset before loading a new program.'));return false;}try{const result=compileEdmGcode(c.ncText);ncCommands=result;set('rows',result.rows);process.S.alarm=null;setNotice(L('NC program načítaný.','NC program loaded.'));return true;}catch(e){setNotice(e.message);process.stop(e.message);return false;}};
     const start=()=>{
       if(c.ncMode==='gcode'&&!process.job&&!compile())return;
@@ -77,6 +107,7 @@ export default function OscarSimulator({onBack}){
     apiRef.current.toggleGate=()=>{if(!gateFree())return;set('door',!c.door);if(c.door)set('fill',false);};
     const actions={start,hold,reset,emergency:()=>{set('estop',!c.estop);hold();if(c.estop)process.stop(L('Núdzový STOP','Emergency STOP'));},coolant:()=>set('flushing',!c.flushing),light:()=>set('light',!c.light)};
     apiRef.current={...apiRef.current,start,hold,reset,compileNc:compile,setNcText:text=>{if(!process.job&&!process.S.run&&!c.unclamped)set('ncText',text);},hmiAction:id=>actions[id]?.(),setSpeed:v=>set('speed',v),getHmiCanvas:()=>screen.tx.image,snapshot,lockHmi:()=>set('hmiLocked',!c.hmiLocked)};
+    apiRef.current.measure=()=>measureEdm({stock,S:process.S,current:process.job?.current??c.current,row:(process.job?.rows||c.rows)[0]});
     apiRef.current.exportStep=async()=>{if(process.S.run)throw new Error(L('Najprv zastav hĺbenie.','Stop sinking first.'));flush();return exportStep(stockG);};
     apiRef.current.stl=()=>{if(process.S.run)return null;flush();return exportStl(stockG);};
     const screen=tex(1040,650,(g,w,h)=>drawOscarScreen(g,w,h,{S:process.S,c,oilLevel}));model.display.material.map=screen.tx;
@@ -136,8 +167,9 @@ export default function OscarSimulator({onBack}){
       <div className="sec"><div className="section-heading"><h2 className="sec-title mb-2">{L('Elektróda a generátor','Electrode and generator')}</h2><SectionInfo title={L('Elektróda a generátor','Electrode and generator')}><p className="text-xs muted">{L('Medená alebo grafitová elektróda, oceľový polotovar 100 × 80 × 30 mm. Nastavenie procesu a úberová rýchlosť sú výučbové, nie emulácia technológie výrobcu. Po rozbehnutí cyklu zmeny odomkne Reset (nový polotovar).','Copper or graphite electrode, 100 × 80 × 30 mm steel blank. Process parameters and removal rate are educational, not manufacturer technology emulation. After starting, Reset unlocks edits and creates a new blank.')}</p></SectionInfo></div><fieldset disabled={locked} className="hermle-settings">
         <div className="flex flex-wrap gap-2 mb-3"><button className="btn" onClick={()=>setLibrary('pick')}>{L('Vybrať elektródu zo skrinky…','Choose electrode from cabinet…')}</button><button className="btn" onClick={()=>setLibrary('manage')}>{L('Spravovať skrinku…','Manage cabinet…')}</button></div>
         <p className="text-sm mb-3">{ui.electrode.material==='graphite'?L('Grafit','Graphite'):'Cu'} · {ui.electrode.shape==='round'?`Ø${ui.electrode.w}`:`${ui.electrode.w} × ${ui.electrode.d}`} · L{ui.electrode.length} mm</p>
-        <Slider id="ex-current" label={L('Pracovný prúd','Working current')} min={1} max={EX500.current} value={ui.current} unit="A" onChange={v=>set('current',v)}/><Slider id="ex-gap" label={L('Výbojová medzera','Discharge gap')} min={.01} max={.2} step={.01} digits={2} value={ui.gap} unit="mm" onChange={v=>set('gap',v)}/>
+        <Slider id="ex-current" label={L('Pracovný prúd','Working current')} min={1} max={EX500.current} value={ui.current} unit="A" onChange={v=>set('current',v)}/><EdmReadout electrode={ui.electrode} current={ui.current}/>
       </fieldset></div>
+      <TaskSection machine="oscarmax" tasks={EDM_TASKS} apiRef={apiRef} params={params} status={{kind:tele.alarm?'danger':'idle',text:tele.alarm||''}} onSetup={setupTask} safety={{ui,set,runKey:'fill',items:EDM_SAFETY()}}/>
       <div className="sec"><div className="section-heading"><h2 className="sec-title mb-2">{L('Program hĺbenia','Sinking program')}</h2><SectionInfo title={L('Program hĺbenia','Sinking program')}><p className="text-xs muted mt-2">{L('Každá operácia: bezpečný zdvih → presun XY → hĺbenie → odtiahnutie. Elektróda sa netočí; dutina kopíruje jej tvar vrátane medzery.','Each operation: safe lift → XY move → sink → retract. The electrode does not rotate; the cavity follows its shape including the gap.')}</p></SectionInfo></div><fieldset disabled={locked} className="hermle-settings"><SegRow label={L('Riadenie','Control')} value={ui.ncMode} options={[["operations",L('Operácie','Operations')],["gcode",L("G-kód / ISO","G-code / ISO")]]} onChange={v=>set('ncMode',v)}/>{ui.ncMode==='gcode'&&<div className="edm-nc-editor"><label htmlFor="edm-nc">{L('NC program · G54 Z0 = horná plocha obrobku','NC program · G54 Z0 = blank top')}</label><textarea id="edm-nc" rows={14} spellCheck={false} value={ui.ncText} onChange={e=>apiRef.current.setNcText(e.target.value)}/><div className="flex flex-wrap gap-2 mt-2"><button className="btn" onClick={()=>apiRef.current.compileNc()}>{L('Skontrolovať a načítať NC','Check and load NC')}</button><button className="btn" onClick={()=>apiRef.current.setNcText(EDM_GCODE_SAMPLE)}>{L('Ukážkový program','Sample program')}</button><label className="btn">{L('Otvoriť NC súbor','Open NC file')}<input hidden type="file" accept=".nc,.tap,.txt,.iso" onChange={async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;if(f.size>256000){setNotice('NC: max. 256 kB');return;}apiRef.current.setNcText(await f.text());}}/></label></div><SectionInfo title="G-kód / ISO"><p>G0 / G1 · G21 · G90 / G91 · G54 · G94 · F (mm/min) · M3/M5 · M8/M9 · M2/M30. {L('Pred XY presunom a na konci programu použi G0 Z5. Podporované je zvislé hĺbenie; nepodporované bloky sa odmietnu s číslom riadku. Posuv F obmedzí výučbový servo-prísuv.','Use G0 Z5 before XY moves and at program end. Vertical burns are supported; unsupported blocks are rejected with their line number. F limits the training servo feed.')}</p></SectionInfo></div>}<fieldset disabled={ui.ncMode==='gcode'} className="edm-operations">{ui.rows.map((r,i)=><div className="edm-operation" key={i}><b>{i+1}</b>{number('X mm',r.x,-40,40,v=>set('rows',ui.rows.map((r,j)=>j===i?{...r,x:v}:r)))}{number('Y mm',r.y,-30,30,v=>set('rows',ui.rows.map((r,j)=>j===i?{...r,y:v}:r)))}{number(L('Hĺbka mm','Depth mm'),r.depth,.1,29,v=>set('rows',ui.rows.map((r,j)=>j===i?{...r,depth:v}:r)),.1)}<button className="btn" disabled={ui.rows.length===1} aria-label={L(`Odstrániť operáciu ${i+1}`,`Remove operation ${i+1}`)} onClick={()=>set('rows',ui.rows.filter((_,j)=>j!==i))}>×</button></div>)}</fieldset><button className="btn mt-2" disabled={ui.ncMode==='gcode'||ui.rows.length>=12} onClick={()=>set('rows',[...ui.rows,{x:0,y:0,depth:5}])}>+ {L('Operácia','Operation')}</button></fieldset>
 
       </div>

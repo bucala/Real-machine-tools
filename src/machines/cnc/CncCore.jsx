@@ -21,7 +21,9 @@ import { createExecutor } from './sim';
 import { MATERIALS } from './tooling';
 import { cabinHalfWidth, hmiPose } from './hermleLayout';
 import { HmiFullscreen } from '../../ui/hmiFullscreen';
-import { StepDownloadButton } from '../../ui/tools';
+import { StepDownloadButton, TaskSection } from '../../ui/tools';
+import { PocketDrawing } from '../../ui/sketch';
+import { CNC_SAFETY, CNC_TASK_PROGRAMS, cncChecks, measureCnc } from './cncTasks';
 import { CncToolPreview } from '../../ui/cncToolPreview';
 import { ToolLibrary } from '../../ui/toolLibrary';
 import { ToolPicker } from '../../ui/toolPicker';
@@ -48,11 +50,27 @@ const hermleParts = () => mkParts([
   ['panel', 'Ovládací panel', 'Control panel', 'Riadiaci systém Heidenhain TNC 640', 'Heidenhain TNC 640 control', 'Otočný ovládací panel s 19" dotykovou obrazovkou. Simulátor číta programy ISO (G-kód) aj Heidenhain Klartext.', 'Swivelling control panel with a 19" touch screen. The simulator reads ISO (G-code) and Heidenhain conversational programs.'],
   ['obrobok', 'Obrobok', 'Workpiece', 'Polotovar na upínači', 'Blank on the fixture', 'Polotovar na nulovom upínacom systéme. Nulový bod G54 je v strede hornej plochy.', 'The blank on the zero-point clamping system. Datum G54 is at the centre of the top face.'],
 ]);
+// úlohy s hodnotením (kontroly a pripravené programy v cncTasks.js)
+const CNC_TASKS = (samples) => [
+  { id: 'kapsa', title: () => L('Kapsa 40 × 30 × 5 ±0,1 mm', 'Pocket 40 × 30 × 5 ±0.1 mm'),
+    desc: () => L('Hliníkový polotovar 100 × 80 × 40 mm, nulový bod G54 v strede hornej plochy. Pripravený program vyfrézuje len kapsu 30 × 20 mm do hĺbky 2,5 mm – doplň dráhy tak, aby kapsa mala 40 × 30 mm a hĺbku 5 mm s rovným dnom. Fréza Ø10: dráha stredu nástroja je o polomer 5 mm vnútri steny, hĺbku rozdeľ na dva prechody.', 'Aluminium blank 100 × 80 × 40 mm, datum G54 at the centre of the top face. The prepared program only mills a 30 × 20 mm pocket 2.5 mm deep – add toolpaths so the pocket is 40 × 30 mm and 5 mm deep with a flat floor. Ø10 cutter: the tool-centre path is one radius (5 mm) inside the wall; split the depth into two passes.'),
+    setup: { program: () => CNC_TASK_PROGRAMS.kapsa }, drawing: () => <PocketDrawing px={40} py={30} depth={5} tol={0.1} />,
+    labels: { run: () => L('Program dokončený bez alarmu', 'Program finished without alarm'), depth: () => L('Hĺbka 5 ±0,1 mm', 'Depth 5 ±0.1 mm'), x: () => L('Dĺžka kapsy 40 ±0,1 mm', 'Pocket length 40 ±0.1 mm'), y: () => L('Šírka kapsy 30 ±0,1 mm', 'Pocket width 30 ±0.1 mm'), floor: () => L('Rovné dno (4 body ±0,1 mm)', 'Flat floor (4 points ±0.1 mm)'), load: () => L('Bez preťaženia vretena', 'No spindle overload') } },
+  { id: 'kolizia', title: () => L('Nájdi chybu v programe – zápich', 'Find the program error – plunge'),
+    desc: () => L('Program má vyfrézovať drážku 30 × 10 mm hlbokú 3 mm, ale pri spustení skončí alarmom. Nájdi chybný blok (pozri Kontrolu programu a riadok alarmu), oprav ho a program dokonči. Do materiálu sa smie vchádzať len pracovným posuvom G1 s posuvom F.', 'The program should mill a 30 × 10 mm slot 3 mm deep but ends with an alarm. Find the faulty block (see Program check and the alarm line), fix it and finish the program. The tool may enter material only with a working feed G1 and a feed rate F.'),
+    setup: { program: () => CNC_TASK_PROGRAMS.kolizia }, drawing: () => <PocketDrawing px={30} py={10} depth={3} tol={0.2} />,
+    labels: { run: () => L('Program dokončený bez alarmu', 'Program finished without alarm'), depth: () => L('Hĺbka drážky 3 ±0,1 mm', 'Slot depth 3 ±0.1 mm'), x: () => L('Dĺžka drážky 30 ±0,2 mm', 'Slot length 30 ±0.2 mm') } },
+  { id: 'naklon', title: () => L('3+2: šikmá plocha 30° (G68.2)', '3+2: 30° inclined face (G68.2)'),
+    desc: () => L('Spusti ukážkový program 3+2. Príkaz G68.2 definuje naklonenú rovinu, G53.1 natočí stôl osou A tak, aby nástroj stál kolmo na rovinu. Sleduj os A na displeji a over, že vznikne plocha so sklonom 30°.', 'Run the sample 3+2 program. G68.2 defines a tilted plane, G53.1 rotates the table with the A axis so the tool is normal to the plane. Watch the A axis on the display and check that a 30° face is produced.'),
+    setup: { program: () => (samples.find((x) => x.id === 'p32') || {}).text },
+    labels: { run: () => L('Program dokončený bez alarmu', 'Program finished without alarm'), a: () => L('Os A natočená na 30 ±0,1°', 'A axis at 30 ±0.1°'), slope: () => L('Sklon plochy 30 ±0,5°', 'Face slope 30 ±0.5°') } },
+].map((t) => ({ ...t, checks: (m) => cncChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
+
 const fmt = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // Spoločné CNC jadro pre Hermle aj Röders. Geometriu stroja dodá createModel (každý stroj vo vlastnom chunku).
-function CncCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId, createModel }) {
+function CncCore({ onBack, model, setModel, text, setText, tools, setTools, progId, setProgId, createModel, params }) {
   const rxu=model===RXU.id, MC = rxu ? RXU : MODELS[model] || MODELS.c32;
   const brand=rxu?'Röders':'Hermle', controller=rxu?'RMS6':'HEIDENHAIN · TNC 640';
   const mountRef = useRef(null), layerRef = useRef(null), tipRef = useRef(null), fileRef = useRef(null);
@@ -131,7 +149,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
 
     // ---------------- program a vykonávanie ----------------
     let loadedText='',loadedTools=[];
-    let prog = null, ex = null, toolsNow = [], o54 = [0, 0, 90], curT = -1, stockMin = null, stockMax = null, maxLoad = 0, msg = null;
+    let prog = null, ex = null, toolsNow = [], o54 = [0, 0, 90], curT = -1, stockMin = null, stockMax = null, maxLoad = 0, maxA = 0, msg = null;
     const stockCfg = () => {
       if (prog && prog.stock) {
         const s = prog.stock, sx = s.max[0] - s.min[0], sy = s.max[1] - s.min[1], sz = s.max[2] - s.min[2];
@@ -166,10 +184,11 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         pos: [['X',fmt(ex.S.pose.m[0])],['Y',fmt(ex.S.pose.m[1])],['Z','0.000'],['A','0.000'],['C','0.000'],['T','0'],['S','0'],['F','100']],
         status: L('Pripravený', 'Ready'), alarm: false };
       screen.redraw();
-      maxLoad = 0; msg = null; curT = -1;
+      maxLoad = 0; maxA = 0; msg = null; curT = -1;
       return { errors: prog.errors, warns: prog.warns, time: programTime(prog.moves, o54, MC), dialect: prog.dialect, toolDefs: prog.toolDefs, stock: prog.stock, n: prog.moves.length };
     };
     apiRef.current.load = load;
+    apiRef.current.measure = () => measureCnc({ stock, o54, ex, maxA, maxLoad });
     apiRef.current.start = () => {
       if (!ex) return 'noprog';
       if(c.unclamped){msg=L('Najprv upni obrobok späť.','Clamp the workpiece back first.');return 'unclamped';}
@@ -385,6 +404,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (T !== curT) { curT = T; buildTool(tl); pockets.forEach((pk, i) => { pk.visible = i + 1 !== T; }); }
       yG.position.z = -p.m[1] * U; xG.position.x = p.m[0] * U; zG.position.y = PY + (p.m[2] + Lt) * U;
       aG.rotation.x = p.a * Math.PI / 180; cG.rotation.y = p.c * Math.PI / 180;
+      if (Math.abs(p.a) > Math.abs(maxA)) maxA = p.a;
       geometry.updateAxes?.();
       const spinOn = S && S.dir && S.spin > 0 && !S.alarm && (c.running || false);
       spinA += spinOn ? dt * Math.min(60, S.spin / 60 * 2 * Math.PI) * 0.15 * (S.dir || 1) : 0; toolG.rotation.y = spinA;
@@ -447,6 +467,13 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   const installSavedTool = (tool,pocket) => {requireStopped();if(rxu)validateRxuTool(tool);setTools(ts=>installTool(ts,tool,pocket,MC.mag));};
   const freePocket = Array.from({length:MC.mag},(_,i)=>i+1).find(t=>!tools.some(tool=>tool.t===t));
   const start = () => { const r = apiRef.current.start && apiRef.current.start(); if (r === 'ok') set('running', true); };
+  const tasks = CNC_TASKS(samples);
+  // úloha pripraví hliníkový polotovar 100 × 80 × 40 a program; program sa potom znova načíta (reload)
+  const setupTask = (task) => {
+    if (ctl.current.running || ctl.current.unclamped) return;
+    set('mat', 'al'); set('sx', 100); set('sy', 80); set('sz', 40);
+    const txt = task.setup?.program?.(); if (txt) { setProgId(''); setText(txt); }
+  };
   const parts = hermleParts();
   if(!rxu){
     const dims=MC.id==='c42'?'800 × 800 × 550':'650 × 650 × 500',depth=MC.id==='c42'?630:540;
@@ -564,6 +591,8 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         </div>
 
         </>}
+        <TaskSection machine={rxu ? 'roeders' : 'hermle'} tasks={tasks} apiRef={apiRef} params={params} status={status} onSetup={setupTask}
+          safety={{ ui, set, runKey: 'running', items: CNC_SAFETY(), onConfirm: () => { if (apiRef.current.start() !== 'ok') set('running', false); } }} />
         <div className="sec">
           <h2 className="sec-title mb-2">{L('CNC program', 'CNC program')}</h2>
           <select className="sel mb-2" value={progId} onChange={(e) => pickSample(e.target.value)} aria-label={L('Ukážkový program', 'Sample program')}>
