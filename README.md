@@ -76,9 +76,10 @@ HMI sa otvára tlačidlom **HMI cez celé okno** alebo ovládaním displeja v ru
 
 V hornej lište fullscreen HMI sú:
 
-- **Pracovný priestor:** samostatné okno so živou scénou a pevnou kamerou.
-- **Split-screen:** pracovný priestor zostane vedľa ovládateľného HMI, takže možno spustiť, pozastaviť a sledovať proces bez zatvárania pohľadu.
-- **Auto / Vedľa seba / Nad sebou:** automatické rozloženie podľa obrazovky alebo ručná voľba orientácie. Na širokom displeji sú pohľady vedľa seba, v portréte nad sebou.
+- **Priestor (▣):** samostatné okno so živou scénou a pevnou kamerou. Zobrazuje iba obraz a krížik na zatvorenie.
+- **Split (◫):** živý pracovný priestor je v orientácii na šírku vždy vľavo od ovládateľného HMI a v orientácii na výšku vždy hore. Rozloženie sa automaticky prispôsobí otočeniu displeja. Aj tento pohľad má iba krížik na zatvorenie.
+
+Lišta HMI zostáva v jednom riadku. Na úzkom displeji sú tlačidlá pracovného priestoru a splitu ikonové; ich úplné názvy zostávajú dostupné pre čítačky obrazovky. Displej HMI sa škáluje podľa šírky aj výšky svojho panela a neprekrýva ovládacie prvky.
 
 Pracovný pohľad používa tú istú simuláciu a vlastnú kameru. Priebežne zobrazuje pohyb osí, nástroj, aktuálny úber a efekty; neslúži ako uložená snímka. Ťahanie v tomto pohľade nemení hlavnú kameru. Otvorenie ani zatvorenie pohľadu nemení rozpracovaný cyklus. Dosiahnutá snímková frekvencia závisí od zariadenia.
 

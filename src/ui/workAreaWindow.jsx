@@ -13,19 +13,18 @@ function LiveWorkArea({apiRef}){
   return error?<p role="alert">{error}</p>:<canvas ref={canvas} className="live-work-area" width="800" height="500" aria-label={L('Živý uzamknutý pohľad na pracovný priestor','Live locked view of working area')}/>;
 }
 export function WorkAreaButton({apiRef}){
-  const anchor=useRef(null),[open,setOpen]=useState(false),[split,setSplit]=useState(false),[host,setHost]=useState(null),[layout,setLayout]=useState('auto');
+  const anchor=useRef(null),[open,setOpen]=useState(false),[split,setSplit]=useState(false),[host,setHost]=useState(null);
   useEffect(()=>{if(!split)return;const root=anchor.current.closest('.hmi-fullscreen,.brake-hmi,.deep-hmi');if(!root)return;
-    const target=document.createElement('section');target.className='work-area-split-pane';root.appendChild(target);root.classList.add('work-split');setHost(target);
-    return()=>{root.classList.remove('work-split');delete root.dataset.workLayout;target.remove();};
+    const target=document.createElement('section');target.className='work-area-split-pane';target.setAttribute('aria-label',L('Pracovný priestor','Working area'));root.appendChild(target);root.classList.add('work-split');setHost(target);
+    return()=>{root.classList.remove('work-split');target.remove();};
   },[split]);
-  useEffect(()=>{const root=anchor.current?.closest('.hmi-fullscreen,.brake-hmi,.deep-hmi');if(root&&split)root.dataset.workLayout=layout;},[layout,split,host]);
-  return <span className="work-area-actions" ref={anchor}><button type="button" className="scene-btn work-area-open" onClick={()=>{setSplit(false);setOpen(true);}}>▣ {L('Pracovný priestor','Working area')}</button><button type="button" className="scene-btn work-area-split" aria-pressed={split} onClick={()=>{setOpen(false);setHost(null);setSplit(v=>!v);}}>◫ Split-screen</button>
+  return <span className="work-area-actions" ref={anchor}><button type="button" className="scene-btn work-area-open" onClick={()=>{setSplit(false);setOpen(true);}} aria-label={L('Pracovný priestor','Working area')} title={L('Pracovný priestor','Working area')}><span aria-hidden="true">▣</span><span className="work-area-label">{L('Priestor','Area')}</span></button><button type="button" className="scene-btn work-area-split" aria-pressed={split} onClick={()=>{setOpen(false);setHost(null);setSplit(v=>!v);}} aria-label="Split-screen" title="Split-screen"><span aria-hidden="true">◫</span><span className="work-area-label">Split</span></button>
     {open&&<WorkAreaWindow apiRef={apiRef} onClose={()=>setOpen(false)}/>}
-    {split&&host&&createPortal(<><header><div><strong>{L('Pracovný priestor','Working area')}</strong><small>🔒 {L('Naživo · uzamknutá kamera','Live · locked camera')}</small></div><button className="scene-btn" onClick={()=>setSplit(false)} aria-label={L('Zavrieť split-screen','Close split screen')}>×</button></header><div className="work-area-layout" role="group" aria-label={L('Rozloženie split-screen','Split screen layout')}>{[['auto','Auto'],['columns',L('Vedľa seba','Side by side')],['rows',L('Nad sebou','Stacked')]].map(([id,label])=><button key={id} className="scene-btn" aria-pressed={layout===id} onClick={()=>setLayout(id)}>{label}</button>)}</div><div className="work-area-live-frame"><LiveWorkArea apiRef={apiRef}/></div></>,host)}
+    {split&&host&&createPortal(<><button className="work-area-close" onClick={()=>setSplit(false)} aria-label={L('Zavrieť split-screen','Close split screen')} title={L('Zavrieť','Close')}>×</button><div className="work-area-live-frame"><LiveWorkArea apiRef={apiRef}/></div></>,host)}
   </span>;
 }
 function WorkAreaWindow({apiRef,onClose}){
   const dialog=useRef(null);
   useEffect(()=>{const previous=document.activeElement,d=dialog.current;d.showModal();return()=>{d.close();if(previous?.isConnected)previous.focus({preventScroll:true});};},[]);
-  return createPortal(<dialog ref={dialog} className="work-area-dialog" aria-labelledby="work-area-title" onCancel={e=>{e.preventDefault();e.stopPropagation();onClose();}} onKeyDown={e=>e.stopPropagation()}><header><div><strong id="work-area-title">{L('Pracovný priestor','Working area')}</strong><span>🔒 {L('Uzamknutý pohľad · naživo','Locked view · live')}</span></div><button className="scene-btn" autoFocus onClick={onClose}>{L('Späť do HMI','Back to HMI')} · Esc</button></header><div className="work-area-live-frame"><LiveWorkArea apiRef={apiRef}/></div></dialog>,document.body);
+  return createPortal(<dialog ref={dialog} className="work-area-dialog" aria-label={L('Pracovný priestor','Working area')} onCancel={e=>{e.preventDefault();e.stopPropagation();onClose();}} onKeyDown={e=>e.stopPropagation()}><button className="work-area-close" autoFocus onClick={onClose} aria-label={L('Späť do HMI','Back to HMI')} title={L('Zavrieť','Close')}>×</button><div className="work-area-live-frame"><LiveWorkArea apiRef={apiRef}/></div></dialog>,document.body);
 }
