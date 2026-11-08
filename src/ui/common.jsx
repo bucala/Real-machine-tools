@@ -362,6 +362,21 @@ function SceneView({
 }) {
   const inspect = ui.unclamped;
   const [help, setHelp] = useState(false);
+  // úzka scéna (mobil, úzke rozdelenie obrazovky): štítky stavu len ako kontrolky, ďalšie tlačidlá pod „⋯“,
+  // aby tlačidlá nezakrývali väčšinu 3D scény
+  const wrapRef = useRef(null);
+  const [narrow, setNarrow] = useState(false);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => setNarrow(el.clientWidth < 560));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!narrow) setMore(false);
+  }, [narrow]);
   const closeHelp = React.useCallback(() => setHelp(false), []);
   const workButton = canUnclamp && (
     <button
@@ -391,7 +406,7 @@ function SceneView({
     </button>
   );
   return (
-    <div className="scene-wrap relative flex-1 overflow-hidden">
+    <div ref={wrapRef} className={`scene-wrap relative flex-1 overflow-hidden ${narrow ? 'scene-narrow' : ''}`}>
       <div ref={mountRef} className="absolute inset-0" />
       <div
         ref={layerRef}
@@ -423,12 +438,18 @@ function SceneView({
             >
               ← {L('Menu', 'Menu')}
             </button>
-            {chips.map((ch) => (
-              <span key={ch.text} className="chip">
-                <span className="lamp" style={{ color: ch.color }} />
-                {ch.text}
-              </span>
-            ))}
+            {chips.map((ch) =>
+              narrow ? (
+                <span key={ch.text} className="chip chip-compact" role="img" aria-label={ch.text} title={ch.text}>
+                  <span className="lamp" style={{ color: ch.color }} />
+                </span>
+              ) : (
+                <span key={ch.text} className="chip">
+                  <span className="lamp" style={{ color: ch.color }} />
+                  {ch.text}
+                </span>
+              ),
+            )}
             <button
               type="button"
               className={`scene-btn help-btn ${help ? 'on' : ''}`}
@@ -465,6 +486,7 @@ function SceneView({
                 className={ui.manual ? '' : 'on'}
                 aria-pressed={!ui.manual}
                 onClick={() => set('manual', false)}
+                aria-label={L('Ovládanie kamery', 'Camera control')}
                 title={L('Ovládanie kamery (M)', 'Camera control (M)')}
               >
                 <svg
@@ -489,6 +511,7 @@ function SceneView({
                 aria-pressed={ui.manual}
                 disabled={inspect}
                 onClick={() => set('manual', true)}
+                aria-label={manualLabel || L('Ručné ovládanie', 'Manual control')}
                 title={L('Ručné ovládanie prvkov stroja (M)', 'Manual control of machine elements (M)')}
               >
                 <svg
@@ -508,13 +531,30 @@ function SceneView({
                 <span className="lg:hidden">{manualLabel || L('Ručne', 'Manual')}</span>
               </button>
             </div>
-            {!workBelowModes && workButton}
+            {!narrow && !workBelowModes && workButton}
+            {narrow && (workButton || tools) && (
+              <button
+                type="button"
+                className={`scene-btn more-btn ${more ? 'on' : ''}`}
+                aria-expanded={more}
+                aria-label={L('Ďalšie tlačidlá scény', 'More scene buttons')}
+                title={L('Ďalšie tlačidlá', 'More buttons')}
+                onClick={() => setMore((v) => !v)}
+              >
+                ⋯
+              </button>
+            )}
           </div>
           {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
-          <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>
-            {workBelowModes && workButton}
-            {tools}
-          </div>
+          {(!narrow || more) && (
+            <div
+              className={`flex justify-end gap-2 ${narrow ? 'flex-col items-end' : 'flex-wrap'}`}
+              style={{ zIndex: 6 }}
+            >
+              {(narrow || workBelowModes) && workButton}
+              {tools}
+            </div>
+          )}
         </div>
       </div>
     </div>

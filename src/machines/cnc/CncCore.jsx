@@ -847,30 +847,36 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
                   ]}
                   onChange={(v) => set('panelAngle', v)}
                 />
-                <Slider
-                  id="hermle-arm-angle"
-                  label={rxu ? L('Uhol ramena HMI', 'HMI arm angle') : L('Poloha ramena HMI', 'HMI arm position')}
-                  min={0}
-                  max={rxu ? 180 : 100}
-                  step={0.1}
-                  digits={1}
-                  disabled={ui.hmiLocked}
-                  value={rxu ? ui.panelAngle : ui.panelAngle / 1.8}
-                  unit={rxu ? '°' : '%'}
-                  onChange={(v) => set('panelAngle', rxu ? v : v * 1.8)}
-                />
-                <Slider
-                  id="hermle-panel-yaw"
-                  label={L('Korekcia natočenia HMI', 'HMI rotation trim')}
-                  min={-180}
-                  max={180}
-                  step={0.1}
-                  digits={1}
-                  disabled={ui.hmiLocked}
-                  value={ui.panelYaw}
-                  unit="°"
-                  onChange={(v) => set('panelYaw', v)}
-                />
+                {/* plynulé nastavenie je doplnok k trom polohám vyššie – predvolene zbalené, aby nepôsobilo ako druhé ovládanie */}
+                <details className="hermle-hmi-fine mb-2">
+                  <summary className="text-sm muted" style={{ cursor: 'pointer' }}>
+                    {L('Jemné nastavenie polohy HMI', 'Fine HMI position')}
+                  </summary>
+                  <Slider
+                    id="hermle-arm-angle"
+                    label={rxu ? L('Uhol ramena HMI', 'HMI arm angle') : L('Poloha ramena HMI', 'HMI arm position')}
+                    min={0}
+                    max={rxu ? 180 : 100}
+                    step={0.1}
+                    digits={1}
+                    disabled={ui.hmiLocked}
+                    value={rxu ? ui.panelAngle : ui.panelAngle / 1.8}
+                    unit={rxu ? '°' : '%'}
+                    onChange={(v) => set('panelAngle', rxu ? v : v * 1.8)}
+                  />
+                  <Slider
+                    id="hermle-panel-yaw"
+                    label={L('Korekcia natočenia HMI', 'HMI rotation trim')}
+                    min={-180}
+                    max={180}
+                    step={0.1}
+                    digits={1}
+                    disabled={ui.hmiLocked}
+                    value={ui.panelYaw}
+                    unit="°"
+                    onChange={(v) => set('panelYaw', v)}
+                  />
+                </details>
               </fieldset>
               <button type="button" className="btn mb-2" onClick={() => apiRef.current.view?.('panel')}>
                 {L('Pohľad na HMI', 'HMI view')}

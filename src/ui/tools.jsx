@@ -89,16 +89,25 @@ function CutCalc({ D, mat, speeds, rpm, locked, onApply, what }) {
 }
 
 // ---------- kontrola BOZP pred spustením ----------
-function SafetyGate({ active, ui, set, runKey, items, onConfirm }) {
+// runKey: stroj sa spúšťa prepínačom v ui (gate ho vráti a otvorí zoznam);
+// bez runKey si stroj o kontrolu požiada sám cez apiRef.current.safetyGate (ok() / request())
+function SafetyGate({ active, ui, set, runKey, items, onConfirm, apiRef }) {
   const [open, setOpen] = useState(false),
     [ticks, setTicks] = useState({}),
     confirmed = useRef(false);
+  useEffect(() => {
+    if (!apiRef) return undefined;
+    apiRef.current.safetyGate = { ok: () => !active || confirmed.current, request: () => setOpen(true) };
+    return () => {
+      delete apiRef.current.safetyGate;
+    };
+  }, [active]);
   useEffect(() => {
     confirmed.current = false;
     setTicks({});
   }, [active]);
   useEffect(() => {
-    if (!active || confirmed.current || !ui[runKey]) return;
+    if (!runKey || !active || confirmed.current || !ui[runKey]) return;
     set(runKey, false);
     setOpen(true); // stroj sa nespustí, kým sa nepotvrdí kontrolný zoznam
   }, [active, ui[runKey]]);
@@ -150,7 +159,7 @@ function SafetyGate({ active, ui, set, runKey, items, onConfirm }) {
             onClick={() => {
               confirmed.current = true;
               setOpen(false);
-              set(runKey, true);
+              if (runKey) set(runKey, true);
               if (onConfirm) onConfirm();
             }}
           >
@@ -412,7 +421,7 @@ function TaskSection({ machine, tasks, apiRef, params, status, onSetup, safety }
               )}
             </div>
           )}
-          {safety && <SafetyGate active={bozp} {...safety} />}
+          {safety && <SafetyGate active={bozp} apiRef={apiRef} {...safety} />}
         </>
       )}
     </div>

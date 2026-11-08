@@ -191,6 +191,21 @@ const BRAKE_TASKS = [
   },
 ].map((t) => ({ ...t, checks: (m) => brakeChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 
+const BRAKE_SAFETY = () => [
+  L(
+    'Ochranné pole (svetelná závora) je voľné a bočné kryty sú zatvorené.',
+    'The safety field (light curtain) is clear and the side guards are closed.',
+  ),
+  L(
+    'Plech pridržiavam zboku, prsty nikdy nedávam medzi razník a matricu.',
+    'I hold the sheet from the side and never put my fingers between punch and die.',
+  ),
+  L(
+    'Sila ohybu je pod kapacitou lisu a matrice (pozri Nástroje a dorazy).',
+    'The bending force is within the press and die capacity (see Tooling and gauges).',
+  ),
+];
+
 export default function BystronicSimulator({ onBack, params }) {
   const mountRef = useRef(null),
     layerRef = useRef(null),
@@ -303,6 +318,15 @@ export default function BystronicSimulator({ onBack, params }) {
         (id) => [id, () => control.action(id)],
       ),
     );
+    // pri úlohe s kontrolou BOZP sa prvý ohyb spustí až po potvrdení zoznamu (TaskSection → SafetyGate)
+    actions.start = () => {
+      const gate = apiRef.current.safetyGate;
+      if (gate && !gate.ok()) {
+        gate.request();
+        return;
+      }
+      control.action('start');
+    };
     actions.startPanel = actions.start;
     actions.retractPanel = actions.retract;
     actions.hmi = () => setHmi(true);
@@ -688,6 +712,7 @@ export default function BystronicSimulator({ onBack, params }) {
           params={params}
           status={{ kind: tele.alarm ? 'danger' : 'idle', text: tele.alarm || '' }}
           onSetup={setupTask}
+          safety={{ ui, set, items: BRAKE_SAFETY(), onConfirm: () => apiRef.current.hmiAction?.('start') }}
         />
         <div className="sec">
           <div className="section-heading">

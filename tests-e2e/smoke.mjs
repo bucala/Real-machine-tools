@@ -1,6 +1,6 @@
 // Test v prehliadači nad zostaveným public/: otvorí menu a každý stroj, zlyhá pri chybe v konzole,
 // výnimke na stránke, zlyhanej požiadavke alebo porušení CSP. Potom prejde CNC program na Hermle
-// (vrátane zámku dverí), jeden ohyb na Bystronic a štart elektroerózie.
+// (vrátane zámku dverí), jeden ohyb na Bystronic, štart elektroerózie, BOZP v úlohe a úzku scénu (mobil).
 // Spustenie: npm run build && npm run test:e2e   (prehliadač: npx playwright install chromium)
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -62,8 +62,8 @@ const fail = (where, what) => {
   console.log(`  ✗ ${where}: ${what}`);
 };
 
-async function open(route, { debug = false } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+async function open(route, { debug = false, viewport = { width: 1280, height: 800 } } = {}) {
+  const ctx = await browser.newContext({ viewport, serviceWorkers: 'block' });
   const page = await ctx.newPage(),
     problems = [];
   page.on('console', (m) => {
@@ -186,6 +186,49 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     fail('oscarmax', e.message.split('\n')[0]);
   }
   problems.forEach((p) => fail('oscarmax', p));
+  await ctx.close();
+}
+
+// 5) Bystronic: v úlohe sa ohyb spustí až po potvrdení BOZP
+{
+  const { page, ctx, problems } = await open('bystronic/uloha=uholnik', { debug: true });
+  try {
+    await until(page, () => window.__bystronic?.process);
+    await page
+      .getByRole('button', { name: /Spustiť ohyb/i })
+      .first()
+      .click();
+    const dialog = page.locator('[aria-label="Kontrola BOZP"]');
+    if (!(await dialog.count())) fail('bystronic BOZP', 'kontrola BOZP sa neotvorila');
+    if (await page.evaluate(() => window.__bystronic.process.S.run))
+      fail('bystronic BOZP', 'ohyb sa spustil pred potvrdením');
+    for (const cb of await dialog.locator('input[type=checkbox]').all()) await cb.check();
+    await page.getByRole('button', { name: 'Potvrdiť a spustiť' }).click();
+    await until(page, () => window.__bystronic.process.S.run || window.__bystronic.process.S.done, null, 10000);
+    console.log('  ✓ bystronic: kontrola BOZP pred prvým ohybom');
+  } catch (e) {
+    fail('bystronic BOZP', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('bystronic BOZP', p));
+  await ctx.close();
+}
+
+// 6) úzka scéna (mobil): jeden riadok tlačidiel, ďalšie pod „⋯“
+{
+  const { page, ctx, problems } = await open('hermle', { viewport: { width: 390, height: 844 } });
+  try {
+    await page.waitForSelector('canvas', { state: 'attached', timeout: 60000 });
+    const work = page.getByRole('button', { name: 'Pozrieť obrobok' });
+    if (await work.count()) fail('mobil', 'tlačidlo „Pozrieť obrobok“ je viditeľné bez „⋯“');
+    await page.getByRole('button', { name: 'Ďalšie tlačidlá scény' }).click();
+    if (!(await work.count())) fail('mobil', '„⋯“ neukázalo ďalšie tlačidlá');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    if (overflow) fail('mobil', 'vodorovný posun stránky');
+    console.log('  ✓ mobil: tlačidlá scény pod „⋯“');
+  } catch (e) {
+    fail('mobil', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('mobil', p));
   await ctx.close();
 }
 

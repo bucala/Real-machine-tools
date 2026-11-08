@@ -1,5 +1,7 @@
 # Presné obrábanie a elektroerózia – zdroje modelov
 
+Dokument popisuje podklady, rozmery a obmedzenia modelov moderných strojov. Poradie a dátumy zmien sú v [CHANGELOG.md](../CHANGELOG.md).
+
 ## Hermle C 32 U / C 42 U
 
 Podklady dodané používateľom:
