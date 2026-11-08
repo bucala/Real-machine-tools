@@ -1,6 +1,8 @@
 import { PartLabelsButton } from '../ui/common';
 import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen, oscarHmiHit, oscarHmiKey } from '../ui/oscarScreen';
+import { stockSnapshot } from '../core/workSession';
+import { WorkResume } from '../ui/workResume';
 import { compileEdmGcode, EDM_GCODE_SAMPLE } from './precision/edmGcode';
 import { workAreaFeed } from '../core/workAreaFeed';
 import { SectionInfo } from '../ui/sectionInfo';
@@ -556,6 +558,26 @@ export default function OscarSimulator({ onBack, params }) {
       snapshot,
       lockHmi: () => set('hmiLocked', !c.hmiLocked),
     };
+    // rozpracovaná práca (ui/workResume.jsx): operácie, elektródy, generátor a obrobok
+    const WORK_KEYS = ['ncMode', 'ncText', 'rows', 'electrode', 'electrode2', 'current', 'speed', 'flushing', 'light'];
+    apiRef.current.workSig = () => JSON.stringify([WORK_KEYS.map((k) => c[k]), stock.removed()]);
+    apiRef.current.workSave = () => ({
+      v: 1,
+      label: L(`${c.rows.length} operácie`, `${c.rows.length} operations`),
+      ui: Object.fromEntries(WORK_KEYS.map((k) => [k, c[k]])),
+      stock: stock.removed() > 0 ? stockSnapshot(stock, 'ex500') : null,
+    });
+    apiRef.current.workRestore = (d) => {
+      if (!d || d.v !== 1 || process.S.run || c.unclamped) return false;
+      reset();
+      WORK_KEYS.forEach((k) => d.ui?.[k] !== undefined && set(k, d.ui[k]));
+      if (d.stock?.sig === 'ex500' && stock.restore(d.stock.field, d.stock.removed)) {
+        process.S.removed = d.stock.removed;
+        flush();
+      }
+      screen.redraw();
+      return true;
+    };
     apiRef.current.measure = () =>
       measureEdm({
         stock,
@@ -866,6 +888,7 @@ export default function OscarSimulator({ onBack, params }) {
       )}
       {hmiOpen && <EdmFullscreen {...{ apiRef, ui, tele }} onClose={() => setHmiOpen(false)} />}
       <aside className="panel">
+        <WorkResume machine="oscarmax" apiRef={apiRef} skip={!!params?.uloha} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · hĺbiaca EDM', 'Modern machines · sinker EDM')}</p>
           <div className="section-heading">

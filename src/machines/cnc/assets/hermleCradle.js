@@ -7,7 +7,10 @@ const MIN = [-46.574, -23.833, 0.002],
   STEP = [0.002, 0.001, 0.001];
 
 // { P, I } → { positions: Float32Array (x, z, h ako v pôvodnom STL), indices: Uint16Array }
-export function decodeCradle({ P, I }) {
+export function decodeCradle(data) {
+  const num = (x) => (typeof x === 'string' ? x.split(',').map(Number) : x),
+    P = num(data.P),
+    I = num(data.I);
   const n = P.length / 3,
     positions = new Float32Array(n * 3);
   for (let a = 0; a < 3; a++) {

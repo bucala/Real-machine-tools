@@ -1,3 +1,4 @@
+import { WorkResume } from '../ui/workResume';
 import { PartLabelsButton } from '../ui/common';
 import { workAreaFeed } from '../core/workAreaFeed';
 import { useEffect, useRef, useState } from 'react';
@@ -523,6 +524,20 @@ export default function BystronicSimulator({ onBack, params }) {
     angle = 180 - (tele.beta * 360) / Math.PI,
     p = parts();
   const change = (key, value) => apiRef.current.hmiSet?.(key, value);
+  // rozpracovaná práca (ui/workResume.jsx): plech, nástroje a ohyb
+  const WORK_KEYS = ['material', 'thickness', 'length', 'depth', 'flange', 'v', 'angle', 'r', 'speed'];
+  apiRef.current.workSig = () => (apiRef.current.hmiSet ? JSON.stringify(WORK_KEYS.map((k) => ctl.current[k])) : null);
+  apiRef.current.workSave = () => ({
+    v: 1,
+    label: `${ctl.current.thickness} mm · ${ctl.current.angle}°`,
+    ui: Object.fromEntries(WORK_KEYS.map((k) => [k, ctl.current[k]])),
+  });
+  apiRef.current.workRestore = (d) => {
+    if (!d || d.v !== 1 || tele.run || ui.unclamped) return false;
+    apiRef.current.hmiAction?.('reset');
+    WORK_KEYS.forEach((k) => d.ui?.[k] !== undefined && change(k, d.ui[k]));
+    return true;
+  };
   // úloha: nový plech a predpísané údaje (uhol, matricu a doraz nastavuje žiak)
   const setupTask = (t) => {
     if (tele.run || ui.unclamped) return;
@@ -578,6 +593,7 @@ export default function BystronicSimulator({ onBack, params }) {
         <BystronicHmi apiRef={apiRef} c={ui} S={tele} setup={setup} onChange={change} onClose={() => setHmi(false)} />
       )}
       <aside className="panel">
+        <WorkResume machine="bystronic" apiRef={apiRef} skip={!!params?.uloha} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · CNC ohraňovací lis', 'Modern machines · CNC press brake')}</p>
           <div className="section-heading">

@@ -15,6 +15,7 @@ import { createExecutor } from './sim';
 import { MATERIALS } from './tooling';
 import { cabinHalfWidth, hmiPose } from './hermleLayout';
 import { measureCnc } from './cncTasks';
+import { stockSnapshot } from '../../core/workSession';
 import { createStock } from './voxel';
 import { createStockMesh } from './stockMesh';
 import { createCabinLighting } from './cabinLighting';
@@ -317,6 +318,16 @@ export function createCncScene({
     };
   };
   apiRef.current.load = load;
+  // rozpracovaná práca: obrobok v stave pri uložení (len rovnaké rozmery, materiál a rozlíšenie)
+  apiRef.current.stockState = () => stockSnapshot(stock, stockSig);
+  apiRef.current.stockRemoved = () => (stock ? stock.removed() : 0);
+  apiRef.current.restoreStock = (saved) => {
+    if (!stock || !saved || c.running || saved.sig !== stockSig || !stock.restore(saved.field, saved.removed))
+      return false;
+    if (ex) ex.S.removed = saved.removed;
+    applyChunks(stock.takeDirty());
+    return true;
+  };
   apiRef.current.measure = () => measureCnc({ stock, o54, ex, maxA, maxLoad });
   apiRef.current.start = () => {
     if (!ex) return 'noprog';
