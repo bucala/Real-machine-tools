@@ -1,3 +1,5 @@
+import { Guide } from '../../ui/guide';
+import { CNC_GUIDE } from '../guides';
 import { PartLabelsButton } from '../../ui/common';
 import { SectionInfo } from '../../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
@@ -282,6 +284,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   };
   // rozpracovaná práca (ui/workResume.jsx): program, nástroje, polotovar, nastavenie a obrobok
   const pendingStock = useRef(null);
+  const guideSteps = CNC_GUIDE(rxu);
   const WORK_KEYS = ['mat', 'sx', 'sy', 'sz', 'res', 'speed', 'fo', 'ro', 'single', 'accessorySetup', 'light'];
   apiRef.current.workSig = () =>
     apiRef.current.load
@@ -673,6 +676,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       )}
       <aside className="panel">
         <WorkResume machine={rxu ? 'roeders' : `hermle-${MC.id}`} apiRef={apiRef} skip={!!params?.uloha} />
+        <Guide steps={guideSteps} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="hermle-settings" disabled={ui.unclamped}>
           <div className="sec">
             <p className="sec-title" style={{ letterSpacing: '.14em' }}>

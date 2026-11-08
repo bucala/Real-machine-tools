@@ -1,4 +1,6 @@
 // Zváranie (MMA a MIG/MAG): React panel a hlavný komponent; scéna je v weldScene.js, dáta a úlohy v weldData.jsx.
+import { Guide } from '../ui/guide';
+import { WELD_GUIDE } from './guides';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import { L, REDUCED_MOTION } from '../core/i18n';
@@ -467,6 +469,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         }
       />
       <aside className="panel">
+        {!MIG && <Guide steps={WELD_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />}
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           {MIG ? (
             <PanelHeader

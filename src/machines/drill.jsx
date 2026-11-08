@@ -1,3 +1,5 @@
+import { Guide } from '../ui/guide';
+import { DRILL_GUIDE } from './guides';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
@@ -1006,6 +1008,7 @@ function DrillSimulator({ onBack, params }) {
         apiRef={apiRef}
       />
       <aside className="panel">
+        <Guide steps={DRILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}

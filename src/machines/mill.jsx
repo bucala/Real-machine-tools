@@ -1,4 +1,6 @@
 // Frézka: React panel a hlavný komponent; scéna je v millScene.js, dáta a úlohy v millData.jsx.
+import { Guide } from '../ui/guide';
+import { MILL_GUIDE } from './guides';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import { L, RPM } from '../core/i18n';
@@ -175,6 +177,7 @@ function MillSimulator({ onBack, params }) {
         apiRef={apiRef}
       />
       <aside className="panel">
+        <Guide steps={MILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}

@@ -1,4 +1,6 @@
 // Sústruh TOS SN: React panel a hlavný komponent; scéna je v latheScene.js, dáta a úlohy v latheData.jsx.
+import { Guide } from '../ui/guide';
+import { LATHE_GUIDE } from './guides';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
 import { L, RPM } from '../core/i18n';
@@ -200,6 +202,7 @@ function LatheCore({ onBack, params, model, onModel }) {
         apiRef={apiRef}
       />
       <aside className="panel">
+        <Guide steps={LATHE_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}

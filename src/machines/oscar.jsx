@@ -1,3 +1,5 @@
+import { Guide } from '../ui/guide';
+import { EDM_GUIDE } from './guides';
 import { PartLabelsButton } from '../ui/common';
 import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen, oscarHmiHit, oscarHmiKey } from '../ui/oscarScreen';
@@ -889,6 +891,7 @@ export default function OscarSimulator({ onBack, params }) {
       {hmiOpen && <EdmFullscreen {...{ apiRef, ui, tele }} onClose={() => setHmiOpen(false)} />}
       <aside className="panel">
         <WorkResume machine="oscarmax" apiRef={apiRef} skip={!!params?.uloha} />
+        <Guide steps={EDM_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · hĺbiaca EDM', 'Modern machines · sinker EDM')}</p>
           <div className="section-heading">
