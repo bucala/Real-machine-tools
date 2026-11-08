@@ -32,6 +32,10 @@ jobs:
             git status --short -- public
             exit 1
           fi
+      - name: Prehliadač pre test (Chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Test v prehliadači (všetky stroje, CNC program, ohyb, elektroerózia)
+        run: npm run test:e2e
 
   # Nasadenie na Cloudflare Workers: po každom pushi (zlúčení) do main, ak prešli kontroly.
   # Potrebuje tajomstvá repozitára CLOUDFLARE_API_TOKEN a CLOUDFLARE_ACCOUNT_ID; bez nich sa krok len preskočí.

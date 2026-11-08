@@ -31,7 +31,11 @@ export default [
   },
   {
     files: ['sw-template.js'],
-    languageOptions: { sourceType: 'script', globals: { ...globals.serviceworker, __PRECACHE__: 'readonly' } },
+    languageOptions: { sourceType: 'script', globals: { ...globals.serviceworker, __PRECACHE__: 'readonly', __ALL__: 'readonly' } },
+  },
+  {
+    files: ['tests-e2e/**/*.mjs'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },
   {
     files: ['*.config.js'],

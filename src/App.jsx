@@ -207,6 +207,36 @@ function TrademarkNote() {
   return <p className="text-xs muted mt-2">{L('Názvy a logá strojov sú ochranné známky ich vlastníkov a slúžia len na identifikáciu predlohy. Projekt nie je spojený s výrobcami; modely sú výučbové rekonštrukcie, nie výrobná dokumentácia.', 'Machine names and logos are trademarks of their owners and only identify the original. The project is not affiliated with the manufacturers; the models are training reconstructions, not production documentation.')}</p>;
 }
 
+// uloží všetky stroje do offline pamäte (service worker); bez podpory alebo vo vývoji sa nezobrazí
+function OfflineSave() {
+  const supported = import.meta.env.PROD && typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+  const [state, setState] = useState(null);
+  useEffect(() => {
+    if (!supported) return undefined;
+    const on = (e) => {
+      if (e.data?.type === 'cache-all-progress') setState({ done: e.data.done, total: e.data.total });
+      if (e.data?.type === 'cache-all-done') setState(e.data.ok ? 'ok' : 'error');
+    };
+    navigator.serviceWorker.addEventListener('message', on);
+    return () => navigator.serviceWorker.removeEventListener('message', on);
+  }, [supported]);
+  if (!supported) return null;
+  const save = () => {
+    setState({ done: 0, total: 0 });
+    navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'cache-all' })).catch(() => setState('error'));
+  };
+  const busy = state && typeof state === 'object';
+  return (
+    <p className="text-xs muted mt-3 flex items-center gap-3 flex-wrap">
+      <button type="button" className="btn" disabled={busy} onClick={save}>{L('Uložiť všetky stroje pre offline', 'Save all machines for offline use')}</button>
+      <span role="status">{busy ? L(`Ukladá sa… ${state.done} / ${state.total || '…'}`, `Saving… ${state.done} / ${state.total || '…'}`)
+        : state === 'ok' ? L('Všetky stroje fungujú aj bez internetu.', 'All machines now work offline.')
+        : state === 'error' ? L('Uloženie sa nepodarilo – skontroluj pripojenie.', 'Saving failed – check the connection.')
+        : L('Otvorené stroje sa ukladajú automaticky.', 'Opened machines are saved automatically.')}</span>
+    </p>
+  );
+}
+
 function Menu({ onOpen }) {
   const [gl] = useState(hasWebGL);
   const [hideGl, setHideGl] = useState(false);
@@ -275,7 +305,8 @@ function Menu({ onOpen }) {
             );
           })}
         </div>
-        <p className="text-xs muted mt-8">{L('Mierka modelov 1 : 100 mm · ovládanie myšou alebo dotykom · kláves M prepína na ručné ovládanie prvkov stroja · po prvej návšteve fungujú simulátory aj bez internetu a dajú sa nainštalovať ako aplikácia.', 'Model scale 1 : 100 mm · mouse or touch control · the M key switches to manual control of the machine elements · after the first visit the simulators also work offline and can be installed as an app.')}</p>
+        <p className="text-xs muted mt-8">{L('Mierka modelov 1 : 100 mm · ovládanie myšou alebo dotykom · kláves M prepína na ručné ovládanie prvkov stroja · raz otvorený simulátor funguje aj bez internetu, aplikácia sa dá nainštalovať.', 'Model scale 1 : 100 mm · mouse or touch control · the M key switches to manual control of the machine elements · a simulator opened once also works offline; the app can be installed.')}</p>
+        <OfflineSave />
         <TrademarkNote />
       </div>
     </main>
