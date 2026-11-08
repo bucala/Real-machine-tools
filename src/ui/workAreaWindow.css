@@ -489,3 +489,51 @@
   outline: 3px solid #e8d740;
   outline-offset: 2px;
 }
+
+/* Telefón na výšku: displej len v potrebnej výške (bez prázdnych pásov), ovládače hneď pod ním. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .hmi-fullscreen:not(.work-split) {
+    grid-template-rows: 44px auto minmax(0, 1fr);
+  }
+  .hmi-fullscreen:not(.work-split) > .hmi-live-display {
+    container-type: inline-size;
+  }
+  .hmi-fullscreen:not(.work-split) > .hmi-live-display > .hmi-screen-bezel {
+    width: calc(100cqw - 16px);
+  }
+  .hmi-fullscreen:not(.work-split) > .hmi-live-display > .rms-reference-bezel {
+    width: calc(100cqw - 72px);
+  }
+  .hmi-fullscreen:not(.work-split) > .hmi-full-controls,
+  .hmi-fullscreen:not(.work-split) > .rms-reference-controls,
+  .hmi-fullscreen:not(.work-split) > .edm-full-controls {
+    align-content: start;
+    margin: 0;
+  }
+  .hmi-fullscreen:not(.work-split) .reference-terminal-deck {
+    margin: 0 auto;
+  }
+}
+
+/* Terminál Röders na úzkom displeji: gombíky korekcie v samostatnom riadku s celým popisom, klávesy pod nimi. */
+@media (max-width: 700px) {
+  .hmi-fullscreen .reference-terminal-deck.rms .reference-deck-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 10px;
+  }
+  .hmi-fullscreen .reference-terminal-deck.rms .reference-deck-controls > .reference-override {
+    flex: 0 0 calc(50% - 4px);
+    max-width: none;
+    font-size: 11px;
+    overflow: visible;
+    justify-items: center;
+    text-align: center;
+  }
+  .hmi-fullscreen .reference-terminal-deck.rms .reference-deck-controls > .reference-key {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    max-width: none;
+  }
+}
