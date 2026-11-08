@@ -169,20 +169,26 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if (!ex) return 'noprog';
       if(c.unclamped){msg=L('Najprv upni obrobok späť.','Clamp the workpiece back first.');return 'unclamped';}
       if (c.estop) { msg=L('Uvoľni núdzový STOP a stlač Reset.', 'Release Emergency STOP and press Reset.'); return 'estop'; }
-      if (c.door || geometry.serviceOpen?.()) { msg = L('Dvere sú otvorené – zatvor ich, potom spusti program.', 'The doors are open – close them, then start the program.'); return 'door'; }
+      if (c.door || geometry.serviceOpen?.()) { pendingStart=false; msg = L('Dvere sú otvorené – zatvor ich, potom spusti program.', 'The doors are open – close them, then start the program.'); return 'door'; }
+      // bezpečnostný zámok: program sa spustí až pri fyzicky zatvorených dverách, nie počas ich zatvárania
+      if (doorK > 0.01) { pendingStart = true; msg = L('Dvere sa zatvárajú – program sa spustí po ich zatvorení a zamknutí.', 'The doors are closing – the program starts once they are closed and locked.'); return 'closing'; }
       if (prog.errors.length) { msg = L(`Program má chyby (${prog.errors.length}) – oprav ich pred spustením.`, `The program has errors (${prog.errors.length}) – fix them before starting.`); return 'err'; }
       if (ex.S.alarm) { msg = L('Najprv potvrď alarm tlačidlom Reset.', 'Acknowledge the alarm with Reset first.'); return 'alarm'; }
       if (ex.S.done) return 'done';
-      ex.S.paused = false; c.fast=false; c.running = true; msg = null; return 'ok';
+      ex.S.paused = false; c.fast=false; c.running = true; pendingStart = false; msg = null; return 'ok';
     };
-    apiRef.current.hold = () => { c.running = false;c.fast=false;if(ex)ex.S.paused=true; };
+    // dvere sú počas chodu programu zamknuté (ako na skutočnom stroji); odomknú sa po Stop posuvu
+    const doorLockMsg = () => L('Dvere sú počas programu zamknuté – najprv stlač Stop posuvu.', 'The doors are locked while the program runs – press Feed hold first.');
+    const doorFree = () => { if (c.running) { msg = doorLockMsg(); return false; } return true; };
+    apiRef.current.toggleDoor = () => { if (!doorFree()) return false; pendingStart = false; set('door', !c.door); return true; };
+    apiRef.current.hold = () => { pendingStart = false; c.running = false;c.fast=false;if(ex)ex.S.paused=true; };
     apiRef.current.emergency = () => {
       set('estop',!c.estop);set('running',false);c.fast=false;
       if(c.estop&&ex){ex.S.dir=0;ex.S.cool=false;ex.S.paused=true;ex.S.alarm={kind:'estop',text:L('Núdzové zastavenie – uvoľni STOP a stlač Reset.','Emergency stop – release STOP and press Reset.'),line:ex.S.line};}
       msg=c.estop?L('Núdzový STOP stlačený.','Emergency STOP latched.'):L('Núdzový STOP uvoľnený – stlač Reset.','Emergency STOP released – press Reset.');
     };
     apiRef.current.reset = () => { if(c.unclamped)return;set('running',false);c.fast=false;setCheck(load(loadedText,loadedTools)); };
-    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || geometry.serviceOpen?.() || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
+    apiRef.current.ffwd = () => { if (!ex || ex.S.alarm || prog.errors.length || c.door || doorK > 0.01 || geometry.serviceOpen?.() || c.estop || c.unclamped) return; ex.S.paused = false; c.running = true; c.fast = true; };
     apiRef.current.snapshot = snapshot;
     apiRef.current.exportStep = async () => {
       if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
@@ -237,19 +243,20 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || !!panelDrag || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl=createControls({dom,mount,camera,root,tipEl,c,getT:()=>t,getHL:insp.hl});
-    let doorDragStart=0,manualDoor=null;
+    let doorDragStart=0,manualDoor=null,pendingStart=false;
     for(const d of doors){
       ctrl.reg({type:'slide',axis:'x',tooltip:false,label:rxu?L('Posuvné dvere doprava','Right-sliding door'):L('Posuvné dvere','Sliding doors'),
         hint:rxu?L('Potiahni doprava po koľajnici alebo klikni.','Drag right along the rail or click.'):L('Potiahni madlo do strany alebo klikni na otvorenie / zatvorenie.','Drag the handle sideways or click to open / close.'),
         read:()=>c.door?L('otvorené','open'):L('zatvorené','closed'),
+        guard:doorFree,
         start:()=>{doorDragStart=doorK;manualDoor=doorK;},
         slide:(dx)=>{manualDoor=Math.max(0,Math.min(1,doorDragStart+dx*d.userData.s/(geometry.doorTravel ?? (rxu?11.8:4)*K)));ctrl.push('door',manualDoor>.01);},
-        click:()=>ctrl.push('door',!c.door),
+        click:()=>{pendingStart=false;ctrl.push('door',!c.door);},
         end:({click})=>{if(!click&&manualDoor!==null)ctrl.push('door',manualDoor>=.5);manualDoor=null;}
       },d);
     }
     for(const d of geometry.serviceDoors||[]){
-      ctrl.reg({type:'button',still:true,tooltip:false,label:L(d.label,'Service door'),
+      ctrl.reg({type:'button',still:true,tooltip:false,label:L(d.label,'Service door'),guard:doorFree,
         action:()=>{d.open=!d.open;if(d.open){apiRef.current.hold();ctrl.push('running',false);}},
         read:()=>d.open?L('otvorené','open'):L('zatvorené','closed')},d.hinge);
     }
@@ -346,6 +353,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       if ((c.door || geometry.serviceOpen?.()) && c.running) { c.running = false; c.fast = false; msg = L('Dvere sa otvorili – posuv a vreteno zastavené.', 'The doors opened – feed and spindle stopped.'); }
       if(c.unclamped){c.running=false;c.fast=false;c.door=true;c.manual=false;}
       if(manualDoor!==null)doorK=manualDoor;else doorK += ((c.door ? 1 : 0) - doorK) * Math.min(1, dt * 4);
+      if (pendingStart && !c.door && doorK <= 0.01 && apiRef.current.start() === 'ok') ctrl.push('running', true);
       wi.update(dt);
       clampPins.forEach(pin=>{pin.position.z=FIX.r*U+wi.open()*.12;});
       const xc = xG.position.x / K;
@@ -512,7 +520,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
           <div className="flex flex-wrap gap-2 mt-2">
             <button type="button" className="btn" onClick={() => apiRef.current.ffwd && apiRef.current.ffwd()}>⏭ {L('Rýchlo na koniec', 'Fast to the end')}</button>
             <button type="button" className={`btn ${ui.estop ? 'active' : ''}`} onClick={() => apiRef.current.emergency?.()}>{ui.estop ? L('Uvoľniť núdzový STOP','Release Emergency STOP') : L('Núdzový STOP','Emergency STOP')}</button>
-            <button type="button" className={`btn ${ui.door ? 'active' : ''}`} onClick={() => set('door', !ui.door)}>{ui.door ? L('Zatvoriť dvere', 'Close doors') : L('Otvoriť dvere', 'Open doors')}</button>
+            <button type="button" className={`btn ${ui.door ? 'active' : ''}`} onClick={() => apiRef.current.toggleDoor ? apiRef.current.toggleDoor() : set('door', !ui.door)}>{ui.door ? L('Zatvoriť dvere', 'Close doors') : L('Otvoriť dvere', 'Open doors')}</button>
           </div>
           <div className="mt-2">
             <SegRow label={L('Rýchlosť simulácie', 'Simulation speed')} value={ui.speed} options={[[1, '×1'], [5, '×5'], [20, '×20'], [80, '×80']]} onChange={(v) => set('speed', v)} />
@@ -567,7 +575,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
           <label className="sr-only" htmlFor="cnc-edit">{L('Editor programu', 'Program editor')}</label>
           <textarea id="cnc-edit" className="cnc-edit mt-2" spellCheck={false} value={text} onChange={(e) => { setProgId(''); setText(e.target.value); }} rows={10} />
           <div className="text-xs mt-2" style={{ lineHeight: 1.5 }}>
-            <div>{check.dialect === 'heidenhain' ? 'Heidenhain Klartext' : 'ISO / G-kód'} · {check.n} {L('pohybov', 'moves')} · {L('odhad času', 'estimated time')} <b>{mmss(check.time)}</b></div>
+            <div>{check.dialect === 'heidenhain' ? 'Heidenhain Klartext' : L('ISO / G-kód', 'ISO / G-code')} · {check.n} {L('pohybov', 'moves')} · {L('odhad času', 'estimated time')} <b>{mmss(check.time)}</b></div>
             {check.errors.slice(0, 6).map((e, i) => <div key={`e${i}`} style={{ color: 'var(--danger)' }}>✗ {L('riadok', 'line')} {e.line + 1}: {e.text}</div>)}
             {check.warns.slice(0, 5).map((e, i) => <div key={`w${i}`} style={{ color: 'var(--warn)' }}>! {L('riadok', 'line')} {e.line + 1}: {e.text}</div>)}
             {!check.errors.length && <div style={{ color: 'var(--accent)' }}>✓ {L('Program bez chýb', 'No errors in the program')}</div>}

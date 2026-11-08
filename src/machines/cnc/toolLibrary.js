@@ -1,3 +1,4 @@
+import { L } from '../../core/i18n';
 // Portable tool cabinet. Dimensions are millimetres; T is a preferred NC number,
 // not a cabinet identity. No PowerMill project/database formats are implied.
 export const LIBRARY_KEY = 'rmt-cnc-tool-library-v1';
@@ -9,35 +10,35 @@ export const shapeOf = t => t.kind === 'cone' ? Number(t.tip) === 90 ? 'chamfer'
 export const shapeTool = (t, shape) => ({ ...t, kind: ['drill', 'chamfer'].includes(shape) ? 'cone' : 'mill', tip: shape === 'chamfer' ? 90 : 118, cr: shape === 'ball' ? t.d / 2 : shape === 'bull' ? Math.min(2, t.d / 4) : 0 });
 
 export function validateTool(raw) {
-  if (!raw || typeof raw !== 'object') throw new Error('Neplatný záznam nástroja / Invalid tool record.');
+  if (!raw || typeof raw !== 'object') throw new Error(L('Neplatný záznam nástroja.','Invalid tool record.'));
   const t = {};
   for (const key of TOOL_FIELDS) {
     if (key === 'tip' && raw.kind === 'mill') { t.tip = 118; continue; }
     const v = raw[key];
     if (key === 'name') {
-      if (typeof v !== 'string' || !v.trim() || v.length > 160 || [...v].some(c => c.charCodeAt(0) < 32)) throw new Error('Neplatný názov / Invalid name (1–160).');
+      if (typeof v !== 'string' || !v.trim() || v.length > 160 || [...v].some(c => c.charCodeAt(0) < 32)) throw new Error(L('Neplatný názov (1–160 znakov).','Invalid name (1–160 characters).'));
       t.name = v.trim();
     } else if (key === 'kind') {
-      if (!['mill', 'cone'].includes(v)) throw new Error('Typ musí byť mill alebo cone / Invalid kind.');
+      if (!['mill', 'cone'].includes(v)) throw new Error(L('Typ musí byť mill alebo cone.','Kind must be mill or cone.'));
       t.kind = v;
     } else {
-      if (v === '' || v === null || v === undefined || !['number','string'].includes(typeof v) || !Number.isFinite(Number(v))) throw new Error(`Chýba alebo je neplatné / Missing or invalid: ${key}`);
+      if (v === '' || v === null || v === undefined || !['number','string'].includes(typeof v) || !Number.isFinite(Number(v))) throw new Error(L(`Chýba alebo je neplatné: ${key}`,`Missing or invalid: ${key}`));
       t[key] = Number(v);
     }
   }
   const ranges = { t: [1, 9999], d: [.5, 80], cr: [0, t.d / 2], tip: [30, 160], l: [40, 300], lc: [.5, 300], s: [1, 275], dh: [20, 80], z: [1, 12] };
-  for (const [k, [min, max]] of Object.entries(ranges)) if (t[k] < min || t[k] > max || (['t', 'z'].includes(k) && !Number.isInteger(t[k]))) throw new Error(`${k}: ${min}–${max}${['t','z'].includes(k) ? ' (celé číslo / integer)' : ''}`);
-  if (t.kind === 'cone' && t.cr !== 0) throw new Error('Vrták / skosenie vyžaduje CR = 0 / Cone requires CR = 0.');
+  for (const [k, [min, max]] of Object.entries(ranges)) if (t[k] < min || t[k] > max || (['t', 'z'].includes(k) && !Number.isInteger(t[k]))) throw new Error(`${k}: ${min}–${max}${['t','z'].includes(k) ? L(' (celé číslo)',' (integer)') : ''}`);
+  if (t.kind === 'cone' && t.cr !== 0) throw new Error(L('Vrták / skosenie vyžaduje CR = 0.','Cone requires CR = 0.'));
   const minCut = t.kind === 'cone' ? t.d / 2 / Math.tan(t.tip * Math.PI / 360) : t.cr;
-  if (t.lc > t.s || t.s > t.l - 25 || t.lc + 1e-6 < minCut) throw new Error('Rozmery: rezná časť ≤ vyloženie ≤ L − 25 mm; rezná časť musí obsiahnuť špičku / Check flute, stick-out and tip.');
+  if (t.lc > t.s || t.s > t.l - 25 || t.lc + 1e-6 < minCut) throw new Error(L('Rozmery: rezná časť ≤ vyloženie ≤ L − 25 mm; rezná časť musí obsiahnuť špičku.','Dimensions: flute length ≤ stick-out ≤ L − 25 mm; the flute must include the tip.'));
   return t;
 }
 export function validateLibrary(raw) {
-  if (!Array.isArray(raw) || raw.length > MAX_TOOLS) throw new Error(`Knižnica musí obsahovať najviac ${MAX_TOOLS} nástrojov / Too many tools.`);
+  if (!Array.isArray(raw) || raw.length > MAX_TOOLS) throw new Error(L(`Knižnica môže obsahovať najviac ${MAX_TOOLS} nástrojov.`,`The library may contain at most ${MAX_TOOLS} tools.`));
   const ids = new Set();
   return raw.map((r, i) => {
     const id = typeof r?.id === 'string' && /^[\w-]{1,80}$/.test(r.id) ? r.id : newToolId();
-    if (ids.has(id)) throw new Error(`Duplicitné ID / Duplicate ID: ${id}`);
+    if (ids.has(id)) throw new Error(L(`Duplicitné ID: ${id}`,`Duplicate ID: ${id}`));
     ids.add(id);
     try { return { id, ...validateTool(r) }; } catch (e) { throw new Error(`${i + 1}: ${e.message}`); }
   });
@@ -45,7 +46,7 @@ export function validateLibrary(raw) {
 export function encodeLibrary(tools) { return JSON.stringify({ format: 'rmt-tool-library', version: 1, units: 'mm', tools: validateLibrary(tools) }, null, 2); }
 export function decodeLibrary(text) {
   const doc = JSON.parse(text);
-  if (doc?.format !== 'rmt-tool-library' || doc.version !== 1 || doc.units !== 'mm') throw new Error('Očakáva sa RMT knižnica v1 v mm / Expected RMT v1 library in mm.');
+  if (doc?.format !== 'rmt-tool-library' || doc.version !== 1 || doc.units !== 'mm') throw new Error(L('Očakáva sa RMT knižnica v1 v mm.','Expected RMT v1 library in mm.'));
   return validateLibrary(doc.tools);
 }
 const CSV_KEYS = ['id', ...TOOL_FIELDS];
@@ -59,15 +60,15 @@ export function decodeCsv(input) {
   const rows = []; let row = [], value = '', quoted = false, closed = false;
   for (let i = 0; i <= text.length; i++) {
     const c = text[i];
-    if (quoted) { if (c === undefined) throw new Error('Neuzavreté úvodzovky CSV / Unterminated CSV quote.'); if (c === '"') { if (text[i + 1] === '"') { value += '"'; i++; } else { quoted = false; closed = true; } } else value += c; }
+    if (quoted) { if (c === undefined) throw new Error(L('Neuzavreté úvodzovky CSV.','Unterminated CSV quote.')); if (c === '"') { if (text[i + 1] === '"') { value += '"'; i++; } else { quoted = false; closed = true; } } else value += c; }
     else if (c === '"' && value === '' && !closed) quoted = true;
     else if (c === delimiter || c === '\n' || c === undefined) { row.push(value.replace(/\r$/, '')); value = ''; closed = false; if (c !== delimiter) { if (row.some(v => v !== '')) rows.push(row); row = []; } }
-    else { if (closed && c !== '\r') throw new Error('Neplatné CSV / Invalid CSV.'); value += c; }
+    else { if (closed && c !== '\r') throw new Error(L('Neplatné CSV.','Invalid CSV.')); value += c; }
   }
   const header = rows.shift();
   if (!header || !TOOL_FIELDS.every(k => header.includes(k)) || new Set(header).size !== header.length) throw new Error(`CSV hlavička / CSV header: ${CSV_KEYS.join(',')}`);
   return validateLibrary(rows.map(row => {
-    if (row.length !== header.length) throw new Error('Nesprávny počet stĺpcov CSV / CSV column count.');
+    if (row.length !== header.length) throw new Error(L('Nesprávny počet stĺpcov CSV.','CSV column count.'));
     const t = {};
     CSV_KEYS.forEach(k => { const index = header.indexOf(k); if (index >= 0) t[k] = row[index]; });
     if (/^'['=+\-@]/.test(t.name)) t.name = t.name.slice(1);

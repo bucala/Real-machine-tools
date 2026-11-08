@@ -1,3 +1,4 @@
+import { L } from '../../core/i18n';
 // Manufacturer values: supplied Xpert Pro technical data, PDF page 4,
 // standard 320/4300 column. Process timing and springback are training estimates.
 export const XPERT320=Object.freeze({length:5260,width:2000,height:3170,force:3200,bendLength:4300,stroke:250,openHeight:640,frameGap:3750,throat:400,tableWidth:74,xRange:1050,xTravel:600,rTravel:250,zTravel:2900,oil:600,mass:24300,power:34,yAccuracy:.004});
@@ -12,18 +13,18 @@ export function supportDepth(c,beta){
   return r*(1-Math.cos(beta))+(c.v/2-r*Math.sin(beta))*Math.tan(beta);
 }
 export function brakeSetup(c){
-  if(!c||!BRAKE_MATERIALS[c.material])throw new Error('Vyber materiál. / Select material.');
+  if(!c||!BRAKE_MATERIALS[c.material])throw new Error(L('Vyber materiál.','Select material.'));
   for(const [key,min,max] of [['thickness',.5,12],['length',100,XPERT320.bendLength],['depth',80,1400],['flange',20,XPERT320.xRange],['v',16,120],['angle',90,170]]){
-    if(!Number.isFinite(c[key])||c[key]<min||c[key]>max)throw new Error(`Rozmer mimo rozsahu: ${key}. / Dimension outside range.`);
+    if(!Number.isFinite(c[key])||c[key]<min||c[key]>max)throw new Error(L(`Rozmer mimo rozsahu: ${key}.`,`Dimension outside range: ${key}.`));
   }
-  if(c.v<6*c.thickness)throw new Error('V-matrica je príliš úzka pre hrúbku plechu. / V-die is too narrow.');
-  if(Math.min(c.flange,c.depth-c.flange)<.7*c.v)throw new Error('Krátke rameno nedosiahne na oporu matrice. / Flange does not reach the die shoulder.');
-  if(c.length>XPERT320.frameGap&&c.flange>XPERT320.throat)throw new Error('Široký plech presahuje vyloženie rámu 400 mm. / Wide sheet exceeds the 400 mm frame throat.');
+  if(c.v<6*c.thickness)throw new Error(L('V-matrica je príliš úzka pre hrúbku plechu.','V-die is too narrow.'));
+  if(Math.min(c.flange,c.depth-c.flange)<.7*c.v)throw new Error(L('Krátke rameno nedosiahne na oporu matrice.','Flange does not reach the die shoulder.'));
+  if(c.length>XPERT320.frameGap&&c.flange>XPERT320.throat)throw new Error(L('Široký plech presahuje vyloženie rámu 400 mm.','Wide sheet exceeds the 400 mm frame throat.'));
   const force=brakeForce(c),spring=springback(c),beta=(180-c.angle+spring)*rad/2;
-  if(180-beta/rad*2<85)throw new Error('Kompenzovaný uhol prekračuje 85° nástroj. / Compensated angle exceeds 85° tooling.');
-  if(force>XPERT320.force)throw new Error('Prekročená sila 3 200 kN. / 3,200 kN capacity exceeded.');
+  if(180-beta/rad*2<85)throw new Error(L('Kompenzovaný uhol prekračuje 85° nástroj.','Compensated angle exceeds 85° tooling.'));
+  if(force>XPERT320.force)throw new Error(L('Prekročená sila 3 200 kN.','3,200 kN capacity exceeded.'));
   const contact=OPEN_TIP-c.thickness,target=contact+supportDepth(c,beta);
-  if(target>XPERT320.stroke)throw new Error('Ohyb presahuje zdvih 250 mm. / Bend exceeds 250 mm stroke.');
+  if(target>XPERT320.stroke)throw new Error(L('Ohyb presahuje zdvih 250 mm.','Bend exceeds 250 mm stroke.'));
   return {force,spring,beta,contact,target};
 }
 
@@ -42,11 +43,11 @@ export function sheetSection(c,beta){
 
 export function createBrakeProcess(){
   const S={phase:'idle',run:false,paused:false,done:false,complete:false,y:0,beta:0,peak:0,force:0,maxForce:0,t:0,alarm:null};let job=null,dwell=0;
-  const safetyError=s=>s.estop?'Núdzový STOP / Emergency STOP':!s.hydraulic?'Zapni hydrauliku. / Enable hydraulics.':s.guardOpen?'Zatvor bočné kryty. / Close side guards.':s.obstructed?'Prekážka v ochrannom poli. / Safety field obstructed.':s.unclamped?'Vráť plech k nástroju. / Return sheet to tooling.':null;
+  const safetyError=s=>s.estop?L('Núdzový STOP','Emergency STOP'):!s.hydraulic?L('Zapni hydrauliku.','Enable hydraulics.'):s.guardOpen?L('Zatvor bočné kryty.','Close side guards.'):s.obstructed?L('Prekážka v ochrannom poli.','Safety field obstructed.'):s.unclamped?L('Vráť plech k nástroju.','Return sheet to tooling.'):null;
   const stop=alarm=>{S.run=false;S.paused=!!job&&!S.done;S.alarm=alarm||null;};
   const start=(c,s)=>{
     const error=safetyError(s);if(error){stop(error);return false;}
-    if(S.done){stop('Vlož nový plech. / Load a new sheet.');return false;}
+    if(S.done){stop(L('Vlož nový plech.','Load a new sheet.'));return false;}
     if(!job){try{job={...c,...brakeSetup(c)};}catch(e){stop(e.message);return false;}S.phase='approach';}
     S.run=true;S.paused=false;S.alarm=null;return true;
   };

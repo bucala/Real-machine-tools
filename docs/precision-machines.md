@@ -152,7 +152,7 @@ Siemens Edition používa jeden živý canvas pre monitor aj zväčšené HMI. R
 
 ## Bystronic Xpert Pro 320/4300
 
-Používateľ zvolil **320/4300 v štandardnej výške**. Parametre vychádzajú zo štvrtej strany dodaného [technického listu Xpert Pro](references/bystronic-xpert-pro-technical-data.pdf), zo stĺpca **320/4300**, nie **320/4300 Extended**. Fotografie modelov 150 a 320 slúžia pre tvar a členenie okrytovania, nástrojov a príslušenstva.
+Používateľ zvolil **320/4300 v štandardnej výške**. Parametre vychádzajú zo štvrtej strany dodaného technického listu Xpert Pro (dokument výrobcu, v repozitári sa nešíri), zo stĺpca **320/4300**, nie **320/4300 Extended**. Fotografie modelov 150 a 320 slúžia pre tvar a členenie okrytovania, nástrojov a príslušenstva.
 
 | Parameter | Štandard 320/4300 |
 | --- | --- |

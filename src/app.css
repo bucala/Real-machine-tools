@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-ui)}
 .app-title:focus,.menu-title:focus{outline:none}
 .app-title{font-family:var(--f-head);font-size:26px;line-height:1.05;font-weight:700;margin:0;text-wrap:balance}
 .muted{color:var(--muted)} .ink{color:var(--text)} .tnum{font-variant-numeric:tabular-nums}
-.range{width:100%;accent-color:var(--accent);margin-top:6px;cursor:pointer}
+.range{width:100%;min-height:24px;accent-color:var(--accent);margin-top:2px;cursor:pointer}
 .range:disabled{opacity:.45;cursor:not-allowed}
 .btn{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s;font-family:var(--f-ui)}
 .btn:hover{border-color:var(--accent)}

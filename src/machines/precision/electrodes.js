@@ -1,3 +1,4 @@
+import { L } from '../../core/i18n';
 export const ELECTRODE_KEY='rmt-edm-electrodes-v1';
 export const defaultElectrodes=()=>[
   {id:'copper-prism-20-15',name:'Cu · 20 × 15 mm',shape:'box',w:20,d:15,length:100},
@@ -6,11 +7,11 @@ export const defaultElectrodes=()=>[
 ];
 export function parseElectrodes(json){
   const data=typeof json==='string'?JSON.parse(json):json;
-  if(!data||data.version!==1||!Array.isArray(data.electrodes)||data.electrodes.length>200)throw new Error('Neplatná knižnica elektród / Invalid electrode library.');
+  if(!data||data.version!==1||!Array.isArray(data.electrodes)||data.electrodes.length>200)throw new Error(L('Neplatná knižnica elektród.','Invalid electrode library.'));
   const ids=new Set();
   return data.electrodes.map(e=>{
-    if(!e||typeof e.id!=='string'||!e.id||ids.has(e.id)||typeof e.name!=='string'||!e.name.trim()||!['box','round'].includes(e.shape)||!Number.isFinite(e.w)||e.w<2||e.w>40||!Number.isFinite(e.d)||e.d<2||e.d>40||!Number.isFinite(e.length)||e.length<80||e.length>180)throw new Error('Skontroluj názov, rozmery a jedinečné ID elektródy / Check name, dimensions and unique electrode ID.');
-    if(e.material!==undefined&&!['copper','graphite'].includes(e.material))throw new Error('Neplatný materiál / Invalid material.');
+    if(!e||typeof e.id!=='string'||!e.id||ids.has(e.id)||typeof e.name!=='string'||!e.name.trim()||!['box','round'].includes(e.shape)||!Number.isFinite(e.w)||e.w<2||e.w>40||!Number.isFinite(e.d)||e.d<2||e.d>40||!Number.isFinite(e.length)||e.length<80||e.length>180)throw new Error(L('Skontroluj názov, rozmery a jedinečné ID elektródy.','Check name, dimensions and unique electrode ID.'));
+    if(e.material!==undefined&&!['copper','graphite'].includes(e.material))throw new Error(L('Neplatný materiál.','Invalid material.'));
     ids.add(e.id);return {...(e.material?{material:e.material}:{}),id:e.id,name:e.name.trim().slice(0,80),shape:e.shape,w:e.w,d:e.d,length:e.length};
   });
 }

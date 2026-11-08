@@ -1,3 +1,4 @@
+import { L } from '../../core/i18n';
 import { brakeSetup,createBrakeProcess } from './pressBrakeProcess';
 
 export const BRAKE_TABS=['part','tools','bend','machine','diagnostics'];
@@ -9,12 +10,12 @@ export const BRAKE_PRESETS=[
   {name:'Hliník 90°',material:'aluminium',thickness:2,length:800,depth:250,flange:60,v:16,angle:90,r:0},
 ];
 export function brakeRecipe(source){
-  if(!source||typeof source!=='object'||!['steel','stainless','aluminium'].includes(source.material))throw new Error('Neplatný materiál. / Invalid material.');
+  if(!source||typeof source!=='object'||!['steel','stainless','aluminium'].includes(source.material))throw new Error(L('Neplatný materiál.','Invalid material.'));
   const out={name:String(source.name||'Diel').trim().slice(0,48)||'Diel',material:source.material};
   for(const [key,[min,max]] of Object.entries(RECIPE_LIMITS)){
-    const n=source[key];if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw new Error(`Neplatný parameter / Invalid parameter: ${key}`);out[key]=n;
+    const n=source[key];if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw new Error(L(`Neplatný parameter: ${key}`,`Invalid parameter: ${key}`));out[key]=n;
   }
-  brakeSetup(out);if(out.r!==0)throw new Error('Program pre plochý plech vyžaduje R = 0. / Flat sheet program requires R = 0.');
+  brakeSetup(out);if(out.r!==0)throw new Error(L('Program pre plochý plech vyžaduje R = 0.','Flat sheet program requires R = 0.'));
   return out;
 }
 export function readBrakeRecipes(storage){
@@ -38,7 +39,7 @@ export function createBrakeControl({c,onChange=()=>{},guardClosed=()=>!c.guardOp
   const process=createBrakeProcess(),stats={completed:0,interrupted:0,lastTime:0,lastForce:0};let events=[],sequence=0,counted=null,lastAlarm=null,notice='';
   const safety=()=>({...c,guardOpen:c.guardOpen||!guardClosed()});
   const event=(sk,en,level='info')=>{events=[{id:++sequence,time:now(),sk,en,level},...events].slice(0,40);};
-  const reject=(sk,en)=>{notice=`${sk} / ${en}`;event(sk,en,'warning');return false;};
+  const reject=(sk,en)=>{notice=L(sk,en);event(sk,en,'warning');return false;};
   const write=(key,value)=>{c[key]=value;onChange(key,value);};
   const editable=()=>!process.job&&!process.S.run&&!c.unclamped&&process.S.y<.01;
   const observe=()=>{
@@ -77,7 +78,7 @@ export function createBrakeControl({c,onChange=()=>{},guardClosed=()=>!c.guardOp
     else if(id==='reset'){
       if(c.unclamped||!process.reset())return reject('Nový plech vyžaduje stojaci a zdvihnutý baran.','Stop and retract the ram before loading a new sheet.');
       event('Vložený nový plech.','New sheet loaded.');
-    }else if(id==='emergency'){write('estop',true);process.hold('Núdzový STOP / Emergency STOP');}
+    }else if(id==='emergency'){write('estop',true);process.hold(L('Núdzový STOP','Emergency STOP'));}
     else if(id==='releaseStop'){write('estop',false);event('STOP uvoľnený. Pohyb ostáva zastavený.','STOP released. Motion remains stopped.');}
     else if(id==='acknowledge'){
       ok=process.acknowledge(safety());if(ok)event('Hlásenie potvrdené.','Alarm acknowledged.');

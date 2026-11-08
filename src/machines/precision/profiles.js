@@ -1,3 +1,4 @@
+import { L } from '../../core/i18n';
 // Dimensions transcribed from the supplied manufacturer catalogues. Scene units = 100 mm.
 export const RXU = {
   id:'rxu1001', brand:'Röders', name:'RXU 1001 DSH', controller:'RMS6 · ISO training interface',
@@ -9,8 +10,8 @@ export const RXU = {
   source:'Röders catalogue, supplied PDF pp. 58–59; Ø600 round table variant',
 };
 export function validateRxuTool(tool) {
-  if(tool.d>RXU.maxToolDiameter)throw new Error('RXU 1001 DSH · štandardné vreteno: nástroj max. Ø35 mm / standard spindle: tool max. Ø35 mm.');
-  if(tool.l>RXU.maxToolLength)throw new Error('Výukový profil RXU: dĺžka nástroja max. 250 mm / training profile: tool length max. 250 mm.');
+  if(tool.d>RXU.maxToolDiameter)throw new Error(L('RXU 1001 DSH · štandardné vreteno: nástroj max. Ø35 mm.','RXU 1001 DSH · standard spindle: tool max. Ø35 mm.'));
+  if(tool.l>RXU.maxToolLength)throw new Error(L('Výukový profil RXU: dĺžka nástroja max. 250 mm.','RXU training profile: tool length max. 250 mm.'));
 }
 export const RXU_PROGRAM = `%
 O1001 (ROEDERS - ISO TRAINING POST)

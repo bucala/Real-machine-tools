@@ -124,7 +124,7 @@ const MODERN = [
   {id:'roeders',Art:RoedersArt,Comp:RoedersSimulator,t:()=>({
     meta:L('5-osé HSC · QUADROGUIDE','5-axis HSC · QUADROGUIDE'),name:'Röders RXU 1001 DSH',model:'Röders RXU 1001 DSH',
     desc:L('Presné vysokorýchlostné frézovanie s priamymi pohonmi, obojstranne uloženým stolom A/C a štyrmi vedeniami osi Z. ISO program, skrinka nástrojov, úber materiálu a prehliadka obrobku.','Precision high-speed milling with direct drives, a two-sided A/C trunnion and four Z guideways. ISO program, tool cabinet, material removal and workpiece inspection.'),
-    specs:['800 / 855 / 500 mm · Ø600 mm','A ±115° · C 360°','24 000 rpm · HSK-A63 · 24 T']})},
+    specs:['800 / 855 / 500 mm · Ø600 mm','A ±115° · C 360°',L('24 000 ot/min · HSK-A63 · 24 miest','24,000 rpm · HSK-A63 · 24 pockets')]})},
   // Retained, including its simulator and saved data; unavailable in the public UI.
   {id:'shuangli',hidden:true,Art:ShuangliArt,Comp:ShuangliSimulator,t:()=>({
     meta:L('CNC hĺbkové vŕtanie','CNC deep hole drilling'),name:'ShuangliCNC ZJA13-2013F',model:'ZJA13-2013F · Siemens Edition',
@@ -202,6 +202,11 @@ class SimBoundary extends React.Component {
   }
 }
 
+// upozornenie o ochranných známkach – názvy a logá slúžia len na identifikáciu predlohy
+function TrademarkNote() {
+  return <p className="text-xs muted mt-2">{L('Názvy a logá strojov sú ochranné známky ich vlastníkov a slúžia len na identifikáciu predlohy. Projekt nie je spojený s výrobcami; modely sú výučbové rekonštrukcie, nie výrobná dokumentácia.', 'Machine names and logos are trademarks of their owners and only identify the original. The project is not affiliated with the manufacturers; the models are training reconstructions, not production documentation.')}</p>;
+}
+
 function Menu({ onOpen }) {
   const [gl] = useState(hasWebGL);
   const [hideGl, setHideGl] = useState(false);
@@ -212,7 +217,7 @@ function Menu({ onOpen }) {
           <p className="menu-kicker">Real machine tools</p>
           <PrefBar />
         </div>
-        <h1 className="menu-title" tabIndex={-1}>{L('Simulátory konvenčných obrábacích strojov', 'Conventional machine tool simulators')}</h1>
+        <h1 className="menu-title" tabIndex={-1}>{L('Simulátory obrábacích a tvárniacich strojov', 'Machine tool and forming simulators')}</h1>
         <p className="menu-lead">{L('Vyber stroj. Každý model je zostavený v 3D, dá sa otáčať, rezať v ňom a v režime ručného ovládania sa obsluhuje kolesami, pákami a tlačidlami ako skutočný stroj.', 'Choose a machine. Every model is built in 3D; you can orbit it, cut with it and, in manual mode, operate it with handwheels, levers and buttons like the real thing.')}</p>
         {!gl && !hideGl && (
           <div className="msg-warn" role="note" style={{ maxWidth: '68ch', marginTop: 14, padding: '10px 14px', borderRadius: 9, border: '1px solid var(--border)' }}>
@@ -228,8 +233,8 @@ function Menu({ onOpen }) {
           <span className="modern-banner-art"><PrecisionArt /></span>
           <span className="modern-banner-body">
             <span className="modern-kicker">{L('Nová kategória', 'New category')}</span>
-            <span className="modern-banner-title">{L('Presné obrábanie a elektroerózia', 'Precision machining & EDM')}</span>
-            <span className="text-sm" style={{ opacity: 0.85 }}>{L('Moderné CNC technológie: viac-osé frézovanie, presné obrábanie a elektroerozívne procesy v spoločnom prostredí simulátorov.', 'Modern CNC technology: multi-axis milling, precision machining and EDM processes in a shared simulator environment.')}</span>
+            <span className="modern-banner-title">{L('Moderné stroje: obrábanie, elektroerózia a tvárnenie', 'Modern machines: machining, EDM & forming')}</span>
+            <span className="text-sm" style={{ opacity: 0.85 }}>{L('Moderné CNC technológie: 5-osé frézovanie, presné obrábanie, hĺbiaca elektroerózia a CNC ohraňovanie plechu v spoločnom prostredí simulátorov.', 'Modern CNC technology: 5-axis milling, precision machining, die-sinking EDM and CNC press braking in a shared simulator environment.')}</span>
           </span>
           <span className="modern-banner-cta">{L('Otvoriť →', 'Open →')}</span>
         </button>
@@ -271,6 +276,7 @@ function Menu({ onOpen }) {
           })}
         </div>
         <p className="text-xs muted mt-8">{L('Mierka modelov 1 : 100 mm · ovládanie myšou alebo dotykom · kláves M prepína na ručné ovládanie prvkov stroja · po prvej návšteve fungujú simulátory aj bez internetu a dajú sa nainštalovať ako aplikácia.', 'Model scale 1 : 100 mm · mouse or touch control · the M key switches to manual control of the machine elements · after the first visit the simulators also work offline and can be installed as an app.')}</p>
+        <TrademarkNote />
       </div>
     </main>
   );
@@ -307,6 +313,7 @@ function ModernMenu({ onOpen, onBack }) {
 
         </div>
         <p className="text-xs muted mt-8">{L('Simulácia je výučbová – rozmery a dynamika stroja vychádzajú z katalógových údajov, riadiaci systém je zjednodušený.', 'The simulation is for training – machine dimensions and dynamics follow catalogue data, the control is simplified.')}</p>
+        <TrademarkNote />
       </div>
     </main>
   );

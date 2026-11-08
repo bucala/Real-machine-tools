@@ -1,19 +1,20 @@
+import { L } from '../../core/i18n';
 import { EX500 } from './profiles';
 const within=(x,r)=>Number.isFinite(x)&&x>=r[0]&&x<=r[1];
 export function validateEdmJob({rows,electrode,current,gap,oilLevel,fixtureHeight=0},stock){
-  if(!Array.isArray(rows)||!rows.length||rows.length>100)throw new Error('Zadaj 1–100 operácií / Enter 1–100 operations.');
-  if(!within(current,[1,EX500.current]))throw new Error('Generátor: 1–60 A / Generator: 1–60 A.');
-  if(!within(gap,[.01,.2]))throw new Error('Medzera: 0,01–0,20 mm / Gap: 0.01–0.20 mm.');
-  if(!electrode||!['box','round'].includes(electrode.shape)||![electrode.w,electrode.d,electrode.length].every(v=>within(v,[1,200])))throw new Error('Neplatná elektróda / Invalid electrode.');
-  if(!within(oilLevel,[stock.max[2]+40,EX500.tankHeight]))throw new Error('Dielektrikum musí byť ≥40 mm nad obrobkom / Dielectric must cover the workpiece by ≥40 mm.');
+  if(!Array.isArray(rows)||!rows.length||rows.length>100)throw new Error(L('Zadaj 1–100 operácií.','Enter 1–100 operations.'));
+  if(!within(current,[1,EX500.current]))throw new Error(L('Generátor: 1–60 A.','Generator: 1–60 A.'));
+  if(!within(gap,[.01,.2]))throw new Error(L('Medzera: 0,01–0,20 mm.','Gap: 0.01–0.20 mm.'));
+  if(!electrode||!['box','round'].includes(electrode.shape)||![electrode.w,electrode.d,electrode.length].every(v=>within(v,[1,200])))throw new Error(L('Neplatná elektróda.','Invalid electrode.'));
+  if(!within(oilLevel,[stock.max[2]+40,EX500.tankHeight]))throw new Error(L('Dielektrikum musí byť ≥40 mm nad obrobkom.','Dielectric must cover the workpiece by ≥40 mm.'));
   for(const r of rows){
-    if(r.feed!=null&&!within(r.feed,[.001,100]))throw new Error('Neplatný posuv / Invalid feed.');
-    if(!within(r.x,EX500.X)||!within(r.y,EX500.Y))throw new Error('Poloha mimo dráh X/Y / X/Y travel exceeded.');
-    if(!within(r.depth,[.1,stock.max[2]-stock.min[2]-.5]))throw new Error('Hĺbka zasahuje do upnutia / Depth intersects the fixture.');
+    if(r.feed!=null&&!within(r.feed,[.001,100]))throw new Error(L('Neplatný posuv.','Invalid feed.'));
+    if(!within(r.x,EX500.X)||!within(r.y,EX500.Y))throw new Error(L('Poloha mimo dráh X/Y.','X/Y travel exceeded.'));
+    if(!within(r.depth,[.1,stock.max[2]-stock.min[2]-.5]))throw new Error(L('Hĺbka zasahuje do upnutia.','Depth intersects the fixture.'));
     const low=fixtureHeight+stock.max[2]-r.depth+electrode.length;
-    if(low<EX500.chuck[0]||fixtureHeight+stock.max[2]+5+electrode.length>EX500.chuck[1])throw new Error('Elektróda nedosiahne obrobok v rozsahu výšky upínača / Electrode cannot reach within chuck clearance.');
+    if(low<EX500.chuck[0]||fixtureHeight+stock.max[2]+5+electrode.length>EX500.chuck[1])throw new Error(L('Elektróda nedosiahne obrobok v rozsahu výšky upínača.','Electrode cannot reach within chuck clearance.'));
     const rx=(electrode.shape==='round'?electrode.w:electrode.w)/2+gap,ry=(electrode.shape==='round'?electrode.w:electrode.d)/2+gap;
-    if(r.x-rx<stock.min[0]||r.x+rx>stock.max[0]||r.y-ry<stock.min[1]||r.y+ry>stock.max[1])throw new Error('Elektróda presahuje obrobok / Electrode exceeds the blank.');
+    if(r.x-rx<stock.min[0]||r.x+rx>stock.max[0]||r.y-ry<stock.min[1]||r.y+ry>stock.max[1])throw new Error(L('Elektróda presahuje obrobok.','Electrode exceeds the blank.'));
   }
 }
 // Educational servo model, not OSCARMAX generator firmware. SDF removal follows
@@ -31,7 +32,7 @@ export function createEdmProcess(stock){
   const stop=message=>{hold();S.alarm=message;};
   const advance=(dt,{door=false,oilLevel=0,flushing=true,estop=false}={})=>{
     S.sparking=false;if(!S.run)return;
-    if(door||estop||oilLevel<stock.max[2]+40||!flushing){stop(door?'Zatvor nádrž / Close the tank.':estop?'Núdzový STOP / Emergency STOP.':!flushing?'Zapni výplach / Enable flushing.':'Nízka hladina dielektrika / Low dielectric level.');return;}
+    if(door||estop||oilLevel<stock.max[2]+40||!flushing){stop(door?L('Zatvor nádrž.','Close the tank.'):estop?L('Núdzový STOP.','Emergency STOP.'):!flushing?L('Zapni výplach.','Enable flushing.'):L('Nízka hladina dielektrika.','Low dielectric level.'));return;}
     // Bounded steps avoid both tunnelling and a long unresponsive fast-forward frame.
     let left=Math.min(dt,120),steps=0;
     while(left>1e-8&&S.run&&steps++<600){
