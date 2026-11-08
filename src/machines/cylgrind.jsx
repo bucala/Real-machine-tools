@@ -203,7 +203,7 @@ function CylGrinderSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, handwheel } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Hrotová brúska na guľato' };
+    apiRef.current.machineModel = { root, name: L('Hrotová brúska na guľato', 'Cylindrical grinder') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();
@@ -1207,6 +1207,7 @@ function CylGrinderSimulator({ onBack, params }) {
                 [5, '5×'],
                 [20, '20×'],
               ]}
+              shortcut="speed"
               onChange={(v) => set('timeScale', v)}
             />
           </div>

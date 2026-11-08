@@ -250,7 +250,7 @@ function PressSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Výstredníkový lis' };
+    apiRef.current.machineModel = { root, name: L('Výstredníkový lis', 'Eccentric press') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

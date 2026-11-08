@@ -310,7 +310,7 @@ function SlotterSimulator({ onBack, params }) {
     const { add, box, cylY, cylZ, ball, hitProxy, pivotLever, detents, handwheel, crank } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Zvislá obrážačka' };
+    apiRef.current.machineModel = { root, name: L('Zvislá obrážačka', 'Slotting machine') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();

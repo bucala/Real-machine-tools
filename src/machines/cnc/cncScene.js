@@ -1,4 +1,4 @@
-import { drawRmsScreen } from '../../ui/machineScreens';
+import { cncHmiHit, cncHmiKey, drawCncScreen } from './cncScreen';
 import { workAreaFeed } from '../../core/workAreaFeed';
 import * as THREE from 'three';
 import { L } from '../../core/i18n';
@@ -15,6 +15,7 @@ import { createExecutor } from './sim';
 import { MATERIALS } from './tooling';
 import { cabinHalfWidth, hmiPose } from './hermleLayout';
 import { measureCnc } from './cncTasks';
+import { stockSnapshot } from '../../core/workSession';
 import { createStock } from './voxel';
 import { createStockMesh } from './stockMesh';
 import { createCabinLighting } from './cabinLighting';
@@ -147,43 +148,60 @@ export function createCncScene({
     loadMagazine,
     accessories,
   } = geometry;
-  const screen = tex(rxu ? 1024 : 640, rxu ? 768 : 460, (g, w, h) => {
-    if (rxu) {
-      drawRmsScreen(g, w, h, scr);
-      return;
-    }
-    g.fillStyle = '#e9edf0';
-    g.fillRect(0, 0, w, h);
-    g.fillStyle = '#292e33';
-    g.fillRect(0, 0, w, 34);
-    g.fillStyle = '#fff';
-    g.font = 'bold 18px monospace';
-    g.fillText(`${controller} · ${scr ? scr.title : 'Ready'}`, 12, 23);
-    if (!scr) return;
-    g.font = '17px monospace';
-    scr.lines.forEach((ln, i) => {
-      if (ln.cur) {
-        g.fillStyle = '#ffd34d';
-        g.fillRect(8, 48 + i * 24, 384, 22);
-        g.fillStyle = '#10202f';
-      } else g.fillStyle = '#27333e';
-      g.fillText(ln.t.slice(0, 36), 12, 64 + i * 24);
-    });
-    g.fillStyle = '#d7dfe5';
-    g.fillRect(404, 44, 228, 340);
-    g.font = '18px monospace';
-    scr.pos.forEach(([k, v], i) => {
-      g.fillStyle = '#334b5f';
-      g.fillText(k, 414, 74 + i * 38);
-      g.fillStyle = '#172b3b';
-      g.fillText(v, 446, 74 + i * 38);
-    });
-    g.fillStyle = scr.alarm ? '#ff5a4f' : '#59d17b';
-    g.fillRect(0, h - 40, w, 40);
-    g.fillStyle = '#0d1a2a';
-    g.font = 'bold 17px sans-serif';
-    g.fillText(scr.status.slice(0, 64), 12, h - 14);
+  let loadedText = '',
+    loadedTools = [];
+  let prog = null,
+    ex = null,
+    toolsNow = [],
+    o54 = [0, 0, 90],
+    curT = -1,
+    stockMin = null,
+    stockMax = null,
+    maxLoad = 0,
+    maxA = 0,
+    msg = null;
+  // živý dotykový displej (cnc/cncScreen.js): záložky, rýchlosť simulácie a korekcia posuvu na displeji
+  const scrKind = rxu ? 'rms' : 'tnc';
+  let live = {},
+    hist = [],
+    histT = -Infinity,
+    histStep = 0.5,
+    est = 0;
+  const scrState = () => ({
+    controller,
+    title: scr ? scr.title : L('Pripravený', 'Ready'),
+    lines: scr ? scr.lines : [],
+    posList: scr ? scr.pos : [],
+    status: scr ? scr.status : L('Pripravený', 'Ready'),
+    alarm: scr ? scr.alarm : false,
+    msg,
+    pos: { X: live.X, Y: live.Y, Z: live.Z, A: live.A, C: live.C },
+    wx: live.wx,
+    wy: live.wy,
+    wz: live.wz,
+    T: live.T ?? 0,
+    S: live.S ?? 0,
+    F: live.F ?? 0,
+    load: live.load ?? 0,
+    t: live.t ?? 0,
+    removed: live.removed ?? 0,
+    maxLoad,
+    line: live.line ?? 0,
+    running: !!c.running,
+    paused: !!live.paused,
+    done: !!live.done,
+    tools: toolsNow,
+    hist,
+    est,
+    nLines: prog ? prog.lines.length : 0,
+    dialect: prog ? prog.dialect : 'iso',
+    stock: { ...(prog ? stockCfg() : { sx: c.sx, sy: c.sy, sz: c.sz }), mat: c.mat, res: c.res },
+    door: c.door,
+    fo: c.fo,
+    ro: c.ro,
+    single: c.single,
   });
+  const screen = tex(rxu ? 1024 : 640, rxu ? 768 : 460, (g, w, h) => drawCncScreen(g, w, h, scrKind, scrState(), c));
   sm.material.map = screen.tx;
   sm.material.needsUpdate = true;
   apiRef.current.getHmiCanvas = () => screen.tx.image;
@@ -210,18 +228,6 @@ export function createCncScene({
   const applyChunks = (parts) => stockMesh?.apply(parts);
 
   // ---------------- program a vykonávanie ----------------
-  let loadedText = '',
-    loadedTools = [];
-  let prog = null,
-    ex = null,
-    toolsNow = [],
-    o54 = [0, 0, 90],
-    curT = -1,
-    stockMin = null,
-    stockMax = null,
-    maxLoad = 0,
-    maxA = 0,
-    msg = null;
   const stockCfg = () => {
     if (prog && prog.stock) {
       const s = prog.stock,
@@ -306,10 +312,14 @@ export function createCncScene({
     maxA = 0;
     msg = null;
     curT = -1;
+    hist = [];
+    histT = -Infinity;
+    histStep = 0.5;
+    est = programTime(prog.moves, o54, MC);
     return {
       errors: prog.errors,
       warns: prog.warns,
-      time: programTime(prog.moves, o54, MC),
+      time: est,
       dialect: prog.dialect,
       toolDefs: prog.toolDefs,
       stock: prog.stock,
@@ -317,6 +327,16 @@ export function createCncScene({
     };
   };
   apiRef.current.load = load;
+  // rozpracovaná práca: obrobok v stave pri uložení (len rovnaké rozmery, materiál a rozlíšenie)
+  apiRef.current.stockState = () => stockSnapshot(stock, stockSig);
+  apiRef.current.stockRemoved = () => (stock ? stock.removed() : 0);
+  apiRef.current.restoreStock = (saved) => {
+    if (!stock || !saved || c.running || saved.sig !== stockSig || !stock.restore(saved.field, saved.removed))
+      return false;
+    if (ex) ex.S.removed = saved.removed;
+    applyChunks(stock.takeDirty());
+    return true;
+  };
   apiRef.current.measure = () => measureCnc({ stock, o54, ex, maxA, maxLoad });
   apiRef.current.start = () => {
     if (!ex) return 'noprog';
@@ -600,7 +620,7 @@ export function createCncScene({
         type: 'button',
         still: true,
         tooltip: false,
-        label: L(d.label, 'Service door'),
+        label: L(d.label, d.labelEn || 'Service door'),
         guard: doorFree,
         action: () => {
           d.open = !d.open;
@@ -660,6 +680,19 @@ export function createCncScene({
       control.action();
     }
   };
+  // dotyk / klávesnica na displeji
+  const hmiApply = (hit) => {
+    if (!hit) return null;
+    if (hit.id === 'tab') set('scrTab', hit.tab);
+    else if (hit.id === 'speed') set('speed', hit.value);
+    else if (hit.id === 'fo') apiRef.current.setHmiOverride('fo', hit.value);
+    else apiRef.current.hmiAction(hit.id);
+    screen.redraw();
+    return hit;
+  };
+  apiRef.current.hmiPoint = (x, y, drag) => hmiApply(cncHmiHit(scrKind, c, x, y, drag));
+  apiRef.current.hmiHover = (x, y) => !!cncHmiHit(scrKind, c, x, y);
+  apiRef.current.hmiKey = (key) => hmiApply(cncHmiKey(scrKind, c, key));
   apiRef.current.setHmiOverride = (key, value) => {
     if (key === 'fo' || key === 'ro')
       set(key, Math.max(key === 'fo' ? 0 : 5, Math.min(key === 'fo' ? 150 : 100, Math.round(value))));
@@ -1031,34 +1064,44 @@ export function createCncScene({
       teleT = t;
       const w = [p.pT[0] - o54[0], p.pT[1] - o54[1], p.pT[2] - o54[2]],
         mv = prog && prog.moves[S.idx];
-      setTele({
-        serviceDoorOpen: !!geometry.serviceOpen?.(),
-        run: !!c.running,
-        paused: S.paused,
-        done: S.done,
-        alarm: S.alarm,
-        line: S.line,
-        X: p.m[0],
-        Y: p.m[1],
-        Z: p.m[2] + Lt - MC.nose[1],
-        A: p.a,
-        C: p.c,
-        wx: w[0],
-        wy: w[1],
-        wz: w[2],
-        T,
-        S: S.dir ? S.spin : 0,
-        F: mv && mv.kind !== 'tc' ? (mv.rapid ? -1 : Math.round(((mv.F || 0) * c.fo) / 100)) : 0,
-        load: S.load || 0,
-        mrr: ((S.mrr || 0) * 60) / 1000,
-        t: S.t,
-        removed: S.removed / 1000,
-        busy,
-        building: false,
-        maxLoad,
-        msg,
-        cool: !!S.cool,
-      });
+      if (c.running && S.t - histT >= histStep) {
+        histT = S.t;
+        hist.push({ t: S.t, load: S.load || 0, mrr: ((S.mrr || 0) * 60) / 1000 });
+        if (hist.length > 360) {
+          hist = hist.filter((_, i) => i % 2 === 0);
+          histStep *= 2;
+        }
+      }
+      setTele(
+        (live = {
+          serviceDoorOpen: !!geometry.serviceOpen?.(),
+          run: !!c.running,
+          paused: S.paused,
+          done: S.done,
+          alarm: S.alarm,
+          line: S.line,
+          X: p.m[0],
+          Y: p.m[1],
+          Z: p.m[2] + Lt - MC.nose[1],
+          A: p.a,
+          C: p.c,
+          wx: w[0],
+          wy: w[1],
+          wz: w[2],
+          T,
+          S: S.dir ? S.spin : 0,
+          F: mv && mv.kind !== 'tc' ? (mv.rapid ? -1 : Math.round(((mv.F || 0) * c.fo) / 100)) : 0,
+          load: S.load || 0,
+          mrr: ((S.mrr || 0) * 60) / 1000,
+          t: S.t,
+          removed: S.removed / 1000,
+          busy,
+          building: false,
+          maxLoad,
+          msg,
+          cool: !!S.cool,
+        }),
+      );
     }
     renderer.render(scene, camera);
   };

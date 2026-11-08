@@ -1,6 +1,10 @@
+import { Guide } from '../ui/guide';
+import { EDM_GUIDE } from './guides';
 import { PartLabelsButton } from '../ui/common';
 import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen, oscarHmiHit, oscarHmiKey } from '../ui/oscarScreen';
+import { stockSnapshot } from '../core/workSession';
+import { WorkResume } from '../ui/workResume';
 import { compileEdmGcode, EDM_GCODE_SAMPLE } from './precision/edmGcode';
 import { workAreaFeed } from '../core/workAreaFeed';
 import { SectionInfo } from '../ui/sectionInfo';
@@ -556,6 +560,26 @@ export default function OscarSimulator({ onBack, params }) {
       snapshot,
       lockHmi: () => set('hmiLocked', !c.hmiLocked),
     };
+    // rozpracovaná práca (ui/workResume.jsx): operácie, elektródy, generátor a obrobok
+    const WORK_KEYS = ['ncMode', 'ncText', 'rows', 'electrode', 'electrode2', 'current', 'speed', 'flushing', 'light'];
+    apiRef.current.workSig = () => JSON.stringify([WORK_KEYS.map((k) => c[k]), stock.removed()]);
+    apiRef.current.workSave = () => ({
+      v: 1,
+      label: L(`${c.rows.length} operácie`, `${c.rows.length} operations`),
+      ui: Object.fromEntries(WORK_KEYS.map((k) => [k, c[k]])),
+      stock: stock.removed() > 0 ? stockSnapshot(stock, 'ex500') : null,
+    });
+    apiRef.current.workRestore = (d) => {
+      if (!d || d.v !== 1 || process.S.run || c.unclamped) return false;
+      reset();
+      WORK_KEYS.forEach((k) => d.ui?.[k] !== undefined && set(k, d.ui[k]));
+      if (d.stock?.sig === 'ex500' && stock.restore(d.stock.field, d.stock.removed)) {
+        process.S.removed = d.stock.removed;
+        flush();
+      }
+      screen.redraw();
+      return true;
+    };
     apiRef.current.measure = () =>
       measureEdm({
         stock,
@@ -866,6 +890,8 @@ export default function OscarSimulator({ onBack, params }) {
       )}
       {hmiOpen && <EdmFullscreen {...{ apiRef, ui, tele }} onClose={() => setHmiOpen(false)} />}
       <aside className="panel">
+        <WorkResume machine="oscarmax" apiRef={apiRef} skip={!!params?.uloha} />
+        <Guide steps={EDM_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · hĺbiaca EDM', 'Modern machines · sinker EDM')}</p>
           <div className="section-heading">
@@ -926,7 +952,7 @@ export default function OscarSimulator({ onBack, params }) {
         </div>
         <div className="sec">
           <h2 className="sec-title mb-2">{L('Prevádzka', 'Operation')}</h2>
-          <div className="cnc-run">
+          <div className="cnc-run" data-running={String(!!tele.run)}>
             <button className="btn-run start" disabled={ui.unclamped} onClick={() => apiRef.current.start?.()}>
               ▶ {L('Štart cyklu', 'Cycle start')}
             </button>
@@ -976,6 +1002,7 @@ export default function OscarSimulator({ onBack, params }) {
               [20, '×20'],
               [80, '×80'],
             ]}
+            shortcut="speed"
             onChange={(v) => set('speed', v)}
           />
           <fieldset disabled={ui.hmiLocked} className="hermle-hmi-position">
@@ -1112,7 +1139,7 @@ export default function OscarSimulator({ onBack, params }) {
                     />
                   </label>
                 </div>
-                <SectionInfo title="G-kód / ISO">
+                <SectionInfo title={L('G-kód / ISO', 'G-code / ISO')}>
                   <p>
                     G0 / G1 · G21 · G90 / G91 · G54 · G94 · F (mm/min) · M3/M5 · M8/M9 · M2/M30.{' '}
                     {L(

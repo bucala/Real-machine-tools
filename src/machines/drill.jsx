@@ -1,3 +1,5 @@
+import { Guide } from '../ui/guide';
+import { DRILL_GUIDE } from './guides';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
@@ -221,7 +223,7 @@ function DrillSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, crank, face } = makeKit(M);
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Stĺpová vŕtačka' };
+    apiRef.current.machineModel = { root, name: L('Stĺpová vŕtačka', 'Pillar drill') };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();
@@ -1006,6 +1008,7 @@ function DrillSimulator({ onBack, params }) {
         apiRef={apiRef}
       />
       <aside className="panel">
+        <Guide steps={DRILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}
@@ -1151,6 +1154,7 @@ function DrillSimulator({ onBack, params }) {
                 [5, '5×'],
                 [20, '20×'],
               ]}
+              shortcut="speed"
               onChange={(v) => set('timeScale', v)}
             />
           </div>

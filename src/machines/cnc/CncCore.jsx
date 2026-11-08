@@ -1,6 +1,9 @@
+import { Guide } from '../../ui/guide';
+import { CNC_GUIDE } from '../guides';
 import { PartLabelsButton } from '../../ui/common';
 import { SectionInfo } from '../../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
+import { WorkResume } from '../../ui/workResume';
 import { L } from '../../core/i18n';
 import {
   HelpFooter,
@@ -272,7 +275,42 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
     if (!ctl.current.unclamped && apiRef.current.load) {
       set('running', false);
       setCheck(apiRef.current.load(txt, tls));
+      // obnovená rozpracovaná práca: obrobok až po načítaní programu s rovnakým polotovarom
+      if (pendingStock.current) {
+        apiRef.current.restoreStock?.(pendingStock.current);
+        pendingStock.current = null;
+      }
     }
+  };
+  // rozpracovaná práca (ui/workResume.jsx): program, nástroje, polotovar, nastavenie a obrobok
+  const pendingStock = useRef(null);
+  const guideSteps = CNC_GUIDE(rxu);
+  const WORK_KEYS = ['mat', 'sx', 'sy', 'sz', 'res', 'speed', 'fo', 'ro', 'single', 'accessorySetup', 'light'];
+  apiRef.current.workSig = () =>
+    apiRef.current.load
+      ? JSON.stringify([text, tools, progId, WORK_KEYS.map((k) => ctl.current[k]), apiRef.current.stockRemoved?.()])
+      : null;
+  apiRef.current.workSave = () => ({
+    v: 1,
+    label: (samples.find((x) => x.id === progId) || {}).name || L('vlastný program', 'own program'),
+    text,
+    tools,
+    progId,
+    ui: Object.fromEntries(WORK_KEYS.map((k) => [k, ctl.current[k]])),
+    stock: apiRef.current.stockRemoved?.() > 0 ? apiRef.current.stockState?.() : null,
+  });
+  apiRef.current.workRestore = (d) => {
+    if (!d || d.v !== 1 || ctl.current.running || ctl.current.unclamped) return false;
+    WORK_KEYS.forEach((k) => d.ui?.[k] !== undefined && set(k, d.ui[k]));
+    if (d.progId) setProgId(d.progId);
+    if (Array.isArray(d.tools)) setTools(d.tools);
+    if (typeof d.text === 'string') setText(d.text);
+    pendingStock.current = d.stock || null;
+    // ak sa program ani polotovar nezmenili, reload nepríde – obrobok sa obnoví priamo
+    setTimeout(() => {
+      if (pendingStock.current && apiRef.current.restoreStock?.(pendingStock.current)) pendingStock.current = null;
+    }, 900);
+    return true;
   };
   useEffect(() => {
     const h = setTimeout(() => reload(), 350);
@@ -637,6 +675,8 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
         />
       )}
       <aside className="panel">
+        <WorkResume machine={rxu ? 'roeders' : `hermle-${MC.id}`} apiRef={apiRef} skip={!!params?.uloha} />
+        <Guide steps={guideSteps} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="hermle-settings" disabled={ui.unclamped}>
           <div className="sec">
             <p className="sec-title" style={{ letterSpacing: '.14em' }}>
@@ -755,7 +795,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
                 </p>
               </SectionInfo>
             </div>
-            <div className="cnc-run">
+            <div className="cnc-run" data-running={String(!!tele.run)}>
               <button type="button" className="btn-run start" onClick={start}>
                 ▶ {L('Štart cyklu', 'Cycle start')}
               </button>
@@ -802,6 +842,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
                   [20, '×20'],
                   [80, '×80'],
                 ]}
+                shortcut="speed"
                 onChange={(v) => set('speed', v)}
               />
               <SegRow

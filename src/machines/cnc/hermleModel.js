@@ -4,7 +4,7 @@ import { createHmiPanel } from './hmiPanel';
 import { CHIP_DRAWER, createAccessories } from './accessories';
 import { createToolModel } from './toolModel';
 import { cabinHalfWidth, HMI_ARM, hmiPose } from './hermleLayout';
-import { cradleData } from './assets/hermleCradle';
+import { loadCradle } from './assets/hermleCradle';
 
 // Dimensions: supplied C32 catalogue pp. 12–13, 34–39; C42 pp. 18–19, 46–50.
 // Scene units are 100 mm. Small fittings are reconstructed from catalogue photos.
@@ -271,24 +271,35 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
   // User supplied STL: disconnected table removed, casting reduced to 14k faces.
   // Calibrate the generated mesh to the catalogue bearings and table plane;
   // its original units/proportions are not a dimensional Hermle CAD drawing.
-  const positions = [],
-    cradleAsset = cradleData();
-  for (let i = 0; i < cradleAsset.positions.length; i += 3) {
-    const x = cradleAsset.positions[i],
-      z = cradleAsset.positions[i + 1],
-      h = cradleAsset.positions[i + 2];
-    const y = h <= 23 ? (h - 23) * 0.105 - MC.hA * U : h < 28 ? ((h - 28) * MC.hA * U) / 5 : ((h - 28) * 2.15) / 22;
-    const edge = THREE.MathUtils.smoothstep(Math.abs(x), 28, 40);
-    positions.push((x * bearingX) / 44, y, -z * THREE.MathUtils.lerp(P.tableDepth / 44.5, 0.105, edge));
-  }
-  const casting = new THREE.BufferGeometry();
-  casting.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  casting.setIndex(new THREE.BufferAttribute(cradleAsset.indices, 1));
-  casting.computeVertexNormals();
-  const bowl = new THREE.Mesh(casting, std(0x9ca4aa, 0.38, 0.55));
+  // tvar kolísky z dodaného STL sa načíta asynchrónne (samostatný chunk); dovtedy prázdna geometria
+  const castingFrom = (cradleAsset) => {
+    const positions = [];
+    for (let i = 0; i < cradleAsset.positions.length; i += 3) {
+      const x = cradleAsset.positions[i],
+        z = cradleAsset.positions[i + 1],
+        h = cradleAsset.positions[i + 2];
+      const y = h <= 23 ? (h - 23) * 0.105 - MC.hA * U : h < 28 ? ((h - 28) * MC.hA * U) / 5 : ((h - 28) * 2.15) / 22;
+      const edge = THREE.MathUtils.smoothstep(Math.abs(x), 28, 40);
+      positions.push((x * bearingX) / 44, y, -z * THREE.MathUtils.lerp(P.tableDepth / 44.5, 0.105, edge));
+    }
+    const casting = new THREE.BufferGeometry();
+    casting.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    casting.setIndex(new THREE.BufferAttribute(cradleAsset.indices, 1));
+    casting.computeVertexNormals();
+    return casting;
+  };
+  const empty = new THREE.BufferGeometry();
+  empty.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+  const bowl = new THREE.Mesh(empty, std(0x9ca4aa, 0.38, 0.55));
   bowl.name = 'cast-A-cradle';
   bowl.castShadow = true;
   bowl.receiveShadow = true;
+  const cradleReady = loadCradle().then((data) => {
+    bowl.geometry.dispose();
+    bowl.geometry = castingFrom(data);
+    bowl.castShadow = true; // obmedzenie vrhačov tieňa videlo prázdnu geometriu
+    return bowl;
+  });
   aG.add(bowl);
   for (const sign of [-1, 1]) {
     cylX(aG, 2.25, sign * (bearingX - 0.28), sign * (bearingX + 0.05), 0, 0, M.steelD, 96);
@@ -731,7 +742,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
   });
   // Thin hinged leaves in real openings. Local +Z is the outside of each wall.
   const serviceDoors = [];
-  const serviceDoor = (parent, { name, label, x, y = 1.5, z, width, height, side = 1 }) => {
+  const serviceDoor = (parent, { name, label, labelEn, x, y = 1.5, z, width, height, side = 1 }) => {
     const hinge = new THREE.Group();
     hinge.name = name;
     hinge.position.set(x, y, z);
@@ -740,7 +751,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
     for (const yy of [0.8, height - 0.8]) box(hinge, -0.09, 0.09, yy, yy + 0.35, -0.02, 0.12, M.steelD);
     const hx = side * (width - 0.35);
     box(hinge, hx - 0.07, hx + 0.07, height * 0.5 - 0.35, height * 0.5 + 0.35, 0.02, 0.15, M.black);
-    const d = { hinge, label, side, width, height, open: false, angle: 0 };
+    const d = { hinge, label, labelEn, side, width, height, open: false, angle: 0 };
     serviceDoors.push(d);
     return d;
   };
@@ -848,6 +859,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
       const d = serviceDoor(wall, {
         name: `service-${sign < 0 ? 'left' : 'right'}-${side}`,
         label: sign < 0 ? 'Ľavé servisné dvere' : 'Pravé servisné dvere',
+        labelEn: sign < 0 ? 'Left service door' : 'Right service door',
         x: centreX + side * (span / 2 - 0.06),
         y: 7.44,
         z: 0.01,
@@ -1319,6 +1331,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
     const d = serviceDoor(rearFrame, {
       name: `rear-service-${sign}`,
       label: 'Zadné servisné dvere',
+      labelEn: 'Rear service door',
       x: sign * (rearWidth - 0.03),
       y: 1.5,
       z: 0,
@@ -1424,6 +1437,7 @@ export function createHermleModel({ root, G, M, tex, MC, PY }) {
   // Pocket groups remain separate so tool loading/indexing keeps its real poses.
   for (const group of [magG, drum, saddle]) batchStaticMeshes(group);
   return {
+    cradleReady,
     serviceDoors,
     updateServiceDoors,
     serviceOpen,

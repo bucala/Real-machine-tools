@@ -1,7 +1,7 @@
 // Test v prehliadači nad zostaveným public/: otvorí menu a každý stroj, zlyhá pri chybe v konzole,
 // výnimke na stránke, zlyhanej požiadavke alebo porušení CSP. Potom prejde CNC program na Hermle
-// (vrátane zámku dverí), jeden ohyb na Bystronic, štart a dotykové HMI elektroerózie, BOZP v úlohe a úzku scénu
-// (mobil).
+// (vrátane zámku dverí), jeden ohyb na Bystronic, štart a dotykové HMI elektroerózie, sústruženie a frézovanie
+// cez sprievodcu krok za krokom, zvar MMA, BOZP v úlohe a úzku scénu (mobil).
 // Spustenie: npm run build && npm run test:e2e   (prehliadač: npx playwright install chromium)
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -26,8 +26,13 @@ const TYPES = {
 };
 // identifikátory strojov priamo z App.jsx – nový stroj sa do testu dostane automaticky
 const MACHINES = [
-  ...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{ ?id: ?'([a-z]+)'/g),
+  ...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{\s*id:\s*'([a-z]+)'/g),
 ].map((m) => m[1]);
+// poistka: po preformátovaní App.jsx výraz raz nenašiel žiadny stroj a test „všetky stroje“ prešiel naprázdno
+if (MACHINES.length < 15) {
+  console.error(`Test nenašiel stroje v App.jsx (${MACHINES.length}) – skontroluj regulárny výraz.`);
+  process.exit(1);
+}
 
 const server = http.createServer(async (req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
@@ -106,6 +111,10 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   const { page, ctx, problems } = await open('hermle', { debug: true });
   try {
     await until(page, () => window.__hermle?.ex);
+    // dotykový displej TNC: stránka POSITION z klávesnice displeja
+    await page.evaluate(() => window.__hermle.api.hmiKey('2'));
+    if ((await page.evaluate(() => window.__hermle.c.scrTab)) !== 'position')
+      fail('hermle', 'stránka displeja sa neprepla');
     await page.getByRole('button', { name: 'Zatvoriť dvere', exact: true }).click();
     await page
       .getByRole('button', { name: /Štart cyklu/i })
@@ -197,7 +206,7 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     await until(page, () => window.__oscar?.process);
     await page.getByRole('button', { name: 'Ručné ovládanie' }).click();
     await page.getByRole('button', { name: 'HMI cez celé okno' }).click();
-    const screen = page.locator('.edm-touch-screen');
+    const screen = page.locator('.hmi-touch-screen');
     await screen.waitFor();
     if (await page.locator('#edm-full-speed').count()) fail('oscarmax HMI', 'posuvník rýchlosti mimo displeja');
     const box = await screen.boundingBox(),
@@ -220,6 +229,126 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     fail('oscarmax HMI', e.message.split('\n')[0]);
   }
   problems.forEach((p) => fail('oscarmax HMI', p));
+  await ctx.close();
+}
+
+// 4c) klasické stroje cez sprievodcu krok za krokom: sústruh, frézka a zváranie MMA
+const range = (page, label, v) =>
+  page.evaluate(
+    ([label, v]) => {
+      const inp = document.querySelector(`[data-param="${label}"] input[type=range]`);
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inp, v);
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    [label, v],
+  );
+const guideStep = (page, n, ms = 30000) =>
+  until(
+    page,
+    (n) => {
+      const t = document.querySelector('.guide .sec-title')?.textContent || '';
+      return n ? t.startsWith(`Krok ${n} `) : /Hotovo/.test(t);
+    },
+    n,
+    ms,
+  );
+{
+  const { page, ctx, problems } = await open('sustruh');
+  try {
+    await page.waitForSelector('canvas', { timeout: 60000 });
+    await page.getByRole('button', { name: /Sprievodca krok za krokom/ }).click();
+    await page.getByRole('button', { name: /Ďalej/ }).click();
+    await page.getByRole('button', { name: /Ďalej/ }).click();
+    await guideStep(page, 3);
+    await page.getByRole('button', { name: /Štart vretena/ }).click();
+    await guideStep(page, 4);
+    await range(page, 'Priečny posuv X (priemer)', 88);
+    await guideStep(page, 5);
+    await page.locator('[data-param="Automatický pozdĺžny posuv k skľučovadlu"]').click();
+    await guideStep(page, 7, 60000); // 30 mm sústruženia
+    await page.locator('[data-param="Automatický pozdĺžny posuv k skľučovadlu"]').click();
+    await guideStep(page, 8);
+    await page
+      .getByRole('button', { name: /Stop vretena/ })
+      .first()
+      .click();
+    await guideStep(page, 9);
+    await page.locator('[data-param="Posuvné meradlo na obrobku"]').click();
+    await guideStep(page, 0);
+    console.log('  ✓ sústruh: sprievodca, sústruženie 30 mm a meranie');
+  } catch (e) {
+    fail('sústruh', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('sústruh', p));
+  await ctx.close();
+}
+{
+  const { page, ctx, problems } = await open('freza');
+  try {
+    await page.waitForSelector('canvas', { timeout: 60000 });
+    await page.getByRole('button', { name: /Sprievodca krok za krokom/ }).click();
+    await page.getByRole('button', { name: /Ďalej/ }).click();
+    await page.getByRole('button', { name: /Ďalej/ }).click();
+    await page.getByRole('button', { name: /Štart vretena/ }).click();
+    await guideStep(page, 4);
+    await range(page, 'Konzola zvisle Z', 418);
+    await guideStep(page, 5);
+    await page.locator('[data-param="Konzola zaistená"]').click();
+    await guideStep(page, 6);
+    await page.locator('[data-param="Posuv stola"] button', { hasText: 'Vpravo' }).click();
+    await guideStep(page, 8, 60000); // 40 mm frézovania
+    await page.locator('[data-param="Posuv stola"] button', { hasText: 'Stop' }).click();
+    await page
+      .getByRole('button', { name: /Stop vretena/ })
+      .first()
+      .click();
+    await guideStep(page, 9);
+    await page.locator('[data-param="Hĺbkomer na obrobku"]').click();
+    await guideStep(page, 0);
+    console.log('  ✓ frézka: sprievodca, frézovanie 40 mm a hĺbkomer');
+  } catch (e) {
+    fail('frézka', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('frézka', p));
+  await ctx.close();
+}
+{
+  const { page, ctx, problems } = await open('zvaranie', { debug: true });
+  try {
+    await until(page, () => window.__weld?.proj);
+    await range(page, 'Najvyššia rýchlosť ruky pri zváraní', 20);
+    await page.getByRole('button', { name: /Sprievodca krok za krokom/ }).click();
+    await page.mouse.click(5, 300);
+    await page.keyboard.press('h');
+    await page.keyboard.press('m');
+    await page.waitForTimeout(800);
+    const pts = await page.evaluate(() => {
+      const P = window.__weld.F.S.path,
+        at = (f) => P[Math.floor(f * (P.length - 1))];
+      return [0.05, 0.95].map((f) => window.__weld.proj(at(f).x, at(f).z));
+    });
+    await page.mouse.move(...pts[0]);
+    await page.mouse.down({ button: 'right' });
+    await page.waitForTimeout(500);
+    await page.mouse.down({ button: 'left' });
+    await until(page, () => window.__weld.st.arc, null, 10000);
+    for (let i = 1; i <= 80; i++) {
+      await page.mouse.move(
+        pts[0][0] + ((pts[1][0] - pts[0][0]) * i) / 80,
+        pts[0][1] + ((pts[1][1] - pts[0][1]) * i) / 80,
+      );
+      await page.waitForTimeout(150);
+    }
+    await page.mouse.up({ button: 'left' });
+    await page.mouse.up({ button: 'right' });
+    await page.waitForTimeout(800);
+    const ev = await page.evaluate(() => window.__weld.evalWeld());
+    if (!ev || ev.cov < 0.3) fail('zváranie', `krátky zvar (pokrytie ${ev ? Math.round(ev.cov * 100) : 0} %)`);
+    else console.log(`  ✓ zváranie: oblúk a zvar pozdĺž spoja (${Math.round(ev.cov * 100)} %)`);
+  } catch (e) {
+    fail('zváranie', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('zváranie', p));
   await ctx.close();
 }
 

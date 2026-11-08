@@ -633,6 +633,7 @@ export default function ShuangliSimulator({ onBack }) {
               [20, '×20'],
               [80, '×80'],
             ]}
+            shortcut="speed"
             onChange={(v) => set('speed', v)}
           />
         </div>

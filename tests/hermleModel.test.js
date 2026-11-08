@@ -86,8 +86,9 @@ describe.each(['c32', 'c42'])('Hermle %s catalogue geometry', (id) => {
     expect(bridge.max.y).toBeLessThan(HERMLE_ENVELOPES[id].roof);
     expect(root.getObjectByName('magazine-support-drum')).toBeTruthy();
   });
-  it('leaves the A flanges exposed and uses narrow rising arms rather than full-depth ears', () => {
-    const { root, MC, PY } = setup(id);
+  it('leaves the A flanges exposed and uses narrow rising arms rather than full-depth ears', async () => {
+    const { root, MC, PY, model } = setup(id);
+    await model.cradleReady;
     root.updateMatrixWorld(true);
     const cradle = root.getObjectByName('cast-A-cradle');
     const outerX = 6.4 * MC.K - 0.5;
@@ -485,5 +486,16 @@ describe.each(['c32', 'c42'])('Hermle %s catalogue geometry', (id) => {
       const direction = new THREE.Vector3(0, 0, 1).transformDirection(m.armPivot.matrixWorld);
       expect(new THREE.Raycaster(origin, direction, 0, 7).intersectObjects([G.lozko, m.cab], true)).toHaveLength(0);
     }
+  });
+});
+
+describe('Hermle cradle data', () => {
+  it('decodes the compact cradle chunk to the 14k-face casting', async () => {
+    const { loadCradle } = await import('../src/machines/cnc/assets/hermleCradle.js');
+    const d = await loadCradle();
+    expect(d.positions.length).toBe(6998 * 3);
+    expect(d.indices.length).toBe(42000);
+    expect(Math.max(...d.indices)).toBe(6997);
+    expect(Math.min(...d.positions.filter((_, i) => i % 3 === 0))).toBeCloseTo(-46.574, 3);
   });
 });

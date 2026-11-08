@@ -307,7 +307,16 @@ export function createStock({ min, max, res }) {
     );
     return v * q;
   };
+  // obnova uloženého obrobku rovnakých rozmerov (rozpracovaná práca)
+  const restore = (field, removedVolume) => {
+    if (!field || field.length !== f.length) return false;
+    f.set(field);
+    removed = removedVolume / vox;
+    dirty.fill(1);
+    return true;
+  };
   return {
+    restore,
     cut,
     cutBox,
     hits,

@@ -213,7 +213,10 @@ function HorizSimulator({ onBack, params }) {
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, handwheel } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Horizontálna vŕtačka a frézka' };
+    apiRef.current.machineModel = {
+      root,
+      name: L('Horizontálna vŕtačka a frézka', 'Horizontal boring and milling machine'),
+    };
     const G = {};
     const grp = (k, parent = root) => {
       const g = new THREE.Group();
@@ -1251,6 +1254,7 @@ function HorizSimulator({ onBack, params }) {
                 [5, '5×'],
                 [20, '20×'],
               ]}
+              shortcut="speed"
               onChange={(v) => set('timeScale', v)}
             />
           </div>

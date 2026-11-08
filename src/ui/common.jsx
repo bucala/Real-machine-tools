@@ -23,6 +23,66 @@ function useTele(init) {
   return [tele, set];
 }
 
+const visible = (el) => el && !el.disabled && el.getClientRects().length > 0;
+// hlavné tlačidlo chodu: smerové (Vzad / Stop / Vpred), cyklus (štart / stop posuvu) alebo prepínač štart / stop
+function runButton() {
+  const panel = document.querySelector('.machine-app .panel') || document;
+  const row = panel.querySelector('.run-row');
+  if (row) {
+    const on = row.querySelector('.btn-run.start.is-on');
+    return on ? row.querySelector('.btn-run.stop') : [...row.querySelectorAll('.btn-run.start')].at(-1);
+  }
+  const cycle = panel.querySelector('.cnc-run');
+  if (cycle)
+    return cycle.dataset.running === 'true' ? cycle.querySelectorAll('button')[1] : cycle.querySelector('button');
+  return [...panel.querySelectorAll('.btn-run')].find(visible);
+}
+function shortcut(e, ctl, set) {
+  if (e.key === ' ') {
+    if (e.target?.tagName === 'BUTTON') return false; // medzerník na tlačidle ho stlačí sám
+    const b = runButton();
+    if (!visible(b)) return false;
+    b.click();
+    return true;
+  }
+  if (/^[1-9]$/.test(e.key)) {
+    const b = [...document.querySelectorAll('.machine-app [data-key="view"]')][Number(e.key) - 1];
+    if (!b) return false;
+    b.click();
+    return true;
+  }
+  if (['+', '=', '-', '_'].includes(e.key)) {
+    const seg = document.querySelector('.machine-app [data-key="speed"] .seg');
+    if (!seg) return false;
+    const opts = [...seg.querySelectorAll('button')],
+      i = opts.findIndex((b) => b.classList.contains('on')),
+      next = opts[Math.max(0, Math.min(opts.length - 1, i + (e.key === '+' || e.key === '=' ? 1 : -1)))];
+    if (next && next !== opts[i]) next.click();
+    return true;
+  }
+  if (e.key === 'l' || e.key === 'L') {
+    if (!ctl.current.labels && ctl.current.manual) set('manual', false);
+    set('labels', !ctl.current.labels);
+    return true;
+  }
+  if (e.key === 'i' || e.key === 'I' || e.key === '?') {
+    const b = document.querySelector('.machine-app .help-btn');
+    if (!b) return false;
+    b.click();
+    return true;
+  }
+  return false;
+}
+// zoznam pre Pomocníka
+const SHORTCUTS = () => [
+  ['M', L('ručné ovládanie / kamera (Esc späť na kameru)', 'manual control / camera (Esc back to camera)')],
+  [L('medzerník', 'Space'), L('štart / stop – hlavné tlačidlo chodu', 'start / stop – main run button')],
+  ['1 – 9', L('pohľady kamery v poradí z panela', 'camera views in panel order')],
+  ['+ / −', L('zrýchlenie simulácie', 'simulation speed')],
+  ['L', L('názvy častí stroja', 'machine part names')],
+  ['I / ?', L('Pomocník', 'Help')],
+];
+
 function useMachine(init) {
   const ctl = useRef({ labels: false, unclamped: false, ...init, highlight: null });
   const [ui, setUi] = useState({ labels: false, unclamped: false, ...init });
@@ -41,7 +101,9 @@ function useMachine(init) {
     ctl.current.highlight = k;
     setSelected(k);
   };
-  // M = prepnutie kamera / ručné ovládanie, Esc = späť na kameru
+  // jednotné klávesové skratky všetkých strojov (zoznam v Pomocníkovi – SHORTCUTS):
+  // M ručné ovládanie, Esc späť na kameru, medzerník štart / stop, 1 – 9 pohľady, + / − zrýchlenie simulácie,
+  // L názvy častí, I alebo ? Pomocník. Skratky klikajú na tie isté tlačidlá ako myš (rovnaké podmienky a hlášky).
   useEffect(() => {
     const onKey = (e) => {
       const tag = e.target && e.target.tagName;
@@ -51,12 +113,14 @@ function useMachine(init) {
         e.altKey ||
         tag === 'TEXTAREA' ||
         tag === 'SELECT' ||
-        (tag === 'INPUT' && e.target.type !== 'range')
+        (tag === 'INPUT' && e.target.type !== 'range') ||
+        e.target?.closest?.('[aria-modal="true"], dialog[open], .hmi-fullscreen, .tool-library')
       )
         return;
-      if (ctl.current.unclamped) return;
-      if (e.key === 'm' || e.key === 'M') set('manual', !ctl.current.manual);
-      else if (e.key === 'Escape' && ctl.current.manual) set('manual', false);
+      if (e.key === 'm' || e.key === 'M') {
+        if (!ctl.current.unclamped) set('manual', !ctl.current.manual);
+      } else if (e.key === 'Escape' && ctl.current.manual) set('manual', false);
+      else if (shortcut(e, ctl, set)) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -323,6 +387,8 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
       )}
       <h3>{manualLabel || L('Ručné ovládanie', 'Manual control')}</h3>
       {manualHint ? <p>{manualHint}</p> : <HelpRows rows={HELP_MANUAL()} />}
+      <h3>{L('Klávesové skratky', 'Keyboard shortcuts')}</h3>
+      <HelpRows rows={SHORTCUTS()} />
       {canUnclamp && (
         <>
           <h3>{L('Polotovar', 'Workpiece')}</h3>
@@ -687,7 +753,13 @@ function ViewSection({ views, apiRef }) {
       <h2 className="sec-title mb-2">{L('Pohľad', 'View')}</h2>
       <div className="flex flex-wrap gap-2">
         {views.map(([k, l]) => (
-          <button key={k} type="button" className="btn" onClick={() => apiRef.current.view && apiRef.current.view(k)}>
+          <button
+            key={k}
+            type="button"
+            className="btn"
+            data-key="view"
+            onClick={() => apiRef.current.view && apiRef.current.view(k)}
+          >
             {l}
           </button>
         ))}
@@ -764,10 +836,11 @@ function BlankSection({ title, children, onApply, applyLabel, note }) {
   );
 }
 
-function SegRow({ label, value, options, onChange, noParam }) {
+function SegRow({ label, value, options, onChange, noParam, shortcut }) {
   const cur = options.find(([v]) => v === value);
   return (
     <div
+      data-key={shortcut}
       className="flex items-center justify-between text-sm gap-2 mb-3"
       data-param={noParam ? undefined : pl(label)}
       data-val={cur ? pl(cur[1]) : undefined}

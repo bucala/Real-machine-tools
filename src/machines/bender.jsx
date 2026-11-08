@@ -295,7 +295,7 @@ function BenderSimulator({ onBack, params }) {
     const { box, cylY, cylZ, ball, hitProxy } = kit;
     const root = new THREE.Group();
     scene.add(root);
-    apiRef.current.machineModel = { root, name: 'Ohýbačka profilov' };
+    apiRef.current.machineModel = { root, name: L('Ohýbačka profilov', 'Profile bending machine') };
     const mach = new THREE.Group();
     root.add(mach);
     const G = {};
