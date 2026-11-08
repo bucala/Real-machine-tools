@@ -15,7 +15,7 @@ const state = (m) =>
 
 // ---------- elektroerózia ----------
 // stock v ráme stola (horná plocha = stock.max[2]); rows = operácie hĺbenia (x, y, depth)
-export function measureEdm({ stock, S, current, row }) {
+export function measureEdm({ stock, S, current, row, rows = [row] }) {
   if (!stock || !S || !row) return null;
   const o = [0, 0, stock.max[2]],
     top = surfaceZ(stock, o, row.x, row.y);
@@ -30,6 +30,7 @@ export function measureEdm({ stock, S, current, row }) {
     current,
     gap: edmGap(current),
     wear: S.wear || 0,
+    tools: rows.map((r) => r.tool || 1),
   };
 }
 export const edmChecks = {
@@ -38,6 +39,18 @@ export const edmChecks = {
     { key: 'depth', ok: within(m.depth, 6, 0.03), actual: `${f2(m.depth, 3)} mm` },
     { key: 'x', ok: within(m.size.x, 20.3, 0.05), actual: `${f2(m.size.x, 3)} mm` },
     { key: 'y', ok: within(m.size.y, 15.3, 0.05), actual: `${f2(m.size.y, 3)} mm` },
+  ],
+  dve: (m) => [
+    { key: 'run', ok: m.done && !m.alarm, actual: state(m) },
+    {
+      key: 'tools',
+      ok: m.tools.includes(1) && m.tools[m.tools.length - 1] === 2,
+      actual: m.tools.map((t) => `E${t}`).join(' → '),
+    },
+    { key: 'depth', ok: within(m.depth, 6, 0.03), actual: `${f2(m.depth, 3)} mm` },
+    { key: 'x', ok: within(m.size.x, 20.3, 0.05), actual: `${f2(m.size.x, 3)} mm` },
+    { key: 'y', ok: within(m.size.y, 15.3, 0.05), actual: `${f2(m.size.y, 3)} mm` },
+    { key: 'ra', ok: m.done && m.ra > 0 && m.ra <= 1.6, actual: m.ra ? `Ra ${f2(m.ra, 1)} µm` : '–' },
   ],
   dokoncenie: (m) => [
     { key: 'run', ok: m.done && !m.alarm, actual: state(m) },

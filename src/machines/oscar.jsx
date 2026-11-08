@@ -34,6 +34,7 @@ import { ElectrodeLibrary } from '../ui/electrodeLibrary';
 import '../ui/toolPicker.css';
 import { EdmFullscreen } from '../ui/edmFullscreen';
 import { createStock } from './cnc/voxel';
+import { createStockMesh } from './cnc/stockMesh';
 import { EX500 } from './precision/profiles';
 import { createEdmProcess, edmFeed, edmGap, edmMrr, edmRa, edmVdi, edmRelWear } from './precision/edmProcess';
 import { createOscarModel } from './precision/oscarModel';
@@ -122,6 +123,9 @@ const save = (blob, name) => {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 };
 // technologické údaje generátora podľa prúdu a elektródy (výučbový model v edmProcess.js)
+const electrodeText = (e) =>
+  `${e.material === 'graphite' ? L('Grafit', 'Graphite') : 'Cu'} · ${e.shape === 'round' ? `Ø${e.w}` : `${e.w} × ${e.d}`} · L${e.length} mm`;
+
 function EdmReadout({ electrode, current }) {
   if (!electrode) return null;
   const rows = [
@@ -194,6 +198,47 @@ const EDM_TASKS = [
       depth: () => L('Hĺbka 2,00 ±0,03 mm', 'Depth 2.00 ±0.03 mm'),
     },
   },
+  {
+    id: 'dve',
+    title: () => L('Hrubovanie a dokončenie dvoma elektródami', 'Roughing and finishing with two electrodes'),
+    desc: () =>
+      L(
+        'Dutina 20,3 × 15,3 × 6,00 mm s drsnosťou dna Ra ≤ 1,6 µm. Hrubovacia elektróda E1 (Cu 19,6 × 14,6) odoberie väčšinu materiálu pri 30 A a nechá prídavok, dokončovacia E2 (Cu 20,25 × 15,25) dutinu dokončí malým prúdom. Pripravený program má pri E2 príliš veľký prúd a hĺbky bez kompenzácie medzery – uprav prúd E2, aby dutina mala 20,3 × 15,3 mm a Ra ≤ 1,6 µm, a hĺbku E2 zmenši o jej čelnú medzeru. Hrubovanie nesmie siahnuť hlbšie ako dokončenie.',
+        'Cavity 20.3 × 15.3 × 6.00 mm with floor roughness Ra ≤ 1.6 µm. Roughing electrode E1 (Cu 19.6 × 14.6) removes most material at 30 A and leaves an allowance; finishing electrode E2 (Cu 20.25 × 15.25) finishes the cavity at low current. The prepared program uses too high a current for E2 and depths without gap compensation – set the E2 current so the cavity is 20.3 × 15.3 mm with Ra ≤ 1.6 µm, and reduce the E2 depth by its frontal gap. Roughing must not go deeper than finishing.',
+      ),
+    setup: {
+      current: 30,
+      electrode: {
+        id: 'copper-rough-19.6-14.6',
+        name: 'Cu · 19,6 × 14,6 mm',
+        shape: 'box',
+        w: 19.6,
+        d: 14.6,
+        length: 100,
+      },
+      electrode2: {
+        id: 'copper-finish-20.25-15.25',
+        name: 'Cu · 20,25 × 15,25 mm',
+        shape: 'box',
+        w: 20.25,
+        d: 15.25,
+        length: 100,
+      },
+      rows: [
+        { x: 0, y: 0, depth: 5.6, tool: 1, current: 30 },
+        { x: 0, y: 0, depth: 6, tool: 2, current: 12 },
+      ],
+    },
+    drawing: () => <PocketDrawing bx={100} by={80} bz={30} px={20.3} py={15.3} depth={6} tol={0.05} />,
+    labels: {
+      run: () => L('Hĺbenie dokončené bez hlásenia', 'Sinking finished without message'),
+      tools: () => L('Hrubovanie E1 a dokončenie E2', 'Roughing with E1 and finishing with E2'),
+      depth: () => L('Hĺbka 6,00 ±0,03 mm', 'Depth 6.00 ±0.03 mm'),
+      x: () => L('Dĺžka 20,3 ±0,05 mm', 'Length 20.3 ±0.05 mm'),
+      y: () => L('Šírka 15,3 ±0,05 mm', 'Width 15.3 ±0.05 mm'),
+      ra: () => L('Drsnosť dna Ra ≤ 1,6 µm', 'Floor roughness Ra ≤ 1.6 µm'),
+    },
+  },
 ].map((t) => ({ ...t, checks: (m) => edmChecks[t.id](m).map((c) => ({ ...c, label: t.labels[c.key]() })) }));
 
 export default function OscarSimulator({ onBack, params }) {
@@ -216,6 +261,7 @@ export default function OscarSimulator({ onBack, params }) {
     current: 30,
     gap: 0.05,
     electrode: { shape: 'box', w: 20, d: 15, length: 100 },
+    electrode2: { id: 'copper-prism-20-15', name: 'Cu · 20 × 15 mm', shape: 'box', w: 20, d: 15, length: 100 },
     rows: [
       { x: -20, y: 0, depth: 8 },
       { x: 20, y: 0, depth: 5 },
@@ -245,8 +291,19 @@ export default function OscarSimulator({ onBack, params }) {
     if (tele.run || ui.unclamped) return;
     apiRef.current.reset?.();
     set('ncMode', 'operations');
-    set('electrode', { id: 'copper-prism-20-15', name: 'Cu · 20 × 15 mm', shape: 'box', w: 20, d: 15, length: 100 });
-    set('rows', [{ x: 0, y: 0, depth: t.setup.depth }]);
+    set(
+      'electrode',
+      t.setup.electrode || {
+        id: 'copper-prism-20-15',
+        name: 'Cu · 20 × 15 mm',
+        shape: 'box',
+        w: 20,
+        d: 15,
+        length: 100,
+      },
+    );
+    if (t.setup.electrode2) set('electrode2', t.setup.electrode2);
+    set('rows', t.setup.rows || [{ x: 0, y: 0, depth: t.setup.depth }]);
     set('current', t.setup.current);
   };
   useEffect(() => {
@@ -319,48 +376,20 @@ export default function OscarSimulator({ onBack, params }) {
     stockG.scale.setScalar(0.01);
     model.stockMount.add(stockG);
     G.obrobok = stockG;
-    const stockMat = mat(0x899299, 0.7, 0.4),
-      chunks = new Map();
+    const stockMat = mat(0x899299, 0.7, 0.4);
     let stock,
       process,
       ncCommands = null,
       ncEndApplied = false;
-    const flush = () => {
-      for (const p of stock.takeDirty()) {
-        let me = chunks.get(p.id);
-        if (!p.idx.length) {
-          if (me) {
-            stockG.remove(me);
-            me.geometry.dispose();
-            chunks.delete(p.id);
-          }
-          continue;
-        }
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(p.pos, 3));
-        g.setAttribute('normal', new THREE.BufferAttribute(p.nor, 3));
-        g.setIndex(new THREE.BufferAttribute(p.idx, 1));
-        g.computeBoundingSphere();
-        if (me) {
-          me.geometry.dispose();
-          me.geometry = g;
-        } else {
-          me = new THREE.Mesh(g, stockMat);
-          me.castShadow = true;
-          me.receiveShadow = true;
-          stockG.add(me);
-          chunks.set(p.id, me);
-        }
-      }
-    };
+    // obrobok: povrch po blokoch, do GPU zlúčený po 2 × 2 × 2 blokoch (cnc/stockMesh.js)
+    let stockMesh = null;
+    const flush = () => stockMesh.apply(stock.takeDirty());
+
     const reset = () => {
       if (c.unclamped) return;
-      for (const me of chunks.values()) {
-        stockG.remove(me);
-        me.geometry.dispose();
-      }
-      chunks.clear();
       stock = createStock({ min: [-50, -40, 0], max: [50, 40, 30], res: 0.7 });
+      if (stockMesh) stockMesh.reset(stock);
+      else stockMesh = createStockMesh({ group: stockG, material: stockMat, stock, castShadow: true });
       process = createEdmProcess(stock);
       ncCommands = null;
       ncEndApplied = false;
@@ -380,6 +409,7 @@ export default function OscarSimulator({ onBack, params }) {
     const cfg = () => ({
       rows: c.rows,
       electrode: c.electrode,
+      electrode2: c.electrode2,
       current: c.current,
       gap: edmGap(c.current),
       oilLevel: oilLevel - 50,
@@ -496,6 +526,7 @@ export default function OscarSimulator({ onBack, params }) {
         S: process.S,
         current: process.job?.current ?? c.current,
         row: (process.job?.rows || c.rows)[0],
+        rows: process.job?.rows || c.rows,
       });
     apiRef.current.exportStep = async () => {
       if (process.S.run) throw new Error(L('Najprv zastav hĺbenie.', 'Stop sinking first.'));
@@ -639,11 +670,13 @@ export default function OscarSimulator({ onBack, params }) {
         const end = process.job?.ncCommands?.endFlushing;
         if (typeof end === 'boolean') set('flushing', end);
       }
-      const e = JSON.stringify(c.electrode);
+      // zobrazená elektróda: počas programu tá z aktuálnej operácie (E1 / E2), inak zvolená E1
+      const shown = (process.job && process.S.electrode) || c.electrode,
+        e = JSON.stringify(shown);
       if (e !== signature) {
         signature = e;
-        model.buildElectrode(c.electrode);
-        model.electrode.userData.length = c.electrode.length;
+        model.buildElectrode(shown);
+        model.electrode.userData.length = shown.length;
       }
       depth += ((c.unclamped ? -5 : process.S.depth) - depth) * Math.min(1, dt * 15);
       model.update({ S: { ...process.S, depth }, oilLevel, door: gate, light: c.light, hmiAngle: c.hmiAngle });
@@ -665,7 +698,7 @@ export default function OscarSimulator({ onBack, params }) {
       }
       if (render) renderer.render(scene, camera);
     };
-    const sceneOpt = optimizeMachine({ root, scene, renderer });
+    const sceneOpt = optimizeMachine({ root, scene, renderer, refs: { model, G }, controls: ctrl });
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000);
@@ -763,7 +796,7 @@ export default function OscarSimulator({ onBack, params }) {
       />
       {library && (
         <ElectrodeLibrary
-          mode={library}
+          mode={library === 'pick2' ? 'pick' : library}
           canApply={!locked}
           onClose={() => setLibrary(null)}
           onChoose={(e) => {
@@ -771,7 +804,7 @@ export default function OscarSimulator({ onBack, params }) {
               throw new Error(
                 L('Najprv zastav stroj a upni obrobok.', 'Stop the machine and clamp the workpiece first.'),
               );
-            set('electrode', e);
+            set(library === 'pick2' ? 'electrode2' : 'electrode', e);
             setLibrary(null);
           }}
         />
@@ -938,10 +971,17 @@ export default function OscarSimulator({ onBack, params }) {
                 {L('Spravovať skrinku…', 'Manage cabinet…')}
               </button>
             </div>
-            <p className="text-sm mb-3">
-              {ui.electrode.material === 'graphite' ? L('Grafit', 'Graphite') : 'Cu'} ·{' '}
-              {ui.electrode.shape === 'round' ? `Ø${ui.electrode.w}` : `${ui.electrode.w} × ${ui.electrode.d}`} · L
-              {ui.electrode.length} mm
+            <p className="text-sm mb-1">E1 · {electrodeText(ui.electrode)}</p>
+            <p className="text-sm mb-3 flex items-center gap-2 flex-wrap">
+              <span>
+                E2 · {electrodeText(ui.electrode2)}{' '}
+                <span className="muted text-xs">
+                  {L('(dokončovacia, pre operácie s E2)', '(finishing, for operations using E2)')}
+                </span>
+              </span>
+              <button className="btn" onClick={() => setLibrary('pick2')}>
+                {L('Vybrať E2…', 'Choose E2…')}
+              </button>
             </p>
             <Slider
               id="ex-current"
@@ -1061,7 +1101,29 @@ export default function OscarSimulator({ onBack, params }) {
                         'rows',
                         ui.rows.map((r, j) => (j === i ? { ...r, depth: v } : r)),
                       ),
-                    0.1,
+                    0.001,
+                  )}
+                  <label className="text-xs">
+                    {L('Elektróda', 'Electrode')}
+                    <select
+                      className="sel"
+                      value={r.tool || 1}
+                      onChange={(e) =>
+                        set(
+                          'rows',
+                          ui.rows.map((r, j) => (j === i ? { ...r, tool: Number(e.target.value) } : r)),
+                        )
+                      }
+                    >
+                      <option value={1}>E1</option>
+                      <option value={2}>E2</option>
+                    </select>
+                  </label>
+                  {number(L('Prúd A', 'Current A'), r.current ?? ui.current, 1, EX500.current, (v) =>
+                    set(
+                      'rows',
+                      ui.rows.map((r, j) => (j === i ? { ...r, current: v } : r)),
+                    ),
                   )}
                   <button
                     className="btn"

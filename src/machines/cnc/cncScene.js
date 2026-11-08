@@ -16,6 +16,7 @@ import { MATERIALS } from './tooling';
 import { cabinHalfWidth, hmiPose } from './hermleLayout';
 import { measureCnc } from './cncTasks';
 import { createStock } from './voxel';
+import { createStockMesh } from './stockMesh';
 import { createCabinLighting } from './cabinLighting';
 import { optimizeMachine } from '../../core/sceneOptimize';
 import { validateRxuTool } from '../precision/profiles';
@@ -201,53 +202,12 @@ export function createCncScene({
   stockG.userData.stepJoin = true;
   stockG.rotation.x = -Math.PI / 2;
   stockG.scale.setScalar(U);
-  const meshes = new Map();
+  // obrobok: povrch po blokoch, do GPU zlúčený po 2 × 2 × 2 blokoch (stockMesh.js)
   let stock = null,
-    mat = null;
-  const clearStock = () => {
-    meshes.forEach((me) => {
-      stockG.remove(me);
-      me.geometry.dispose();
-    });
-    meshes.clear();
-  };
-  const applyChunks = (parts) => {
-    parts.forEach((p) => {
-      let me = meshes.get(p.id);
-      if (!p.idx.length) {
-        if (me) {
-          stockG.remove(me);
-          me.geometry.dispose();
-          meshes.delete(p.id);
-        }
-        return;
-      }
-      const geo = new THREE.BufferGeometry(),
-        M2 = MATERIALS[c.mat] || MATERIALS.al,
-        col = new Float32Array(p.raw.length * 3);
-      for (let i = 0; i < p.raw.length; i++) {
-        const cc = p.raw[i] ? M2.raw : M2.rgb;
-        col[i * 3] = cc[0];
-        col[i * 3 + 1] = cc[1];
-        col[i * 3 + 2] = cc[2];
-      }
-      geo.setAttribute('position', new THREE.BufferAttribute(p.pos, 3));
-      geo.setAttribute('normal', new THREE.BufferAttribute(p.nor, 3));
-      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      geo.setIndex(new THREE.BufferAttribute(p.idx, 1));
-      geo.computeBoundingSphere();
-      if (me) {
-        me.geometry.dispose();
-        me.geometry = geo;
-      } else {
-        me = new THREE.Mesh(geo, mat);
-        me.receiveShadow = true;
-        me.userData.part = 'obrobok';
-        stockG.add(me);
-        meshes.set(p.id, me);
-      }
-    });
-  };
+    mat = null,
+    stockMesh = null;
+  const clearStock = () => stockMesh?.clear();
+  const applyChunks = (parts) => stockMesh?.apply(parts);
 
   // ---------------- program a vykonávanie ----------------
   let loadedText = '',
@@ -291,8 +251,18 @@ export function createCncScene({
       side: THREE.FrontSide,
     });
     lighting.registerMaterial(mat);
-    clearStock();
     stock = createStock({ min: stockMin, max: stockMax, res: c.res });
+    if (stockMesh) stockMesh.reset(stock, mat);
+    else
+      stockMesh = createStockMesh({
+        group: stockG,
+        material: mat,
+        stock,
+        color: () => {
+          const m3 = MATERIALS[c.mat] || MATERIALS.al;
+          return [m3.raw, m3.rgb];
+        },
+      });
     applyChunks(stock.takeDirty());
   };
   const load = (txt, tls) => {
@@ -470,7 +440,7 @@ export function createCncScene({
   };
   apiRef.current.stl = () => {
     const parts = [];
-    meshes.forEach((me) => parts.push(me.geometry));
+    (stockMesh ? stockMesh.meshes() : []).forEach((me) => parts.push(me.geometry));
     let n = 0;
     parts.forEach((g) => {
       n += g.index.count / 3;
@@ -1093,7 +1063,7 @@ export function createCncScene({
     renderer.render(scene, camera);
   };
   // zlúčenie statických sietí a menej vrhačov tieňa (stovky vykreslení menej na snímok)
-  const sceneOpt = optimizeMachine({ root, scene, renderer });
+  const sceneOpt = optimizeMachine({ root, scene, renderer, refs: { geometry, G, clampPins }, controls: ctrl });
   raf = requestAnimationFrame(loop);
   try {
     if (/[?&]debug/.test(window.location.search))

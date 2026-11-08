@@ -6,6 +6,12 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
 ## 8. 11. 2026
 
+- Výkon: obrobok CNC a elektroerózie sa do GPU posiela po 2 × 2 × 2 blokoch, zlučovanie sietí sa učí, ktoré diely sa
+  naozaj hýbu (Hermle 715 → 281, Röders 957 → 212 vykreslení po behu programu), `?noopt` na porovnanie.
+- Elektroerózia: operácie s elektródou E1 / E2 a vlastným prúdom, výmena elektródy, servo podľa plochy v zábere;
+  úloha hrubovanie a dokončenie dvoma elektródami.
+- Test výkonu (`?perf` alebo Pomocník): živé FPS a 12 s test s výsledkom na skopírovanie.
+
 - **Audit 2. kolo** ([#23](https://github.com/bucala/Real-machine-tools/pull/23), [#24](https://github.com/bucala/Real-machine-tools/pull/24), [#25](https://github.com/bucala/Real-machine-tools/pull/25)):
   - zámok dverí CNC (štart len pri zatvorených dverách, dvere zamknuté počas programu), presné hlášky pri štarte elektroerózie;
   - hlášky procesov, interpretera a alarmov v jednom jazyku;

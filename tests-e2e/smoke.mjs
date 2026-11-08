@@ -232,6 +232,23 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   await ctx.close();
 }
 
+// 7) meranie výkonu (?perf): panel so živými údajmi scény
+{
+  const { page, ctx, problems } = await open('hermle', { debug: false });
+  try {
+    await page.goto(page.url().replace('/#', '/?perf#'));
+    await page.waitForSelector('.perf-overlay', { timeout: 60000 });
+    await page.waitForFunction(() => /FPS/.test(document.querySelector('.perf-overlay')?.textContent || ''), null, {
+      timeout: 30000,
+    });
+    console.log('  ✓ meranie výkonu: panel ?perf');
+  } catch (e) {
+    fail('perf', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('perf', p));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 if (failures.length) {

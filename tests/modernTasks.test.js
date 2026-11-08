@@ -116,3 +116,36 @@ describe('úlohy ohraňovacieho lisu', () => {
     expect(brakeChecks.sila(bend({ ...cfg, v: 50 })).filter((c) => !c.ok)).toEqual([]);
   });
 });
+
+describe('elektroerózia – hrubovanie a dokončenie dvoma elektródami', () => {
+  const E1 = { shape: 'box', w: 19.6, d: 14.6, length: 100 },
+    E2 = { shape: 'box', w: 20.25, d: 15.25, length: 100 };
+  const twoStage = (finishCurrent, finishDepth) => {
+    const stock = createStock({ min: [-50, -40, 0], max: [50, 40, 30], res: 0.7 }),
+      p = createEdmProcess(stock);
+    const rows = [
+      { x: 0, y: 0, depth: 5.6, tool: 1, current: 30 },
+      { x: 0, y: 0, depth: finishDepth, tool: 2, current: finishCurrent },
+    ];
+    const job = { rows, electrode: E1, electrode2: E2, current: 30, gap: edmGap(30), oilLevel: 80, fixtureHeight: 50 };
+    expect(p.start(job)).toBe(true);
+    let phases = new Set();
+    for (let i = 0; i < 40000 && !p.S.done; i++) {
+      p.advance(5, { oilLevel: 80, flushing: true });
+      phases.add(p.S.phase);
+    }
+    return { m: measureEdm({ stock, S: p.S, current: finishCurrent, row: rows[0], rows }), phases, t: p.S.t };
+  };
+  it('pripravený program (E2 pri 12 A, bez kompenzácie) neprejde, s 3 A a hĺbkou 6 − medzera áno', () => {
+    expect(
+      edmChecks
+        .dve(twoStage(12, 6).m)
+        .filter((c) => !c.ok)
+        .map((c) => c.key),
+    ).toEqual(expect.arrayContaining(['depth', 'ra']));
+    const { m, phases, t } = twoStage(3, 6 - edmGap(3));
+    expect(edmChecks.dve(m).filter((c) => !c.ok)).toEqual([]);
+    expect(phases.has('change')).toBe(true);
+    expect(t).toBeLessThan(3 * 3600); // dokončenie prejde prázdnou dutinou rýchlo, nie celých 6 mm pri 3 A
+  }, 120000);
+});
