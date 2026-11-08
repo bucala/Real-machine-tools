@@ -86,6 +86,84 @@ export function sheetSection(c, beta) {
   return points.filter((p, i) => i === 0 || Math.hypot(p.z - points[i - 1].z, p.y - points[i - 1].y) > 1e-7);
 }
 
+// Prierez dielu s viacerými ohybmi (program ohybov): hotové ohyby prog.bends = [{ s, beta }] v polohe s od hrany A,
+// práve ohýbaný ohyb v polohe prog.cur s pol-uhlom beta; prog.side = hrana pri doraze ('A' alebo 'B').
+// Všetky ohyby smerujú nahor (diel sa medzi ohybmi len otáča okolo zvislej osi). Body idú od zadného konca
+// k prednému, t = uhol dotyčnice – rovnaký tvar výstupu ako sheetSection.
+export function profileSection(c, beta, prog) {
+  if (!prog) return sheetSection(c, beta);
+  const r = insideRadius(c) + c.thickness / 2,
+    a = Math.max(0, beta),
+    D = c.depth,
+    sc = prog.cur;
+  // prechod od ohraňovaného ohybu ku koncu pásu; dir = −1 dozadu (hrana pri doraze), +1 dopredu
+  const walk = (dir, toEnd, bends) => {
+    let th = dir < 0 ? Math.PI - a : a,
+      z = dir < 0 ? -r * Math.sin(a) : r * Math.sin(a),
+      y = r * (1 - Math.cos(a)),
+      used = r * a;
+    const pts = [];
+    const straight = (len) => {
+      if (len <= 1e-6) return;
+      z += len * Math.cos(th);
+      y += len * Math.sin(th);
+      pts.push({ z, y, th });
+    };
+    for (const b of bends) {
+      const phi = 2 * b.beta,
+        half = r * b.beta;
+      straight(b.d - used - half);
+      const n = Math.max(2, Math.ceil(phi / 0.12));
+      for (let i = 0; i < n; i++) {
+        const dth = ((dir < 0 ? -1 : 1) * phi) / n,
+          mid = th + dth / 2;
+        z += (r * phi * Math.cos(mid)) / n;
+        y += (r * phi * Math.sin(mid)) / n;
+        th += dth;
+        pts.push({ z, y, th });
+      }
+      used = b.d + half;
+    }
+    straight(toEnd - used);
+    return pts;
+  };
+  const backA = prog.side !== 'B',
+    side = (back) =>
+      prog.bends
+        .filter((b) => (back === backA ? b.s < sc : b.s > sc))
+        .map((b) => ({ d: Math.abs(b.s - sc), beta: b.beta }))
+        .sort((p, q) => p.d - q.d);
+  const back = walk(-1, backA ? sc : D - sc, side(true)),
+    front = walk(1, backA ? D - sc : sc, side(false));
+  const at = (t) => ({ z: r * Math.sin(t), y: r * (1 - Math.cos(t)), t });
+  const points = [
+    ...back.reverse().map((p) => ({ z: p.z, y: p.y, t: p.th - Math.PI })),
+    ...Array.from({ length: 21 }, (_, i) => at(-a + (2 * a * i) / 20)),
+    ...front.map((p) => ({ z: p.z, y: p.y, t: p.th })),
+  ];
+  return points.filter((p, i) => i === 0 || Math.hypot(p.z - points[i - 1].z, p.y - points[i - 1].y) > 1e-7);
+}
+
+// Zložitý program: C-profil s lemami – štyri ohyby, diel sa medzi nimi otáča (hrana A / B k dorazu)
+export const BRAKE_PROGRAMS = [
+  {
+    id: 'cprofil',
+    name: () => L('C-profil s lemami – 4 ohyby', 'C-channel with lips – 4 bends'),
+    material: 'steel',
+    thickness: 3,
+    length: 1500,
+    depth: 360,
+    v: 24,
+    r: 0,
+    steps: [
+      { side: 'A', flange: 25, angle: 90 },
+      { side: 'B', flange: 25, angle: 90 },
+      { side: 'A', flange: 95, angle: 90 },
+      { side: 'B', flange: 95, angle: 90 },
+    ],
+  },
+];
+
 export function createBrakeProcess() {
   const S = {
     phase: 'idle',

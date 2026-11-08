@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { compileEdmGcode, EDM_GCODE_SAMPLE } from '../src/machines/precision/edmGcode';
 import { createEdmProcess } from '../src/machines/precision/edmProcess';
 import { createStock } from '../src/machines/cnc/voxel';
@@ -74,4 +74,32 @@ it('adds four graphite sizes to existing cabinets and retains material on JSON i
   expect(parseElectrodes({ version: 1, electrodes: graphite })).toEqual(graphite);
   expect(items[0].id).toBe('copper-prism-20-15');
   expect(() => parseElectrodes({ version: 1, electrodes: [{ ...graphite[0], material: 'invalid' }] })).toThrow();
+});
+
+describe('EDM G-kód: elektródy a prúd', () => {
+  it('T1 / T2 M6 a S nastavia elektródu a prúd ďalších hĺbení', async () => {
+    const { compileEdmGcode } = await import('../src/machines/precision/edmGcode.js');
+    const r = compileEdmGcode('M3 M8\nT1 M6\nS30\nG0 Z5\nG1 Z-4 F3\nG0 Z5\nT2 M6\nS8\nG1 Z-4.2 F3\nG0 Z5\nM30');
+    expect(r.rows.map((x) => [x.tool, x.current])).toEqual([
+      [1, 30],
+      [2, 8],
+    ]);
+    expect(() => compileEdmGcode('M3 M8\nG0 Z5\nG1 Z-2 F3\nT2 M6\nG0 Z5\nM30')).toThrow();
+    expect(() => compileEdmGcode('M3 M8\nS80\nG0 Z5\nG1 Z-2\nG0 Z5\nM30')).toThrow();
+  });
+  it('zložitý program formy 3 × 3 sa preloží a prejde kontrolou úlohy', async () => {
+    const { compileEdmGcode, edmComplexProgram, EDM_COMPLEX_ELECTRODES } = await import(
+      '../src/machines/precision/edmGcode.js'
+    );
+    const { validateEdmJob } = await import('../src/machines/precision/edmProcess.js');
+    const r = compileEdmGcode(edmComplexProgram());
+    expect(r.rows).toHaveLength(27);
+    expect(new Set(r.rows.map((x) => x.tool))).toEqual(new Set([1, 2]));
+    expect(() =>
+      validateEdmJob(
+        { rows: r.rows, ...EDM_COMPLEX_ELECTRODES, current: 30, gap: 0.145, oilLevel: 80, fixtureHeight: 50 },
+        { min: [-50, -40, 0], max: [50, 40, 30] },
+      ),
+    ).not.toThrow();
+  });
 });

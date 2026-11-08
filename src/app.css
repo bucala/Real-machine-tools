@@ -243,6 +243,21 @@ body {
     animation: none;
   }
 }
+.brake-steps {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.brake-steps th,
+.brake-steps td {
+  padding: 3px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.brake-steps tr.on td {
+  background: var(--accent-soft);
+  font-weight: 700;
+}
 .work-resume {
   margin: 10px max(16px, env(safe-area-inset-left, 0px)) 0;
   padding: 10px 12px;

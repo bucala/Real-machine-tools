@@ -32,7 +32,7 @@ import { BendDrawing } from '../ui/sketch';
 import { brakeChecks, measureBrake } from './precision/modernTasks';
 import { BystronicHmi, drawBrakeHmi } from '../ui/bystronicHmi';
 import { createBystronicModel } from './precision/bystronicModel';
-import { brakeSetup, XPERT320 } from './precision/pressBrakeProcess';
+import { BRAKE_PROGRAMS, brakeSetup, XPERT320 } from './precision/pressBrakeProcess';
 import { createBrakeControl } from './precision/brakeControl';
 import '../ui/bystronic.css';
 
@@ -315,6 +315,8 @@ export default function BystronicSimulator({ onBack, params }) {
       raf;
     const control = createBrakeControl({ c, onChange: set, guardClosed: () => guardAngle < 0.01 }),
       process = control.process;
+    // predvolený je program C-profilu so štyrmi ohybmi; jeden ohyb a úlohy ho nahradia
+    control.loadProgram('cprofil');
     const snd = createSound('bender');
     const actions = Object.fromEntries(
       ['start', 'hold', 'retract', 'reset', 'emergency', 'releaseStop', 'acknowledge', 'light', 'hydraulic'].map(
@@ -344,6 +346,7 @@ export default function BystronicSimulator({ onBack, params }) {
       hmiAction: (id) => actions[id]?.(),
       hmiSet: control.set,
       hmiLoad: control.load,
+      loadProgram: control.loadProgram,
       getHmiCanvas: () => screen.tx.image,
       snapshot,
       stl: () => (process.S.run ? null : exportStl(model.stock)),
@@ -470,7 +473,7 @@ export default function BystronicSimulator({ onBack, params }) {
       guardAngle += ((c.guardOpen ? 1.15 : 0) - guardAngle) * Math.min(1, dt * 5);
       control.advance(dt * c.speed);
       c.running = process.S.run;
-      model.update({ S: process.S, c, guardAngle });
+      model.update({ S: process.S, c, guardAngle, prog: control.profile() });
       wi.update(dt);
       insp.update(t, c);
       ctrl.update(dt);
@@ -761,6 +764,62 @@ export default function BystronicSimulator({ onBack, params }) {
             {number('flange', L('Doraz X [mm]', 'X back gauge [mm]'), 20, Math.min(XPERT320.xRange, ui.depth - 20), 1)}
             {number('angle', L('Vnútorný uhol [°]', 'Inside angle [°]'), 90, 170, 1)}
           </fieldset>
+        </div>
+        <div className="sec">
+          <div className="section-heading">
+            <h2 className="sec-title">{L('Program ohybov', 'Bend program')}</h2>
+            <SectionInfo title={L('Program ohybov', 'Bend program')}>
+              <p>
+                {L(
+                  'Viac ohybov na jednom plechu: po každom ohybe sa diel otočí k dorazu hranou A alebo B a Štart urobí ďalší krok s novým dorazom X a uhlom. Hotové ohyby zostanú na dieli. Nový plech začne program od prvého kroku; ručná zmena nastavenia program zruší.',
+                  'Several bends on one sheet: after each bend the part is turned with edge A or B to the gauge and Start runs the next step with a new X gauge and angle. Finished bends stay on the part. New sheet restarts the program; a manual setting change cancels it.',
+                )}
+              </p>
+            </SectionInfo>
+          </div>
+          {BRAKE_PROGRAMS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="btn mt-2"
+              disabled={tele.run}
+              onClick={() => apiRef.current.loadProgram?.(p.id)}
+            >
+              {L('Načítať zložitý program', 'Load complex program')}: {p.name()}
+            </button>
+          ))}
+          {tele.program && (
+            <table className="brake-steps mt-2">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>{L('Hrana k dorazu', 'Edge to gauge')}</th>
+                  <th>X [mm]</th>
+                  <th>{L('Uhol', 'Angle')}</th>
+                  <th>{L('Stav', 'State')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tele.program.steps.map((st, i) => (
+                  <tr key={i} className={i === tele.program.index ? 'on' : ''}>
+                    <td>{i + 1}</td>
+                    <td>{st.side}</td>
+                    <td>{st.flange}</td>
+                    <td>{st.angle}°</td>
+                    <td>
+                      {i < tele.program.bends
+                        ? L('hotový', 'done')
+                        : i === tele.program.index
+                          ? tele.run
+                            ? L('ohýba sa', 'bending')
+                            : L('na rade', 'next')
+                          : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         <div className="sec">
           <div className="section-heading">
