@@ -3,10 +3,10 @@ import * as THREE from 'three';
 import { clamp } from './util';
 
 // ---------- odopnutie polotovaru: vyberie sa zo stroja, dá sa otáčať a vráti sa na pôvodné miesto ----------
-function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onState }) {
+function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onState, canDetach = () => true }) {
   const pivot = new THREE.Group(), box3 = new THREE.Box3();
   const s = { phase: 'in', t: 0, obj: null, parent: null, lp: new THREE.Vector3(), lq: new THREE.Quaternion(), cL: new THREE.Vector3(),
-    from: new THREE.Vector3(), to: new THREE.Vector3(), q0: new THREE.Quaternion(), pose: null, rad: 1 };
+    manual: false, from: new THREE.Vector3(), to: new THREE.Vector3(), q0: new THREE.Quaternion(), pose: null, rad: 1 };
   const OPEN = 0.5, MOVE = 0.9, qI = new THREE.Quaternion(), tmp = new THREE.Vector3();
   let open = 0;
   const ease = (k) => k * k * (3 - 2 * k);
@@ -18,7 +18,8 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
     pivot.position.copy(s.from); pivot.quaternion.identity(); scene.add(pivot); pivot.attach(obj);
     s.to.copy(getSpot());
     s.pose = insp.pose();
-    const d = tmp.subVectors(camera.position, s.to).normalize(), dist = clamp(s.rad * 3.6, 2.4, 14);
+    const d = tmp.subVectors(camera.position, s.to).normalize();
+    const dist = Math.max(2.4, s.rad * 1.1 / Math.sin(camera.fov * Math.PI / 360) / Math.min(1, camera.aspect));
     insp.flyTo(s.to.clone().addScaledVector(d, dist).add(new THREE.Vector3(0, dist * 0.25, 0)), s.to);
   };
   const attachBack = () => {
@@ -26,7 +27,7 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
     scene.remove(pivot); s.obj = null;
   };
   const toggle = () => {
-    if (s.phase === 'in') { c.unclamped = true; c.manual = false; onState(true); s.phase = 'opening'; s.t = 0; return true; }
+    if (s.phase === 'in') { s.manual = c.manual; c.unclamped = true; c.manual = false; onState(true); s.phase = 'opening'; s.t = 0; return true; }
     if (s.phase === 'inspect') {
       s.phase = 'back'; s.t = 0; s.from.copy(pivot.position); s.q0.copy(pivot.quaternion);
       s.to.copy(s.cL); s.parent.localToWorld(s.to);
@@ -38,7 +39,7 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
   const update = (dt) => {
     if (s.phase === 'in') { open = 0; return; }
     s.t += dt;
-    if (s.phase === 'opening') { open = Math.min(1, s.t / OPEN); if (s.t >= OPEN) { detach(); s.phase = 'out'; s.t = 0; } }
+    if (s.phase === 'opening') { open = Math.min(1, s.t / OPEN); if (s.t >= OPEN && canDetach()) { detach(); s.phase = 'out'; s.t = 0; } }
     else if (s.phase === 'out') {
       const k = ease(Math.min(1, s.t / MOVE));
       pivot.position.lerpVectors(s.from, s.to, k); pivot.position.y += Math.sin(Math.PI * k) * 0.8;
@@ -50,7 +51,7 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
       if (k >= 1) { attachBack(); s.phase = 'closing'; s.t = 0; }
     } else if (s.phase === 'closing') {
       open = Math.max(0, 1 - s.t / OPEN);
-      if (s.t >= OPEN) { s.phase = 'in'; open = 0; c.unclamped = false; onState(false); }
+      if (s.t >= OPEN) { s.phase = 'in'; open = 0; c.unclamped = false; c.manual = s.manual; onState(false); }
     }
   };
   // otáčanie polotovaru ťahaním, priblíženie kolieskom
@@ -68,7 +69,7 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
   const wheel = (e) => {
     if (s.phase !== 'inspect') return; e.preventDefault();
     tmp.subVectors(camera.position, pivot.position);
-    const d = clamp(tmp.length() * Math.exp(e.deltaY * 0.0012), Math.max(1.2, s.rad * 1.4), 30);
+    const d = clamp(tmp.length() * Math.exp(e.deltaY * 0.0012), Math.max(1.2, s.rad * 1.4), Math.max(30, s.rad * 12));
     camera.position.copy(pivot.position).addScaledVector(tmp.normalize(), d); camera.lookAt(pivot.position);
   };
   dom.addEventListener('pointerdown', down); dom.addEventListener('pointermove', move);
@@ -78,7 +79,9 @@ function createWorkInspect({ scene, camera, dom, insp, c, getObj, getSpot, onSta
     dom.removeEventListener('pointerdown', down); dom.removeEventListener('pointermove', move);
     dom.removeEventListener('pointerup', up); dom.removeEventListener('pointercancel', up); dom.removeEventListener('wheel', wheel);
   };
-  return { toggle, update, open: () => open, phase: () => s.phase, busy: () => s.phase !== 'in' && s.phase !== 'inspect', dispose };
+  const api = { toggle, update, open: () => open, phase: () => s.phase, busy: () => s.phase !== 'in' && s.phase !== 'inspect', dispose };
+  try { if (/[?&]debug/.test(window.location.search) && window.__stage) window.__stage.inspection = { ...api, object: () => s.obj || getObj() }; } catch (err) { /* test without window */ }
+  return api;
 }
 
 export { createWorkInspect };

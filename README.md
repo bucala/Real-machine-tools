@@ -1,416 +1,245 @@
-<div align="center">
-
 # Real machine tools
 
-**Interaktívne 3D simulátory konvenčných obrábacích a tvárniacich strojov priamo v prehliadači.**
+Interaktívne 3D simulátory obrábacích strojov, CNC, hĺbiacej elektroerózie a tvárnenia plechu v prehliadači. Rozhranie je v slovenčine a angličtine; aplikácia funguje na počítači aj dotykovom zariadení.
 
-[![Spustiť simulátor](https://img.shields.io/badge/%E2%96%B6%20Spusti%C5%A5-real--machine--tools-4f7f3b?style=for-the-badge)](https://real-machine-tools.marcel-bucala.workers.dev)
+**[Spustiť aplikáciu](https://real-machine-tools.marcel-bucala.workers.dev)** · **[Moderné stroje](https://real-machine-tools.marcel-bucala.workers.dev/#moderne)** · [Podklady presných modelov](docs/precision-machines.md) · [Licencia MIT](LICENSE)
 
-![React 19](https://img.shields.io/badge/React-19.3-61dafb?logo=react&logoColor=white)
-![three.js r186](https://img.shields.io/badge/three.js-r186-000000?logo=threedotjs&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwindcss&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
-![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)
-![Jazyk: SK / EN](https://img.shields.io/badge/jazyk-SK%20%2F%20EN-0b4ea2)
-[![License: MIT](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
+![Výber moderných strojov](docs/img/precision-menu.png)
 
-<a href="https://real-machine-tools.marcel-bucala.workers.dev"><img src="docs/img/menu.png" alt="Hlavné menu s výberom stroja" width="900"></a>
+## Čo aplikácia obsahuje
 
-</div>
+- Otočnú a približovaciu kameru, pripravené pohľady, výber a opis dielov.
+- Ručné ovládanie kolies, pák, tlačidiel, dverí a panelov priamo v 3D, podľa vybavenia stroja.
+- Úber materiálu, vŕtanie, ohýbanie, brúsenie alebo zváranie podľa zvoleného procesu.
+- Výučbové úlohy, výkresy, meranie a protokoly na podporovaných konvenčných strojoch.
+- Živé HMI moderných strojov, samostatný pracovný pohľad a split-screen s ovládaním aj procesom naraz.
+- Prehliadku obrobku mimo stroja a export aktuálnej geometrie; samostatne aj export celého stroja.
+- Prepínanie SK / EN, tri vzhľady a syntetizovaný zvuk. Každé nové načítanie začína so zvukom vypnutým.
+- Offline režim a inštaláciu ako PWA po načítaní a uložení súborov do vyrovnávacej pamäte.
 
-Každý stroj je poskladaný z 3D tvarov priamo v kóde, bez externých modelov. Dá sa otáčať a približovať, jednotlivé časti sa po kliknutí zvýraznia a zobrazí sa ich popis. V stroji sa naozaj obrába: nôž odoberá materiál podľa svojho tvaru, fréza vyrezáva drážky, vrták vŕta diery, plech sa ohýba, brúsny kotúč odoberá stotiny milimetra a pásová píla reže dosku. Kontroly kolízií zabránia nezmyselným pohybom.
+Rozmery majú v modeloch spoločnú mierku **1 jednotka scény = 100 mm**. Modely kombinujú procedurálnu geometriu, katalógové rozmery a rekonštrukciu fotografií; niektoré časti používajú spracované referenčné CAD alebo sieťové podklady. Zdroje a odhady sú uvedené v [dokumentácii modelov](docs/precision-machines.md) a pod ikonami **i** pri príslušných sekciách.
 
-**Spoločné pre všetky stroje:** po prvej návšteve fungujú aj bez internetu a dajú sa nainštalovať ako aplikácia, slovenčina aj angličtina (prepínač SK / EN), tri vzhľady (zelený, tmavý, svetlý), voľba rozmeru a tvaru polotovaru, tlačidlo **Odopnúť polotovar** – kus sa vyberie zo stroja, dá sa otáčať a po „Upnúť späť“ sa vráti na pôvodné miesto.
+## Dostupné stroje
 
-## Stroje
+### Konvenčné stroje a zváranie
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#sustruh"><img src="docs/img/lathe-tools.png" alt="Sústruh – štvorpolohová nožová hlava"></a>
-      <h3>🛠️ Konvenčný hrotový sústruh</h3>
-      <sub>predloha TOS SN / VDF · veľkosti SN 32 / 40 / 50 / 55 · tyč kruhová alebo šesťhran, mosadz / oceľ / hliník</sub>
-      <ul>
-        <li>4 veľkosti stroja (výška hrotov, dĺžka lôžka, otáčky, najväčší polotovar) – obrobok a nože vždy v skutočných mm</li>
-        <li>prídavné vybavenie: plechový kryt skľučovadla s mikrospínačom, chladenie s hadicou Loc-Line, zadný kryt, pevná a pohyblivá luneta, kryt skrutiek, nožná brzda; dlhý tenký obrobok bez podopretia sa chveje</li>
-        <li>štvorpolohová nožová hlava, 8 typov nožov v pravom aj ľavom prevedení a závitový nôž 60°, animovaná výmena</li>
-        <li>rezanie metrických závitov P 0,75 – 3 mm cez maticu vodiacej skrutky, skrutkovicový profil závitu</li>
-        <li>horné sane s mikroposuvom, páky odistenia hlavy, pinoly a koníka</li>
-        <li>12 otáčok, prevodovka posuvov Norton, DRO na ramene, pracovná lampa</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#freza"><img src="docs/img/mill-tools.png" alt="Fréza – guľová fréza nad obrobkom"></a>
-      <h3>⚙️ Univerzálna konzolová fréza</h3>
-      <sub>predloha TOS FA 3 B · hranol alebo tyč vo zveráku, tyč v deliacom prístroji</sub>
-      <ul>
-        <li>stopkové frézy Ø6 – Ø25, guľové Ø6 – Ø16, čelné Ø50 – Ø100</li>
-        <li>stôl X, sane Y, konzola Z; automatický posuv stola, chladenie</li>
-        <li>zverák sa prispôsobí šírke obrobku, kolízie s čeľusťami a podložkami</li>
-        <li><b>deliaci prístroj</b> so skľučovadlom a koníkom: jednoduché delenie n = 40 / z (výpočet otáčok kľuky a kruhu dier), aretácia vretena, úlohy šesťhran a štvorhran</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#vrtacka"><img src="docs/img/drill-cut.png" alt="Stĺpová vŕtačka – navŕtané diery"></a>
-      <h3>🔩 Stĺpová vŕtačka</h3>
-      <sub>predloha TOS SV16 · oceľová doska na podložkách</sub>
-      <ul>
-        <li>priečna kľuka pinoly (100 mm), zdvíhací stôl na stĺpe</li>
-        <li>vrtáky Ø3 – Ø16, diery naslepo aj naskrz</li>
-        <li>posuv obmedzený na 0,12 mm/ot, ochrana podložiek a stola</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#ohybacka"><img src="docs/img/folder-bend.png" alt="Ohýbačka – ohnutý plech"></a>
-      <h3>📐 Výkyvná ohýbačka plechu</h3>
-      <sub>predloha FASTI 204-10-2 · dĺžka ohybu 1 040 mm, do 2 mm</sub>
-      <ul>
-        <li>upínacia lišta na kolese cez dve zdvíhacie skrutky</li>
-        <li>vykývnutie ohýbacej lišty až do 130°</li>
-        <li>odpruženie plechu podľa hrúbky, ohyb len po upnutí</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#bruska"><img src="docs/img/grinder-coolant.png" alt="Rovinná brúska – chladenie emulziou"></a>
-      <h3>✨ Rovinná brúska</h3>
-      <sub>predloha BPH 300 · kotúč Ø300 × 40 mm · magnetická doska</sub>
-      <ul>
-        <li>hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu</li>
-        <li>prísuv po 0,005 mm, iskry, kvapky a hmla emulzie</li>
-        <li>kontrola magnetu a prísuvu (max. 0,1 mm na prechod)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#pila"><img src="docs/img/saw-cut.png" alt="Pásová píla – rez dosky"></a>
-      <h3>🪚 Strojná pásová píla</h3>
-      <sub>predloha TOS PPN · kolesá Ø720 mm · drevo, hliník, oceľ</sub>
-      <ul>
-        <li>napínanie pásu, horné vodidlo s hviezdicovým kolieskom</li>
-        <li>3 rýchlosti pásu podľa materiálu, rovnomerný posuv</li>
-        <li>viditeľný rez, odrezok sa po dorezaní oddelí</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+| Stroj | Predloha / proces | Spustiť |
+| --- | --- | --- |
+| Hrotový sústruh | TOS SN / VDF, varianty SN 32 / 40 / 50 / 55; sústruženie, závity, lunety | [Sústruh](https://real-machine-tools.marcel-bucala.workers.dev/#sustruh) |
+| Univerzálna fréza | TOS FA 3 B; frézy, zverák, deliaci prístroj | [Fréza](https://real-machine-tools.marcel-bucala.workers.dev/#freza) |
+| Stĺpová vŕtačka | TOS SV16; slepé a priechodné otvory | [Vŕtačka](https://real-machine-tools.marcel-bucala.workers.dev/#vrtacka) |
+| Radiálna vŕtačka | TOS VO 50; otočné rameno a automatický posuv | [Radiálna vŕtačka](https://real-machine-tools.marcel-bucala.workers.dev/#radialka) |
+| Horizontálna vyvrtávačka | TOS Varnsdorf W; os W, otočný stôl a vyvrtávanie | [Horizontálka](https://real-machine-tools.marcel-bucala.workers.dev/#horizontalka) |
+| Odvalovacia frézka | Výroba čelných ozubených kolies | [Odvalovacia frézka](https://real-machine-tools.marcel-bucala.workers.dev/#odvalovacka) |
+| Výkyvná ohýbačka | FASTI 204-10-2; upnutie, ohyb, odpruženie | [Ohýbačka](https://real-machine-tools.marcel-bucala.workers.dev/#ohybacka) |
+| Tabuľové nožnice | BS 2000/8; zadný doraz a strihanie | [Nožnice](https://real-machine-tools.marcel-bucala.workers.dev/#noznice) |
+| Výstredníkový lis | TOMA LEN 40C; dierovanie a vystrihovanie | [Lis](https://real-machine-tools.marcel-bucala.workers.dev/#lis) |
+| Zakružovačka profilov | COMAC 3025 HV; tri valce, profily a rúry | [Profily](https://real-machine-tools.marcel-bucala.workers.dev/#profilova) |
+| Zakružovačka plechu | TOS XZC 3000/10; predohnutie a vysunutie plášťa | [Plech](https://real-machine-tools.marcel-bucala.workers.dev/#zakruzovacka) |
+| Rovinná brúska | BPH 300; magnetická doska, prísuv, chladenie | [Rovinná brúska](https://real-machine-tools.marcel-bucala.workers.dev/#bruska) |
+| Brúska na guľato | Hrotové brúsenie vonkajších priemerov | [Brúska na guľato](https://real-machine-tools.marcel-bucala.workers.dev/#gulato) |
+| Zvislá obrážačka | Drážky a vnútorné tvary v náboji | [Zvislá obrážačka](https://real-machine-tools.marcel-bucala.workers.dev/#zobrazacka) |
+| Pásová píla | TOS PPN; rezanie a oddelenie odrezku | [Píla](https://real-machine-tools.marcel-bucala.workers.dev/#pila) |
+| Ručné oblúkové zváranie | Elektróda, príprava spoja a hodnotenie húsenice | [MMA](https://real-machine-tools.marcel-bucala.workers.dev/#zvaranie) |
+| MIG/MAG | Fronius TransPuls Synergic TPS 450; drôt, plyn a synergia | [MIG/MAG](https://real-machine-tools.marcel-bucala.workers.dev/#mag) |
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#obrazacka"><img src="docs/img/shaper.png" alt="Obrážačka – kulisa a smykadlo"></a>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🪚 Priečna obrážačka</h3>
-      <sub>predloha kulisová obrážačka TOS · v menu skrytá, otvára sa priamo odkazom <code>#obrazacka</code></sub>
-      <ul>
-        <li>kulisový mechanizmus viditeľný cez odkrytý bok stojana: koleso s čapom, kulisa, kameň; dĺžka zdvihu 20 – 500 mm mení polomer čapu</li>
-        <li>rýchly spätný chod – pracovný zdvih trvá ~230° otáčky kolesa, spätný ~130°; 6 stupňov 10 – 56 zdvihov/min, rezná rýchlosť v paneli</li>
-        <li>nôž v sklopnej doske reže len pri pracovnom zdvihu, pri spätnom sa nadvihne</li>
-        <li>západkový posuv stola o krok na začiatku každého zdvihu, prísuv noža kolieskom na hlave</li>
-        <li>4 nože (ubierací, hladiaci, drážkovacie 6 a 10 mm) s najväčším záberom – pri preťažení sa stroj zastaví; náraz do čeľustí zveráka</li>
-        <li>3 úlohy: rovina o 2 mm, drážka pre pero 10 × 5, osadenie 30 × 10</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+Vodorovná obrážačka zostáva v zdrojoch, ale je skrytá z hlavného výberu.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🔩 Horizontálna vŕtačka a frézka</h3>
-      <sub>predloha TOS Varnsdorf rad W · <code>#horizontalka</code></sub>
-      <ul>
-        <li>vreteník na stojane (Y), vysúvacie vreteno W s posuvom, sane Z, stôl X a otočný stôl B s aretáciou po 90°</li>
-        <li>vyvrtávanie predliatych otvorov mikrometrickou hlavou po 0,005 mm, priehyb tyče podľa záberu a vyloženia</li>
-        <li>úlohy Ø80 H7 a súosé otvory po otočení stola o 180° (<code>horizMath.js</code>)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <h3>⚙️ Odvalovacia frézka na ozubenie</h3>
-      <sub>predloha TOS Čelákovice · <code>#odvalovacka</code></sub>
-      <ul>
-        <li>odvalovanie jednochodou frézou m 2: stôl 1/z otáčky na otáčku frézy, výmenné kolesá delenia i = 24 / z</li>
-        <li>sklon frézy na stúpací uhol, radiálny prísuv na 2,25 · m, zvislý posuv cez šírku kolesa</li>
-        <li>kontrola rozmeru cez zuby Wk, úlohy z 30 a z 24 (<code>hobMath.js</code>)</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🌀 Zakružovačka plechu</h3>
-      <sub>TOS XZC 3000/10 · trojvalcová pyramída · <code>#zakruzovacka</code></sub>
-      <ul>
-        <li>dva poháňané spodné valce, horný valec prisúva ručné koleso na stĺpiku; odpruženie podľa hrúbky</li>
-        <li>konce zostanú rovné na polovicu rozostupu valcov – predohnú sa podložným plechom</li>
-        <li>hotový plášť sa vysunie po vytiahnutí kolíka cez odklopné ložisko</li>
-        <li>úlohy plášť Ø1000 zo 6 mm a oblúk R 800 z 10 mm (<code>plateMath.js</code>)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <h3>✂️ Tabuľové nožnice</h3>
-      <sub>mechanické BS 2000/8 · <code>#noznice</code></sub>
-      <ul>
-        <li>zadný doraz, bočný uholník, vôľa nožov podľa hrúbky (ostrina), kapacita 8 mm</li>
-        <li>prítlaky, šikmý horný nôž, hrebeňový kryt prstov blokujúci pedál, pedálová tyč po celej šírke, pásy padajú do koša</li>
-        <li>úlohy 3 pásy 100 mm z 2 mm a prírezy 150 mm zo 6 mm (<code>shearMath.js</code>)</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🔨 Výstredníkový lis</h3>
-      <sub>TOMA LEN 40C · C-stojan 400 kN · <code>#lis</code></sub>
-      <ul>
-        <li>zotrvačník s jednootáčkovou spojkou, jednotlivý zdvih pedálom alebo trvalý chod, kryt nástroja</li>
-        <li>sila strihu F = π · d · t · 0,8 · Rm, preťaženie zasekne lis v dolnej úvrati</li>
-        <li>prestavenie baranidla: vzduch – vtlačené – prestrihnuté – zlomený razník</li>
-        <li>úlohy 5 dier Ø20 v rozstupe 50 mm a podložky Ø50 zo 6 mm s mostíkom (<code>pressMath.js</code>)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top"></td>
-  </tr>
-</table>
+### Moderné stroje
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🧭 Radiálna vŕtačka</h3>
-      <sub>predloha TOS VO 50 · <code>#radialka</code></sub>
-      <ul>
-        <li>rameno sa otáča okolo stĺpa a zdvíha motorom, vreteník jazdí po ramene – obrobok stojí</li>
-        <li>upínanie stĺpa a vreteníka (bez neho sa nevŕta), automatický posuv 0,1 – 0,4 mm/ot s hĺbkovým dorazom</li>
-        <li>vrtáky Ø10 – Ø40, displej polohy vretena od stredu dosky; úlohy rozteč 300 × 200 a príruba 6 × Ø20 na Ø300 (<code>radialMath.js</code>)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <h3>💎 Hrotová brúska na guľato</h3>
-      <sub>predloha TOS BUA · <code>#gulato</code></sub>
-      <ul>
-        <li>hydraulický stôl s dorazmi obratu, prísuv kotúča po 0,005 mm, automatický prísuv na obrate s dorazom</li>
-        <li>pružné odtláčanie kotúča – vyiskrovanie, prepal pri veľkom zábere alebo bez chladenia, iskry a emulzia</li>
-        <li>meranie mikrometrom po 0,001 mm, úlohy Ø40 h6 a Ø25 h5 s kontrolou kužeľovitosti (<code>cylMath.js</code>)</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+| Stroj | Parametre a funkcie | Spustiť |
+| --- | --- | --- |
+| **Hermle C 32 U / C 42 U** | X/Y/Z 650/650/500 alebo 800/800/550 mm, stôl Ø650/Ø800, A/C, ISO a Heidenhain Klartext | [Hermle](https://real-machine-tools.marcel-bucala.workers.dev/#hermle) |
+| **Röders RXU 1001 DSH** | X/Y/Z 800/855/500 mm, stôl Ø600, A ±115°, 24 000 ot/min, 24 nástrojov, RMS terminál | [Röders](https://real-machine-tools.marcel-bucala.workers.dev/#roeders) |
+| **OSCARMAX EX 500** | Hĺbiaca EDM, dráhy 500/400/450 mm, stôl 850 × 450 mm, generátor 60 A, Cu a grafit, operácie alebo G-kód | [OSCARMAX](https://real-machine-tools.marcel-bucala.workers.dev/#oscarmax) |
+| **Bystronic Xpert Pro 320/4300** | Štandardná výška; 3 200 kN, dĺžka ohybu 4 300 mm, zdvih 250 mm, otvorenie bez nástrojov 640 mm | [Bystronic](https://real-machine-tools.marcel-bucala.workers.dev/#bystronic) |
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zobrazacka"><img src="docs/img/slotter.png" alt="Zvislá obrážačka – drážka v náboji"></a>
-      <h3>⬇️ Zvislá obrážačka</h3>
-      <sub>predloha TOS ST 350 · drážkovačka s krížovým otočným stolom</sub>
-      <ul>
-        <li>zvislé smykadlo s kulisovým pohonom v hlave („labutí krk“), pracovný zdvih dole, zdvih 20 – 350 mm, 12 – 71 zdvihov/min</li>
-        <li>krížový stôl X / Z, otočný stôl C (1 otáčka = 4°) s delením 2 – 8, trojčeľusťové skľučovadlo s otvorom pre výbeh noža</li>
-        <li>náboj ako vnútorný a vonkajší polomer pre každý uhol; nôž sa zastaví pri prekročení prierezu triesky, náraz do skľučovadla</li>
-        <li>západkový posuv v X, Z alebo C v hornej úvrati; stôl sa pri noži v obrobku do materiálu nepohne</li>
-        <li>2 úlohy: drážka pre pero 12 × 3,3 v otvore Ø40, štvorhranný otvor 25 × 25 z Ø24 (`slotterMath.js`)</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#profilova"><img src="docs/img/bender.png" alt="Profilová ohýbačka – oblúk z plochej tyče"></a>
-      <h3>➰ Profilová ohýbačka</h3>
-      <sub>predloha COMAC 3025 HV · tri poháňané valce v pyramíde</sub>
-      <ul>
-        <li>hydraulický prísuv stredného valca δ, polomer v zábere z kružnice cez tri dotyky</li>
-        <li>pružno-plastický ohyb s odpružením podľa profilu (medza klzu S235, tvarový súčiniteľ); rovné konce dĺžky polovice rozpätia</li>
-        <li>5 profilov: plochá tyč naplocho aj nastojato, rúra, jäkel, uholník; valce s nákružkami alebo drážkové pre rúru</li>
-        <li>bočné vodiace kladky – bez nich sa profil nastojato a uholník skrúti, rúra na rovných valcoch sa sploští</li>
-        <li>pracovná poloha H aj V (stroj sa sklopí), nožný pedál vpred / vzad, 3 úlohy: oblúk R 500, prstenec R 300 z rúry, oblúk R 800 nastojato (`benderMath.js`)</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+**ShuangliCNC ZJA13-2013F · Siemens Edition** je na žiadosť používateľa skrytý. Geometria, proces, konfigurácia a testy zostávajú zachované; `#shuangli` otvorí menu moderných strojov. Údaje referenčného Zonjet ZJA13-1610 nie sú garantovanou špecifikáciou verzie 2013F.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#zvaranie"><img src="docs/img/weld-helmet.png" alt="Zváranie – pohľad cez kuklu"></a>
-    </td>
-    <td width="50%" valign="top">
-      <h3>⚡ Oblúková zváračka</h3>
-      <sub>predloha Elektrokov JS 90FN · ručné zváranie obalenou elektródou (MMA)</sub>
-      <ul>
-        <li><b>tvar a poloha polotovarov</b>: rovinné plechy (I, V, ½V, Y, U, J, presah, lem, návar), kolmé plechy (T-spoj, rohový vnútorný a vonkajší), kruhové (rúra – rúra, rúra na plech) a tvarové (jokel na plech, tvarový rez po krivke); zvarová príprava podľa hrúbky</li>
-        <li>polohy PA – PG (1G – 4G/F) a rúrové PH, PJ, H-L045 (5G, 6G); kontrola smeru zvárania nahor / nadol</li>
-        <li>prúd 55 – 155 A, prepínač 380 / 220 V (istič pri 220 V nad 75 A), rutilové a bázické elektródy Ø2 – Ø4</li>
-        <li>húsenica podľa prúdu, rýchlosti a dĺžky oblúka; troska, popúšťacie farby, hodnotenie zvaru</li>
-        <li>kukla (H): moderná samostmievacia (DIN 9 – 13, oneskorenie) alebo stará s pevným tmavým sklom</li>
-        <li>režim <b>Zváranie</b> (M): pravé tlačidlo vedie elektródu, pravé + ľavé zvára, na dotyk dva prsty; v režime kamery pravé tlačidlo posúva pohľad</li>
-        <li>navárať sa dá kdekoľvek na diel, ďalšie vrstvy sa ukladajú na predchádzajúce</li>
-        <li>pri dohorenej elektróde vyskočí tlačidlo <b>Vymeň elektródu</b> (alebo E) – animácia: ohorok vypadne, nová elektróda sa zasunie do čeľustí</li>
-        <li><b>rez zvarom (makrovýbrus)</b> kdekoľvek pozdĺž spoja: plechy, jednotlivé húsenice, hranica natavenia, tepelne ovplyvnená oblasť, póry, troskové vtrúseniny a neprievar; miesto rezu ukazuje červená rovina v scéne</li>
-        <li><b>zvarová mierka</b> v reze: prevýšenie h a šírka b, pri kútovom zvare ramená z₁, z₂ a účinná hrúbka a</li>
-        <li><b>viacvrstvové zvary</b>: každé zapálenie oblúka je nová húsenica, rez ukazuje koreň, výplň a kryciu vrstvu; zvar cez neotlčenú trosku zanechá vtrúseniny; rúra na <b>polohovadle</b> (1G) sa otáča pod horákom</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+## Ovládanie
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="https://real-machine-tools.marcel-bucala.workers.dev/#mag"><img src="docs/img/mig.png" alt="Zváranie MIG/MAG – Fronius TPS 450 na vozíku"></a>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🔥 Zváranie MIG/MAG</h3>
-      <sub>predloha Fronius TransPuls Synergic TPS 450 · podávač VR 4000 · chladenie FK</sub>
-      <ul>
-        <li>synergický program: drôt G3Si1 Ø0,8 / 1,0 / 1,2 a plyn M21 alebo CO₂, rýchlosť drôtu 1 – 22 m/min určí prúd (3 – 450 A) a napätie, korekcia dĺžky oblúka ±3 V</li>
-        <li>štandardný a impulzný oblúk; skratový, prechodový a sprchový prenos s rôznym rozstrekom</li>
-        <li>2-takt / 4-takt na horáku, hlavný vypínač, ovládanie priamo na paneli zdroja (displej A / V, LED režimov)</li>
-        <li>plynová fľaša s ventilom a prietokomerom – pri slabej ochrane (zatvorený ventil, málo či veľa plynu, dlhý výlet drôtu) vznikajú póry</li>
-        <li>výlet drôtu kolieskom pri zváraní; dlhší výlet zníži prúd</li>
-        <li>úlohy: zvar V 8 mm PA, kútový zvar PB, tenký plech 2 mm, rúra Ø60,3 × 4 v polohe PH, rúra Ø88,9 × 8 na polohovadle (3 vrstvy)</li>
-      </ul>
-    </td>
-  </tr>
-</table>
-
-### 🏭 Moderné stroje – CNC a 5-osé obrábanie (`#moderne`)
-
-Samostatné menu s vlastným vizuálom (grafit, sklo, červený akcent). Vstup je baner v hlavnom menu.
-
-**Hermle C 32 U / C 42 U** (`#hermle`) – 5-osé obrábacie centrum s otočno-sklopným stolom A/C, základný stroj bez prídavných zariadení:
-
-- **Model.** C 32 U podľa katalógu (650 / 650 / 500 mm, stôl Ø650 × 540, A ±130°, 18 000 ot/min HSK-A63, 42 kW, 36 miest, TNC 640). C 42 U má orientačné údaje (800 / 800 / 550 mm, stôl Ø800).
-- **CNC program.** Interpreter ISO / Fanuc a Heidenhain Klartext (`src/machines/cnc/gcode.js`):
-  - ISO: G0–G3, G43, G43.4 (TCP), G68.2 + G53.1, cykly G81–G83, G93;
-  - Heidenhain: BLK FORM, TOOL CALL, L / CC / C / CR, M128, PLANE SPATIAL, CYCL DEF 200.
-- **Napojenie na CAM.**
-  - Načítanie súboru z postprocesora (Fusion 360, Mastercam, hyperMILL …).
-  - Nástroje sa dajú prevziať z komentárov typu `T3 D=10. CR=0. - flat end mill`.
-  - Uloženie programu.
-- **Kinematika a úber.**
-  - 5-osá kinematika stola A/C, inverzná úloha (`kin.js`).
-  - Skutočný úber materiálu vo voxelovom poli so znamienkovou vzdialenosťou a sieťou surface nets (`voxel.js`), vrátane naklonených a podrezaných plôch.
-  - Export obrobku do STL.
-- **Kontroly a alarmy** (`sim.js`):
-  - koncové spínače;
-  - rýchloposuv do materiálu, rez so stojacim vretenom;
-  - kolízia drieku alebo držiaka, náraz do stola alebo upínača;
-  - preťaženie vretena;
-  - bezpečnostný zámok dverí.
-- **Prevádzka.** Blok po bloku, korekcie posuvu a rýchloposuvu, rýchlosť simulácie, odhad času.
-- **Ukážky.** Štyri ukážkové programy: 3-osý, 3+2 (G68.2), simultánny 5-osý s TCP a Heidenhain s PLANE SPATIAL (`programs.js`).
-
-### 🎓 Výučba
-
-| | |
+| Režim / prvok | Použitie |
 | --- | --- |
-| **Úlohy s kontrolou** | každý stroj má úlohy podľa výkresu (napr. osadenie Ø40 × 50, zápich, závit M30 × 1,5, drážka 20 × 5, dve diery Ø10 naskrz, ohyb 90°, prebrúsenie o 0,1 mm, tupý zvar V); požiadavky sa kontrolujú priebežne z modelu, vyhodnotenie dá percentá a známku, počíta sa čas aj varovania |
-| **Výkresy s kótami** | každá úloha má náčrt s kótovacími a pomocnými čiarami, šípkami a toleranciami (`src/ui/sketch.jsx`); texty kót sa neprekrývajú s čiarami ani navzájom – overené automatickou kontrolou v prehliadači |
-| **Protokol z cvičenia** | tlačidlo *Vyexportovať protokol* stiahne HTML protokol (tlač alebo PDF): zadanie, výkres, nastavenie stroja a polotovaru, údaje stroja, požiadavky s predpísanou a dosiahnutou hodnotou a odchýlkou, snímka dosiahnutého tvaru, hodnotenie, meno žiaka a odkaz na úlohu, napr. `…/#sustruh/uloha=zavit` (`src/ui/protocol.js`) |
-| **Kontrola BOZP** | pri úlohe sa stroj spustí až po potvrdení kontrolného zoznamu (kľúč zo skľučovadla, okuliare, upnutie, kukla …) |
-| **Meranie** | sústruh: posuvné meradlo s krúžkom na obrobku a tabuľka osadení a závitu; fréza: hĺbkomer; vŕtačka: zoznam dier s rozostupom; brúska: úbytok a rovinnosť |
-| **Rezné podmienky** | kalkulačka n = 1000 · vc / (π · D) podľa materiálu a nástroja (HSS / SK), najbližší stupeň prevodovky jedným klikom |
-| **Uloženie a export** | rozpracovaný obrobok sa uloží v prehliadači a dá sa znova upnúť; export obrobku do STL v mm a snímka scény do PNG |
-| **Zvuk** | motor podľa otáčok, rez, iskrenie brúsky, bzučanie transformátora a praskanie oblúka – syntetizované v prehliadači, zapína sa ikonou reproduktora (predvolene vypnutý) |
+| Kamera | Ťahanie otáča pohľad, koliesko približuje; pravé tlačidlo alebo Shift posúva pohľad. Na dotyku sa používajú jedno- a dvojprstové gestá. |
+| Ručné ovládanie | Prepínač **Ručne** alebo kláves **M** zamkne kameru a sprístupní prvky stroja. Kolesá a páky sa ťahajú, tlačidlá a pedále sa stláčajú. |
+| Esc | Zatvorí aktívne okno; mimo okien vráti ručný režim na kameru. |
+| Predvolené pohľady | Celok, pracovný priestor, nástroj, panel a ďalšie pohľady podľa stroja. |
+| Výber dielu | Kliknutie na stroj alebo položku v zozname zvýrazní diel a zobrazí jeho opis. |
+| Prehliadka obrobku | **Pozrieť obrobok** odopne rovnaký kus; po prehliadke sa vráti na pôvodné miesto. Potrebné odtiahnutie nástroja alebo otvorenie nádrže závisí od stroja. |
+| Informácie | Ikony **i** obsahujú návody, podporované kódy, technické údaje a obmedzenia danej sekcie. |
 
-Na slabšom hardvéri sa kvalita zníži automaticky (rozlíšenie, potom tiene lámp); parameter `?hq` v adrese to vypne.
+Zvuk sa zapína ikonou reproduktora. Moderné stroje majú vlastné farebné akcenty; dostupné vzhľady sa prepínajú v menu. Vybrané knižnice, nastavenia a uložené obrobky používajú lokálne úložisko prehliadača; nejde o spoločné cloudové úložisko.
 
-### ✋ Ručné ovládanie
+Tlačidlo **Názvy častí** pri názve každého stroja zapína popisy v 3D scéne. Zapnutý stav je farebne zvýraznený; kliknutie na popis vyberie príslušnú časť.
 
-Kláves <kbd>M</kbd> alebo prepínač vpravo hore zamkne pohľad a ovládacie prvky sa zvýraznia namodro. Ťahaním sa točia ručné kolesá a kľuky a prestavujú páky, tlačidlá, vypínače a núdzový STOP sa stláčajú myšou. Pracovné lampy (sústruh, fréza, brúska) majú skutočné bodové svetlo s tieňmi.
+## HMI a živý pracovný priestor
 
-## Ako to funguje
+HMI sa otvára tlačidlom **HMI cez celé okno** alebo ovládaním displeja v ručnom režime podľa stroja. Röders a OSCARMAX zdieľajú medzi monitorom v 3D a fullscreen rovnaký živý canvas. Hermle a Shuangli tiež zrkadlia svoj displej; Bystronic má interaktívne obrazovky prepojené s rovnakým kontrolérom a údajmi v 3D termináli.
 
-```mermaid
-flowchart LR
-  menu["Hlavné menu<br/>#sustruh · #freza · #vrtacka · #radialka · #horizontalka · #odvalovacka · #ohybacka · #noznice · #lis · #profilova · #moderne → #hermle · #zakruzovacka · #bruska · #gulato · #zobrazacka (#obrazacka skrytá) · #pila · #zvaranie · #mag"] --> machine
-  subgraph core["Spoločné jadro"]
-    stage["createStage<br/>renderer, svetlá, podlaha, skin"]
-    kit["makeKit + createLamp<br/>tvary, kolesá, páky, lampy"]
-    ctrl["createControls<br/>ručné ovládanie prvkov"]
-    insp["createInspector<br/>kamera, pohľady, výber dielov"]
-    wi["createWorkInspect<br/>odopnutie a prehliadka polotovaru"]
-    hf["createHeightField<br/>výšková mapa obrobku"]
-  end
-  machine["Stroj<br/>model + simulácia v hlavnej slučke"] --> stage & kit & ctrl & insp & wi & hf
-  machine --> panel["Panel<br/>DRO, posuvníky, stav, SK / EN"]
+V hornej lište fullscreen HMI sú:
+
+- **Priestor (▣):** samostatné okno so živou scénou a pevnou kamerou. Zobrazuje iba obraz a krížik na zatvorenie.
+- **Split (◫):** živý pracovný priestor je v orientácii na šírku vždy vľavo od ovládateľného HMI a v orientácii na výšku vždy hore. Rozloženie sa automaticky prispôsobí otočeniu displeja. Aj tento pohľad má iba krížik na zatvorenie.
+
+Lišta HMI zostáva v jednom riadku. Na úzkom displeji sú tlačidlá pracovného priestoru a splitu ikonové; ich úplné názvy zostávajú dostupné pre čítačky obrazovky. Displej HMI sa škáluje podľa šírky aj výšky svojho panela a neprekrýva ovládacie prvky.
+
+Pracovný pohľad používa tú istú simuláciu a vlastnú kameru. Priebežne zobrazuje pohyb osí, nástroj, aktuálny úber a efekty; neslúži ako uložená snímka. Ťahanie v tomto pohľade nemení hlavnú kameru. Otvorenie ani zatvorenie pohľadu nemení rozpracovaný cyklus. Dosiahnutá snímková frekvencia závisí od zariadenia.
+
+### CNC: Hermle a Röders
+
+- Editor a načítanie NC programu, kontrola blokov, štart, hold, reset a režim po blokoch.
+- ISO/Fanuc a podporovaná podmnožina Heidenhain Klartext; prehľad je priamo v informačnom okne sekcie Program/CAM.
+- Súvislé 3-osé, polohované 3+2 a podporované simultánne 5-osé pohyby, rotačný stôl A/C, TCP, nástroje a výmeny.
+- Úber materiálu z aktuálneho voxelového poľa, kontrola podporovaných kolízií, zaťaženie a export rozpracovaného obrobku.
+- Knižnica nástrojov, HMI, osvetlenie, dvere a servisné blokovania. Hermle má voliteľný dopravník triesok, filtráciu a dochladzovač.
+
+Pre výmenu dát s PowerMill pozri [postup CAM](docs/cam/powermill-exchange.md). Podporovaný NC jazyk je výučbovou podmnožinou; neimplementuje celý firmvér TNC ani RMS6.
+
+### OSCARMAX: hĺbiaca elektroerózia
+
+Elektróda sa netočí. Tvarová Cu alebo grafitová elektróda vytvára dutinu v upnutom oceľovom polotovare **100 × 80 × 30 mm**. Nádrž, dielektrikum, výplach, upnutie a STOP tvoria podmienky štartu. Hold zachová dutinu aj miesto v cykle.
+
+Skrinka obsahuje medené elektródy a grafitové hranoly **8 × 8, 12 × 12, 20 × 15 a 30 × 20 mm**, všetky L100 mm. Grafitové položky sa doplnia aj do staršej uloženej skrinky. Možno spravovať vlastné elektródy a importovať/exportovať JSON s materiálom a rozmermi.
+
+Riadenie má dva režimy:
+
+1. **Operácie:** súradnice X/Y a hĺbka každej dutiny.
+2. **G-kód / ISO:** editor, NC/TAP/TXT/ISO súbor do 256 kB, ukážka a kontrola s číslom chybného riadku.
+
+NC podporuje `G0`, `G1`, `G21`, `G90`, `G91`, `G54`, `G94`, `F`, `M3/M5`, `M8/M9`, `M2/M30`. G54 Z0 je horná plocha obrobku, záporné Z zadáva hĺbku. Pred XY a na konci programu sa používa bezpečný zdvih `G0 Z5`. M8 pri novom štarte zapne výplach a koncové M9 ho po dokončení vypne. F v mm/min obmedzuje výučbový servo-prísuv. Nepodporované kódy, oblúky a nebezpečné presuny sa odmietajú.
+
+```gcode
+G21 G90 G94 G54
+M3 M8
+G0 Z5
+G0 X-20 Y0
+G1 Z-5 F3
+G0 Z5
+M5 M9
+M30
 ```
 
-| Čo sa simuluje | Ako |
+Iskrenie schematicky zvýrazňuje aktívnu výbojovú zónu. Je viazané na prebiehajúce hĺbenie a vypne sa pri holde, STOP, otvorení nádrže alebo strate výplachu; dá sa vypnúť aj samostatne. Úberová rýchlosť, opotrebenie a svetelný efekt sú výučbové odhady.
+
+### Bystronic: ohýbanie plechu
+
+Vybraná verzia je **Xpert Pro 320/4300 v štandardnej výške** podľa [technického listu](docs/references/bystronic-xpert-pro-technical-data.pdf).
+
+- Jeden ohyb vo vzduchu so segmentovaným 85° horným nástrojom a skutočným V-výrezom matrice.
+- Materiál, prírez, hrúbka, vnútorný uhol, zadný doraz X, výška R a otvorenie V.
+- Odhad sily, limit 3 200 kN, kontrola ramena, matrice a vyloženia rámu; približné odpruženie.
+- Funkčné záložky **Diel, Nástroje, Ohýbanie, Stroj, Diagnostika**, uložené nastavenia dielov a histórie udalostí.
+- Fyzické pedále a tlačidlá, mobilný terminál a samostatný STOP panel. Uvoľnenie STOP samo nespustí pohyb.
+- Zachovanie čiastočného ohybu pri prerušení, prehliadka a export plechu po zdvihnutí barana.
+
+![Živý proces OSCARMAX vedľa HMI](docs/img/oscarmax-split-screen.png)
+
+## Výučba a rozsah simulácie
+
+Podporované konvenčné stroje ponúkajú úlohy s kótovaným náčrtom, priebežné meranie, hodnotenie, kontrolné zoznamy a HTML protokol vhodný na tlač/PDF. Dostupnosť závisí od konkrétneho simulátora; moderné stroje nemajú automaticky rovnakú sadu úloh.
+
+Geometria obrobkov používa podľa procesu profil polomeru, výškové pole, voxelové pole, prierez plechu alebo samostatný matematický model. Voxelový CNC/EDM obrobok sa mení priebežne a sieť sa aktualizuje po častiach. Kontroly kolízií a blokovania pokrývajú implementované situácie, nie všeobecnú analýzu ľubovoľnej výrobnej zostavy.
+
+Simulátory sú určené na výučbu a vizualizáciu. Odhady času, sily, odpruženia, úberu a opotrebenia nenahrádzajú technologický predpis. Výstupný model nie je originálny parametrický výrobný CAD výrobcu.
+
+## Exporty
+
+| Výstup | Obsah |
 | --- | --- |
-| Odoberanie materiálu | sústruh: profil polomeru (340 úsekov) a tvar ostria zvoleného noža → `LatheGeometry`; fréza a brúska: výšková mapa s rezaním po celej dráhe medzi snímkami |
-| Kolízie | nástroj voči obrobku pri stojacom vretene, bok noža voči materiálu, zverák, podložky, stôl, koník, magnetická doska, horné vodidlo píly |
-| Ručné ovládanie | pohyb myši sa premieta na dotyčnicu k obvodu kolesa v mieste uchopenia, páky majú aretované polohy |
-| Jazyk | každý text má slovenskú aj anglickú podobu, `L(sk, en)` |
-| Mierka | 1 jednotka scény = 100 mm |
+| **Model stroja: OBJ / STL / STEP** | Tlačidlo **Stiahnuť model** v päte menu. Aktuálna poloha a viditeľné diely, bez obrobku, podlahy, svetiel a efektov. OBJ zachová názvy častí; textúry sa neexportujú. |
+| **Obrobok: STL / STEP** | Aktuálny geometrický stav vrátane prerušeného úberu alebo čiastočného ohybu, podľa dostupných tlačidiel stroja. Export neobnovuje čistý polotovar. |
+| **PNG** | Snímka scény na strojoch s príslušným tlačidlom. |
+| **HTML / JSON** | Výučbové protokoly, knižnice nástrojov a elektród, nastavenia a diagnostika podľa stroja. |
 
-<details>
-<summary><b>Ďalšie snímky</b></summary>
+CAD rozmery sú v milimetroch. STEP/STP používa ploškovú reprezentáciu geometrie, bez parametrickej histórie. Pri detailnom stroji môže byť súbor veľký; export modelu beží vo workeri a možno ho zrušiť. Geometria a rozlíšenie obrobku zostávajú obmedzené modelom simulácie.
 
-| | |
-| --- | --- |
-| ![Sústruh](docs/img/lathe.png) | ![Sústruh – rez](docs/img/lathe-cut.png) |
-| ![Fréza](docs/img/mill.png) | ![Fréza – rez](docs/img/mill-cut.png) |
-| ![Vŕtačka](docs/img/drill.png) | ![Ohýbačka](docs/img/folder.png) |
-| ![Brúska](docs/img/grinder.png) | ![Brúska – brúsenie](docs/img/grinder-run.png) |
-| ![Pásová píla](docs/img/saw.png) | ![Fréza – ručné ovládanie](docs/img/mill-manual.png) |
-| ![Zváranie – celok](docs/img/weld.png) | ![Zváranie – húsenica po otlčení trosky](docs/img/weld-bead.png) |
+## Spustenie projektu
 
-</details>
-
-## Súbory
-
-| Cesta | Obsah |
-| --- | --- |
-| [`index.html`](index.html), [`src/main.jsx`](src/main.jsx) | vstup aplikácie pre Vite |
-| [`src/App.jsx`](src/App.jsx) | hlavné menu, smerovanie podľa `#hash`, zachytenie chýb, upozornenie bez WebGL |
-| [`src/core/`](src/core) | spoločné 3D jadro: scéna a vykresľovanie (`stage.js`), súprava tvarov a lampa (`kit.js`), ručné ovládanie (`controls.js`), výber dielov a pohľady (`inspector.js`), odopnutie polotovaru, výšková mapa a jej rozbor (`hfMath.js`), častice, zvuk (`sound.js`), export STL, jazyk |
-| [`src/ui/`](src/ui) | spoločné prvky panelu (`common.jsx`), úlohy, BOZP, kalkulačka, uloženie a export (`tools.jsx`), ilustrácie strojov v menu (`art.jsx`) |
-| [`src/machines/`](src/machines) | jeden súbor na stroj – model, simulácia, panel a úlohy; načítava sa až pri otvorení stroja. Výpočty bez three.js: `latheMath.js` (profil, závit, úlohy sústruhu), `shaperMath.js` (kulisa, nože a úlohy obrážačky), `slotterMath.js` (náboj r(θ), rez zvislou obrážačkou, drážka a štvorhran), `benderMath.js` (pružno-plastický ohyb, odpruženie, tri valce), `radialMath.js`, `cylMath.js`, `horizMath.js`, `plateMath.js`, `hobMath.js`, `shearMath.js`, `pressMath.js` (radiálna vŕtačka, brúska na guľato, horizontálka, zakružovačka, odvalovacia frézka, nožnice, výstredníkový lis), `millIndex.js` (deliaci prístroj, tyč r(x, θ), mnohohrany), `shopMath.js` (úlohy vŕtačky, ohýbačky, píly, zvárania), `migMath.js` (synergia MIG/MAG, prenos kovu, plynová ochrana), `weldShape.js` (tvar polotovarov, krivka spoja, rúra na valci, hodnotenie húsenice); `fronius.js` model zdroja TPS 450 s podávačom a fľašou |
-| [`src/app.css`](src/app.css) | farebné tokeny troch vzhľadov a štýly rozhrania (Tailwind cez PostCSS) |
-| [`static/`](static) | súbory kopírované do buildu bez zmeny: ikony, manifest, úvodná obrazovka, [`_headers`](static/_headers) s CSP a cache |
-| [`sw-template.js`](sw-template.js) | service worker pre offline režim – build doplní zoznam všetkých súborov a vytvorí `public/sw.js` |
-| [`public/`](public) | **zostavená aplikácia** (`npm run build`) – commituje sa, z nej nasadzuje Cloudflare |
-| [`tests/`](tests) | jednotkové testy (Vitest): prevodovky, nože, závit a profil sústruhu, kontroly všetkých úloh, rezné podmienky, zvarová príprava, tvary polotovarov a hodnotenie po krivke, synergia MIG/MAG, výšková mapa |
-| [`src/index.js`](src/index.js) | export `App` a jednotlivých simulátorov na použitie v inej React aplikácii (vyžaduje `three@0.186`) |
-| [`wrangler.jsonc`](wrangler.jsonc) | nasadenie na Cloudflare Workers so statickými súbormi z `public/` |
-| [`docs/AUDIT.md`](docs/AUDIT.md) | audit aplikácie – zistenia, opravy a ďalšie návrhy |
-
-## Vývoj
-
-Potrebný je Node.js 22.12 alebo novší. Závislosti sa nainštalujú raz:
+Potrebný je **Node.js ≥22.12**, npm a prehliadač s WebGL2. Závislosti sú uzamknuté v `package-lock.json`.
 
 ```bash
-npm install
-```
-
-Vývojový server s okamžitým obnovením stránky:
-
-```bash
+npm ci
 npm run dev
 ```
 
-Pred commitom: lint, testy, build a kontrola, že commitnutý `public/` zodpovedá zdrojom (to isté robí CI pri každom pull requeste):
+Vite vypíše lokálnu adresu. Pre prístup z iného zariadenia v sieti:
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+Produkčné zostavenie a jeho lokálny náhľad:
+
+```bash
+npm run build
+npm run preview -- --host 0.0.0.0
+```
+
+**`public/` je zostavený výstup, ktorý sa v tomto repozitári commituje.** Zdrojové zmeny patria do `src/`; statické vstupy do `static/`. Build aktualizuje `public/` vrátane service workera a jeho zoznamu cache súborov.
+
+## Kontroly a testy
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Súhrnná kontrola zhodná s CI navyše overí, že pracovná verzia `public/` zodpovedá repozitáru:
 
 ```bash
 npm run check
 ```
 
-Ak kontrola hlási rozdiel v `public/`, stačí spustiť `npm run build` a výsledok commitnúť.
+Po zmene zdrojov preto najprv zostav aplikáciu a zahrň nový `public/` do commitu. Testy Vitest pokrývajú výpočty strojov, NC, úber materiálu, kolízie a blokovania, knižnice, exporty aj vybrané geometrické vzťahy. Zmeny scény a HMI treba overiť aj v prehliadači na počítači a v mobilnom rozložení; porovnať snímky a vyskúšať reálny proces, nielen načítanie stránky.
+
+Na slabšom hardvéri scéna priebežne znižuje kvalitu vykresľovania. Diagnostické parametre `?debug` a `?hq` sú určené na kontrolu scény; `?hq` vypne automatické znižovanie kvality. Pokles výkonu pri split-screen ovplyvňuje počet vykreslených snímok.
+
+## Štruktúra repozitára
+
+| Cesta | Úloha |
+| --- | --- |
+| [`src/App.jsx`](src/App.jsx) | Výber strojov, hash smerovanie, skryté položky a lazy načítanie simulátorov. |
+| [`src/core/`](src/core) | Scéna, kamera, fyzické ovládanie, prehliadka obrobku, zvuk a exporty. `workAreaFeed.js` vytvára samostatnú živú kameru. |
+| [`src/machines/`](src/machines) | Jednotlivé simulátory, matematické modely, proces a ovládací panel. |
+| [`src/machines/cnc/`](src/machines/cnc) | CNC jadro, kinematika, nástroje, voxelový obrobok, Hermle a príslušenstvo. |
+| [`src/machines/precision/`](src/machines/precision) | Röders, OSCARMAX, Bystronic, zachovaný Shuangli, procesy a podklady geometrie. |
+| [`src/ui/`](src/ui) | Spoločné ovládanie, HMI, živý split-screen, knižnice, výkresy a protokoly. |
+| [`tests/`](tests) | Automatické testy Vitest. |
+| [`docs/`](docs) | Podklady modelov, CAM postup, snímky a audit. |
+| [`static/`](static) | Manifest PWA, ikony, HTTP hlavičky a ďalšie statické vstupy. |
+| [`sw-template.js`](sw-template.js) | Šablóna service workera doplnená pri zostavení. |
+| [`public/`](public) | Commitovaný produkčný výstup Vite. |
+| [`wrangler.jsonc`](wrangler.jsonc) | Cloudflare Workers Static Assets z `public/`. |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Lint, testy, build, kontrola výstupu a nasadenie. |
+
+Technológie: React 19, three.js r186, Tailwind CSS 3, Vite 8, Vitest a Cloudflare Workers. Presné verzie sú v [package.json](package.json) a lockfile. Vybrané staršie simulátory majú aj exporty v [`src/index.js`](src/index.js); kompletným vstupom aplikácie je `App`.
 
 ## Nasadenie
 
-Nasadenie je automatické: po každom zlúčení do `main` workflow [CI](.github/workflows/ci.yml) najprv spustí lint, testy a build a ak prejdú, nasadí `public/` na Cloudflare Workers (`npx wrangler deploy`). Ručne sa dá spustiť v záložke **Actions → CI → Run workflow** na vetve `main`.
+Po pushi do `main` workflow **CI** vykoná kontroly a následne nasadí statickú aplikáciu na Cloudflare. Dá sa spustiť aj cez **Actions → CI → Run workflow**. Deployment potrebuje repozitárové tajomstvá:
 
-Workflow potrebuje dve tajomstvá repozitára (**Settings → Secrets and variables → Actions**):
-
-| Tajomstvo | Kde ho získať |
+| Tajomstvo | Použitie |
 | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare → **My Profile → API Tokens → Create Token** → šablóna **Edit Cloudflare Workers** |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → **Workers & Pages** → pravý panel **Account ID** |
+| `CLOUDFLARE_API_TOKEN` | Token s oprávnením nasadiť príslušný Worker. |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare účet, do ktorého sa nasadzuje. |
 
-Bez nich sa krok nasadenia len preskočí s upozornením. Ručné nasadenie z počítača funguje aj naďalej – `public/` je v repozitári už zostavený:
+Ak tajomstvá chýbajú, krok nasadenia sa preskočí s upozornením. Pri lokálne nastavenom prístupe možno zostaviť a nasadiť:
 
 ```bash
-npx wrangler deploy
+npm run deploy
 ```
 
-Živá verzia: **https://real-machine-tools.marcel-bucala.workers.dev**
+Samotné `npx wrangler deploy` používa už vytvorený `public/`. Úspešný build sám osebe nepotvrdzuje nasadenie; v CI treba skontrolovať aj krok **Nasadenie (wrangler deploy)**.
+
+Živá aplikácia: **https://real-machine-tools.marcel-bucala.workers.dev**
+
+## Podklady a ďalšia dokumentácia
+
+- [Rozmery, fotografie, rekonštrukcie a obmedzenia presných strojov](docs/precision-machines.md)
+- [Výmena dát s PowerMill](docs/cam/powermill-exchange.md)
+- [Audit aplikácie](docs/AUDIT.md)
+- [Technický list Bystronic Xpert Pro](docs/references/bystronic-xpert-pro-technical-data.pdf)
+- [Používateľov STEP podklad krytovania Röders](docs/references/roeders-cover-user.STEP)
+
+Zdrojový kód projektu je pod [licenciou MIT](LICENSE).

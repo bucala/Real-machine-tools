@@ -2,8 +2,9 @@
 import React, { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { L, PREFS, PrefsCtx } from './core/i18n';
 import { setSoundOn } from './core/sound';
-import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, HermleArt, MillArt, PlateRollArt, PressArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
+import { BandSawArt, BenderArt, CylGrinderArt, DrillArt, FolderArt, GrinderArt, HobberArt, HorizArt, LatheArt, MigArt, HermleArt, MillArt, PlateRollArt, PressArt, PrecisionArt, OscarArt, ShuangliArt, RoedersArt, RadialArt, ShaperArt, ShearArt, SlotterArt, WelderArt } from './ui/art';
 import { PrefBar } from './ui/common';
+import { BystronicArt } from './ui/bystronicArt';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -18,6 +19,10 @@ const PlateRollSimulator = lazy(() => import('./machines/plate'));
 const ShearSimulator = lazy(() => import('./machines/shear'));
 const PressSimulator = lazy(() => import('./machines/press'));
 const HermleSimulator = lazy(() => import('./machines/hermle'));
+const RoedersSimulator = lazy(() => import('./machines/roeders'));
+const OscarSimulator = lazy(() => import('./machines/oscar'));
+const ShuangliSimulator = lazy(() => import('./machines/shuangli'));
+const BystronicSimulator = lazy(() => import('./machines/bystronic'));
 const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
@@ -116,6 +121,23 @@ const MODERN = [
     meta: L('5-osé obrábacie centrá', '5-axis machining centres'), name: 'Hermle C 32 U / C 42 U', model: 'Hermle C 32 U / C 42 U',
     desc: L('Obrábanie podľa CNC programu: ISO / G-kód aj Heidenhain Klartext, programy z CAM, 3-osé, 3+2 aj simultánne 5-osé obrábanie s TCP, skutočný úber materiálu, kolízie, zaťaženie vretena a export obrobku do STL.', 'Machining from a CNC program: ISO / G-code and Heidenhain conversational, programs from CAM, 3-axis, 3+2 and simultaneous 5-axis machining with TCP, real material removal, collisions, spindle load and part export to STL.'),
     specs: [L('C 32: 650 / 650 / 500 mm, stôl Ø650', 'C 32: 650 / 650 / 500 mm, table Ø650'), L('C 42: 800 / 800 / 550 mm, stôl Ø800', 'C 42: 800 / 800 / 550 mm, table Ø800'), L('A ±130°, C 360° · TNC 640', 'A ±130°, C 360° · TNC 640')] }) },
+  {id:'roeders',Art:RoedersArt,Comp:RoedersSimulator,t:()=>({
+    meta:L('5-osé HSC · QUADROGUIDE','5-axis HSC · QUADROGUIDE'),name:'Röders RXU 1001 DSH',model:'Röders RXU 1001 DSH',
+    desc:L('Presné vysokorýchlostné frézovanie s priamymi pohonmi, obojstranne uloženým stolom A/C a štyrmi vedeniami osi Z. ISO program, skrinka nástrojov, úber materiálu a prehliadka obrobku.','Precision high-speed milling with direct drives, a two-sided A/C trunnion and four Z guideways. ISO program, tool cabinet, material removal and workpiece inspection.'),
+    specs:['800 / 855 / 500 mm · Ø600 mm','A ±115° · C 360°','24 000 rpm · HSK-A63 · 24 T']})},
+  // Retained, including its simulator and saved data; unavailable in the public UI.
+  {id:'shuangli',hidden:true,Art:ShuangliArt,Comp:ShuangliSimulator,t:()=>({
+    meta:L('CNC hĺbkové vŕtanie','CNC deep hole drilling'),name:'ShuangliCNC ZJA13-2013F',model:'ZJA13-2013F · Siemens Edition',
+    desc:L('Vodorovné vŕtanie s dlhým jednobritým vrtákom, vodiacimi podperami a tlakovým chladením. Posuvné presklené dvere, odkrytý mechanizmus, živé HMI a export modelu aj obrobku. Vizuálna rekonštrukcia podľa rodiny ZJA13.','Horizontal drilling with a long single-lip drill, guide supports and pressure coolant. Glazed sliding doors, exposed mechanism, live HMI and machine/workpiece export. Visual reconstruction of the ZJA13 family.'),
+    specs:[L('3 osi · vodorovné vreteno','3 axes · horizontal spindle'),'Siemens Edition',L('Parametre výučbového modelu v info','Training model parameters in info')]})},
+  {id:'oscarmax',Art:OscarArt,Comp:OscarSimulator,t:()=>({
+    meta:L('Hĺbiaca elektroerózia','Die-sinking EDM'),name:'OSCARMAX EX 500',model:'OSCARMAX EX 500',
+    desc:L('Tvarová medená elektróda hĺbi dutiny v oceli bez otáčania. Pohyblivý stĺp, dielektrická nádrž, výplach a generátor 60 A. Viac operácií, aktuálna geometria dutín a export prerušeného procesu.','A shaped copper electrode sinks cavities in steel without rotation. Moving column, dielectric tank, flushing and 60 A generator. Multiple operations, actual cavity geometry and paused-process export.'),
+    specs:['500 / 400 / 450 mm','850 × 450 mm · 2 300 kg','60 A · 10 kVA · 850 l']})},
+  {id:'bystronic',Art:BystronicArt,Comp:BystronicSimulator,t:()=>({
+    meta:L('CNC ohraňovací lis','CNC press brake'),name:'Bystronic Xpert Pro 320',model:'Xpert Pro 320/4300',
+    desc:L('Ohýbanie plechu do V-matrice: synchronizovaný baran, zadné dorazy X/R/Z, predné podpery a mobilné dotykové HMI. Nastavenie materiálu, nástrojov, uhla a kontrola lisovacej sily.','Air bending in a V-die: synchronised ram, X/R/Z back gauges, front supports and a mobile touch HMI. Material, tooling and angle setup with bending-force checks.'),
+    specs:['3 200 kN · 4 300 mm',L('Zdvih 250 mm · otvorenie 640 mm','250 mm stroke · 640 mm open height'),L('Zadný doraz do 1 050 mm','Back gauge up to 1,050 mm')]})},
 ];
 
 // podpora WebGL – bez nej sa 3D scéna nedá vytvoriť
@@ -203,11 +225,11 @@ function Menu({ onOpen }) {
           </div>
         )}
         <button type="button" className="modern-banner mt-8" onClick={() => onOpen('moderne')}>
-          <span className="modern-banner-art"><HermleArt /></span>
+          <span className="modern-banner-art"><PrecisionArt /></span>
           <span className="modern-banner-body">
             <span className="modern-kicker">{L('Nová kategória', 'New category')}</span>
-            <span className="modern-banner-title">{L('Moderné stroje – CNC a 5-osé obrábanie', 'Modern machines – CNC and 5-axis machining')}</span>
-            <span className="text-sm" style={{ opacity: 0.85 }}>{L('Hermle C 32 U a C 42 U: obrábanie podľa CNC programu z CAM, ISO aj Heidenhain, simultánne 5 osí a skutočný úber materiálu.', 'Hermle C 32 U and C 42 U: machining from a CAM CNC program, ISO and Heidenhain, simultaneous 5 axes and real material removal.')}</span>
+            <span className="modern-banner-title">{L('Presné obrábanie a elektroerózia', 'Precision machining & EDM')}</span>
+            <span className="text-sm" style={{ opacity: 0.85 }}>{L('Moderné CNC technológie: viac-osé frézovanie, presné obrábanie a elektroerozívne procesy v spoločnom prostredí simulátorov.', 'Modern CNC technology: multi-axis milling, precision machining and EDM processes in a shared simulator environment.')}</span>
           </span>
           <span className="modern-banner-cta">{L('Otvoriť →', 'Open →')}</span>
         </button>
@@ -263,10 +285,11 @@ function ModernMenu({ onOpen, onBack }) {
           <PrefBar />
         </div>
         <p className="modern-kicker mt-8">Real machine tools · {L('Moderné stroje', 'Modern machines')}</p>
-        <h1 className="menu-title modern-title" tabIndex={-1}>{L('CNC obrábanie a 5-osé centrá', 'CNC machining and 5-axis centres')}</h1>
-        <p className="menu-lead">{L('Stroje riadené programom. Program napíš, vlož z CAM systému alebo použi ukážku – simulátor ho prečíta ako riadiaci systém, prepočíta 5-osú kinematiku a odoberá materiál z polotovaru.', 'Program-controlled machines. Write a program, paste it from a CAM system or use a sample – the simulator reads it like the control, computes the 5-axis kinematics and removes material from the blank.')}</p>
-        <div className="grid gap-6 mt-8 lg:grid-cols-2">
-          {MODERN.map((m) => {
+        <h1 className="menu-title modern-title" tabIndex={-1}>{L('Obrábanie, elektroerózia a tvárnenie', 'Machining, EDM & forming')}</h1>
+        <p className="menu-lead">{L('Moderné výrobné technológie v spoločnom rozhraní. Vyber dostupný stroj, priprav nástroj a program a sleduj jeho pracovný proces v 3D.', 'Modern manufacturing technologies in a shared interface. Select an available machine, prepare a tool and program, and explore its working process in 3D.')}</p>
+        <div className="modern-category-visual"><PrecisionArt/><div><span>01 · CNC</span><span>02 · HSC</span><span>03 · EDM</span><span>04 · {L('OHÝBANIE','BENDING')}</span></div></div>
+        <div className="modern-machine-grid grid gap-6 mt-8 lg:grid-cols-2">
+          {MODERN.filter(m=>!m.hidden).map((m) => {
             const tx = m.t();
             return (
               <button key={m.id} type="button" className="card modern-card" onClick={() => onOpen(m.id)}>
@@ -281,13 +304,7 @@ function ModernMenu({ onOpen, onBack }) {
               </button>
             );
           })}
-          <div className="card modern-card soon" aria-disabled="true">
-            <div className="card-body">
-              <span className="card-meta">{L('Pripravujeme', 'Coming soon')}</span>
-              <span className="card-name">{L('Ďalšie CNC stroje', 'More CNC machines')}</span>
-              <span className="text-sm muted" style={{ lineHeight: 1.5 }}>{L('CNC sústruh s poháňanými nástrojmi, drôtová rezačka…', 'CNC lathe with driven tools, wire EDM…')}</span>
-            </div>
-          </div>
+
         </div>
         <p className="text-xs muted mt-8">{L('Simulácia je výučbová – rozmery a dynamika stroja vychádzajú z katalógových údajov, riadiaci systém je zjednodušený.', 'The simulation is for training – machine dimensions and dynamics follow catalogue data, the control is simplified.')}</p>
       </div>
@@ -336,15 +353,16 @@ function App() {
   };
   // #stroj alebo #stroj/uloha=… (odkaz učiteľa na konkrétnu úlohu)
   const [mid, query = ''] = route.split('/');
-  const mm = MODERN.find((x) => x.id === mid), m = mm || MACHINES.find((x) => x.id === mid);
-  const modern = mid === 'moderne' || !!mm;
+  const entry = MODERN.find((x) => x.id === mid), mm = entry?.hidden ? null : entry, m = mm || MACHINES.find((x) => x.id === mid);
+  const modernMenu = mid === 'moderne' || !!entry?.hidden;
+  const modern = modernMenu || !!mm;
   // moderné stroje majú vlastný vizuál – nastaví sa pred vytvorením 3D scény (useLayoutEffect beží skôr)
-  useLayoutEffect(() => { try { if (modern) document.documentElement.dataset.mode = 'modern'; else delete document.documentElement.dataset.mode; } catch (err) { /* ignorované */ } }, [modern]);
+  useLayoutEffect(() => { try { if (modern) document.documentElement.dataset.mode = modernMenu ? 'modern-menu' : 'modern'; else delete document.documentElement.dataset.mode; document.documentElement.dataset.machine=mid; } catch (err) { /* ignorované */ } }, [modern,modernMenu,mid]);
   const params = Object.fromEntries(new URLSearchParams(query));
   return (
     <PrefsCtx.Provider value={{ prefs, setPref }}>
       {m ? <SimBoundary key={m.id} onBack={() => go(mm ? 'moderne' : '')}><Suspense fallback={<SimLoading />}><m.Comp lang={prefs.lang} params={params} onBack={() => go(mm ? 'moderne' : '')} /></Suspense></SimBoundary>
-        : mid === 'moderne' ? <ModernMenu onOpen={go} onBack={() => go('')} /> : <Menu onOpen={go} />}
+        : modernMenu ? <ModernMenu onOpen={go} onBack={() => go('')} /> : <Menu onOpen={go} />}
     </PrefsCtx.Provider>
   );
 }

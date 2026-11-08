@@ -1,7 +1,9 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, REDUCED_MOTION } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -225,6 +227,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     const kit = makeKit(M);
     const { add, box, cylY, cylZ, hitProxy, face } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: MIG ? 'Fronius TPS 450 MIG MAG' : 'Zváracie pracovisko MMA' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
 
@@ -632,6 +635,10 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
     apiRef.current.measure = () => ({ stats: evalWeld(), type: F.type, t: F.t, D: F.S.R ? c.wD : undefined, pos: c.wPos, slag: c.slag, ...(MIG ? { I: st.Imax || migI() } : {}) });
     apiRef.current.exportStl = () => exportStl(weldG);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work || st.arc)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(weldG);
+    };
     apiRef.current.newParts = () => { if (st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; } if (c.unclamped) { say(L('Najprv polož zvarenec späť.', 'Put the weldment back first.')); return; } newParts(); insp.goView('detail', false); say(L('Pripravené nové diely.', 'New parts are prepared.'), 'info'); };
     // výmena elektródy s animáciou: držiak sa zdvihne, ohorok vypadne, nová elektróda sa zasunie do čeľustí
     apiRef.current.newElectrode = () => {
@@ -641,7 +648,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
       say(L('Výmena elektródy…', 'Changing the electrode…'), 'info');
     };
     apiRef.current.chip = () => { if (F.hot > 0.15) { say(L('Zvar je ešte horúci – počkaj, kým vychladne.', 'The weld is still hot – wait until it cools down.')); return false; } c.slag = false; F.sl.fill(0); F.dirty = true; say(L('Troska je otlčená – vidno kresbu húsenice.', 'The slag is chipped off – the bead ripples are visible.'), 'info'); return true; };
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => weldG, getSpot: () => v3(2.4, TT + 2.6, 4.2), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => weldG, getSpot: () => v3(2.4, TT + 2.6, 4.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && st.arc) { say(L('Najprv zhasni oblúk.', 'Stop the arc first.')); return; }
       if (wi.phase() === 'in' && F.hot > 0.3) { say(L('Zvarenec je rozžhavený – nechaj ho chvíľu vychladnúť.', 'The weldment is red-hot – let it cool for a moment.')); return; }
@@ -1121,7 +1128,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef}
-        workLabels={[L('Prezrieť si zvarenec', 'Inspect the weldment'), L('Vrátiť na stôl', 'Back to the table')]} overlay={overlay}
+        workLabels={[L('Pozrieť obrobok', 'Inspect workpiece'), L('Upnúť späť', 'Clamp back')]} overlay={overlay}
         manualLabel={L('Zváranie', 'Welding')}
         tools={<>
           <button type="button" className={`scene-btn ${ui.helmet ? 'on' : ''}`} aria-pressed={ui.helmet} onClick={() => set('helmet', !ui.helmet)} title="H">
@@ -1135,7 +1142,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         </>}
         hint={L('Ťahaj: otáčanie · pravé tlačidlo: posun · koliesko: zoom · M: režim Zváranie · H: kukla', 'Drag: orbit · right button: pan · wheel: zoom · M: welding mode · H: helmet')}
         manualHint={MIG ? <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď horák, ľavé tlačidlo pri držanom pravom je spúšťač (2T / 4T), samotné ľavé tlačidlo nakláňa horák, koliesko s pravým mení výlet drôtu. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the torch, the left button with the right held is the trigger (2T / 4T), the left button alone tilts the torch, the wheel with the right button sets the stick-out. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</> : <><b className="ink">{L('Zváranie:', 'Welding:')}</b> {L('drž pravé tlačidlo a veď elektródu, ľavým pri držanom pravom zapáliš oblúk, samotné ľavé tlačidlo nakláňa elektródu, koliesko s pravým mení dĺžku oblúka. Na dotyku 1 prst vedie, 2 prsty zvárajú. Kameru vráti M alebo Esc.', 'hold the right button to guide the electrode, press the left one as well to strike the arc, the left button alone tilts the electrode, the wheel with the right button sets the arc length. On touch 1 finger guides, 2 fingers weld. M or Esc returns to the camera.')}</>} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         {MIG ? (
           <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zváranie MIG/MAG', 'Simulator · MIG/MAG welding')} title={L('Zváranie v ochrannom plyne', 'Gas metal arc welder')}
             sub={L('Predloha: invertorový zdroj Fronius TransPuls Synergic TPS 450 s podávačom drôtu VR 4000 a chladiacim modulom FK.', 'Modelled after the Fronius TransPuls Synergic TPS 450 inverter source with a VR 4000 wire feeder and an FK cooling unit.')}
@@ -1153,16 +1160,16 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
 
         {MIG && (<>
           <div className="sec">
-            <h2 className="sec-title mb-2">{L('Zdroj TPS 450', 'TPS 450 source')}</h2>
+            <div className="section-heading"><h2 className="sec-title mb-2">{L('Zdroj TPS 450', 'TPS 450 source')}</h2><SectionInfo title={L('Zdroj TPS 450', 'TPS 450 source')}><p className="text-xs muted mt-2">{L('2-takt: zvára sa, kým držíš spúšťač – na krátke zvary a stehy. 4-takt: stlač a pusti = štart, znova = koniec – na dlhé zvary.', '2-step: welds while you hold the trigger – for short welds and tacks. 4-step: press and release = start, again = stop – for long welds.')}</p></SectionInfo></div>
             <Toggle on={ui.power} label={L('Hlavný vypínač zapnutý', 'Main switch on')} onClick={() => set('power', !ui.power)} />
             <SegRow label={L('Proces', 'Process')} value={ui.prog} options={[['std', L('Synergic štandard', 'Synergic standard')], ['pulse', L('Synergic impulz', 'Synergic pulse')]]} onChange={(v) => set('prog', v)} />
             <SegRow label={L('Horák', 'Torch')} value={ui.trig} options={[['2T', L('2-takt', '2-step')], ['4T', L('4-takt', '4-step')]]} onChange={(v) => set('trig', v)} />
             <Toggle on={ui.ground} label={L('Zemniaca svorka pripojená', 'Ground clamp attached')} onClick={() => set('ground', !ui.ground)} />
-            <p className="text-xs muted mt-2">{L('2-takt: zvára sa, kým držíš spúšťač – na krátke zvary a stehy. 4-takt: stlač a pusti = štart, znova = koniec – na dlhé zvary.', '2-step: welds while you hold the trigger – for short welds and tacks. 4-step: press and release = start, again = stop – for long welds.')}</p>
+
           </div>
 
           <div className="sec">
-            <h2 className="sec-title mb-2">{L('Synergický program', 'Synergic program')}</h2>
+            <div className="section-heading"><h2 className="sec-title mb-2">{L('Synergický program', 'Synergic program')}</h2><SectionInfo title={L('Synergický program', 'Synergic program')}><p className="text-xs muted mt-2">{L('Synergia: zvolíš drôt a plyn, rýchlosťou drôtu nastavíš výkon – zdroj sám dopočíta prúd a napätie. Korekciou predĺžiš (+) alebo skrátiš (−) oblúk.', 'Synergic: choose the wire and gas, set the power with the wire speed – the source works out current and voltage. The correction lengthens (+) or shortens (−) the arc.')}</p></SectionInfo></div>
             <SegRow label={L('Drôt G3Si1', 'Wire G3Si1')} value={ui.wire} options={MIG_WIRES.map((d) => [d, `Ø${L(String(d).replace('.', ','), String(d))}`])} onChange={(v) => set('wire', v)} />
             <SegRow label={L('Plyn', 'Gas')} value={ui.gas} options={Object.entries(MIG_GASES).map(([k, g]) => [k, L(g.sk, g.en)])} onChange={(v) => set('gas', v)} />
             <Slider id="mvd" label={L('Rýchlosť drôtu', 'Wire speed')} unit="m/min" min={1} max={22} step={0.5} value={ui.vd} digits={1} onChange={(v) => set('vd', v)} />
@@ -1173,23 +1180,23 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
               {syn.overload && <div className="mt-1" style={{ color: 'var(--warn)' }}>{L(`Na drôt Ø${String(ui.wire).replace('.', ',')} je prúd príliš vysoký – zvoľ hrubší drôt.`, `The current is too high for a Ø${ui.wire} wire – choose a thicker one.`)}</div>}
               {syn.mode === 'globular' && <div className="mt-1" style={{ color: 'var(--warn)' }}>{ui.gas === 'C1' ? L('V čistom CO₂ nevznikne sprchový prenos – rozstrek je väčší.', 'Pure CO₂ gives no spray transfer – more spatter.') : L('Prechodová oblasť – veľký rozstrek. Zmeň rýchlosť drôtu alebo zapni impulz.', 'Globular range – heavy spatter. Change the wire speed or switch to pulse.')}</div>}
             </div>
-            <p className="text-xs muted mt-2">{L('Synergia: zvolíš drôt a plyn, rýchlosťou drôtu nastavíš výkon – zdroj sám dopočíta prúd a napätie. Korekciou predĺžiš (+) alebo skrátiš (−) oblúk.', 'Synergic: choose the wire and gas, set the power with the wire speed – the source works out current and voltage. The correction lengthens (+) or shortens (−) the arc.')}</p>
+
           </div>
 
           <div className="sec">
-            <h2 className="sec-title mb-2">{L('Plyn a horák', 'Gas and torch')}</h2>
+            <div className="section-heading"><h2 className="sec-title mb-2">{L('Plyn a horák', 'Gas and torch')}</h2><SectionInfo title={L('Plyn a horák', 'Gas and torch')}><p className="text-xs muted mt-1" style={{ color: cover < 0.7 ? 'var(--warn)' : undefined }}>{L(`Plynová ochrana: ${Math.round(cover * 100)} %. Prietok 12 – 16 l/min, výlet 10 – 15 mm. Dlhší výlet zníži prúd a plyn kúpeľ nechráni.`, `Gas shielding: ${Math.round(cover * 100)} %. Flow 12 – 16 l/min, stick-out 10 – 15 mm. A longer stick-out lowers the current and the gas no longer covers the pool.`)}</p></SectionInfo></div>
             <Toggle on={ui.valve} label={L('Ventil plynovej fľaše otvorený', 'Gas cylinder valve open')} onClick={() => set('valve', !ui.valve)} />
             <Slider id="mfl" label={L('Prietok plynu', 'Gas flow')} unit="l/min" min={0} max={25} step={1} value={ui.flow} onChange={(v) => set('flow', v)} />
             <Slider id="mct" label={L('Výlet drôtu (vzdialenosť špičky)', 'Stick-out (contact tip distance)')} unit="mm" min={2} max={30} step={1} value={ui.ctwd} onChange={(v) => set('ctwd', v)} />
             <Slider id="mhv" label={L('Najvyššia rýchlosť ruky pri zváraní', 'Max hand speed while welding')} unit="mm/s" min={1} max={20} step={0.5} value={ui.handV} digits={1} onChange={(v) => set('handV', v)} />
-            <p className="text-xs muted mt-1" style={{ color: cover < 0.7 ? 'var(--warn)' : undefined }}>{L(`Plynová ochrana: ${Math.round(cover * 100)} %. Prietok 12 – 16 l/min, výlet 10 – 15 mm. Dlhší výlet zníži prúd a plyn kúpeľ nechráni.`, `Gas shielding: ${Math.round(cover * 100)} %. Flow 12 – 16 l/min, stick-out 10 – 15 mm. A longer stick-out lowers the current and the gas no longer covers the pool.`)}</p>
+            <p className="text-xs muted mt-1" style={{ color: cover < 0.7 ? 'var(--warn)' : undefined }}>{L('Plynová ochrana','Gas shielding')}: {Math.round(cover * 100)} %</p>
             {ui.manual && <p className="text-xs muted mt-1">{L(`Drôtu spotrebovaného: ${fmt(tele.wire || 0)} m.`, `Wire used: ${fmt(tele.wire || 0)} m.`)}</p>}
           </div>
         </>)}
 
         {!MIG && (<>
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Zváračka', 'Welder')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Zváračka', 'Welder')}</h2><SectionInfo title={L('Zváračka', 'Welder')}><p className="text-xs muted mt-2">{L('Pri 220 V je dovolený prúd najviac 75 A – inak istič vypadne.', 'On 220 V the current is limited to 75 A – otherwise the breaker trips.')}</p></SectionInfo></div>
           <SegRow label={L('Prepínač', 'Switch')} value={ui.mode} options={[['off', '0'], ['w380', '380 V'], ['w220', '220 V'], ['charge', L('Nabíjanie', 'Charging')]]} onChange={(v) => set('mode', v)} />
           <div className="text-sm font-semibold mb-1">{L('Zvárací prúd', 'Welding current')}</div>
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1197,25 +1204,27 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
           </div>
           <Toggle on={ui.ground} label={L('Zemniaca svorka pripojená', 'Ground clamp attached')} onClick={() => set('ground', !ui.ground)} />
           {ui.tripped && <button type="button" className="btn w-full mt-2" onClick={() => set('tripped', false)}>{L('Zapnúť istič', 'Reset the breaker')}</button>}
-          <p className="text-xs muted mt-2">{L('Pri 220 V je dovolený prúd najviac 75 A – inak istič vypadne.', 'On 220 V the current is limited to 75 A – otherwise the breaker trips.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Elektróda', 'Electrode')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Elektróda', 'Electrode')}</h2><SectionInfo title={L('Elektróda', 'Electrode')}><p className="text-xs muted mb-2">{L(`Odporúčaný prúd pre Ø${ui.de}: ${lo} – ${hi} A. Dĺžka oblúka ≈ priemer elektródy.`, `Recommended current for Ø${ui.de}: ${lo} – ${hi} A. Arc length ≈ electrode diameter.`)}</p>
+<p className="text-xs muted mt-1">{L('Elektróda ide za kurzorom (modrý krúžok) najviac touto rýchlosťou – bežne 2 – 6 mm/s. Pomalší posuv dá širšiu a vyššiu húsenicu.', 'The electrode follows the cursor (blue ring) at most at this speed – typically 2 – 6 mm/s. Slower travel gives a wider, higher bead.')}</p></SectionInfo></div>
           <SegRow label={L('Druh', 'Type')} value={ui.etype} options={Object.entries(ELECTRODES).map(([k, e]) => [k, L(e.sk, e.en)])}
             onChange={(v) => { set('etype', v); if (!ELECTRODES[v].r[ui.de]) set('de', 3.2); }} />
           <SegRow label={L('Priemer', 'Diameter')} value={ui.de} options={Object.keys(ELECTRODES[ui.etype].r).map(Number).sort((a, b) => a - b).map((d) => [d, `Ø${L(String(d).replace('.', ','), String(d))}`])} onChange={(v) => set('de', v)} />
-          <p className="text-xs muted mb-2">{L(`Odporúčaný prúd pre Ø${ui.de}: ${lo} – ${hi} A. Dĺžka oblúka ≈ priemer elektródy.`, `Recommended current for Ø${ui.de}: ${lo} – ${hi} A. Arc length ≈ electrode diameter.`)}</p>
+
           <Slider id="wla" label={L('Dĺžka oblúka (výška elektródy)', 'Arc length (electrode height)')} unit="mm" min={0} max={12} step={0.5} value={ui.arcLen} digits={1} onChange={(v) => set('arcLen', v)} />
           <Slider id="whv" label={L('Najvyššia rýchlosť ruky pri zváraní', 'Max hand speed while welding')} unit="mm/s" min={1} max={20} step={0.5} value={ui.handV} digits={1} onChange={(v) => set('handV', v)} />
           <Toggle on={ui.autoArc} label={L('Ruka dorovnáva opaľovanie elektródy', 'Hand compensates electrode burn-off')} onClick={() => set('autoArc', !ui.autoArc)} />
-          <p className="text-xs muted mt-1">{L('Elektróda ide za kurzorom (modrý krúžok) najviac touto rýchlosťou – bežne 2 – 6 mm/s. Pomalší posuv dá širšiu a vyššiu húsenicu.', 'The electrode follows the cursor (blue ring) at most at this speed – typically 2 – 6 mm/s. Slower travel gives a wider, higher bead.')}</p>
+
           <button type="button" className="btn w-full mt-2" disabled={tele.swap || tele.arc} onClick={() => apiRef.current.newElectrode && apiRef.current.newElectrode()}>{L('Vymeniť elektródu (E)', 'Replace the electrode (E)')}</button>
         </div>
         </>)}
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Zvar a polotovar', 'Joint and parts')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Zvar a polotovar', 'Joint and parts')}</h2><SectionInfo title={L('Zvar a polotovar', 'Joint and parts')}><p className="text-xs muted mb-3">{grpNow === 'plane' || ui.wType === 'K' ? '' : L(`Pre tento tvar sa dajú nastaviť polohy ${allowed.join(', ')}.`, `Positions available for this shape: ${allowed.join(', ')}.`)}{FILLETS.includes(ui.wType) && ui.wPos === 'PC' ? ` ${L('PC je poloha pre tupé zvary.', 'PC is a butt-weld position.')}` : ''}{!FILLETS.includes(ui.wType) && (ui.wPos === 'PB' || ui.wPos === 'PD') ? ` ${L('PB a PD sú polohy pre kútové zvary.', 'PB and PD are fillet-weld positions.')}` : ''}</p>
+<p className="text-xs muted">{L('V režime Zváranie nakláňaš aj myšou: drž samotné ľavé tlačidlo a ťahaj – hore / dole sklon v smere zvárania, do strán pracovný uhol. Ťahom (10 – 25°) sa zvar viac natavuje, tlačením je plochší; nad 45° pribúda rozstrek' + (MIG ? ' a plyn uniká.' : '.'), 'In welding mode you can tilt with the mouse too: hold the left button alone and drag – up / down tilts along the travel, sideways sets the work angle. Dragging (10 – 25°) gives deeper fusion, pushing a flatter bead; beyond 45° spatter increases' + (MIG ? ' and the gas escapes.' : '.'))}</p>{(ui.wType === 'RR' && ui.wPos === 'PA') && <><p className="text-xs muted">{L('Rúra sa otáča pod horákom, miesto zvárania je stále hore. Drž horák nad spojom a veď ho len priečne; vrstvy kladieš pri ďalších otáčkach.', 'The pipe turns under the torch and the weld spot stays on top. Hold the torch over the joint and only move across it; lay further passes on the next turns.')}</p></>}</SectionInfo></div>
           <div className="text-sm font-semibold mb-1">{L('Tvar a poloha polotovarov', 'Shape and position of the parts')}</div>
           <div className="grid grid-cols-2 gap-1.5 mb-2">
             {SHAPE_GROUPS.map(([g, sk, en]) => (
@@ -1241,12 +1250,11 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
               </button>
             ))}
           </div>
-          <p className="text-xs muted mb-3">{grpNow === 'plane' || ui.wType === 'K' ? '' : L(`Pre tento tvar sa dajú nastaviť polohy ${allowed.join(', ')}.`, `Positions available for this shape: ${allowed.join(', ')}.`)}{FILLETS.includes(ui.wType) && ui.wPos === 'PC' ? ` ${L('PC je poloha pre tupé zvary.', 'PC is a butt-weld position.')}` : ''}{!FILLETS.includes(ui.wType) && (ui.wPos === 'PB' || ui.wPos === 'PD') ? ` ${L('PB a PD sú polohy pre kútové zvary.', 'PB and PD are fillet-weld positions.')}` : ''}</p>
+
           {ui.wType === 'RR' && ui.wPos === 'PA' && (
             <div className="desc mb-3" style={{ marginTop: 0 }}>
               <Toggle on={ui.rotOn} label={L('Polohovadlo otáča rúru', 'Positioner turns the pipe')} onClick={() => set('rotOn', !ui.rotOn)} />
               <Slider id="wrv" label={L('Obvodová rýchlosť (= rýchlosť zvárania)', 'Surface speed (= travel speed)')} unit="mm/s" min={0.5} max={10} step={0.5} value={ui.rotV} digits={1} onChange={(v) => set('rotV', v)} />
-              <p className="text-xs muted">{L('Rúra sa otáča pod horákom, miesto zvárania je stále hore. Drž horák nad spojom a veď ho len priečne; vrstvy kladieš pri ďalších otáčkach.', 'The pipe turns under the torch and the weld spot stays on top. Hold the torch over the joint and only move across it; lay further passes on the next turns.')}</p>
             </div>
           )}
           {usesSize(ui.wType) && <SegRow label={ui.wType === 'JK' ? L('Jokel', 'Box section') : L('Rúra Ø', 'Pipe Ø')} value={ui.wD} options={sizeOptions(ui.wType).map((d) => [d, ui.wType === 'JK' ? `${d}×${d}` : fmtD(d)])} onChange={(v) => set('wD', v)} />}
@@ -1265,21 +1273,21 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
             <button type="button" className="btn" onClick={() => { set('tiltA', 20); set('tiltB', 0); }}>{L('Vyrovnať', 'Reset')}</button>
             {FILLETS.includes(ui.wType) && ui.wType !== 'L' && <button type="button" className="btn" onClick={() => { set('tiltA', 15); set('tiltB', ui.tiltB < 0 ? -45 : 45); }}>{L('45° do kúta', '45° into the corner')}</button>}
           </div>
-          <p className="text-xs muted">{L('V režime Zváranie nakláňaš aj myšou: drž samotné ľavé tlačidlo a ťahaj – hore / dole sklon v smere zvárania, do strán pracovný uhol. Ťahom (10 – 25°) sa zvar viac natavuje, tlačením je plochší; nad 45° pribúda rozstrek' + (MIG ? ' a plyn uniká.' : '.'), 'In welding mode you can tilt with the mouse too: hold the left button alone and drag – up / down tilts along the travel, sideways sets the work angle. Dragging (10 – 25°) gives deeper fusion, pushing a flatter bead; beyond 45° spatter increases' + (MIG ? ' and the gas escapes.' : '.'))}</p>
+
           <button type="button" className="btn w-full mt-2" onClick={() => apiRef.current.newParts && apiRef.current.newParts()}>{L('Pripraviť nové diely', 'Prepare new parts')}</button>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Ochrana', 'Protection')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Ochrana', 'Protection')}</h2><SectionInfo title={L('Ochrana', 'Protection')}><p className="text-xs muted mt-2">{L(`Bez kukly oblúk oslňuje celú obrazovku. Záblesky bez kukly: ${tele.flashes || 0}.`, `Without the helmet the arc blinds the whole screen. Flashes without helmet: ${tele.flashes || 0}.`)} {L('Pri vypnutých efektoch sa obrazovka rozjasní plynulo a nebliká.', 'With effects off the screen brightens smoothly and does not flicker.')}</p>{(ui.helmetType === 'auto') && <><p className="text-xs muted">{L('Senzory zachytia oblúk a sklo okamžite stmavne; bez oblúka je priehľadné, takže vidíš, kam priložíš elektródu.', 'The sensors detect the arc and the glass darkens instantly; without the arc it is clear, so you see where to place the electrode.')}</p></>}
+{!(ui.helmetType === 'auto') && <><p className="text-xs muted mt-2">{L('Pevné tmavé sklo DIN 11 – bez oblúka cez neho takmer nič nevidno, elektródu treba priložiť naslepo.', 'Fixed dark DIN 11 glass – without the arc you can hardly see anything, the electrode has to be placed blind.')}</p></>}</SectionInfo></div>
           <SegRow label={L('Kukla', 'Helmet')} value={ui.helmetType} options={[['auto', L('Moderná (senzor)', 'Modern (sensor)')], ['old', L('Stará (pevné sklo)', 'Old (fixed glass)')]]} onChange={(v) => set('helmetType', v)} />
           <Toggle on={ui.helmet} label={L('Zváračská kukla spustená (H)', 'Welding helmet down (H)')} onClick={() => set('helmet', !ui.helmet)} />
           {ui.helmetType === 'auto' ? (<div className="mt-2">
             <Slider id="wsh" label={L('Stupeň stmavenia', 'Shade')} unit="DIN" min={9} max={13} step={1} value={ui.shade} onChange={(v) => set('shade', v)} />
             <Slider id="wdl" label={L('Oneskorenie zosvetlenia', 'Light-state delay')} unit="s" min={0.1} max={1} step={0.1} value={ui.adfDelay} digits={1} onChange={(v) => set('adfDelay', v)} />
-            <p className="text-xs muted">{L('Senzory zachytia oblúk a sklo okamžite stmavne; bez oblúka je priehľadné, takže vidíš, kam priložíš elektródu.', 'The sensors detect the arc and the glass darkens instantly; without the arc it is clear, so you see where to place the electrode.')}</p>
-          </div>) : <p className="text-xs muted mt-2">{L('Pevné tmavé sklo DIN 11 – bez oblúka cez neho takmer nič nevidno, elektródu treba priložiť naslepo.', 'Fixed dark DIN 11 glass – without the arc you can hardly see anything, the electrode has to be placed blind.')}</p>}
+          </div>) : <></>}
           <Toggle on={ui.flashFx} label={L('Efekty záblesku (blikanie oblúka)', 'Flash effects (arc flicker)')} onClick={() => set('flashFx', !ui.flashFx)} />
-          <p className="text-xs muted mt-2">{L(`Bez kukly oblúk oslňuje celú obrazovku. Záblesky bez kukly: ${tele.flashes || 0}.`, `Without the helmet the arc blinds the whole screen. Flashes without helmet: ${tele.flashes || 0}.`)} {L('Pri vypnutých efektoch sa obrazovka rozjasní plynulo a nebliká.', 'With effects off the screen brightens smoothly and does not flicker.')}</p>
+          <p className="text-xs muted mt-2">{L('Záblesky bez kukly','Flashes without helmet')}: {tele.flashes || 0}</p>
         </div>
 
         <div className="sec">
@@ -1296,7 +1304,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Rez zvarom a zvarová mierka', 'Weld section and gauge')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Rez zvarom a zvarová mierka', 'Weld section and gauge')}</h2><SectionInfo title={L('Rez zvarom a zvarová mierka', 'Weld section and gauge')}><p className="text-xs muted mt-1">{L('Tmavosivý je leptaný základný materiál, svetlé sú húsenice (každá iným odtieňom), prerušovaná čiara je hranica natavenia, olivová oblasť je tepelne ovplyvnená. Červená značka = neprievar. Oranžovo zvarová mierka. Miesto rezu ukazuje v scéne červená rovina.', 'Dark grey is the etched parent metal, the light areas are the passes (each in its own shade), the dashed line is the fusion boundary, the olive band is the heat-affected zone. Red mark = lack of fusion. The weld gauge is in orange. The red plane in the scene shows where the section is cut.')}</p></SectionInfo></div>
           <Toggle on={ui.secOn} label={L('Rez zvarom (makrovýbrus)', 'Weld section (macro etch)')} onClick={() => set('secOn', !ui.secOn)} />
           {ui.secOn && (<>
             <Slider id="wsp" label={L('Miesto rezu pozdĺž zvaru', 'Section position along the weld')} unit="%" min={0} max={100} step={1} value={ui.secPos} onChange={(v) => set('secPos', v)} />
@@ -1309,7 +1317,6 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
                 {sec.m.wallFus != null && <div style={{ color: sec.m.lof ? 'var(--warn)' : undefined }}>{L('Natavenie bokov úkosu', 'Side-wall fusion')}: <b>{fmt(sec.m.wallFus)} mm</b>{sec.m.lof ? ` – ${L('studený spoj (neprievar) na boku', 'cold lap on the side wall')}` : ''}</div>}
                 {(sec.m.por > 0 || sec.m.inc > 0) && <div style={{ color: 'var(--warn)' }}>{sec.m.por > 0 ? L('póry v reze', 'pores in the section') : ''}{sec.m.por > 0 && sec.m.inc > 0 ? ' · ' : ''}{sec.m.inc > 0 ? L('troskové vtrúseniny', 'slag inclusions') : ''}</div>}
               </div>
-              <p className="text-xs muted mt-1">{L('Tmavosivý je leptaný základný materiál, svetlé sú húsenice (každá iným odtieňom), prerušovaná čiara je hranica natavenia, olivová oblasť je tepelne ovplyvnená. Červená značka = neprievar. Oranžovo zvarová mierka. Miesto rezu ukazuje v scéne červená rovina.', 'Dark grey is the etched parent metal, the light areas are the passes (each in its own shade), the dashed line is the fusion boundary, the olive band is the heat-affected zone. Red mark = lack of fusion. The weld gauge is in orange. The red plane in the scene shows where the section is cut.')}</p>
             </>) : <p className="text-sm muted mt-1">{L('V tomto mieste ešte nie je zvar.', 'There is no weld at this spot yet.')}</p>}
           </>)}
         </div>
@@ -1317,8 +1324,8 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         <ExportSection machine={MIG ? 'mag' : 'zvaranie'} apiRef={apiRef} canSave={false} />
         <ViewSection apiRef={apiRef} views={[['detail', L('Detail spoja', 'Joint detail')], ['zhora', L('Zhora', 'Top')], ['celok', L('Celok', 'Overview')], ['zvaracka', MIG ? L('Zdroj TPS 450', 'TPS 450 source') : L('Zváračka', 'Welder')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

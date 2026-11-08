@@ -1,8 +1,10 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { createHeightField } from '../core/heightField';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -68,6 +70,7 @@ function GrinderSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, handwheel, orient } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Rovinná brúska' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -216,10 +219,14 @@ function GrinderSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(hf.mesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(hf.mesh);
+    };
 
     // ---------- polotovar ----------
     const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(3.0, 9.6, 4.6),
-      onState: (v) => { push('unclamped', v); push('magnet', !v); } });
+      onState: (v) => { push('unclamped', v); push('manual',c.manual); push('magnet', !v); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.wheel || st.wr > 1) { say(L('Obrobok sa snímá len pri stojacom kotúči.', 'The workpiece can only be removed with the wheel stopped.')); return; }
@@ -421,7 +428,7 @@ function GrinderSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · brúska', 'Simulator · grinder')} title={L('Rovinná brúska', 'Surface grinder')}
           sub={L('Predloha: BPH 300 s vodorovným vretenom a magnetickou doskou. Kotúč Ø300 × 40 mm.', 'Modelled after the BPH 300 with a horizontal spindle and a magnetic chuck. Wheel Ø300 × 40 mm.')}
           rows={[['X', tele.x.toFixed(2)], ['Y', tele.y.toFixed(2)], ['Z', tele.z.toFixed(3)]]}
@@ -446,7 +453,7 @@ function GrinderSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Polohy', 'Positions')}</h2><SectionInfo title={L('Polohy', 'Positions')}><p className="text-xs muted mt-2">{L(`Obrobok je vysoký ${ui.bH} mm. Prisúvaj po 0,01 – 0,05 mm; viac ako 0,1 mm na prechod stroj nedovolí.`, `The workpiece is ${ui.bH} mm high. Feed in 0.01 – 0.05 mm steps; the machine refuses more than 0.1 mm per pass.`)}</p></SectionInfo></div>
           <Slider id="gx" label={L('Stôl X', 'Table X')} unit="mm" min={0} max={600} step={1} value={ui.x} actual={tele.x} onChange={(v) => set('x', v)} disabled={ui.autoX} />
           {ui.autoX && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Pri zapnutom pohybe stola tam a späť sa stôl ručne neposúva – vypni ho nižšie.', 'With table reciprocation on, the table cannot be moved by hand – switch it off below.')}</p>}
           <Slider id="gy" label={L('Sane Y', 'Saddle Y')} unit="mm" min={0} max={240} step={0.5} value={ui.y} actual={tele.y} digits={1} onChange={(v) => set('y', v)} />
@@ -454,7 +461,7 @@ function GrinderSimulator({ onBack, params }) {
           <div className="flex flex-wrap gap-2">
             {[-0.1, -0.02, -0.01, 0.01, 0.1, 1].map((d) => <button key={d} type="button" className="btn" onClick={() => set('z', Math.round((ui.z + d) * 1000) / 1000)}>{d > 0 ? '+' : ''}{L(String(d).replace('.', ','), String(d))}</button>)}
           </div>
-          <p className="text-xs muted mt-2">{L(`Obrobok je vysoký ${ui.bH} mm. Prisúvaj po 0,01 – 0,05 mm; viac ako 0,1 mm na prechod stroj nedovolí.`, `The workpiece is ${ui.bH} mm high. Feed in 0.01 – 0.05 mm steps; the machine refuses more than 0.1 mm per pass.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -492,8 +499,8 @@ function GrinderSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail kotúča', 'Wheel detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['panel', L('Panel', 'Panel')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

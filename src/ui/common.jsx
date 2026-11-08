@@ -2,6 +2,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { L, PrefsCtx } from '../core/i18n';
 import { logNear } from '../core/util';
+import { MachineDownload } from './machineDownload';
+import { SectionInfo } from './sectionInfo';
 
 // ---------- spoločné prvky rozhrania ----------
 // telemetria pre panel: nový stav sa nastaví len pri skutočnej zmene – stojaci stroj panel neprekresľuje
@@ -100,8 +102,21 @@ function Seg({ value, options, onChange, label }) {
   );
 }
 
+function SoundToggle({ className = 'btn' }) {
+  const { prefs, setPref } = React.useContext(PrefsCtx);
+  return (
+      <button type="button" className={`${className} ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
+        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
+        onClick={() => setPref('sound', !prefs.sound)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
+          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+        </svg>
+      </button>
+  );
+}
+
 // prepínač vzhľadu (skin) a jazyka
-function PrefBar() {
+function PrefBar({ sound = true }) {
   const { prefs, setPref } = React.useContext(PrefsCtx);
   const skins = [['green', '#4f7f3b', L('Zelený', 'Green')], ['dark', '#2b3138', L('Tmavý', 'Dark')], ['light', '#e9ece5', L('Svetlý', 'Light')]];
   return (
@@ -113,13 +128,7 @@ function PrefBar() {
         ))}
       </div>
       <Seg label={L('Jazyk', 'Language')} value={prefs.lang} options={[['sk', 'SK'], ['en', 'EN']]} onChange={(v) => setPref('lang', v)} />
-      <button type="button" className={`btn ${prefs.sound ? 'active' : ''}`} style={{ padding: '3px 8px', minHeight: 26 }} aria-pressed={!!prefs.sound}
-        title={prefs.sound ? L('Vypnúť zvuk', 'Mute') : L('Zapnúť zvuk strojov', 'Turn machine sound on')} aria-label={L('Zvuk strojov', 'Machine sound')}
-        onClick={() => setPref('sound', !prefs.sound)}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block' }}>
-          <path d="M4 9h4l5-4v14l-5-4H4z" />{prefs.sound ? <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /> : <path d="M17 9l5 6M22 9l-5 6" />}
-        </svg>
-      </button>
+      {sound && <SoundToggle />}
     </div>
   );
 }
@@ -172,7 +181,7 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
       {manualHint ? <p>{manualHint}</p> : <HelpRows rows={HELP_MANUAL()} />}
       {canUnclamp && (<>
         <h3>{L('Polotovar', 'Workpiece')}</h3>
-        <p>{L(`Tlačidlo „${workLabels ? workLabels[0] : 'Odopnúť polotovar'}“ vyberie obrobok zo stroja – ťahaním ho otáčaš, kolieskom približuješ, „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na miesto.`, `“${workLabels ? workLabels[0] : 'Unclamp workpiece'}” takes the work out of the machine – drag to rotate it, scroll to zoom, “${workLabels ? workLabels[1] : 'Clamp back'}” puts it back.`)}</p>
+        <p>{L(`Tlačidlo „${workLabels ? workLabels[0] : 'Pozrieť obrobok'}“ vyberie obrobok zo stroja – ťahaním ho otáčaš, kolieskom približuješ, „${workLabels ? workLabels[1] : 'Upnúť späť'}“ ho vráti na miesto.`, `“${workLabels ? workLabels[0] : 'Inspect workpiece'}” takes the work out of the machine – drag to rotate it, scroll to zoom, “${workLabels ? workLabels[1] : 'Clamp back'}” puts it back.`)}</p>
       </>)}
       <h3>{L('Tipy', 'Tips')}</h3>
       <ul>{[...(tips || []), ...HELP_TIPS()].map((x) => <li key={x}>{x}</li>)}</ul>
@@ -180,10 +189,17 @@ function SceneHelp({ onClose, hint, manualLabel, manualHint, tips, canUnclamp, w
   );
 }
 
-function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, overlay, hint, manualLabel, manualHint, tools, tips }) {
+function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selectPart, chips, onBack, apiRef, canUnclamp = true, workLabels, workBelowModes = false, overlay, hint, manualLabel, manualHint, tools, tips }) {
   const inspect = ui.unclamped;
   const [help, setHelp] = useState(false);
   const closeHelp = React.useCallback(() => setHelp(false), []);
+  const workButton = canUnclamp && (
+    <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
+      onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
+      {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Pozrieť obrobok', 'Inspect workpiece')}
+    </button>
+  );
   return (
     <div className="scene-wrap relative flex-1 overflow-hidden">
       <div ref={mountRef} className="absolute inset-0" />
@@ -203,6 +219,7 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
             {chips.map((ch) => <span key={ch.text} className="chip"><span className="lamp" style={{ color: ch.color }} />{ch.text}</span>)}
             <button type="button" className={`scene-btn help-btn ${help ? 'on' : ''}`} aria-pressed={help} aria-label={L('Pomocník: ovládanie a tipy', 'Help: controls and tips')}
               title={L('Ovládanie a tipy', 'Controls and tips')} onClick={() => setHelp((v) => !v)}>i</button>
+            <SoundToggle className="scene-btn" />
           </div>
           {help && <SceneHelp onClose={closeHelp} hint={hint} manualLabel={manualLabel} manualHint={manualHint} tips={tips} canUnclamp={canUnclamp} workLabels={workLabels} />}
         </div>
@@ -218,16 +235,10 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
               <span className="hidden lg:inline">{manualLabel || L('Ručné ovládanie', 'Manual control')}</span><span className="lg:hidden">{manualLabel || L('Ručne', 'Manual')}</span>
             </button>
           </div>
-          {canUnclamp && (
-            <button type="button" className={`scene-btn ${inspect ? 'on' : ''}`} aria-pressed={inspect}
-              onClick={() => apiRef.current.toggleWork && apiRef.current.toggleWork()}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16v10H4zM8 7V4h8v3" /></svg>
-              {workLabels ? workLabels[inspect ? 1 : 0] : inspect ? L('Upnúť späť', 'Clamp back') : L('Odopnúť polotovar', 'Unclamp workpiece')}
-            </button>
-          )}
+          {!workBelowModes && workButton}
         </div>
         {/* ďalšie tlačidlá v scéne pod hlavným riadkom – pri zalomení sa posunú nadol, neprekrývajú sa */}
-        {tools && <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{tools}</div>}
+        <div className="flex flex-wrap justify-end gap-2" style={{ zIndex: 6 }}>{workBelowModes && workButton}{tools}</div>
         </div>
       </div>
     </div>
@@ -236,14 +247,18 @@ function SceneView({ mountRef, layerRef, tipRef, ui, set, parts, selected, selec
 
 // chod tam a späť (vzad / stop / vpred) v rovnakom štýle ako hlavné tlačidlo Štart / Stop
 function DirRun({ value, onChange, labels }) {
-  const [lb, ls, lf] = labels || [L('◀ Vzad', '◀ Reverse'), L('■ Stop', '■ Stop'), L('Vpred ▶', 'Forward ▶')];
+  const [lb, ls, lf] = labels || [L('Vzad', 'Reverse'), L('Stop', 'Stop'), L('Vpred', 'Forward')];
   return (
     <div className="run-row" role="group" aria-label={L('Smer chodu', 'Drive direction')}>
-      <button type="button" className={`btn-run start ${value === -1 ? 'is-on' : 'is-off'}`} aria-pressed={value === -1} onClick={() => onChange(value === -1 ? 0 : -1)}>{lb}</button>
-      <button type="button" className={`btn-run stop ${value ? 'is-on' : 'is-off'}`} onClick={() => onChange(0)}>{ls}</button>
-      <button type="button" className={`btn-run start ${value === 1 ? 'is-on' : 'is-off'}`} aria-pressed={value === 1} onClick={() => onChange(value === 1 ? 0 : 1)}>{lf}</button>
+      <button type="button" className={`btn-run start ${value === -1 ? 'is-on' : ''}`} aria-pressed={value === -1} onClick={() => onChange(value === -1 ? 0 : -1)}><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><path d="M10 1 2 6l8 5z" /></svg>{lb}</button>
+      <button type="button" className={`btn-run stop ${value === 0 ? 'is-on' : ''}`} aria-pressed={value === 0} onClick={() => onChange(0)}><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><rect x="1" y="1" width="10" height="10" /></svg>{ls}</button>
+      <button type="button" className={`btn-run start ${value === 1 ? 'is-on' : ''}`} aria-pressed={value === 1} onClick={() => onChange(value === 1 ? 0 : 1)}>{lf}<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" className="shrink-0"><path d="m2 1 8 5-8 5z" /></svg></button>
     </div>
   );
+}
+
+function PartLabelsButton({ui,set}) {
+  return <button type="button" className={`btn part-labels-toggle ${ui.labels?'active':''}`} aria-pressed={!!ui.labels} title={L('Názvy častí stroja','Machine part names')} onClick={()=>{if(!ui.labels&&ui.manual)set('manual',false);set('labels',!ui.labels);}}>{L('Názvy častí','Part names')}</button>;
 }
 
 function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
@@ -251,18 +266,15 @@ function PanelHeader({ kicker, title, sub, rows, foot, status, ui, set }) {
     <div className="sec">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="sec-title" style={{ letterSpacing: '.12em' }}>{kicker}</p>
-        <PrefBar />
+        <PrefBar sound={false} />
       </div>
-      <h1 className="app-title mt-3" tabIndex={-1}>{title}</h1>
-      <p className="text-xs muted mt-1">{sub}</p>
+      <div className="section-heading mt-3"><h1 className="app-title" tabIndex={-1}>{title}</h1><PartLabelsButton ui={ui} set={set}/><SectionInfo title={title}><p>{sub}</p></SectionInfo></div>
       <div className="dro mt-3 tnum">
         {rows.map(([l, v]) => <div key={l} className="dro-row"><span>{l}</span><b>{v}</b></div>)}
         <div className="dro-sub">{foot.map((s) => <span key={s}>{s}</span>)}</div>
       </div>
       <div className={`msg msg-${status.kind}`} role="status" aria-live={status.kind === 'run' || status.kind === 'idle' ? 'off' : 'polite'}><span className="lamp" />{status.text}</div>
-      <div className="mt-2">
-        <Toggle noParam on={ui.labels} label={L('Popisy častí v modeli', 'Part labels in the model')} onClick={() => set('labels', !ui.labels)} />
-      </div>
+
     </div>
   );
 }
@@ -285,7 +297,7 @@ function PartsSection({ parts, selected, selectPart }) {
   return (
     <div className="sec">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2>
+        <div className="section-heading"><h2 className="sec-title">{L('Časti stroja', 'Machine parts')}</h2><SectionInfo title={L('Časti stroja', 'Machine parts')}><p>{L('Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.', 'Pick a part from the list or click it in the model – it is highlighted and its description is shown.')}</p></SectionInfo></div>
         {selected && <button type="button" className="text-xs muted underline" onClick={() => selectPart(selected)}>{L('Zrušiť výber', 'Clear selection')}</button>}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -293,10 +305,7 @@ function PartsSection({ parts, selected, selectPart }) {
           <button key={p.key} type="button" className={`part-btn ${selected === p.key ? 'active' : ''}`} onClick={() => selectPart(p.key)}>{p.short}</button>
         ))}
       </div>
-      <div className="desc">
-        {sel ? (<><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></>)
-          : <span className="muted">{L('Vyber časť zo zoznamu alebo klikni na ňu v modeli – zvýrazní sa a zobrazí sa jej popis.', 'Pick a part from the list or click it in the model – it is highlighted and its description is shown.')}</span>}
-      </div>
+      {sel && <div className="desc"><div className="font-semibold mb-1">{sel.name}</div><div>{sel.desc}</div></div>}
     </div>
   );
 }
@@ -308,10 +317,9 @@ const mkParts = (rows) => rows.map(([key, ss, se, ns, ne, ds, de]) => ({ key, sh
 function BlankSection({ title, children, onApply, applyLabel, note }) {
   return (
     <div className="sec">
-      <h2 className="sec-title mb-2">{title || L('Polotovar', 'Workpiece')}</h2>
+      <div className="section-heading"><h2 className="sec-title">{title || L('Polotovar', 'Workpiece')}</h2>{note && <SectionInfo title={title || L('Polotovar', 'Workpiece')}><p>{note}</p></SectionInfo>}</div>
       {children}
       <button type="button" className="btn mt-1 w-full" onClick={onApply}>{applyLabel || L('Upnúť nový polotovar', 'Clamp a new workpiece')}</button>
-      {note && <p className="text-xs muted mt-2">{note}</p>}
     </div>
   );
 }
@@ -326,13 +334,12 @@ function SegRow({ label, value, options, onChange, noParam }) {
   );
 }
 
-function HelpFooter() {
+function HelpFooter({ apiRef, ui }) {
   return (
-    <div className="sec text-xs muted" style={{ borderBottom: 0 }}>
-      {L('Ovládanie kamery, ručné ovládanie prvkov stroja a tipy nájdeš pod ikonou „i“ vľavo hore v scéne. Kláves M prepína kameru a ručné ovládanie.',
-        'Camera control, manual control of the machine and tips are under the “i” icon at the top left of the scene. The M key switches between camera and manual control.')}
+    <div className="sec machine-download-footer" style={{ borderBottom: 0 }}>
+      <MachineDownload apiRef={apiRef} disabled={ui.unclamped} className="btn" />
     </div>
   );
 }
 
-export { BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };
+export { PartLabelsButton, BlankSection, DirRun, GEAR_LOCK, HelpFooter, PanelHeader, PartsSection, PrefBar, SceneView, Seg, SegRow, Slider, SoundToggle, StepSelect, Toggle, ViewSection, mkParts, useMachine, useTele };

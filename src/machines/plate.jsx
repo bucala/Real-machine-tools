@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
@@ -56,26 +58,22 @@ function PlateRollSimulator({ onBack, params }) {
   useEffect(() => {
     const mount = mountRef.current, layer = layerRef.current, tipEl = tipRef.current;
     const c = ctl.current;
-    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+    const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount, {far:300,floorSize:240,gridSize:160,fogNear:120,fogFar:260});
     const snd = createSound('bender');
     const dom = renderer.domElement;
     const M = {
       ...baseMats(0xa9cd7f, 0x93b96a, 0x6f9150),
       top: std(0x9d8a80, 0.55, 0.45), low: std(0x7e8285, 0.45, 0.6), front: std(0xb3a79c, 0.55, 0.45), bronze: std(0x8a6a3a, 0.35, 0.8),
       sheet: new THREE.MeshStandardMaterial({ color: 0x9ea4a9, roughness: 0.45, metalness: 0.7, side: THREE.DoubleSide, flatShading: true }),
-      floor: std(0x6c6f71, 0.9, 0.2), groove: std(0x4c4f51, 0.9, 0.1),
     };
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Zakružovačka plechu' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    // ---------- podlaha z rebrovaných plechov ----------
-    const fl = new THREE.Group(); root.add(fl);
-    box(fl, -9, 9, -0.02, 0.0, -HW - 6, HW + 6, M.floor);
-    for (let x = -8.5; x <= 8.5; x += 0.5) box(fl, x - 0.01, x + 0.01, 0.0, 0.006, -HW - 6, HW + 6, M.groove);
     // ---------- stojany (tvar podľa koncového pohľadu: široký spodok, vidlica hore) ----------
     const fork = [[3.2, Y0 - 0.3], [2.9, Y0 + 4.2], [1.55, Y0 + 4.2], [1.55, Y0 - 1.0], [-1.55, Y0 - 1.0], [-1.55, Y0 + 4.2], [-2.9, Y0 + 4.2], [-3.2, Y0 - 0.3]];
     const lower = [[-4.0, 0], [4.0, 0], [4.0, 1.4], [3.4, 2.2], [3.2, Y0 - 0.3]];
@@ -142,6 +140,8 @@ function PlateRollSimulator({ onBack, params }) {
     const bBack = pbtn(10.9, 6.1, M.btnGreen), bStop = pbtn(10.9, 6.4, M.black), bFwd = pbtn(10.9, 6.7, M.btnGreen);
     const eStop = new THREE.Group(); eStop.position.set(6.4, 10.1, -HW - 3.6); pan.add(eStop);
     cylZ(eStop, 0.08, 0.08, 0, 0.07, 0, 0, M.steelDark, 16); cylZ(eStop, 0.18, 0.17, 0.07, 0.15, 0, 0, M.red, 24); hitProxy(eStop, 0.24, 0, 0, 0.1);
+    const mainSw=new THREE.Group();mainSw.position.set(6.4,9.65,-HW-3.6);pan.add(mainSw);
+    cylZ(mainSw,.12,.12,0,.06,0,0,M.black,20);box(mainSw,-.035,.035,-.16,.16,.06,.12,M.red);hitProxy(mainSw,.18,0,0,.06);
     const lampRun = std(0x1f5f33, 0.4, 0.1); ball(pan, 0.07, 6.4, 11.2, -HW - 3.58, lampRun);
     // ---------- plech ----------
     const shG = grp('plech');
@@ -152,7 +152,7 @@ function PlateRollSimulator({ onBack, params }) {
       if (mesh) { shG.remove(mesh); mesh.geometry.dispose(); }
       const N = sheet.N, geo = new THREE.BufferGeometry(), idx = [];
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((N + 1) * 4 * 3), 3));
-      for (let i = 0; i < N; i++) for (let k = 0; k < 4; k++) { const a = i * 4 + k, b2 = i * 4 + (k + 1) % 4; idx.push(a, b2, a + 4, b2, b2 + 4, a + 4); }
+      for (let i = 0; i < N; i++) for (let k = 0; k < 4; k++) { const a = i * 4 + k, b2 = i * 4 + (k + 1) % 4; idx.push(a, a + 4, b2, b2, a + 4, b2 + 4); }
       idx.push(0, 1, 2, 0, 2, 3, N * 4, N * 4 + 2, N * 4 + 1, N * 4, N * 4 + 3, N * 4 + 2);
       geo.setIndex(idx); mesh = new THREE.Mesh(geo, M.sheet); mesh.castShadow = true; mesh.userData.part = 'plech'; shG.add(mesh);
       st.s = 0.03; st.dirty = true; st.out = 0; st.done = false; shG.position.z = 0; shG.visible = true;
@@ -181,14 +181,15 @@ function PlateRollSimulator({ onBack, params }) {
       spodne: () => v3(A, Y0 - 0.1, HW - 3), pohon: () => v3(4.0, 3.0, -HW - FW - 1.8), ovladanie: () => v3(6.4, 11.6, -HW - 3.6), plech: () => v3(-4, Y0 + 0.3, 0),
     };
     const views = {
-      celok: () => [[20, 17, -30], [0, Y0 - 1, -2]],
+      celok: () => [[25, 21, -38], [0, Y0 - 1, -2]],
       koniec: () => [[13, Y0 + 5, HW + 12], [0, Y0, HW], true],
       bok: () => [[2, Y0 + 2, -HW - 26], [1, Y0 + 1, 0], true],
       valce: () => [[9, Y0 + 7, -HW + 2], [0, Y0, -HW + 6], true],
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      orbitOptions:{maxDistance:140,maxTargetY:50},
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
@@ -196,10 +197,20 @@ function PlateRollSimulator({ onBack, params }) {
     const flags = {};
     const say = (text, kind = 'warn') => { st.msg = { text, kind, until: t + 3.2 }; };
     const sayOnce = (key, cond, text, kind) => { if (cond && !flags[key]) say(text, kind); flags[key] = cond; };
-    apiRef.current.view = (n) => insp.goView(n, false);
     apiRef.current.measure = () => ({ sheet, info: bendInfo(sheet) });
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(shG);
+    };
+    let inspectPin=true,inspectVisible=true;
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(shG),getSpot:()=>v3(14, Y0+7, 0),
+      canInspect:()=>c.drive ? L('Najprv zastav valce.', 'Stop the rolls first.') : null, prepare:()=>{inspectPin=st.pin;inspectVisible=shG.visible;st.pin=false;shG.visible=true;}, restore:()=>{st.pin=inspectPin;shG.visible=inspectVisible;}, canDetach:()=>st.open>.995,
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (c.drive) { say(L('Najprv zastav valce.', 'Stop the rolls first.')); return false; }
       if (st.open > 0.02) { say(L('Najprv zatvor a zaisti odklopné ložisko.', 'Close and secure the drop-end bearing first.')); return false; }
       push('dT', 0); st.d = 0; makeSheet();
@@ -216,11 +227,12 @@ function PlateRollSimulator({ onBack, params }) {
 
     // ---------- ovládanie ----------
     const needPower = (fn) => () => { if (!c.power) say(L('Najprv zapni hlavný vypínač.', 'Switch on the main switch first.')); else fn(); };
+    ctrl.reg({type:'lever',angles:[0,-Math.PI/2],minR:.15,label:LL('Hlavný vypínač','Main switch'),hint:LL('0 = vypnuté, I = zapnuté.','0 = off, I = on.'),getIdx:()=>c.power?1:0,onSet:i=>{push('power',!!i);if(!i)push('drive',0);}},mainSw);
     ctrl.reg({ type: 'button', label: LL('◀ Vzad', '◀ Reverse'), hint: LL('Spodné valce ťahajú plech späť.', 'The lower rolls pull the sheet back.'), action: needPower(() => push('drive', c.drive === -1 ? 0 : -1)) }, bBack);
     ctrl.reg({ type: 'button', label: LL('Vpred ▶', 'Forward ▶'), hint: LL('Spodné valce ťahajú plech vpred.', 'The lower rolls pull the sheet forward.'), action: needPower(() => push('drive', c.drive === 1 ? 0 : 1)) }, bFwd);
     ctrl.reg({ type: 'button', label: LL('STOP', 'STOP'), hint: LL('Zastaví valce.', 'Stops the rolls.'), action: () => push('drive', 0) }, bStop);
     ctrl.reg({ type: 'button', label: LL('Núdzový STOP', 'Emergency STOP'), hint: LL('Okamžite zastaví valce.', 'Stops the rolls at once.'), action: () => { push('drive', 0); say(L('Núdzové zastavenie.', 'Emergency stop.'), 'danger'); } }, eStop);
-    ctrl.reg({ type: 'button', label: LL('Kolík odklopného ložiska', 'Drop-end pin'), hint: LL('Vytiahnutím sa ložisko horného valca odklopí, ďalším klikom sa plášť vysunie, potom sa ložisko zavrie.', 'Pulling it opens the top roll bearing, the next click slides the shell off, then the bearing closes.'), action: () => apiRef.current.toggleDrop() }, pinG);
+    ctrl.reg({ type: 'button', still:true, label: LL('Kolík odklopného ložiska', 'Drop-end pin'), hint: LL('Vytiahnutím sa ložisko horného valca odklopí, ďalším klikom sa plášť vysunie, potom sa ložisko zavrie.', 'Pulling it opens the top roll bearing, the next click slides the shell off, then the bearing closes.'), action: () => apiRef.current.toggleDrop() }, pinG);
     ctrl.reg({ type: 'wheel', minR: 0.4, inc: 1, label: LL('Koleso prísuvu horného valca', 'Top roll infeed handwheel'), hint: LL('V smere hodinových ručičiek ide horný valec nadol. 1 otáčka = 2 mm.', 'Clockwise moves the top roll down. 1 turn = 2 mm.'),
       turn: (d) => push('dT', clamp(Math.round((c.dT + d * 2 / TAU) * 10) / 10, 0, PLATE_DMAX)), read: () => `δ ${(st.d * 1000).toFixed(1)} mm` }, wD);
     insp.goView('celok', true);
@@ -230,6 +242,9 @@ function PlateRollSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){st.open=approach(st.open,st.pin?0:1,.7*dt);dropG.rotation.x=st.open*1.45;pinG.position.x=3+(st.pin?0:1.1);ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       if (!c.power && c.drive) push('drive', 0);
       if (c.drive && (st.open > 0.01 || !st.pin)) { push('drive', 0); say(L('Odklopné ložisko nie je zaistené kolíkom – valce sa nespustia.', 'The drop-end bearing is not secured by the pin – the rolls will not start.'), 'danger'); }
       if (c.drive && prof.h > PLATE_TMAX) { push('drive', 0); say(L(`Plech ${prof.h} mm je nad kapacitu stroja (${PLATE_TMAX} mm) – motor sa preťaží.`, `The ${prof.h} mm sheet exceeds the machine capacity (${PLATE_TMAX} mm) – the motor overloads.`), 'danger'); }
@@ -274,7 +289,7 @@ function PlateRollSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__plate = { st, c, sheet: () => sheet }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); try { if (window.__plate && window.__plate.st === st) delete window.__plate; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); try { if (window.__plate && window.__plate.st === st) delete window.__plate; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = plateParts();
@@ -291,11 +306,11 @@ function PlateRollSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Na trojvalcovej pyramíde zostane na oboch koncoch rovný úsek ≈ polovica rozostupu spodných valcov (180 mm) – konce sa predohýbajú s podložným plechom.', 'On a three-roll pyramid a flat length ≈ half the lower-roll spacing (180 mm) stays at both ends – the ends are pre-bent with a backing plate.'),
           L('Odpruženie: prisuň horný valec viac, ako zodpovedá žiadanému polomeru; menší prísuv pri ďalšom prechode už plech nezmení.', 'Springback: feed the top roll more than the wanted radius suggests; a smaller infeed on a later pass no longer changes the sheet.'),
           L('Hotový plášť obopína horný valec – vyberie sa po vytiahnutí kolíka a odklopení ložiska na pravom konci.', 'A finished shell surrounds the top roll – it is removed after pulling the pin and opening the bearing at the right end.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zakružovačka', 'Simulator · plate rolls')} title={L('Zakružovačka plechu', 'Plate bending rolls')}
           sub={L('Predloha: TOS XZC 3000/10 – trojvalcová pyramída, pracovná dĺžka 3 000 mm, plech do 10 mm; dva spodné poháňané valce, prisúvaný horný valec a odklopné ložisko. Rozmery valcov sú orientačné.', 'Modelled after the TOS XZC 3000/10 – three-roll pyramid, 3,000 mm working length, sheet up to 10 mm; two driven lower rolls, an adjustable top roll and a drop-end bearing. Roll sizes are approximate.')}
           rows={[['δ mm', tele.d.toFixed(1)], [L('Plech mm', 'Sheet mm'), tele.s.toFixed(0)], [L('Sila kN', 'Force kN'), tele.F.toFixed(0)]]}
@@ -346,8 +361,8 @@ function PlateRollSimulator({ onBack, params }) {
         <ExportSection machine="zakruzovacka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['koniec', L('Odklopné ložisko', 'Drop-end')], ['bok', L('Zboku', 'Side')], ['valce', L('Valce', 'Rolls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

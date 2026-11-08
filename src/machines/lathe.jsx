@@ -1,7 +1,9 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, mkTex, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -167,6 +169,7 @@ function LatheCore({ onBack, params, model, onModel }) {
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, pivotLeverY, pivotLeverX, detents, handwheel } = kit;
 
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: `TOS ${MD.name}` };
     // veľkosť stroja: celý model sa zmenší / zväčší, obrobok a nože majú v mm stále skutočné rozmery (U mm na jednotku)
     root.scale.setScalar(S); root.position.y = MD.axisH - AXIS_Y * S; root.updateMatrixWorld(true);
     const lift = root.position.y / S;                                    // predĺženie podstavcov (miestne jednotky)
@@ -601,7 +604,7 @@ function LatheCore({ onBack, params, model, onModel }) {
     apiRef.current.view = (n) => insp.goView(n, false);
 
     // ---------- polotovar: nový kus, odopnutie ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => W(v3(1.0, AXIS_Y + 1.2, 5.5)), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => work, getSpot: () => W(v3(1.0, AXIS_Y + 1.2, 5.5)), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Polotovar sa odopína len pri stojacom vretene.', 'The workpiece can only be unclamped with the spindle stopped.')); return; }
@@ -798,6 +801,10 @@ function LatheCore({ onBack, params, model, onModel }) {
     };
     apiRef.current.exportStl = () => exportStl(work);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      if(workDirty){rebuildWork();workDirty=false;}return exportStep(work);
+    };
     apiRef.current.setPostLock = (v) => { if (st.job) { say(L('Nožová hlava sa práve otáča – počkaj.', 'The tool post is moving – wait.'), 'info'); return; } push('postLock', v); st.postLocked = v; };
 
     insp.goView('celok', true);
@@ -1052,7 +1059,7 @@ function LatheCore({ onBack, params, model, onModel }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · sústruh', 'Simulator · lathe')} title={L('Konvenčný hrotový sústruh', 'Conventional centre lathe')}
           sub={L(`Predloha: sústruhy TOS SN a VDF, veľkosť TOS ${MD.name}.`, `Modelled after TOS SN and VDF lathes, size TOS ${MD.name}.`)}
           rows={[['X Ø', tele.x.toFixed(2)], ['Z', tele.z.toFixed(2)]]}
@@ -1062,9 +1069,9 @@ function LatheCore({ onBack, params, model, onModel }) {
           safety={{ ui, set, runKey: 'running', items: LATHE_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Veľkosť stroja', 'Machine size')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Veľkosť stroja', 'Machine size')}</h2><SectionInfo title={L('Veľkosť stroja', 'Machine size')}><p className="text-xs muted">{L(`${MD.name}: výška hrotov ${Math.round(250 * S)} mm, točný priemer nad lôžkom ${Math.round(500 * S)} mm, vzdialenosť hrotov ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} ot/min, polotovar do Ø${maxD}. Rozmery sú orientačné. Zmena veľkosti postaví nový stroj (len pri stojacom vretene).`, `${MD.name}: centre height ${Math.round(250 * S)} mm, swing over bed ${Math.round(500 * S)} mm, distance between centres ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} rpm, bar up to Ø${maxD}. Approximate dimensions. Changing the size builds a new machine (spindle stopped only).`)}</p></SectionInfo></div>
           <SegRow label="TOS" value={model} options={Object.entries(LATHE_MODELS).map(([k, m]) => [k, m.name])} onChange={(m) => { if (stopped && m !== model) onModel(m); }} />
-          <p className="text-xs muted">{L(`${MD.name}: výška hrotov ${Math.round(250 * S)} mm, točný priemer nad lôžkom ${Math.round(500 * S)} mm, vzdialenosť hrotov ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} ot/min, polotovar do Ø${maxD}. Rozmery sú orientačné. Zmena veľkosti postaví nový stroj (len pri stojacom vretene).`, `${MD.name}: centre height ${Math.round(250 * S)} mm, swing over bed ${Math.round(500 * S)} mm, distance between centres ≈ ${Math.round(1250 * S / 50) * 50} mm, ${SPD[0]} – ${SPD[SPD.length - 1]} rpm, bar up to Ø${maxD}. Approximate dimensions. Changing the size builds a new machine (spindle stopped only).`)}</p>
+
         </div>
 
         <div className="sec">
@@ -1085,7 +1092,7 @@ function LatheCore({ onBack, params, model, onModel }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Accessories')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Prídavné vybavenie', 'Accessories')}</h2><SectionInfo title={L('Prídavné vybavenie', 'Accessories')}><p className="text-xs muted mt-2">{L('Lunety sa nasadzujú pri stojacom vretene. Dlhý tenký obrobok (vyloženie nad 6 × Ø) bez podopretia sa pri reze chveje; oceľ pri vysokej reznej rýchlosti potrebuje chladenie.', 'The rests are fitted with the spindle stopped. A long slender part (over 6 × Ø stick-out) without support chatters in the cut; steel at a high cutting speed needs coolant.')}</p></SectionInfo></div>
           <Toggle on={ui.guard} label={L('Ochranný kryt skľučovadla s mikrospínačom', 'Chuck guard with microswitch')} onClick={() => set('guard', !ui.guard)} />
           {ui.guard && <div className="flex gap-2 mb-2"><button type="button" className={`btn ${ui.guardOpen ? 'active' : ''}`} onClick={() => set('guardOpen', !ui.guardOpen)}>{ui.guardOpen ? L('Zatvoriť kryt', 'Close the guard') : L('Otvoriť kryt', 'Open the guard')}</button><span className="text-xs muted self-center">{ui.guardOpen ? L('otvorený – vreteno sa nespustí', 'open – the spindle will not start') : L('zatvorený', 'closed')}</span></div>}
           <Toggle on={ui.coolant} label={L('Chladiaci systém (čerpadlo, vaňa, hadica Loc-Line)', 'Coolant system (pump, tray, Loc-Line hose)')} onClick={() => { set('coolant', !ui.coolant); if (ui.coolant) set('coolOn', false); }} />
@@ -1097,11 +1104,11 @@ function LatheCore({ onBack, params, model, onModel }) {
           <Toggle on={ui.screwGuard} label={L('Kryt vodiacej skrutky a ťažnej tyče', 'Leadscrew and feed-rod guard')} onClick={() => set('screwGuard', !ui.screwGuard)} />
           <Toggle on={ui.brake} label={L('Nožná brzda po celej dĺžke stroja', 'Foot brake along the machine')} onClick={() => set('brake', !ui.brake)} />
           {ui.brake && <button type="button" className="btn-run stop mt-2" onClick={() => apiRef.current.footBrake && apiRef.current.footBrake()}>{L('Šliapnuť na nožnú brzdu', 'Step on the foot brake')}</button>}
-          <p className="text-xs muted mt-2">{L('Lunety sa nasadzujú pri stojacom vretene. Dlhý tenký obrobok (vyloženie nad 6 × Ø) bez podopretia sa pri reze chveje; oceľ pri vysokej reznej rýchlosti potrebuje chladenie.', 'The rests are fitted with the spindle stopped. A long slender part (over 6 × Ø stick-out) without support chatters in the cut; steel at a high cutting speed needs coolant.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Posuvy suportu', 'Carriage feeds')}</h2><SectionInfo title={L('Posuvy suportu', 'Carriage feeds')}><p className="text-xs muted">{L('Údaj Z na displeji je poloha hrotu noža = suport + horné sane + vyloženie zvoleného noža. X = 0 je os vretena, nôž prejde až 5 mm za os.', 'The Z readout is the tool tip position = carriage + top slide + offset of the selected tool. X = 0 is the spindle axis; the tool can go 5 mm past it.')}</p></SectionInfo></div>
           <Slider id="z" label={L('Suport pozdĺžne Z (od čeľustí)', 'Carriage Z (from the jaws)')} unit="mm" min={10} max={Math.round(1150 * S)} step={1} value={ui.z} actual={tele.carZ} onChange={(v) => set('z', v)} />
           <Slider id="top" label={L('Mikroposuv – horné sane Z', 'Fine feed – top slide Z')} unit="mm" min={-50} max={50} step={0.05} value={ui.top} actual={tele.top} digits={2} onChange={(v) => set('top', v)} />
           <Slider id="x" label={L('Priečny posuv X (priemer)', 'Cross feed X (diameter)')} unit="mm" min={-10} max={Math.round(260 * S)} step={0.5} value={ui.x} actual={tele.x} digits={1} onChange={(v) => set('x', v)} />
@@ -1110,12 +1117,12 @@ function LatheCore({ onBack, params, model, onModel }) {
             <StepSelect id="feed" label={L('Posuv na otáčku', 'Feed per revolution')} unit={L('mm/ot', 'mm/rev')} values={LATHE_FEEDS} value={ui.feed} onChange={(v) => set('feed', v)}
               fmt={(v) => L(v.toFixed(2).replace('.', ','), v.toFixed(2))} />
             <SegRow label={L('Zrýchlenie posuvu', 'Feed acceleration')} value={ui.timeScale} options={[[1, '1×'], [10, '10×'], [50, '50×']]} onChange={(v) => set('timeScale', v)} />
-            <p className="text-xs muted">{L('Údaj Z na displeji je poloha hrotu noža = suport + horné sane + vyloženie zvoleného noža. X = 0 je os vretena, nôž prejde až 5 mm za os.', 'The Z readout is the tool tip position = carriage + top slide + offset of the selected tool. X = 0 is the spindle axis; the tool can go 5 mm past it.')}</p>
+
           </div>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nožová hlava', 'Tool post')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nožová hlava', 'Tool post')}</h2><SectionInfo title={L('Nožová hlava', 'Tool post')}><p className="text-xs muted mt-2">{L('Výber polohy pootočí hlavu (páka sa uvoľní a znovu zaistí), zmena noža ho vymení. Oboje len pri stojacom vretene a s nožmi mimo obrobku. Pravý nôž reže smerom k skľučovadlu, ľavý ku koníku.', 'Choosing a position indexes the post (the lever is released and locked again); changing the tool swaps it. Both only with the spindle stopped and the tools clear of the work. A right-hand tool cuts towards the chuck, a left-hand one towards the tailstock.')}</p></SectionInfo></div>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {ui.slots.map((s, k) => (
               <button key={k} type="button" className={`tool-slot ${tele.slot === k ? 'on' : ''}`} aria-pressed={tele.slot === k}
@@ -1130,19 +1137,19 @@ function LatheCore({ onBack, params, model, onModel }) {
           </select>
           {!LATHE_TOOLS[draft.type].sym && <SegRow label={L('Prevedenie', 'Hand')} value={draft.hand} options={[['R', L('Pravý', 'Right')], ['L', L('Ľavý', 'Left')]]} onChange={(v) => setDraft({ hand: v })} />}
           <Toggle on={ui.postLock} label={L('Nožová hlava zaistená', 'Tool post locked')} onClick={() => apiRef.current.setPostLock && apiRef.current.setPostLock(!ui.postLock)} />
-          <p className="text-xs muted mt-2">{L('Výber polohy pootočí hlavu (páka sa uvoľní a znovu zaistí), zmena noža ho vymení. Oboje len pri stojacom vretene a s nožmi mimo obrobku. Pravý nôž reže smerom k skľučovadlu, ľavý ku koníku.', 'Choosing a position indexes the post (the lever is released and locked again); changing the tool swaps it. Both only with the spindle stopped and the tools clear of the work. A right-hand tool cuts towards the chuck, a left-hand one towards the tailstock.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Rezanie závitov', 'Thread cutting')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Rezanie závitov', 'Thread cutting')}</h2><SectionInfo title={L('Rezanie závitov', 'Thread cutting')}><p className="text-xs muted mt-2">{L(`Hĺbka metrického závitu h3 = 0,6134 · P = ${threadDepth(ui.pitch).toFixed(2).replace('.', ',')} mm (priemer jadra o ${(2 * threadDepth(ui.pitch)).toFixed(2).replace('.', ',')} mm menší). Postup: závitový nôž, nízke otáčky, prísuv X, zapni maticu – suport ide o P na otáčku k skľučovadlu; po prechode vysuň nôž, vypni maticu, vráť suport, pridaj prísuv a opakuj.`, `Metric thread depth h3 = 0.6134 · P = ${threadDepth(ui.pitch).toFixed(2)} mm (minor diameter ${(2 * threadDepth(ui.pitch)).toFixed(2)} mm smaller). Procedure: thread tool, low speed, infeed X, engage the half-nut – the carriage moves P per revolution towards the chuck; after the pass retract the tool, disengage, return the carriage, add infeed and repeat.`)}</p></SectionInfo></div>
           <StepSelect id="pitch" label={L('Stúpanie závitu P', 'Thread pitch P')} unit="mm" values={METRIC_PITCHES} value={ui.pitch} onChange={(v) => set('pitch', v)}
             locked={!stopped} lockNote={L('Stúpanie sa nastavuje len pri stojacom vretene.', 'The pitch can only be set with the spindle stopped.')} fmt={(v) => L(String(v).replace('.', ','), String(v))} />
           <Toggle on={ui.halfNut} label={L('Matica vodiacej skrutky zapnutá', 'Half-nut engaged')} onClick={() => apiRef.current.setHalfNut && apiRef.current.setHalfNut(!ui.halfNut)} />
-          <p className="text-xs muted mt-2">{L(`Hĺbka metrického závitu h3 = 0,6134 · P = ${threadDepth(ui.pitch).toFixed(2).replace('.', ',')} mm (priemer jadra o ${(2 * threadDepth(ui.pitch)).toFixed(2).replace('.', ',')} mm menší). Postup: závitový nôž, nízke otáčky, prísuv X, zapni maticu – suport ide o P na otáčku k skľučovadlu; po prechode vysuň nôž, vypni maticu, vráť suport, pridaj prísuv a opakuj.`, `Metric thread depth h3 = 0.6134 · P = ${threadDepth(ui.pitch).toFixed(2)} mm (minor diameter ${(2 * threadDepth(ui.pitch)).toFixed(2)} mm smaller). Procedure: thread tool, low speed, infeed X, engage the half-nut – the carriage moves P per revolution towards the chuck; after the pass retract the tool, disengage, return the carriage, add infeed and repeat.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Meranie', 'Measuring')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Meranie', 'Measuring')}</h2><SectionInfo title={L('Meranie', 'Measuring')}><p className="text-xs muted mt-2">{L('Meria sa pri stojacom vretene. Osadenia sú zoradené od voľného konca.', 'Measure with the spindle stopped. Shoulders are listed from the free end.')}</p></SectionInfo></div>
           <Toggle on={ui.measure} label={L('Posuvné meradlo na obrobku', 'Calliper on the workpiece')} onClick={() => set('measure', !ui.measure)} />
           {minfo && (<div className="mt-2">
             <Slider id="measz" label={L('Poloha merania od čeľustí', 'Measuring position from the jaws')} unit="mm" min={0} max={Math.max(1, Math.floor(minfo.end - 0.5))} step={0.5} value={mz} digits={1} onChange={(v) => set('measZ', v)} />
@@ -1155,7 +1162,6 @@ function LatheCore({ onBack, params, model, onModel }) {
               <tbody>{minfo.steps.filter((x) => x.len >= 1).reverse().map((x, i) => <tr key={i}><td>{x.d.toFixed(2)}</td><td className="text-right">{x.z0.toFixed(1)} – {x.z1.toFixed(1)}</td><td className="text-right">{x.len.toFixed(1)}</td></tr>)}</tbody>
             </table>
             {minfo.thread && <p className="text-xs mt-2">{L('Závit', 'Thread')}: P {minfo.thread.pitch} mm · {L('hĺbka', 'depth')} {minfo.thread.depth.toFixed(2)} mm · {minfo.thread.z0.toFixed(1)} – {minfo.thread.z1.toFixed(1)} mm{minfo.thread.mixed ? L(' · poškodený (rôzne stúpanie)', ' · damaged (mixed pitch)') : ''}</p>}
-            <p className="text-xs muted mt-2">{L('Meria sa pri stojacom vretene. Osadenia sú zoradené od voľného konca.', 'Measure with the spindle stopped. Shoulders are listed from the free end.')}</p>
           </div>)}
         </div>
 
@@ -1181,8 +1187,8 @@ function LatheCore({ onBack, params, model, onModel }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['noz', L('Nožová hlava', 'Tool post')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['konik', L('Koník', 'Tailstock')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

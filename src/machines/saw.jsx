@@ -1,7 +1,9 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, mkTex, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -75,6 +77,7 @@ function BandSawSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, detents, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Pásová píla' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -221,9 +224,13 @@ function BandSawSimulator({ onBack, params }) {
     apiRef.current.measure = () => ({ split: st.split, speed: SAW_SPEEDS[c.speed], recommended: SAW_REC[wk.mat], tension: st.tension, gapMax: st.gapMax || 0, offcut: wk.cx * 100 });
     apiRef.current.exportStl = () => exportStl(pieceG);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(pieceG);
+    };
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => pieceG, getSpot: () => v3(3.4, TT + 1.6, 5.0), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => pieceG, getSpot: () => v3(3.4, TT + 1.6, 5.0), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && zb() < 0.12 && st.cutMax > 0 && !st.split) { say(L('Obrobok je na páse – najprv ho stiahni späť (posuv) alebo dorež.', 'The workpiece is on the blade – pull it back (feed) or finish the cut first.')); return; }
       if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb polotovaru.', 'Wait until the workpiece movement finishes.'), 'info');
@@ -327,7 +334,7 @@ function BandSawSimulator({ onBack, params }) {
       if (st.split) st.sepX = approach(st.sepX, 0.08, 0.3 * dt);
 
       // pohyb skupín
-      pieceG.position.z = zb(); leftG.position.x = -st.sepX;
+      if(!c.unclamped)pieceG.position.z = zb(); leftG.position.x = -st.sepX;
       if (st.cutT === t || st.split) layout();
       post.position.y = TT + st.g;
       dust.update(dt, (p) => (Math.abs(p.x) < 3.3 && Math.abs(p.z) < 3.0 && p.y > TT - 0.2 ? TT : 0.02));
@@ -375,7 +382,7 @@ function BandSawSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · pásová píla', 'Simulator · band saw')} title={L('Strojná pásová píla', 'Vertical band saw')}
           sub={L('Predloha: TOS PPN s kolesami Ø720 mm. Mierka 1 : 100 mm.', 'Modelled after the TOS PPN with Ø720 mm wheels. Scale 1 : 100 mm.')}
           rows={[[L('Posuv', 'Feed'), tele.feed.toFixed(1)], [L('Rez', 'Cut'), tele.cut.toFixed(1)], [L('Vodidlo', 'Guide'), (tele.guide || ui.guide).toFixed(1)]]}
@@ -385,7 +392,7 @@ function BandSawSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'running', items: SAW_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted">{L(`Pre ${mat.sk.toLowerCase()} je najvyššia vhodná rýchlosť ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. Rýchlosť sa mení len pri stojacom stroji.`, `For ${mat.en.toLowerCase()} the highest suitable speed is ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. The speed is changed only with the machine stopped.`)}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.running ? 'stop' : 'start'}`}
             onClick={() => { if (!ui.running && !ui.power) set('power', true); set('running', !ui.running); }}>
             {ui.running ? L('■ Stop píly', '■ Stop saw') : L('▶ Štart píly', '▶ Start saw')}
@@ -397,16 +404,16 @@ function BandSawSimulator({ onBack, params }) {
             {(ui.running || tele.v > 0.05) && <p className="text-xs -mt-2 mb-3" style={{ color: 'var(--warn)' }}>{L('Rýchlosť pásu sa mení len pri stojacom stroji (remeň na inom stupni remenice).', 'The blade speed can only be changed with the machine stopped (belt on another pulley step).')}</p>}
             <Slider id="sten" label={L('Napnutie pásu', 'Blade tension')} unit="%" min={0} max={100} step={1} value={ui.tension} actual={tele.tension} onChange={(v) => set('tension', v)} />
           </div>
-          <p className="text-xs muted">{L(`Pre ${mat.sk.toLowerCase()} je najvyššia vhodná rýchlosť ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. Rýchlosť sa mení len pri stojacom stroji.`, `For ${mat.en.toLowerCase()} the highest suitable speed is ${mat.maxSpeed > 30 ? 25 : mat.maxSpeed} m/s. The speed is changed only with the machine stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Vodidlo a posuv', 'Guide and feed')}</h2><SectionInfo title={L('Vodidlo a posuv', 'Guide and feed')}><p className="text-xs muted">{L('Vodidlo nastav 5 – 10 mm nad obrobok. Obrobok môžeš posúvať aj ťahaním v režime ručného ovládania.', 'Set the guide 5 – 10 mm above the work. In manual control you can also drag the workpiece.')}</p></SectionInfo></div>
           <Slider id="sgd" label={L('Výška horného vodidla nad stolom', 'Upper guide height above the table')} unit="mm" min={10} max={300} step={1} value={ui.guide} actual={tele.guide} onChange={(v) => set('guide', v)} />
           <Slider id="sfd" label={L('Posuv obrobku proti pásu', 'Workpiece feed against the blade')} unit="mm" min={0} max={ui.bL + 120} step={1} value={ui.feed} actual={tele.feed} onChange={(v) => set('feed', v)} />
           <Toggle on={ui.autoFeed} label={L('Rovnomerný posuv', 'Steady feed')} onClick={() => set('autoFeed', !ui.autoFeed)} />
           <Slider id="sfr" label={L('Rýchlosť posuvu', 'Feed rate')} unit="mm/s" min={2} max={80} step={1} value={ui.feedRate} onChange={(v) => set('feedRate', v)} />
-          <p className="text-xs muted">{L('Vodidlo nastav 5 – 10 mm nad obrobok. Obrobok môžeš posúvať aj ťahaním v režime ručného ovládania.', 'Set the guide 5 – 10 mm above the work. In manual control you can also drag the workpiece.')}</p>
+
         </div>
 
         <BlankSection onApply={() => { const r = apiRef.current.newBlank && apiRef.current.newBlank(); if (r) Object.entries(r).forEach(([k, v]) => set(k, v)); }} applyLabel={L('Položiť nový polotovar', 'Put down a new workpiece')}>
@@ -421,8 +428,8 @@ function BandSawSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail rezu', 'Cutting detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Z boku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

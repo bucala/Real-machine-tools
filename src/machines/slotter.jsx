@@ -1,7 +1,9 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -91,6 +93,7 @@ function SlotterSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylY, cylZ, ball, hitProxy, pivotLever, detents, handwheel, crank } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Zvislá obrážačka' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -285,7 +288,11 @@ function SlotterSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(mesh);
     apiRef.current.snapshot = snapshot;
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => mesh, getSpot: () => v3(2.6, 6.4, 3.2), onState: (v) => push('unclamped', v) });
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(mesh);
+    };
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => mesh, getSpot: () => v3(2.6, 6.4, 3.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && (c.run || running())) { say(L('Obrobok sa vyberá len pri stojacom stroji.', 'The workpiece can only be removed with the machine stopped.')); return; }
       if (wi.phase() === 'in' && inWork(st.tip)) { say(L('Najprv vytiahni nôž z obrobku – pootoč kolesom kulisy hore alebo spusti stroj a zastav ho v hornej polohe.', 'Pull the tool out of the work first – stop the ram in its upper position.')); return; }
@@ -420,6 +427,7 @@ function SlotterSimulator({ onBack, params }) {
       chips.update(dt, (q) => (Math.hypot(q.x - st.tx, q.z - st.tz) < 0.9 ? WB - 0.2 : Math.abs(q.x - st.tx) < 1.8 && Math.abs(q.z - st.tz) < 1.6 ? 3.9 : 1.1));
       lamp.update(c.light);
 
+      crS.rotation.z=-c.S/20;
       ctrl.update(dt);
       insp.update(t, c);
       if (t - teleT > 0.1) {
@@ -468,7 +476,7 @@ function SlotterSimulator({ onBack, params }) {
         tips={[L('Posuv stola sa robí v hornej úvrati – keď je nôž nad obrobkom. S nožom v obrobku sa stôl do materiálu nepohne.', 'The table is fed at the top of the stroke – with the tool above the work. With the tool in the work the table will not move into the material.'),
           L('Zdvih nastav tak, aby nôž vyšiel nad obrobok a dole vybehol do otvoru skľučovadla.', 'Set the stroke so that the tool clears the top of the work and overruns into the chuck hole.'),
           L('Ďalšiu stenu štvorhranu dostaneš pootočením otočného stola o 90° (delenie z = 4).', 'The next wall of a square is reached by indexing the rotary table by 90° (z = 4).')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · zvislá obrážačka', 'Simulator · slotting machine')} title={L('Zvislá obrážačka', 'Slotting machine')}
           sub={L('Predloha: TOS ST 350 – drážkovačka so zvislým smykadlom, kulisovým pohonom a krížovým otočným stolom. Obrába drážky pre perá a tvarové otvory v nábojoch.', 'Modelled after a TOS ST 350 slotter – vertical ram, slotted-link drive and a compound rotary table. It cuts keyways and shaped holes in hubs.')}
           rows={[[L('Zdvih mm', 'Stroke mm'), String(ui.S)], ['X mm', tele.tx.toFixed(2)], ['Z mm', tele.tz.toFixed(2)], ['C °', tele.ca.toFixed(2)]]}
@@ -478,7 +486,7 @@ function SlotterSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'run', items: SLOTTER_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted" style={{ color: v > 20 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri zdvihu dole ${fmt(v)} m/min (oceľ nožom HSS: 8 – 15 m/min). Pracovný zdvih trvá ${Math.round(fwdShare(r, SL_K) * 360)}° otáčky kolesa.`, `Mean cutting speed on the down stroke ${fmt(v)} m/min (steel with HSS: 8 – 15 m/min). The cutting stroke takes ${Math.round(fwdShare(r, SL_K) * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.run ? 'stop' : 'start'}`} onClick={() => { if (!ui.run && !ui.power) set('power', true); set('run', !ui.run); }}>
             {ui.run ? L('■ Stop', '■ Stop') : L('▶ Štart', '▶ Start')}
           </button>
@@ -488,18 +496,18 @@ function SlotterSimulator({ onBack, params }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <SegRow label={L('Zdvihy/min', 'Strokes/min')} value={ui.n} options={SLOTTER_SPEEDS.map((n) => [n, String(n)])} onChange={(n) => { if (!busy) set('n', n); }} />
-          <p className="text-xs muted" style={{ color: v > 20 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri zdvihu dole ${fmt(v)} m/min (oceľ nožom HSS: 8 – 15 m/min). Pracovný zdvih trvá ${Math.round(fwdShare(r, SL_K) * 360)}° otáčky kolesa.`, `Mean cutting speed on the down stroke ${fmt(v)} m/min (steel with HSS: 8 – 15 m/min). The cutting stroke takes ${Math.round(fwdShare(r, SL_K) * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p>
+          <p className="text-xs muted" style={{ color: v > 20 ? 'var(--warn)' : undefined }}>{L('Rezná rýchlosť','Cutting speed')}: {fmt(v)} m/min{busy ? ` · ${L('Prevodovka uzamknutá','Gearbox locked')}` : ''}</p>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2><SectionInfo title={L('Zdvih smykadla', 'Ram stroke')}><p className="text-xs muted">{L(`Náboj je vysoký ${ui.H} mm – zdvih nastav o 30 – 50 mm dlhší, aby nôž vyšiel nad obrobok a dole vybehol do otvoru skľučovadla. Ostrie je teraz ${fmt(tele.tip)} mm nad spodkom obrobku.`, `The hub is ${ui.H} mm high – set the stroke 30 – 50 mm longer so that the tool clears the top and overruns into the chuck hole. The tool edge is now ${fmt(tele.tip)} mm above the bottom of the work.`)}</p></SectionInfo></div>
           <Slider id="sls" label={L('Dĺžka zdvihu', 'Stroke length')} unit="mm" min={20} max={350} step={5} value={ui.S} onChange={(val) => set('S', val)} disabled={busy} />
           <Slider id="slp" label={L('Poloha zdvihu (stred voči stredu obrobku)', 'Stroke position (centre to work centre)')} unit="mm" min={-100} max={100} step={5} value={ui.pos} onChange={(val) => set('pos', val)} disabled={busy} />
-          <p className="text-xs muted">{L(`Náboj je vysoký ${ui.H} mm – zdvih nastav o 30 – 50 mm dlhší, aby nôž vyšiel nad obrobok a dole vybehol do otvoru skľučovadla. Ostrie je teraz ${fmt(tele.tip)} mm nad spodkom obrobku.`, `The hub is ${ui.H} mm high – set the stroke 30 – 50 mm longer so that the tool clears the top and overruns into the chuck hole. The tool edge is now ${fmt(tele.tip)} mm above the bottom of the work.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nôž a stôl', 'Tool and table')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nôž a stôl', 'Tool and table')}</h2><SectionInfo title={L('Nôž a stôl', 'Tool and table')}><p className="text-xs muted">{L('Posuv sa urobí v hornej úvrati pred každým pracovným zdvihom. Prierez triesky = šírka záberu × posuv; pri prekročení sa nôž zastaví. Pri stojacom smykadle s nožom v obrobku stôl do materiálu nevojde.', 'The feed happens at the top before every cutting stroke. Chip section = engaged width × feed; above the limit the tool stalls. With the ram stopped and the tool in the work the table will not move into the material.')}</p></SectionInfo></div>
           <div className="grid grid-cols-2 gap-1.5 mb-3">
             {TOOL_LIST.map(([id, sk, en]) => (
               <button key={id} type="button" className={`tool-slot ${ui.tool === id ? 'on' : ''}`} aria-pressed={ui.tool === id} disabled={busy}
@@ -517,18 +525,18 @@ function SlotterSimulator({ onBack, params }) {
           <SegRow label={L('Os', 'Axis')} value={ui.fAx} options={[['x', 'X'], ['z', 'Z'], ['c', 'C']]} onChange={(val) => set('fAx', val)} />
           <SegRow label={L('Smer', 'Direction')} value={ui.fdir} options={[[-1, '−'], [1, '+']]} onChange={(val) => set('fdir', val)} />
           <Slider id="slf" label={ui.fAx === 'c' ? L('Posuv na zdvih (°)', 'Feed per stroke (°)') : L('Posuv na zdvih', 'Feed per stroke')} unit={ui.fAx === 'c' ? '°' : 'mm'} min={0.05} max={3} step={0.05} value={ui.feed} digits={2} onChange={(val) => set('feed', val)} />
-          <p className="text-xs muted">{L('Posuv sa urobí v hornej úvrati pred každým pracovným zdvihom. Prierez triesky = šírka záberu × posuv; pri prekročení sa nôž zastaví. Pri stojacom smykadle s nožom v obrobku stôl do materiálu nevojde.', 'The feed happens at the top before every cutting stroke. Chip section = engaged width × feed; above the limit the tool stalls. With the ram stopped and the tool in the work the table will not move into the material.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Otočný stôl', 'Rotary table')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Otočný stôl', 'Rotary table')}</h2><SectionInfo title={L('Otočný stôl', 'Rotary table')}><p className="text-xs muted">{L('Delí sa, keď je nôž nad obrobkom (smykadlo v hornej polohe).', 'Index with the tool above the work (ram up).')}</p></SectionInfo></div>
           <Slider id="slc" label={L('Natočenie C', 'Angle C')} unit="°" min={-360} max={360} step={0.5} value={ui.cA} actual={tele.ca} digits={2} onChange={(val) => set('cA', val)} />
           <SegRow label={L('Delenie z', 'Division z')} value={ui.div} options={DIVS.map((z) => [z, String(z)])} onChange={(val) => set('div', val)} />
           <div className="flex flex-wrap gap-2 mb-2">
             <button type="button" className="btn" onClick={() => apiRef.current.index && apiRef.current.index(-1)}>◀ −{fmt(360 / ui.div, 0)}°</button>
             <button type="button" className="btn" onClick={() => apiRef.current.index && apiRef.current.index(1)}>+{fmt(360 / ui.div, 0)}° ▶</button>
           </div>
-          <p className="text-xs muted">{L('Delí sa, keď je nôž nad obrobkom (smykadlo v hornej polohe).', 'Index with the tool above the work (ram up).')}</p>
+
         </div>
 
         <div className="sec">
@@ -552,8 +560,8 @@ function SlotterSimulator({ onBack, params }) {
         <ExportSection machine="zobrazacka" apiRef={apiRef} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Detail noža', 'Tool detail')], ['zhora', L('Otvor zhora', 'Bore from above')], ['kulisa', L('Kulisa', 'Slotted link')], ['panel', L('Rozvádzač', 'Control box')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

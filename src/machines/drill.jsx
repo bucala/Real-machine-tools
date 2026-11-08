@@ -1,7 +1,9 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -76,6 +78,7 @@ function DrillSimulator({ onBack, params }) {
     };
     const { add, box, cylX, cylY, cylZ, ball, lever, hitProxy, pivotLever, detents, crank, face } = makeKit(M);
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Stĺpová vŕtačka' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -178,7 +181,7 @@ function DrillSimulator({ onBack, params }) {
     let holes = [];
     const showHole = (h) => { h.m.scale.set(h.r, Math.min(h.depth, wk.PT) + 0.004, h.r); };
     const addHole = (x, z, r) => {
-      const m = new THREE.Mesh(holeGeo, M.hole); m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m);
+      const m = new THREE.Mesh(holeGeo, M.hole); m.userData.stepSubtract=true; m.position.set(x, PAR + wk.PT + 0.002, z); plateW.add(m);
       const h = { x, z, r, depth: 0, m, through: false }; holes.push(h); return h;
     };
     const makePlate = () => {
@@ -248,7 +251,7 @@ function DrillSimulator({ onBack, params }) {
     const inPlate = () => tipK() - st.q - st.T < PAR + wk.PT + 0.04 && floorInfo().onPlate;
 
     // ---------- polotovar ----------
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(2.6, 9.0, 4.6), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => plateW, getSpot: () => v3(2.6, 9.0, 4.6), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in') {
         if (c.running || st.rpm > 1) { say(L('Doska sa berie zo stola len pri stojacom vretene.', 'The plate can only be taken off with the spindle stopped.')); return; }
@@ -275,6 +278,10 @@ function DrillSimulator({ onBack, params }) {
       return true;
     };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(plateW);
+    };
 
     // ---------- ručné ovládanie prvkov ----------
     const spdIdx = () => logNear(DRILL_SPEEDS, c.rpm);
@@ -427,7 +434,7 @@ function DrillSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · vŕtačka', 'Simulator · drill')} title={L('Stĺpová vŕtačka', 'Pillar drill')}
           sub={L('Predloha: TOS SV16, vŕtanie do Ø16 mm v oceli. Mierka 1 : 100 mm.', 'Modelled after the TOS SV16, drilling up to Ø16 mm in steel. Scale 1 : 100 mm.')}
           rows={[[L('Hĺbka', 'Depth'), tele.depth.toFixed(2)], [L('Pinola', 'Quill'), tele.quill.toFixed(2)], [L('Stôl', 'Table'), tele.table.toFixed(2)]]}
@@ -449,26 +456,26 @@ function DrillSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Vrták', 'Drill')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Vrták', 'Drill')}</h2><SectionInfo title={L('Vrták', 'Drill')}><p className="text-xs muted">{L(`Pre oceľ je vhodná rezná rýchlosť 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min. Vrták sa mení len pri stojacom vretene.`, `For steel use a cutting speed of 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}. Drills are changed only with the spindle stopped.`)}</p></SectionInfo></div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {DRILL_SIZES.map((d) => <button key={d} type="button" className={`btn ${ui.bit === d ? 'active' : ''}`} aria-pressed={ui.bit === d} onClick={() => set('bit', d)}>Ø{d}</button>)}
           </div>
-          <p className="text-xs muted">{L(`Pre oceľ je vhodná rezná rýchlosť 20 – 30 m/min: pre Ø${ui.bit} približne ${rec} ot/min. Vrták sa mení len pri stojacom vretene.`, `For steel use a cutting speed of 20 – 30 m/min: about ${rec} rpm for Ø${ui.bit}. Drills are changed only with the spindle stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Posuvy', 'Feeds')}</h2><SectionInfo title={L('Posuvy', 'Feeds')}><p className="text-xs muted">{L('Pri vŕtaní je posuv obmedzený na 0,12 mm/ot – rýchlejšie ako vrták reže, pinola nepôjde.', 'While drilling the feed is limited to 0.12 mm/rev – the quill will not go faster than the drill cuts.')}</p></SectionInfo></div>
           <Slider id="dq" label={L('Výsuv pinoly', 'Quill extension')} unit="mm" min={0} max={100} step={0.5} value={ui.quill} actual={tele.quill} digits={1} onChange={(v) => set('quill', v)} />
           <Slider id="dt" label={L('Výška stola', 'Table height')} unit="mm" min={0} max={500} step={1} value={ui.table} actual={tele.table} onChange={(v) => set('table', v)} />
           <SegRow label={L('Zrýchlenie vŕtania', 'Drilling acceleration')} value={ui.timeScale} options={[[1, '1×'], [5, '5×'], [20, '20×']]} onChange={(v) => set('timeScale', v)} />
-          <p className="text-xs muted">{L('Pri vŕtaní je posuv obmedzený na 0,12 mm/ot – rýchlejšie ako vrták reže, pinola nepôjde.', 'While drilling the feed is limited to 0.12 mm/rev – the quill will not go faster than the drill cuts.')}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Poloha obrobku', 'Workpiece position')}</h2><SectionInfo title={L('Poloha obrobku', 'Workpiece position')}><p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p></SectionInfo></div>
           <Slider id="du" label={L('Posun dosky X', 'Plate offset X')} unit="mm" min={-60} max={60} step={1} value={ui.u} onChange={(v) => set('u', v)} />
           <Slider id="dv" label={L('Posun dosky Y', 'Plate offset Y')} unit="mm" min={-50} max={50} step={1} value={ui.v} onChange={(v) => set('v', v)} />
-          <p className="text-xs muted">{L('Podložky sú 70 mm vľavo a vpravo od stredu dosky – tam nevŕtaj naskrz.', 'The parallels are 70 mm left and right of the plate centre – do not drill through there.')}</p>
+
         </div>
 
         <div className="sec">
@@ -492,8 +499,8 @@ function DrillSimulator({ onBack, params }) {
         <ViewSection apiRef={apiRef}
           views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail vŕtania', 'Drilling detail')], ['spredu', L('Spredu', 'Front')], ['zhora', L('Zhora', 'Top')], ['bok', L('Kľuka pinoly', 'Capstan')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

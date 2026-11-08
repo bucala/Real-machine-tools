@@ -11,7 +11,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     Object.assign(k, { pivot: obj, meshes: [], glow: 0, pressT: -9, pressed: false });
     obj.traverse((o) => { if (o.isMesh && !meshCtl.has(o)) { o.material = o.material.clone(); meshCtl.set(o, k); k.meshes.push(o); } });
     if (k.type === 'lever') { k.angle = k.angles[k.getIdx()]; obj.rotation.z = k.angle; }
-    if (k.type === 'button') k.z0 = obj.position.z;
+    if (k.type === 'button') k.z0 = obj.position[k.pressAxis || 'z'];
     ctrls.push(k);
   };
   const setGlow = (k, v) => k.meshes.forEach((m) => {
@@ -29,10 +29,18 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     camera.updateMatrixWorld(); ray.setFromCamera(ndc, camera);
   };
-  const ctlAt = (cx, cy) => {
+  const pickAt = (cx, cy) => {
     setRay(cx, cy);
-    const h = ray.intersectObjects(root.children, true)[0], k = h && meshCtl.get(h.object);
-    return k ? { k, point: h.point } : null;
+    root.updateMatrixWorld(true);
+    return ray.intersectObjects(root.children, true).find((h) => {
+      if (h.object.userData.controlPassThrough) return false;
+      for (let o=h.object;o;o=o.parent) if (!o.visible) return false;
+      return true;
+    }) || null;
+  };
+  const ctlAt = (cx, cy) => {
+    const h = pickAt(cx,cy), k=h && meshCtl.get(h.object);
+    return k ? { k, point:h.point } : null;
   };
   // otáčanie: pohyb myši sa premietne na dotyčnicu k obvodu v mieste uchopenia
   const rs = { axis: new THREE.Vector3(), C: new THREE.Vector3(), d: new THREE.Vector3() };
@@ -40,7 +48,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   const toScreen = (v, out) => { tmpA.copy(v).project(camera); out.x = (tmpA.x + 1) / 2 * mount.clientWidth; out.y = (1 - tmpA.y) / 2 * mount.clientHeight; };
   const beginRot = (k, point) => {
     k.pivot.updateMatrixWorld(true);
-    rs.axis.set(0, 0, 1).transformDirection(k.pivot.matrixWorld);
+    rs.axis.set(0,0,0); rs.axis[k.axis || 'z']=1; rs.axis.transformDirection(k.pivot.matrixWorld);
     rs.C.setFromMatrixPosition(k.pivot.matrixWorld);
     rs.d.subVectors(point, rs.C).addScaledVector(rs.axis, -rs.d.dot(rs.axis));
     if (rs.d.length() < k.minR) {
@@ -77,7 +85,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   };
   const mDown = (e) => {
     ctlUsed = false;
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     trackPtr(e);
     const h = ctlAt(e.clientX, e.clientY);
     if (!h) return;
@@ -90,7 +98,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     else beginRot(h.k, h.point);
   };
   const mMove = (e) => {
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     trackPtr(e);
     const k = drag.ctl;
     if (!k || e.pointerId !== drag.id) return;
@@ -109,11 +117,16 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     if (!k || e.pointerId !== drag.id) return;
     drag.ctl = null; k.pressed = false;
     if (e.pointerType !== 'mouse') hover = null;
+    if (k.type === 'slide') {
+      const cancelled=e.type==='pointercancel';
+      if (!cancelled && drag.moved<4) k.click?.();
+      k.end?.({cancelled,click:!cancelled&&drag.moved<4});
+    }
     if (k.type === 'lever') leverStep(k, drag.moved < 4 ? (k.getIdx() + 1) % k.angles.length : nearestDetent(k));
   };
   const mLeave = () => { ptr.in = false; if (!drag.ctl) hover = null; };
   const mWheel = (e) => {
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     e.preventDefault();
     const h = ctlAt(e.clientX, e.clientY);
     if (!h || h.k.type === 'button') return;
@@ -134,22 +147,22 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     const t = getT();
     if (c.manual !== prevManual) {
       prevManual = c.manual;
-      if (c.manual) introT = t; else { drag.ctl = null; hover = null; }
+      if (c.manual) introT = t; else { if (drag.ctl) { drag.ctl.pressed=false; if(drag.ctl.type==='slide')drag.ctl.end?.({cancelled:true,click:false}); } drag.ctl = null; hover = null; }
       tipEl.style.display = 'none'; tipHtml = ''; dom.style.cursor = '';
     }
     if (c.manual && ptr.dirty && ptr.in && !drag.ctl) { ptr.dirty = false; const h = ctlAt(ptr.cx, ptr.cy); hover = h ? h.k : null; }
     const intro = c.manual && t - introT < 1.8 ? 0.3 + 0.3 * Math.sin((t - introT) * 10) : 0;
     for (const k of ctrls) {
       if (k.type === 'lever' && k !== drag.ctl) { k.angle = approach(k.angle, k.angles[k.getIdx()], 5 * dt); k.pivot.rotation.z = k.angle; }
-      if (k.type === 'button' && !k.still) k.pivot.position.z = approach(k.pivot.position.z, k.z0 - (k.pressed || t - k.pressT < 0.18 ? 0.05 : 0), 0.8 * dt);
+      if (k.type === 'button' && !k.still) k.pivot.position[k.pressAxis || 'z'] = approach(k.pivot.position[k.pressAxis || 'z'], k.z0 - (k.pressed || k.latched?.() || t - k.pressT < 0.18 ? 0.05 : 0), 0.8 * dt);
       const g = !c.manual ? 0 : k === drag.ctl ? 0.9 : k === hover ? 0.6 : intro;
       if (g !== k.glow) { setGlow(k, g); k.glow = g; }
     }
-    if (!c.manual) return;
+    if (!c.manual || c.unclamped) return;
     const k = drag.ctl || (ptr.in ? hover : null);
     const cur = drag.ctl ? (k.type === 'button' ? 'pointer' : 'grabbing') : k ? (k.type === 'button' ? 'pointer' : 'grab') : 'default';
     if (dom.style.cursor !== cur) dom.style.cursor = cur;
-    const html = k ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
+    const html = k && k.tooltip !== false ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
     if (html !== tipHtml) { tipHtml = html; tipEl.innerHTML = html; tipEl.style.display = html ? 'block' : 'none'; }
     if (html) {
       const fx = ptr.x > mount.clientWidth - 270, fy = ptr.y > mount.clientHeight - 90;
@@ -157,11 +170,14 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     }
   };
   const dispose = () => {
+    if (drag.ctl?.type==='slide') drag.ctl.end?.({cancelled:true,click:false});
     dom.removeEventListener('pointerdown', mDown); dom.removeEventListener('pointermove', mMove);
     dom.removeEventListener('pointerup', mUp); dom.removeEventListener('pointercancel', mUp);
     dom.removeEventListener('pointerleave', mLeave); dom.removeEventListener('wheel', mWheel);
   };
-  return { reg, push, pend, update, isUsed: () => ctlUsed, invalidate: () => ctrls.forEach((k) => { k.glow = -1; }), dispose };
+  const api = { reg, push, pend, update, pickAt, hitAt: (x,y) => ctlAt(x,y)?.k || null, isUsed: () => ctlUsed, invalidate: () => ctrls.forEach((k) => { k.glow = -1; }), dispose, entries: () => ctrls };
+  try { if (/[?&]debug/.test(window.location.search) && window.__stage) window.__stage.controls = { ...api, c, root, camera }; } catch (err) { /* test without window */ }
+  return api;
 }
 
 export { createControls };

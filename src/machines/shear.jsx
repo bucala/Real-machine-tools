@@ -1,7 +1,10 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
 import { createStage } from '../core/stage';
@@ -63,6 +66,7 @@ function ShearSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, hitProxy, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Tabuľové nožnice' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -190,14 +194,23 @@ function ShearSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
-    apiRef.current.view = (n) => insp.goView(n, false);
     apiRef.current.measure = () => ({ strips: st.strips.slice(), D: st.sheet.D });
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work || st.phase)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(fall.length ? fall[fall.length-1].m : shG);
+    };
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(fall.length ? fall[fall.length-1].m : shG),getSpot:()=>v3(3, YT+3, 6),
+      canInspect:()=>st.phase ? L('Počkaj na dokončenie strihu.', 'Wait until the cut finishes.') : fall.length && fall[fall.length-1].m.position.y>1.7 ? L('Počkaj, kým sa odstrihnutý pás odloží.', 'Wait until the cut strip settles.') : null,
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (st.phase) { say(L('Počkaj, kým sa dokončí strih.', 'Wait until the cut is finished.')); return false; }
       st.sheet = { L: clamp(c.L, 200, SHEAR.Wmax), D: clamp(c.D, 100, 1000) }; st.t = c.t; st.strips = []; st.p = -0.5; push('push', 0);
       say(L(`Na stole je nový plech ${c.t} × ${c.L} × ${c.D} mm.`, `A new sheet ${c.t} × ${c.L} × ${c.D} mm is on the table.`), 'info'); return true;
@@ -210,7 +223,7 @@ function ShearSimulator({ onBack, params }) {
     };
     apiRef.current.pedal = pedalPress;
     ctrl.reg({ type: 'button', label: LL('Nožný pedál', 'Foot pedal'), hint: LL('Stlačenie spustí jeden strih.', 'Pressing it triggers one cut.'), action: pedalPress }, pedal);
-    ctrl.reg({ type: 'button', label: LL('Kryt prstov', 'Finger guard'), hint: LL('Klik kryt sklopí alebo zdvihne.', 'Click to lower or raise the guard.'), action: () => push('guard', !c.guard) }, guardPiv);
+    ctrl.reg({ type: 'button', still:true, label: LL('Kryt prstov', 'Finger guard'), hint: LL('Klik kryt sklopí alebo zdvihne.', 'Click to lower or raise the guard.'), action: () => push('guard', !c.guard) }, guardPiv);
     ctrl.reg({ type: 'lever', angles: [0, -Math.PI / 2], minR: 0.2, label: LL('Hlavný vypínač', 'Main switch'), hint: LL('0 = vypnuté, I = zapnuté.', '0 = off, I = on.'),
       getIdx: () => (c.power ? 1 : 0), onSet: (i) => push('power', i === 1), read: () => (c.power ? 'I' : '0') }, mainSw);
     insp.goView('celok', true);
@@ -220,6 +233,9 @@ function ShearSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       // zadný doraz motorom, plech sa zasúva po doraz
       st.g = approach(st.g, clamp(c.gauge, 5, 750), 60 * dt);
       const pT = c.push > 0 ? Math.min(st.g, c.push) : -0.5;
@@ -268,7 +284,7 @@ function ShearSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__shear = { st, c }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); fall.forEach((f) => f.m.geometry.dispose()); try { if (window.__shear && window.__shear.st === st) delete window.__shear; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); fall.forEach((f) => f.m.geometry.dispose()); try { if (window.__shear && window.__shear.st === st) delete window.__shear; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = shearParts();
@@ -282,11 +298,11 @@ function ShearSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Šírka pásu = nastavenie zadného dorazu; plech zasúvaj, kým nedosadne.', 'Strip width = back gauge setting; push the sheet in until it touches.'),
           L('Vôľa nožov ≈ 7 % hrúbky plechu – inak má strih ostrinu.', 'Blade clearance ≈ 7 % of the sheet thickness – otherwise the cut has a burr.'),
           L('Pri zdvihnutom kryte prstov pedál nespustí strih.', 'With the finger guard raised the pedal does not start a cut.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · tabuľové nožnice', 'Simulator · guillotine shear')} title={L('Tabuľové nožnice', 'Guillotine shear')}
           sub={L('Predloha: mechanické tabuľové nožnice BS 2000/8 (1951) – plech do 8 mm, dĺžka strihu 2 000 mm, motor 7,5 kW so zotrvačníkom a jednootáčkovou spojkou; šikmý horný nôž, prítlaky, hrebeňový kryt prstov, zadný doraz a pedálová tyč po celej šírke.', 'Modelled after the BS 2000/8 mechanical guillotine shear (1951) – sheet up to 8 mm, 2,000 mm cut, 7.5 kW motor with flywheel and single-revolution clutch; raked upper blade, hold-downs, comb finger guard, back gauge and a full-width foot treadle.')}
           rows={[[L('Doraz mm', 'Gauge mm'), String(ui.gauge)], [L('Za nožom', 'Past blade'), tele.p.toFixed(1)], [L('Pásy', 'Strips'), String(tele.strips)]]}
@@ -305,11 +321,11 @@ function ShearSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2><SectionInfo title={L('Nastavenie', 'Setup')}><p className="text-xs muted">{L(`Pre plech ${ui.t} mm je vhodná vôľa približne ${gapIdeal(ui.t).toFixed(2).replace('.', ',')} mm.`, `For ${ui.t} mm sheet the recommended clearance is about ${gapIdeal(ui.t).toFixed(2)} mm.`)}</p></SectionInfo></div>
           <Slider id="sg" label={L('Zadný doraz (šírka pásu)', 'Back gauge (strip width)')} unit="mm" min={5} max={750} step={0.1} value={ui.gauge} digits={1} onChange={(v) => set('gauge', v)} />
           <div className="flex flex-wrap gap-2 mb-2">{[-10, -1, -0.1, 0.1, 1, 10].map((x) => <button key={x} type="button" className="btn" onClick={() => set('gauge', clamp(Math.round((ui.gauge + x) * 10) / 10, 5, 750))}>{x > 0 ? '+' : ''}{x}</button>)}</div>
           <Slider id="sv" label={L('Vôľa nožov', 'Blade clearance')} unit="mm" min={0.03} max={0.8} step={0.01} value={ui.gap} digits={2} onChange={(v) => set('gap', v)} />
-          <p className="text-xs muted">{L(`Pre plech ${ui.t} mm je vhodná vôľa približne ${gapIdeal(ui.t).toFixed(2).replace('.', ',')} mm.`, `For ${ui.t} mm sheet the recommended clearance is about ${gapIdeal(ui.t).toFixed(2)} mm.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -339,8 +355,8 @@ function ShearSimulator({ onBack, params }) {
         <ExportSection machine="noznice" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Nôž', 'Blade')], ['zhora', L('Zhora', 'Top')], ['zboku', L('Zboku', 'Side')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

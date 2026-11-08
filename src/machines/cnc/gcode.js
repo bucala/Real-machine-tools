@@ -56,7 +56,7 @@ export function interpret(text, ctx) {
     if (mm[0] < MC.X[0] - 1e-6 || mm[0] > MC.X[1] + 1e-6) err(`os X mimo rozsahu (${mm[0].toFixed(1)} mm)`);
     if (mm[1] < MC.Y[0] - 1e-6 || mm[1] > MC.Y[1] + 1e-6) err(`os Y mimo rozsahu (${mm[1].toFixed(1)} mm)`);
     if (nose > MC.nose[1] + 1e-6 || nose < MC.nose[0] - 1e-6) err(`os Z mimo rozsahu (${(nose - NOSE_MAX).toFixed(1)} mm)`);
-    if (a < MC.A[0] - 1e-6 || a > MC.A[1] + 1e-6) err(`os A mimo rozsahu ±130° (${a.toFixed(1)}°)`);
+    if (a < MC.A[0] - 1e-6 || a > MC.A[1] + 1e-6) err(`os A mimo rozsahu ${MC.A[0]}…${MC.A[1]}° (${a.toFixed(1)}°)`);
   };
   const feed = () => ({ F: st.perRev ? st.F * st.S : st.F, inv: st.inv });
   const lin = (p1, a1, c1, rapid) => {
@@ -100,7 +100,7 @@ export function interpret(text, ctx) {
   const orient = (move) => {              // natočenie A/C tak, aby os nástroja = os Z naklonenej roviny
     const v = st.frame ? matVec(st.frame.R, [0, 0, 1]) : [0, 0, 1];
     const s = axisToAC(v, st.c, MC.A);
-    if (!s) { err('naklonenú rovinu nedosiahne os A (±130°)'); return; }
+    if (!s) { err(`naklonenú rovinu nedosiahne os A (${MC.A[0]}…${MC.A[1]}°)`); return; }
     if (move) machRapid(m, s.a, s.c); else { st.a = s.a; st.c = s.c; resync(); }
   };
   // vŕtacie cykly (v aktívnom ráme, os vŕtania = Z rámu)

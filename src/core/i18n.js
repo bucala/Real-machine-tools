@@ -7,7 +7,7 @@ try {
   const s = JSON.parse(localStorage.getItem('rmt-prefs') || '{}');
   if (s.lang === 'sk' || s.lang === 'en') PREFS.lang = s.lang;
   if (['green', 'dark', 'light'].includes(s.skin)) PREFS.skin = s.skin;
-  if (typeof s.sound === 'boolean') PREFS.sound = s.sound;
+  // Every new application session starts muted, including previously saved sound=true.
 } catch (err) { /* bez uložených nastavení */ }
 try { document.documentElement.dataset.skin = PREFS.skin; document.documentElement.lang = PREFS.lang; } catch (err) { /* ignorované */ }
 const L = (sk, en) => (PREFS.lang === 'en' ? en : sk);

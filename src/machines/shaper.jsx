@@ -1,8 +1,10 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { createHeightField } from '../core/heightField';
 import { L, LL } from '../core/i18n';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -94,6 +96,7 @@ function ShaperSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, detents, handwheel, crank } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Vodorovná obrážačka' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -266,8 +269,12 @@ function ShaperSimulator({ onBack, params }) {
     };
     apiRef.current.exportStl = () => exportStl(hf.mesh);
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      return exportStep(hf.mesh);
+    };
     const running = () => st.w > 0.05;
-    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(2.6, 8.4, 4.2), onState: (v) => push('unclamped', v) });
+    const wi = createWorkInspect({ scene, camera, dom, insp, c, getObj: () => hf.mesh, getSpot: () => v3(2.6, 8.4, 4.2), onState: (v) => { push('unclamped', v); push('manual', c.manual); } });
     apiRef.current.toggleWork = () => {
       if (wi.phase() === 'in' && (c.run || running())) { say(L('Obrobok sa vyberá len pri stojacom stroji.', 'The workpiece can only be removed with the machine stopped.')); return; }
       if (!wi.toggle()) say(L('Počkaj, kým sa dokončí pohyb polotovaru.', 'Wait until the workpiece movement finishes.'), 'info');
@@ -397,6 +404,7 @@ function ShaperSimulator({ onBack, params }) {
       chips.update(dt, (q) => { if (Math.abs(q.x - VX) < 1.2 && Math.abs(q.z - st.tz) < 0.9) return Math.abs(q.z - st.tz) < wk.W / 2 && Math.abs(q.x - VX) < wk.L / 2 ? workBottom() + wk.H : TT + 0.35; return Math.abs(q.z - st.tz) < 1.0 && q.x > 0.15 && q.x < 3.1 ? TT : 0.5; });
       lamp.update(c.light);
 
+      crS.rotation.z=-c.S/20;
       ctrl.update(dt);
       insp.update(t, c);
       if (t - teleT > 0.1) {
@@ -441,7 +449,7 @@ function ShaperSimulator({ onBack, params }) {
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
       <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · obrážačka', 'Simulator · shaper')} title={L('Priečna obrážačka', 'Shaping machine')}
           sub={L('Predloha: kulisová obrážačka TOS so zdvihom do 500 mm. Smykadlo poháňa kulisa, stôl sa posúva západkou.', 'Modelled after a TOS slotted-link shaper with strokes up to 500 mm. The ram is driven by the slotted link, the table by a ratchet.')}
           rows={[[L('Zdvih mm', 'Stroke mm'), String(ui.S)], [L('Prísuv mm', 'Feed mm'), tele.d.toFixed(2)], [L('Stôl Z', 'Table Z'), tele.tz.toFixed(1)]]}
@@ -451,7 +459,7 @@ function ShaperSimulator({ onBack, params }) {
           safety={{ ui, set, runKey: 'run', items: SHAPER_SAFETY() }} />
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Hlavný chod', 'Main drive')}</h2><SectionInfo title={L('Hlavný chod', 'Main drive')}><p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri pracovnom zdvihu ${fmt(v)} m/min (oceľ nožom HSS: 10 – 20 m/min). Pracovný zdvih trvá ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° otáčky kolesa.`, `Mean cutting speed on the cutting stroke ${fmt(v)} m/min (steel with HSS: 10 – 20 m/min). The cutting stroke takes ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p></SectionInfo></div>
           <button type="button" className={`btn-run ${ui.run ? 'stop' : 'start'}`} onClick={() => { if (!ui.run && !ui.power) set('power', true); set('run', !ui.run); }}>
             {ui.run ? L('■ Stop', '■ Stop') : L('▶ Štart', '▶ Start')}
           </button>
@@ -461,18 +469,18 @@ function ShaperSimulator({ onBack, params }) {
             <Toggle on={ui.light} label={L('Pracovné osvetlenie', 'Work light')} onClick={() => set('light', !ui.light)} />
           </div>
           <SegRow label={L('Zdvihy/min', 'Strokes/min')} value={ui.n} options={SHAPER_SPEEDS.map((n) => [n, String(n)])} onChange={(n) => { if (!busy) set('n', n); }} />
-          <p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L(`Priemerná rezná rýchlosť pri pracovnom zdvihu ${fmt(v)} m/min (oceľ nožom HSS: 10 – 20 m/min). Pracovný zdvih trvá ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° otáčky kolesa.`, `Mean cutting speed on the cutting stroke ${fmt(v)} m/min (steel with HSS: 10 – 20 m/min). The cutting stroke takes ${Math.round((Math.PI + 2 * Math.asin(r / SH_K.d)) / TAU * 360)}° of the wheel turn.`)}{busy ? ` ${L('Prevodovka sa preraďuje len pri stojacom stroji.', 'The gearbox is shifted only with the machine stopped.')}` : ''}</p>
+          <p className="text-xs muted" style={{ color: v > 25 ? 'var(--warn)' : undefined }}>{L('Rezná rýchlosť','Cutting speed')}: {fmt(v)} m/min{busy ? ` · ${L('Prevodovka uzamknutá','Gearbox locked')}` : ''}</p>
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Zdvih smykadla', 'Ram stroke')}</h2><SectionInfo title={L('Zdvih smykadla', 'Ram stroke')}><p className="text-xs muted">{L(`Obrobok je dlhý ${ui.bL} mm – zdvih nastav o 20 – 30 mm dlhší, aby nôž pred rezom vyšiel za obrobok. Mení sa len pri stojacom stroji.`, `The work is ${ui.bL} mm long – set the stroke 20 – 30 mm longer so that the tool clears the work before each cut. Only changed with the machine stopped.`)}</p></SectionInfo></div>
           <Slider id="shs" label={L('Dĺžka zdvihu', 'Stroke length')} unit="mm" min={20} max={500} step={5} value={ui.S} onChange={(val) => set('S', val)} disabled={busy} />
           <Slider id="shp" label={L('Poloha zdvihu (stred voči zveráku)', 'Stroke position (centre to vise)')} unit="mm" min={-150} max={150} step={5} value={ui.pos} onChange={(val) => set('pos', val)} disabled={busy} />
-          <p className="text-xs muted">{L(`Obrobok je dlhý ${ui.bL} mm – zdvih nastav o 20 – 30 mm dlhší, aby nôž pred rezom vyšiel za obrobok. Mení sa len pri stojacom stroji.`, `The work is ${ui.bL} mm long – set the stroke 20 – 30 mm longer so that the tool clears the work before each cut. Only changed with the machine stopped.`)}</p>
+
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nôž a posuvy', 'Tool and feeds')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nôž a posuvy', 'Tool and feeds')}</h2><SectionInfo title={L('Nôž a posuvy', 'Tool and feeds')}><p className="text-xs muted">{L('Posuv sa urobí na začiatku každého pracovného zdvihu. Ubieracím nožom 0,5 – 1 mm, hladiacim do 6 mm; drážkovacím nožom posuv vypni a prisúvaj nôž.', 'The feed happens at the start of each cutting stroke. Roughing tool 0.5 – 1 mm, finishing tool up to 6 mm; with the slotting tool switch the feed off and feed the tool down.')}</p></SectionInfo></div>
           <div className="grid grid-cols-2 gap-1.5 mb-3">
             {TOOL_LIST.map(([id, sk, en]) => (
               <button key={id} type="button" className={`tool-slot ${ui.tool === id ? 'on' : ''}`} aria-pressed={ui.tool === id} disabled={busy}
@@ -489,7 +497,7 @@ function ShaperSimulator({ onBack, params }) {
           <Toggle on={ui.autoF} label={L('Západkový posuv stola', 'Ratchet table feed')} onClick={() => set('autoF', !ui.autoF)} />
           <SegRow label={L('Smer', 'Direction')} value={ui.fdir} options={[[-1, L('← k stojanu', '← to column')], [1, L('od stojana →', 'away →')]]} onChange={(val) => set('fdir', val)} />
           <Slider id="shf" label={L('Posuv na zdvih', 'Feed per stroke')} unit="mm" min={0.2} max={4} step={0.1} value={ui.feed} digits={1} onChange={(val) => set('feed', val)} />
-          <p className="text-xs muted">{L('Posuv sa urobí na začiatku každého pracovného zdvihu. Ubieracím nožom 0,5 – 1 mm, hladiacim do 6 mm; drážkovacím nožom posuv vypni a prisúvaj nôž.', 'The feed happens at the start of each cutting stroke. Roughing tool 0.5 – 1 mm, finishing tool up to 6 mm; with the slotting tool switch the feed off and feed the tool down.')}</p>
+
         </div>
 
         <div className="sec">
@@ -513,8 +521,8 @@ function ShaperSimulator({ onBack, params }) {
         <ExportSection machine="obrazacka" apiRef={apiRef} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['noz', L('Detail noža', 'Tool detail')], ['kulisa', L('Kulisa', 'Slotted link')], ['zhora', L('Zhora', 'Top')], ['panel', L('Rozvádzač', 'Control box')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

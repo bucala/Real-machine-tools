@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createDrops, createParticles } from '../core/particles';
@@ -66,6 +68,7 @@ function CylGrinderSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, pivotLever, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Hrotová brúska na guľato' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -112,14 +115,16 @@ function CylGrinderSimulator({ onBack, params }) {
     // dorazy obratu na prednej hrane stola
     const dogLm = box(tbl, -0.1, 0.1, 7.85, 8.3, 2.0, 2.18, M.red), dogRm = box(tbl, -0.1, 0.1, 7.85, 8.3, 2.0, 2.18, M.red);
     // obrobok – prstence s farbou podľa stavu povrchu
-    const workG = grp('obrobok', tbl);
+    const workG = grp('obrobok', tbl); workG.position.set(0,AX,ZA);
     const NT = 40;
     let shaft = null, wMesh = null, wL = 2, dirty = true;
     const C_RAW = new THREE.Color(0x5d6267), C_GR = new THREE.Color(0xe5e9ec), C_BURN = new THREE.Color(0x5a4a6e);
     const buildWork = () => {
       if (wMesh) { workG.remove(wMesh); wMesh.geometry.dispose(); }
-      const N = shaft.N, geo = new THREE.BufferGeometry(), pos = new Float32Array((N + 1) * NT * 3), col = new Float32Array((N + 1) * NT * 3), idx = [];
-      for (let i = 0; i < N; i++) for (let j = 0; j < NT; j++) { const a = i * NT + j, b = i * NT + (j + 1) % NT; idx.push(a, a + NT, b, b, a + NT, b + NT); }
+      const N = shaft.N, geo = new THREE.BufferGeometry(), pos = new Float32Array(((N + 1) * NT + 2) * 3), col = new Float32Array(((N + 1) * NT + 2) * 3), idx = [];
+      for (let i = 0; i < N; i++) for (let j = 0; j < NT; j++) { const a = i * NT + j, b = i * NT + (j + 1) % NT; idx.push(a, b, a + NT, b, b + NT, a + NT); }
+      const left=(N+1)*NT,right=left+1;
+      for(let j=0;j<NT;j++){idx.push(left,(j+1)%NT,j);idx.push(right,N*NT+j,N*NT+(j+1)%NT);}
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx);
       wMesh = new THREE.Mesh(geo, M.work); wMesh.castShadow = true; wMesh.userData.part = 'obrobok'; workG.add(wMesh); G.obrobok = workG;
       dirty = true;
@@ -129,8 +134,9 @@ function CylGrinderSimulator({ onBack, params }) {
       let o = 0;
       for (let i = 0; i <= N; i++) {
         const k = Math.min(i, N - 1), r = shaft.d[k] / 200, x = -wL / 2 + i * shaft.dx / 100, cc = shaft.burn[k] ? C_BURN : shaft.mask[k] ? C_GR : C_RAW;
-        for (let j = 0; j < NT; j++) { const a = j / NT * TAU; pos[o] = x; pos[o + 1] = AX + Math.cos(a) * r; pos[o + 2] = ZA + Math.sin(a) * r; col[o] = cc.r; col[o + 1] = cc.g; col[o + 2] = cc.b; o += 3; }
+        for (let j = 0; j < NT; j++) { const a = j / NT * TAU; pos[o] = x; pos[o + 1] = Math.cos(a) * r; pos[o + 2] = Math.sin(a) * r; col[o] = cc.r; col[o + 1] = cc.g; col[o + 2] = cc.b; o += 3; }
       }
+      for(const x of [-wL/2,wL/2]){pos[o]=x;pos[o+1]=0;pos[o+2]=0;col[o]=C_RAW.r;col[o+1]=C_RAW.g;col[o+2]=C_RAW.b;o+=3;}
       wMesh.geometry.attributes.position.needsUpdate = true; wMesh.geometry.attributes.color.needsUpdate = true; wMesh.geometry.computeVertexNormals(); wMesh.geometry.computeBoundingSphere();
     };
     const makeShaft = (D, Lmm) => {
@@ -189,11 +195,10 @@ function CylGrinderSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
-    apiRef.current.view = (n) => insp.goView(n, false);
     apiRef.current.measure = () => ({ shaft, info: shaftInfo(shaft) });
     apiRef.current.dAt = (x) => dAt(shaft, x);
     apiRef.current.save = () => ({ v: 1, D: shaft.d0, L: shaft.L, N: shaft.N, d: toB64(shaft.d), mask: toB64(shaft.mask), burn: toB64(shaft.burn) });
@@ -204,7 +209,17 @@ function CylGrinderSimulator({ onBack, params }) {
       shaft.d.set(fromB64(r.d, Float64Array)); shaft.mask.set(fromB64(r.mask, Uint8Array)); shaft.burn.set(fromB64(r.burn, Uint8Array)); dirty = true; return true;
     };
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work || c.trav)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      refreshWork();return exportStep(workG);
+    };
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(workG),getSpot:()=>v3(0, AX+1.5, 7),
+      canInspect:()=>c.wheel || c.work || c.trav || st.wheel>.01 || st.work>.01 ? L('Najprv zastav kotúč, obrobok aj posuv stola.', 'Stop the wheel, work rotation and table traverse first.') : st.d < maxUnder()+.02 ? L('Najprv odsuň kotúč od obrobku.', 'Retract the wheel from the work first.') : null, prepare:()=>{refreshWork();dirty=false;},
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (st.work > 0.05 || c.trav) { say(L('Obrobok sa mení pri stojacom obrobku a stole.', 'The work is changed with the work and the table stopped.')); return false; }
       const D = clamp(c.bD, 15, 60);
       push('dT', Math.round((D + 1) * 1000) / 1000); st.d = D + 1;
@@ -239,6 +254,9 @@ function CylGrinderSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){tail.position.x=wL/2+.33+wi.open()*.35;ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       const ts = c.timeScale, dts = dt * ts;
       if (!c.power && (c.wheel || c.work || c.trav)) { push('wheel', false); push('work', false); push('trav', false); }
       st.wheel = approach(st.wheel, c.wheel && c.power ? 1 : 0, (c.wheel ? 0.35 : 0.25) * dt);
@@ -290,7 +308,7 @@ function CylGrinderSimulator({ onBack, params }) {
       // pohyb skupín
       tbl.position.x = st.xt; whz.position.z = wheelZ(st.d);
       st.spin += st.wheel * 6 * TAU * dt; wheel.rotation.x = -st.spin;
-      st.wspin += st.work * (c.nw / 60) * TAU * dt * 0.5; drive.rotation.x = st.wspin;
+      st.wspin += st.work * (c.nw / 60) * TAU * dt * 0.5; drive.rotation.x = st.wspin;workG.rotation.x=st.wspin;tail.position.x=wL/2+.33;
       dogLm.position.x = clamp(c.dogL, uMin(), uMax()) / 100 - wL / 2; dogRm.position.x = clamp(c.dogR, uMin(), uMax()) / 100 - wL / 2;
       lampW.emissive.setHex(c.wheel && c.power ? 0x22dd55 : 0); lampK.emissive.setHex(c.work && c.power ? 0x22dd55 : 0);
       lamp.update(c.light);
@@ -305,7 +323,7 @@ function CylGrinderSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__cyl = { st, c, shaft: () => shaft, root }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); try { if (window.__cyl && window.__cyl.st === st) delete window.__cyl; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); try { if (window.__cyl && window.__cyl.st === st) delete window.__cyl; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = cylParts();
@@ -331,11 +349,11 @@ function CylGrinderSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Kotúč sa pri brúsení odtláča – po poslednom prísuve nechaj niekoľko prechodov vyiskriť, až kým iskry nezmiznú.', 'The wheel deflects while grinding – after the last infeed let it spark out for several passes until the sparks stop.'),
           L('Prísuv na obrat nad 0,03 mm (bez chladenia nad 0,015 mm) prepáli povrch.', 'An infeed above 0.03 mm per reversal (0.015 mm without coolant) burns the surface.'),
           L('Dorazy nastav tak, aby kotúč na koncoch prebiehal o tretinu šírky – inak zostanú konce hrubšie.', 'Set the dogs so that the wheel overruns the ends by a third of its width – otherwise the ends stay oversize.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · brúska na guľato', 'Simulator · cylindrical grinder')} title={L('Hrotová brúska na guľato', 'Cylindrical grinder')}
           sub={L('Predloha: univerzálna hrotová brúska TOS BUA – hydraulický stôl s dorazmi, brúsny vreteník s prísuvom po 0,005 mm, kotúč Ø400 × 40 mm.', 'Modelled after the TOS BUA universal cylindrical grinder – hydraulic table with dogs, wheelhead with 0.005 mm infeed, Ø400 × 40 mm wheel.')}
           rows={[[L('Prísuv Ø', 'Infeed Ø'), tele.d.toFixed(3)], [L('Kotúč u mm', 'Wheel u mm'), tele.u.toFixed(0)]]}
@@ -396,8 +414,8 @@ function CylGrinderSimulator({ onBack, params }) {
         <ExportSection machine="gulato" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail brúsenia', 'Grinding detail')], ['zhora', L('Zhora', 'Top')], ['panel', L('Ovládanie', 'Controls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

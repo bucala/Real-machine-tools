@@ -9,7 +9,8 @@ const LIGHT_K = Math.PI;
 import { clamp } from './util';
 
 // ---------- ovládanie kamery ----------
-function createOrbit(camera, dom, onUser, enabled) {
+function createOrbit(camera, dom, onUser, enabled, { maxDistance = 50, maxTargetY = 16 } = {}) {
+  dom.style.touchAction = 'none';
   const target = new THREE.Vector3();
   const sph = { r: 20, theta: 0, phi: 1 };
   const sync = () => {
@@ -17,7 +18,7 @@ function createOrbit(camera, dom, onUser, enabled) {
     sph.r = o.length(); sph.theta = Math.atan2(o.x, o.z); sph.phi = Math.acos(clamp(o.y / sph.r, -1, 1));
   };
   const apply = () => {
-    sph.phi = clamp(sph.phi, 0.03, 1.5); sph.r = clamp(sph.r, 4, 50);
+    sph.phi = clamp(sph.phi, 0.03, 1.5); sph.r = clamp(sph.r, 4, maxDistance);
     const s = Math.sin(sph.phi);
     camera.position.set(target.x + sph.r * s * Math.sin(sph.theta), target.y + sph.r * Math.cos(sph.phi), target.z + sph.r * s * Math.cos(sph.theta));
     camera.lookAt(target);
@@ -28,7 +29,7 @@ function createOrbit(camera, dom, onUser, enabled) {
     vR.setFromMatrixColumn(camera.matrix, 0); vU.setFromMatrixColumn(camera.matrix, 1);
     const k = sph.r * 0.0017;
     target.addScaledVector(vR, -dx * k).addScaledVector(vU, dy * k);
-    target.y = clamp(target.y, 0, 16);
+    target.y = clamp(target.y, 0, maxTargetY);
   };
   const pts = new Map();
   let mode = null, pinch = 0, mid = null;
@@ -38,6 +39,7 @@ function createOrbit(camera, dom, onUser, enabled) {
   };
   const down = (e) => {
     if (!enabled()) return;
+    if (e.cancelable) e.preventDefault();
     try { dom.setPointerCapture(e.pointerId); } catch (err) { /* ignorované */ }
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.size === 1) mode = (e.button === 2 || e.shiftKey) ? 'pan' : 'rot';
@@ -46,6 +48,7 @@ function createOrbit(camera, dom, onUser, enabled) {
   const move = (e) => {
     const p = pts.get(e.pointerId); if (!p) return;
     if (!enabled()) { pts.clear(); mode = null; return; }
+    if (e.cancelable) e.preventDefault();
     const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
     if (mode === 'rot') { sph.theta -= dx * 0.0065; sph.phi -= dy * 0.0065; }
     else if (mode === 'pan') pan(dx, dy);
@@ -56,7 +59,7 @@ function createOrbit(camera, dom, onUser, enabled) {
     onUser(); apply();
   };
   const up = (e) => { pts.delete(e.pointerId); mode = pts.size === 1 ? 'rot' : null; };
-  const wheel = (e) => { if (!enabled()) return; e.preventDefault(); sph.r *= Math.exp(e.deltaY * 0.0012); onUser(); apply(); };
+  const wheel = (e) => { e.preventDefault(); e.stopPropagation(); if (!enabled()) return; sph.r *= Math.exp(e.deltaY * 0.0012); onUser(); apply(); };
   const ctx = (e) => e.preventDefault();
   dom.addEventListener('pointerdown', down); dom.addEventListener('pointermove', move);
   dom.addEventListener('pointerup', up); dom.addEventListener('pointercancel', up);
@@ -70,7 +73,7 @@ function createOrbit(camera, dom, onUser, enabled) {
 }
 
 // ---------- spoločná scéna: renderer, prostredie, svetlá, podlaha ----------
-function createStage(mount) {
+function createStage(mount, { far = 200, floorSize = 140, gridSize = 80, fogNear = 45, fogFar = 95 } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -83,7 +86,7 @@ function createStage(mount) {
 
   const scene = new THREE.Scene();
   let forceNext = true;                          // vynútené prekreslenie (zmena veľkosti, vzhľadu)
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, far);
 
   // jednoduché prostredie pre odlesky kovov
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -106,17 +109,17 @@ function createStage(mount) {
   scene.add(sun);
   const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35 * LIGHT_K); fill.position.set(12, 8, -10); scene.add(fill);
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.95, metalness: 0 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorSize, floorSize), new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.95, metalness: 0 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   let grid = null;
   const applyTheme = () => {
     const cs = getComputedStyle(document.documentElement);
     const col = (n, d) => new THREE.Color((cs.getPropertyValue(n) || '').trim() || d).convertSRGBToLinear();
     scene.background = col('--scene-bg', '#dde2da');
-    scene.fog = new THREE.Fog(scene.background, 45, 95);
+    scene.fog = new THREE.Fog(scene.background, fogNear, fogFar);
     floor.material.color = col('--floor', '#b7bcb2');
     if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
-    grid = new THREE.GridHelper(80, 80, col('--grid-1', '#8b9386'), col('--grid-2', '#a6ac9f'));
+    grid = new THREE.GridHelper(gridSize, gridSize, col('--grid-1', '#8b9386'), col('--grid-2', '#a6ac9f'));
     grid.position.y = 0.005; scene.add(grid);
     forceNext = true;
   };

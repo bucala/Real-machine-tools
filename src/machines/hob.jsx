@@ -1,7 +1,10 @@
+import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '../core/controls';
 import { L, LL, RPM } from '../core/i18n';
+import { createMachineWorkInspect } from '../core/machineWorkInspect';
+import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
 import { createParticles } from '../core/particles';
@@ -58,6 +61,7 @@ function HobberSimulator({ onBack, params }) {
     const kit = makeKit(M);
     const { add, box, cylX, cylY, cylZ, ball, hitProxy, handwheel } = kit;
     const root = new THREE.Group(); scene.add(root);
+    apiRef.current.machineModel = { root, name: 'Odvaľovacia frézka' };
     const G = {};
     const grp = (k, parent = root) => { const g = new THREE.Group(); g.userData.part = k; parent.add(g); G[k] = g; return g; };
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -94,7 +98,7 @@ function HobberSimulator({ onBack, params }) {
       }
       for (let i = 0; i < NH; i++) for (let j = 0; j < NA; j++) { const a = i * NA + j, b = i * NA + (j + 1) % NA; idx.push(a, a + NA, b, b, a + NA, b + NA); }
       const cB = pos.length / 3; pos.push(0, 0, 0); const cT = cB + 1; pos.push(0, H, 0);
-      for (let j = 0; j < NA; j++) { idx.push(cB, (j + 1) % NA, j); idx.push(cT, NH * NA + j, NH * NA + (j + 1) % NA); }
+      for (let j = 0; j < NA; j++) { idx.push(cB, j, (j + 1) % NA); idx.push(cT, NH * NA + (j + 1) % NA, NH * NA + j); }
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
       gMesh = new THREE.Mesh(geo, M.gear); gMesh.castShadow = true; gMesh.userData.part = 'obrobok'; gMesh.position.y = WY0 - 2.4; gearG.add(gMesh); G.obrobok = gearG;
     };
@@ -153,14 +157,23 @@ function HobberSimulator({ onBack, params }) {
     };
     const insp = createInspector({
       dom, mount, camera, root, G, anchors, views, labelEls: Array.from(layer.querySelectorAll('[data-part]')),
-      enabled: () => !c.manual, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed(), onHL: () => ctrl.invalidate(),
+      enabled: () => !c.manual && !c.unclamped, onPick: (k) => apiRef.current.onPick(k), blockPick: () => ctrl.isUsed() || c.unclamped, onHL: () => ctrl.invalidate(),
     });
     const ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
     const { push, pend } = ctrl;
-    apiRef.current.view = (n) => insp.goView(n, false);
     apiRef.current.measure = () => ({ gear, info: gearInfo(gear) });
     apiRef.current.snapshot = snapshot;
+    apiRef.current.exportStep = async () => {
+      if(c.running || c.drive || c.wheel || c.work)throw new Error(L('Najprv zastav stroj a potom exportuj obrobok.','Stop the machine before exporting the workpiece.'));
+      if(dirty){buildGear();dirty=false;}return exportStep(gearG);
+    };
+    const wi=createMachineWorkInspect({scene,camera,dom,insp,c,set,apiRef,say,
+      getObj:()=>(gearG),getSpot:()=>v3(WX, WY0+2, 6),
+      canInspect:()=>c.running || st.rpm>1 ? L('Najprv zastav frézu a stôl.', 'Stop the hob and the table first.') : engaged() ? L('Najprv odsuň frézu zo záberu.', 'Retract the hob from the cut first.') : null, prepare:()=>{buildGear();dirty=false;},
+    });
+
     apiRef.current.newBlank = () => {
+      if(c.unclamped){say(L('Najprv vráť obrobok do stroja.','Return the workpiece to the machine first.'));return false;}
       if (c.running || st.rpm > 1) { say(L('Polotovar sa mení pri stojacom stroji.', 'The blank is changed with the machine stopped.')); return false; }
       push('d', 0); st.d = 0; push('y', 60); st.y = 60; makeGear();
       say(L(`Na tŕni je nový polotovar Ø${tipD(M2, c.zT)} × 20 mm pre z ${c.zT}.`, `A new blank Ø${tipD(M2, c.zT)} × 20 mm for z ${c.zT} is on the arbor.`), 'info'); return true;
@@ -184,6 +197,9 @@ function HobberSimulator({ onBack, params }) {
     const loop = (nowMs) => {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs; t += dt;
+      wi.update(dt);
+      if(c.unclamped){ctrl.update(dt);insp.update(t,c);renderer.render(scene,camera);return;}
+
       if (!c.power && c.running) push('running', false);
       // nastavenie delenia a sklonu – len pri stojacom stroji
       if ((c.zSel !== st.zSel || Math.abs(c.ang - st.ang) > 1e-9) && st.rpm > 1) { sayOnce('set', true, L('Výmenné kolesá a sklon frézy sa menia len pri stojacom stroji.', 'The change gears and the hob swivel are changed only with the machine stopped.')); c.zSel = st.zSel; pend.zSel = st.zSel; c.ang = st.ang; pend.ang = st.ang; }
@@ -227,7 +243,7 @@ function HobberSimulator({ onBack, params }) {
     };
     try { if (/[?&]debug/.test(window.location.search)) window.__hob = { st, c, gear: () => gear }; } catch (err) { /* ignorované */ }
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); insp.dispose(); try { if (window.__hob && window.__hob.st === st) delete window.__hob; } catch (err) { /* ignorované */ } disposeStage(); };
+    return () => { cancelAnimationFrame(raf); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); try { if (window.__hob && window.__hob.st === st) delete window.__hob; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 
   const parts = hobParts();
@@ -247,11 +263,11 @@ function HobberSimulator({ onBack, params }) {
 
   return (
     <div className="machine-app w-full flex flex-col md:flex-row">
-      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp={false}
+      <SceneView mountRef={mountRef} layerRef={layerRef} tipRef={tipRef} ui={ui} set={set} parts={parts} selected={selected} selectPart={selectPart} chips={chips} onBack={onBack} apiRef={apiRef} canUnclamp workLabels={[L('Pozrieť obrobok','Inspect workpiece'),L('Upnúť späť','Clamp back')]}
         tips={[L('Pri jednochodej fréze sa stôl otočí o 1/z otáčky na otáčku frézy – výmenné kolesá delenia i = 24 / z.', 'With a single-start hob the table turns 1/z of a revolution per hob revolution – index change gears i = 24 / z.'),
           L('Do hĺbky prisúvaj nad obrobkom, potom zvislým posuvom prejdi celú šírku kolesa.', 'Feed to depth above the blank, then traverse the whole face width with the vertical feed.'),
           L('Rozmer cez zuby Wk ukáže, či je zub dorezaný na plnú hĺbku.', 'The span over teeth Wk shows whether the tooth is cut to full depth.')]} />
-      <aside className="panel">
+      <aside className="panel"><fieldset className="machine-settings" disabled={ui.unclamped}>
         <PanelHeader ui={ui} set={set} kicker={L('Simulátor · odvalovacia frézka', 'Simulator · gear hobber')} title={L('Odvalovacia frézka na ozubenie', 'Gear hobbing machine')}
           sub={L('Predloha: odvalovacie frézky TOS Čelákovice – výmenné kolesá delenia, sklon frézy, radiálny prísuv stojana a zvislý posuv hlavy.', 'Modelled after TOS Čelákovice gear hobbers – index change gears, hob swivel, radial column infeed and vertical head feed.')}
           rows={[[L('Hĺbka mm', 'Depth mm'), tele.d.toFixed(2)], ['Y mm', tele.y.toFixed(1)]]}
@@ -271,11 +287,11 @@ function HobberSimulator({ onBack, params }) {
         </div>
 
         <div className="sec">
-          <h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2>
+          <div className="section-heading"><h2 className="sec-title mb-2">{L('Nastavenie', 'Setup')}</h2><SectionInfo title={L('Nastavenie', 'Setup')}><p className="text-xs muted">{L(`Stúpací uhol jednochodej frézy m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2).replace('.', ',')}°.`, `Lead angle of a single-start hob m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2)}°.`)}</p></SectionInfo></div>
           <SegRow label={L('Výmenné kolesá delenia – z', 'Index change gears – z')} value={ui.zSel} options={HOB_Z.map((z) => [z, String(z)])} onChange={(v) => { if (stopped) set('zSel', v); }} />
           <p className="text-xs muted">{gs ? L(`i = 24 / ${ui.zSel} = ${gs.a}/${gs.b}${gs.c !== 1 ? ` · ${gs.c}/${gs.d}` : ''}`, `i = 24 / ${ui.zSel} = ${gs.a}/${gs.b}${gs.c !== 1 ? ` · ${gs.c}/${gs.d}` : ''}`) : ''}</p>
           <Slider id="ha" label={L('Sklon frézy', 'Hob swivel')} unit="°" min={-5} max={5} step={0.01} value={ui.ang} digits={2} onChange={(v) => { if (stopped) set('ang', v); }} disabled={!stopped} />
-          <p className="text-xs muted">{L(`Stúpací uhol jednochodej frézy m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2).replace('.', ',')}°.`, `Lead angle of a single-start hob m 2, Ø70: γ = arcsin(m / d0) = ${hobAngle(M2).toFixed(2)}°.`)}</p>
+
         </div>
 
         <div className="sec">
@@ -303,8 +319,8 @@ function HobberSimulator({ onBack, params }) {
         <ExportSection machine="odvalovacka" apiRef={apiRef} canStl={false} />
         <ViewSection apiRef={apiRef} views={[['celok', L('Celok', 'Overview')], ['rez', L('Detail frézy', 'Hob detail')], ['zhora', L('Zhora', 'Top')], ['panel', L('Ovládanie', 'Controls')]]} />
         <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
-        <HelpFooter />
-      </aside>
+        <HelpFooter apiRef={apiRef} ui={ui} />
+      </fieldset></aside>
     </div>
   );
 }

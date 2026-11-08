@@ -2,3 +2,6 @@
 node_modules/
 .vite/
 coverage/
+
+__pycache__/
+.venv/
