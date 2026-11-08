@@ -13,8 +13,12 @@ describe('prevodovky', () => {
     ['vŕtačka', DRILL_SPEEDS, 8, 125, 1400],
   ])('%s: otáčky stúpajú v geometrickom rade', (_, s, n, lo, hi) => {
     expect(s).toHaveLength(n);
-    expect(s[0]).toBe(lo); expect(s[n - 1]).toBe(hi);
-    for (const r of ratios(s)) { expect(r).toBeGreaterThan(1.15); expect(r).toBeLessThan(1.5); }
+    expect(s[0]).toBe(lo);
+    expect(s[n - 1]).toBe(hi);
+    for (const r of ratios(s)) {
+      expect(r).toBeGreaterThan(1.15);
+      expect(r).toBeLessThan(1.5);
+    }
   });
   it('sústruh: posuvy z prevodovky Norton (8 základných × násobič 1 / 2) bez duplicít', () => {
     expect(LATHE_FEEDS).toEqual([0.05, 0.07, 0.1, 0.14, 0.2, 0.25, 0.28, 0.35, 0.4, 0.5, 0.7, 1]);
@@ -31,7 +35,10 @@ describe('nástroje', () => {
     expect(prof(0)).toBeCloseTo(0, 6);
     expect(prof(5)).toBe(Infinity);
     expect(prof(-5)).toBe(Infinity);
-    for (let d = -0.4; d <= 0.4; d += 0.01) { const v = prof(d); if (v !== Infinity) expect(v).toBeGreaterThanOrEqual(0); }
+    for (let d = -0.4; d <= 0.4; d += 0.01) {
+      const v = prof(d);
+      if (v !== Infinity) expect(v).toBeGreaterThanOrEqual(0);
+    }
   });
   it('frézy: polomer je polovica priemeru v mierke 1 : 100 mm', () => {
     for (const t of Object.values(MILL_TOOLS)) expect(t.r).toBeCloseTo(t.d / 200, 9);

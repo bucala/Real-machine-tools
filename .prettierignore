@@ -1,0 +1,12 @@
+public/
+node_modules/
+package-lock.json
+docs/
+*.md
+static/
+src/machines/cnc/assets/
+.github/
+LICENSE
+*.webmanifest
+tailwind.config.js
+postcss.config.js

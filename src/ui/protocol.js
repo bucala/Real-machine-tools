@@ -12,18 +12,35 @@ export const score = (checks, warns) => {
 
 const NUM = '[-−]?\\d+(?:[.,]\\d+)?';
 const toN = (s) => parseFloat(String(s).replace('−', '-').replace(',', '.'));
-const decs = (s) => { const m = String(s).match(/[.,](\d+)/); return m ? m[1].length : 0; };
+const decs = (s) => {
+  const m = String(s).match(/[.,](\d+)/);
+  return m ? m[1].length : 0;
+};
 // predpis z textu požiadavky: „… 30 ±0,5 mm“ → menovitá hodnota a tolerancia, „Ø40 h6 (40,000 – 39,984)“ → medze
 export function parseReq(label) {
   const s = String(label);
   const pm = s.match(new RegExp(`(${NUM})\\s*±\\s*(${NUM})`));
   if (pm && !/[×x]\s*$/.test(s.slice(0, pm.index))) {
-    return { nom: toN(pm[1]), lo: toN(pm[1]) - toN(pm[2]), hi: toN(pm[1]) + toN(pm[2]), d: Math.max(decs(pm[1]), decs(pm[2])), text: `${pm[1]} ±${pm[2]}` };
+    return {
+      nom: toN(pm[1]),
+      lo: toN(pm[1]) - toN(pm[2]),
+      hi: toN(pm[1]) + toN(pm[2]),
+      d: Math.max(decs(pm[1]), decs(pm[2])),
+      text: `${pm[1]} ±${pm[2]}`,
+    };
   }
   const rg = s.match(new RegExp(`\\((${NUM})\\s*[–-]\\s*(${NUM})\\)`));
   if (rg) {
-    const a = toN(rg[1]), b = toN(rg[2]), nm = s.match(new RegExp(`Ø\\s*(${NUM})`));
-    return { nom: nm ? toN(nm[1]) : (a + b) / 2, lo: Math.min(a, b), hi: Math.max(a, b), d: Math.max(decs(rg[1]), decs(rg[2])), text: `${rg[1]} – ${rg[2]}` };
+    const a = toN(rg[1]),
+      b = toN(rg[2]),
+      nm = s.match(new RegExp(`Ø\\s*(${NUM})`));
+    return {
+      nom: nm ? toN(nm[1]) : (a + b) / 2,
+      lo: Math.min(a, b),
+      hi: Math.max(a, b),
+      d: Math.max(decs(rg[1]), decs(rg[2])),
+      text: `${rg[1]} – ${rg[2]}`,
+    };
   }
   return null;
 }
@@ -34,24 +51,44 @@ export function parseAct(actual) {
 }
 const fmtN = (v, d) => L(v.toFixed(d).replace('.', ','), v.toFixed(d));
 export function deviation(label, actual) {
-  const r = parseReq(label), a = parseAct(actual);
+  const r = parseReq(label),
+    a = parseAct(actual);
   if (!r || !a) return { req: r ? r.text : '', dev: '' };
-  const d = Math.min(3, Math.max(r.d, a.d)), dv = a.v - r.nom;
-  return { req: r.text, dev: Math.abs(dv) < 0.5 * 10 ** -d ? fmtN(0, d) : `${dv > 0 ? '+' : '−'}${fmtN(Math.abs(dv), d)}` };
+  const d = Math.min(3, Math.max(r.d, a.d)),
+    dv = a.v - r.nom;
+  return {
+    req: r.text,
+    dev: Math.abs(dv) < 0.5 * 10 ** -d ? fmtN(0, d) : `${dv > 0 ? '+' : '−'}${fmtN(Math.abs(dv), d)}`,
+  };
 }
 
-const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s) =>
+  String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 // d = { machine, title, sub, kicker, task, desc, svg, shot, params: [{ sec, l, v }], dro: [[l, v]], checks, warns, secs, student, url, date }
 export function buildProtocol(d) {
   const sc = score(d.checks, d.warns);
   const secs = [];
-  d.params.forEach((p) => { let g = secs.find((x) => x.sec === p.sec); if (!g) { g = { sec: p.sec, rows: [] }; secs.push(g); } g.rows.push(p); });
-  const rows = d.checks.map((c, i) => {
-    const dv = deviation(c.label, c.actual);
-    return `<tr><td class="num">${i + 1}</td><td>${esc(c.label)}</td><td class="num">${esc(dv.req || '–')}</td><td class="num">${esc(c.actual || '–')}</td><td class="num">${esc(dv.dev || '–')}</td><td class="${c.ok ? 'ok' : 'ng'}">${c.ok ? L('✓ vyhovuje', '✓ pass') : L('✗ nevyhovuje', '✗ fail')}</td></tr>`;
-  }).join('');
-  const kv = (list) => `<table class="kv">${list.map(([l, v]) => `<tr><th>${esc(l)}</th><td>${esc(v)}</td></tr>`).join('')}</table>`;
+  d.params.forEach((p) => {
+    let g = secs.find((x) => x.sec === p.sec);
+    if (!g) {
+      g = { sec: p.sec, rows: [] };
+      secs.push(g);
+    }
+    g.rows.push(p);
+  });
+  const rows = d.checks
+    .map((c, i) => {
+      const dv = deviation(c.label, c.actual);
+      return `<tr><td class="num">${i + 1}</td><td>${esc(c.label)}</td><td class="num">${esc(dv.req || '–')}</td><td class="num">${esc(c.actual || '–')}</td><td class="num">${esc(dv.dev || '–')}</td><td class="${c.ok ? 'ok' : 'ng'}">${c.ok ? L('✓ vyhovuje', '✓ pass') : L('✗ nevyhovuje', '✗ fail')}</td></tr>`;
+    })
+    .join('');
+  const kv = (list) =>
+    `<table class="kv">${list.map(([l, v]) => `<tr><th>${esc(l)}</th><td>${esc(v)}</td></tr>`).join('')}</table>`;
   const lang = L('sk', 'en');
   return `<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

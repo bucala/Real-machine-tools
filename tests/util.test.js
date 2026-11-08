@@ -15,12 +15,14 @@ describe('pomocné funkcie', () => {
   it('logNear nájde najbližší stupeň v logaritmickej mierke', () => {
     const s = [40, 56, 80, 112];
     expect(logNear(s, 40)).toBe(0);
-    expect(logNear(s, 65)).toBe(1);     // 65 je logaritmicky bližšie k 56 ako k 80
+    expect(logNear(s, 65)).toBe(1); // 65 je logaritmicky bližšie k 56 ako k 80
     expect(logNear(s, 1000)).toBe(3);
   });
   it('fanAngles rozloží polohy páky súmerne', () => {
     expect(fanAngles(1, 1)).toEqual([0]);
     const a = fanAngles(3, 0.6);
-    expect(a[0]).toBeCloseTo(0.6); expect(a[1]).toBeCloseTo(0); expect(a[2]).toBeCloseTo(-0.6);
+    expect(a[0]).toBeCloseTo(0.6);
+    expect(a[1]).toBeCloseTo(0);
+    expect(a[2]).toBeCloseTo(-0.6);
   });
 });

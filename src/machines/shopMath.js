@@ -10,17 +10,30 @@ export const drillChecks = {
     const dist = h.length === 2 ? Math.hypot(h[0].x - h[1].x, h[0].z - h[1].z) : 0;
     return [
       { key: 'count', ok: h.length === 2, actual: `${h.length}` },
-      { key: 'd', ok: h.length === 2 && h.every((x) => Math.abs(x.d - 10) < 0.01), actual: h.map((x) => `Ø${x.d}`).join(', ') || '–' },
-      { key: 'through', ok: h.length === 2 && h.every((x) => x.through), actual: h.filter((x) => x.through).length ? `${h.filter((x) => x.through).length}×` : '–' },
+      {
+        key: 'd',
+        ok: h.length === 2 && h.every((x) => Math.abs(x.d - 10) < 0.01),
+        actual: h.map((x) => `Ø${x.d}`).join(', ') || '–',
+      },
+      {
+        key: 'through',
+        ok: h.length === 2 && h.every((x) => x.through),
+        actual: h.filter((x) => x.through).length ? `${h.filter((x) => x.through).length}×` : '–',
+      },
       { key: 'dist', ok: ok(dist, 50, 1), actual: dist ? `${f1(dist)} mm` : '–' },
     ];
   },
   slepa: ({ holes }) => {
-    const h = holes.filter((x) => x.depth > 0.5), one = h.length === 1 ? h[0] : null;
+    const h = holes.filter((x) => x.depth > 0.5),
+      one = h.length === 1 ? h[0] : null;
     return [
       { key: 'count', ok: !!one, actual: `${h.length}` },
       { key: 'd', ok: !!one && Math.abs(one.d - 8) < 0.01, actual: one ? `Ø${one.d}` : '–' },
-      { key: 'depth', ok: !!one && !one.through && ok(one.depth, 15, 0.5), actual: one ? (one.through ? 'naskrz' : `${f1(one.depth)} mm`) : '–' },
+      {
+        key: 'depth',
+        ok: !!one && !one.through && ok(one.depth, 15, 0.5),
+        actual: one ? (one.through ? 'naskrz' : `${f1(one.depth)} mm`) : '–',
+      },
     ];
   },
 };
@@ -53,7 +66,13 @@ export const sawChecks = {
 // zváranie: m = { stats (evalWeld), type, t, pos, slag }
 const weldCommon = ({ stats, slag }) => {
   const s = stats || {};
-  const flaws = s.cov ? (s.cold > 1 ? 1 : 0) + (s.longArc > 1.5 ? 1 : 0) + (s.fast > 1 ? 1 : 0) + (s.wrongDir > 0.5 ? 1 : 0) + (s.sag > 1 ? 1 : 0) : 0;
+  const flaws = s.cov
+    ? (s.cold > 1 ? 1 : 0) +
+      (s.longArc > 1.5 ? 1 : 0) +
+      (s.fast > 1 ? 1 : 0) +
+      (s.wrongDir > 0.5 ? 1 : 0) +
+      (s.sag > 1 ? 1 : 0)
+    : 0;
   return [
     { key: 'cov', ok: !!stats && s.cov >= 0.95, actual: stats ? `${Math.round(s.cov * 100)} %` : '–' },
     { key: 'off', ok: !!stats && s.off <= 0.15, actual: stats ? `${Math.round(s.off * 100)} %` : '–' },
@@ -65,7 +84,11 @@ const L_SLAG = ['troska', '✓'];
 export const weldChecks = {
   vpa: (m) => [
     { key: 'setup', ok: m.type === 'V' && m.t === 8 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
-    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    {
+      key: 'fill',
+      ok: !!m.stats && m.stats.fill >= 0.9,
+      actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–',
+    },
     ...weldCommon(m),
   ],
   kpb: (m) => [
@@ -77,8 +100,16 @@ export const weldChecks = {
   vrstvy: (m) => [
     { key: 'setup', ok: m.type === 'V' && m.t === 12 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
     { key: 'layers', ok: !!m.stats && m.stats.layers >= 3, actual: m.stats ? `${m.stats.layers}` : '–' },
-    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
-    { key: 'inc', ok: !!m.stats && (m.stats.inc || 0) <= 15, actual: m.stats ? `${Math.round(m.stats.inc || 0)} mm²` : '–' },
+    {
+      key: 'fill',
+      ok: !!m.stats && m.stats.fill >= 0.9,
+      actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–',
+    },
+    {
+      key: 'inc',
+      ok: !!m.stats && (m.stats.inc || 0) <= 15,
+      actual: m.stats ? `${Math.round(m.stats.inc || 0)} mm²` : '–',
+    },
     ...weldCommon(m),
   ],
   // rúra na plech: kútový zvar dookola
@@ -100,7 +131,11 @@ const migCommon = ({ stats }) => {
 export const migChecks = {
   mvpa: (m) => [
     { key: 'setup', ok: m.type === 'V' && m.t === 8 && m.pos === 'PA', actual: `${m.type} ${m.t} mm ${m.pos}` },
-    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    {
+      key: 'fill',
+      ok: !!m.stats && m.stats.fill >= 0.9,
+      actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–',
+    },
     ...migCommon(m),
   ],
   mkpb: (m) => [
@@ -110,15 +145,31 @@ export const migChecks = {
   ],
   // rúra Ø60,3 × 4: obvodový tupý zvar V v polohe PH
   mrr: (m) => [
-    { key: 'setup', ok: m.type === 'RR' && m.t === 4 && m.D === 60.3 && m.pos === 'PH', actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}` },
-    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    {
+      key: 'setup',
+      ok: m.type === 'RR' && m.t === 4 && m.D === 60.3 && m.pos === 'PH',
+      actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}`,
+    },
+    {
+      key: 'fill',
+      ok: !!m.stats && m.stats.fill >= 0.9,
+      actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–',
+    },
     ...migCommon(m),
   ],
   // rúra Ø88,9 × 8 na polohovadle: tri vrstvy dookola
   mrr3: (m) => [
-    { key: 'setup', ok: m.type === 'RR' && m.t === 8 && m.D === 88.9 && m.pos === 'PA', actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}` },
+    {
+      key: 'setup',
+      ok: m.type === 'RR' && m.t === 8 && m.D === 88.9 && m.pos === 'PA',
+      actual: `${m.type} Ø${m.D ?? '–'} × ${m.t} ${m.pos}`,
+    },
     { key: 'layers', ok: !!m.stats && m.stats.layers >= 3, actual: m.stats ? `${m.stats.layers}` : '–' },
-    { key: 'fill', ok: !!m.stats && m.stats.fill >= 0.9, actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–' },
+    {
+      key: 'fill',
+      ok: !!m.stats && m.stats.fill >= 0.9,
+      actual: m.stats && m.stats.fill != null ? `${Math.round(m.stats.fill * 100)} %` : '–',
+    },
     ...migCommon(m),
   ],
   mtenky: (m) => [

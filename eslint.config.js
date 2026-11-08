@@ -31,7 +31,10 @@ export default [
   },
   {
     files: ['sw-template.js'],
-    languageOptions: { sourceType: 'script', globals: { ...globals.serviceworker, __PRECACHE__: 'readonly', __ALL__: 'readonly' } },
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.serviceworker, __PRECACHE__: 'readonly', __ALL__: 'readonly' },
+    },
   },
   {
     files: ['tests-e2e/**/*.mjs'],

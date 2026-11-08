@@ -16,5 +16,9 @@ createRoot(document.getElementById('root')).render(<App />);
 
 // offline režim: service worker si pri prvej návšteve uloží celú aplikáciu
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => { /* bez offline režimu */ }); });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* bez offline režimu */
+    });
+  });
 }

@@ -18,20 +18,27 @@ describe('CNC tool geometry and pick-up', () => {
       const bounds = new THREE.Box3().setFromObject(g);
       expect(bounds.min.y).toBeCloseTo(-t.l / 100, 5);
       expect(bounds.max.y).toBeCloseTo(0, 5);
-      g.traverse((n) => { if (n.geometry) { expect(Array.from(n.geometry.attributes.position.array).every(Number.isFinite)).toBe(true); n.geometry.dispose(); } });
+      g.traverse((n) => {
+        if (n.geometry) {
+          expect(Array.from(n.geometry.attributes.position.array).every(Number.isFinite)).toBe(true);
+          n.geometry.dispose();
+        }
+      });
     }
     material.dispose();
   });
   it.each(['c32', 'c42'])('deposits before indexing and picks up at the magazine seating plane (%s)', (model) => {
-    const mach = MODELS[model], tools = defaultTools(), o54 = [0, 0, 90];
+    const mach = MODELS[model],
+      tools = defaultTools(),
+      o54 = [0, 0, 90];
     const prog = interpret('T3 M6', { tools, o54, mach });
     const stock = createStock({ min: [-5, -5, 50], max: [5, 5, 60], res: 1 });
     const ex = createExecutor({ moves: prog.moves, tools, o54, stock, mach });
-    ex.advance(mach.tc * .5);
+    ex.advance(mach.tc * 0.5);
     expect(ex.S.T).toBe(0);
     expect(ex.S.pose.m[1]).toBeCloseTo(mach.tcY);
     expect(ex.S.pose.m[2]).toBeCloseTo(mach.nose[1] - 80);
-    ex.advance(mach.tc * .21);
+    ex.advance(mach.tc * 0.21);
     expect(ex.S.T).toBe(3);
     expect(ex.S.pose.m[2] + tools[2].l).toBeGreaterThan(mach.nose[1] - 80);
     ex.advance(mach.tc);

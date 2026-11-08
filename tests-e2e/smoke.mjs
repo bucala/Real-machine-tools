@@ -9,35 +9,73 @@ import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
 
 const ROOT = new URL('../public/', import.meta.url).pathname;
-const CSP = (readFileSync(new URL('../static/_headers', import.meta.url), 'utf8').match(/Content-Security-Policy: (.*)/) || [])[1];
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.woff': 'font/woff', '.webmanifest': 'application/manifest+json' };
+const CSP = (readFileSync(new URL('../static/_headers', import.meta.url), 'utf8').match(
+  /Content-Security-Policy: (.*)/,
+) || [])[1];
+const TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.webmanifest': 'application/manifest+json',
+};
 // identifikátory strojov priamo z App.jsx – nový stroj sa do testu dostane automaticky
-const MACHINES = [...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{ ?id: ?'([a-z]+)'/g)].map((m) => m[1]);
+const MACHINES = [
+  ...readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8').matchAll(/\{ ?id: ?'([a-z]+)'/g),
+].map((m) => m[1]);
 
 const server = http.createServer(async (req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html';
+  let p = decodeURIComponent(req.url.split('?')[0]);
+  if (p.endsWith('/')) p += 'index.html';
   const file = normalize(join(ROOT, p));
-  if (!file.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
+  if (!file.startsWith(ROOT)) {
+    res.writeHead(403);
+    res.end();
+    return;
+  }
   try {
     const body = await readFile(file);
-    res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Content-Security-Policy': CSP, 'X-Content-Type-Options': 'nosniff' });
+    res.writeHead(200, {
+      'Content-Type': TYPES[extname(file)] || 'application/octet-stream',
+      'Content-Security-Policy': CSP,
+      'X-Content-Type-Options': 'nosniff',
+    });
     res.end(body);
-  } catch { res.writeHead(404); res.end('not found'); }
+  } catch {
+    res.writeHead(404);
+    res.end('not found');
+  }
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}/`;
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+});
 const failures = [];
-const fail = (where, what) => { failures.push(`${where}: ${what}`); console.log(`  ✗ ${where}: ${what}`); };
+const fail = (where, what) => {
+  failures.push(`${where}: ${what}`);
+  console.log(`  ✗ ${where}: ${what}`);
+};
 
 async function open(route, { debug = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
-  const page = await ctx.newPage(), problems = [];
-  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text().slice(0, 240)}`); });
+  const page = await ctx.newPage(),
+    problems = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(`console: ${m.text().slice(0, 240)}`);
+  });
   page.on('pageerror', (e) => problems.push(`výnimka: ${e.message.slice(0, 240)}`));
   page.on('requestfailed', (r) => problems.push(`požiadavka: ${r.url()} ${r.failure()?.errorText || ''}`));
-  await page.addInitScript(() => document.addEventListener('securitypolicyviolation', (e) => console.error(`CSP ${e.violatedDirective} ${e.blockedURI}`)));
+  await page.addInitScript(() =>
+    document.addEventListener('securitypolicyviolation', (e) =>
+      console.error(`CSP ${e.violatedDirective} ${e.blockedURI}`),
+    ),
+  );
   await page.goto(`${BASE}${debug ? '?debug' : ''}#${route}`);
   return { page, ctx, problems };
 }
@@ -45,13 +83,18 @@ const until = async (page, fn, arg, ms = 60000) => page.waitForFunction(fn, arg,
 
 // 1) menu a všetky stroje
 for (const route of ['', 'moderne', ...MACHINES]) {
-  const name = route || 'menu', t0 = Date.now();
+  const name = route || 'menu',
+    t0 = Date.now();
   const { page, ctx, problems } = await open(route);
   try {
-    await page.waitForSelector(['', 'moderne', 'shuangli'].includes(route) ? '.menu-title' : 'canvas', { timeout: 60000 });
+    await page.waitForSelector(['', 'moderne', 'shuangli'].includes(route) ? '.menu-title' : 'canvas', {
+      timeout: 60000,
+    });
     await page.waitForTimeout(1500);
     if (await page.getByText('Simulátor sa nepodarilo spustiť').count()) fail(name, 'chybová obrazovka simulátora');
-  } catch (e) { fail(name, e.message.split('\n')[0]); }
+  } catch (e) {
+    fail(name, e.message.split('\n')[0]);
+  }
   problems.forEach((p) => fail(name, p));
   console.log(`  ${problems.length ? '✗' : '✓'} ${name} (${Date.now() - t0} ms)`);
   await ctx.close();
@@ -63,19 +106,31 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   try {
     await until(page, () => window.__hermle?.ex);
     await page.getByRole('button', { name: 'Zatvoriť dvere', exact: true }).click();
-    await page.getByRole('button', { name: /Štart cyklu/i }).first().click();
+    await page
+      .getByRole('button', { name: /Štart cyklu/i })
+      .first()
+      .click();
     const early = await page.evaluate(() => ({ running: window.__hermle.c.running, door: window.__hermle.doorTravel }));
-    if (early.running && early.door > 0.01) fail('hermle', `program beží pri pootvorených dverách (${early.door.toFixed(2)})`);
-    await until(page, () => window.__hermle.c.running, null, 20000);          // odložený štart po zatvorení dverí
+    if (early.running && early.door > 0.01)
+      fail('hermle', `program beží pri pootvorených dverách (${early.door.toFixed(2)})`);
+    await until(page, () => window.__hermle.c.running, null, 20000); // odložený štart po zatvorení dverí
     await page.getByRole('button', { name: 'Otvoriť dvere', exact: true }).click();
     if (await page.evaluate(() => window.__hermle.c.door)) fail('hermle', 'dvere sa otvorili počas programu');
     await page.getByRole('button', { name: /Rýchlo na koniec/i }).click();
     await until(page, () => window.__hermle.ex.S.done || window.__hermle.ex.S.alarm, null, 240000);
-    const r = await page.evaluate(() => ({ alarm: window.__hermle.ex.S.alarm?.text, removed: window.__hermle.ex.S.removed, opt: window.__hermle.sceneOpt.stats() }));
+    const r = await page.evaluate(() => ({
+      alarm: window.__hermle.ex.S.alarm?.text,
+      removed: window.__hermle.ex.S.removed,
+      opt: window.__hermle.sceneOpt.stats(),
+    }));
     if (r.alarm) fail('hermle', `alarm ${r.alarm}`);
     if (!(r.removed > 5000)) fail('hermle', `malý úber ${r.removed}`);
-    console.log(`  ✓ hermle: program dokončený, úber ${(r.removed / 1000).toFixed(1)} cm³, zlúčené skupiny ${r.opt.groups}`);
-  } catch (e) { fail('hermle', e.message.split('\n')[0]); }
+    console.log(
+      `  ✓ hermle: program dokončený, úber ${(r.removed / 1000).toFixed(1)} cm³, zlúčené skupiny ${r.opt.groups}`,
+    );
+  } catch (e) {
+    fail('hermle', e.message.split('\n')[0]);
+  }
   problems.forEach((p) => fail('hermle', p));
   await ctx.close();
 }
@@ -86,12 +141,17 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   try {
     await until(page, () => window.__bystronic?.process);
     await page.getByRole('button', { name: '×10', exact: true }).click();
-    await page.getByRole('button', { name: /Spustiť ohyb/i }).first().click();
+    await page
+      .getByRole('button', { name: /Spustiť ohyb/i })
+      .first()
+      .click();
     await until(page, () => window.__bystronic.process.S.done || window.__bystronic.process.S.alarm, null, 120000);
     const S = await page.evaluate(() => ({ ...window.__bystronic.process.S }));
     if (S.alarm || !S.complete) fail('bystronic', `ohyb nedokončený ${S.alarm || ''}`);
     else console.log(`  ✓ bystronic: ohyb dokončený, sila ${Math.round(S.maxForce)} kN`);
-  } catch (e) { fail('bystronic', e.message.split('\n')[0]); }
+  } catch (e) {
+    fail('bystronic', e.message.split('\n')[0]);
+  }
   problems.forEach((p) => fail('bystronic', p));
   await ctx.close();
 }
@@ -101,22 +161,38 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   const { page, ctx, problems } = await open('oscarmax', { debug: true });
   try {
     await until(page, () => window.__oscar?.process);
-    await page.getByRole('button', { name: /Štart cyklu/i }).first().click();
+    await page
+      .getByRole('button', { name: /Štart cyklu/i })
+      .first()
+      .click();
     const msg = await page.evaluate(() => window.__oscar.process.S.alarm);
     if (!/dvere nádrže/i.test(msg || '')) fail('oscarmax', `nečakaná hláška pri otvorenej nádrži: ${msg}`);
     await page.getByRole('button', { name: /Zatvoriť nádrž/i }).click();
     await until(page, () => !window.__oscar.c.door, null, 5000);
     await page.getByText('Napustiť dielektrikum', { exact: true }).click();
     await page.waitForTimeout(500);
-    await until(page, () => { window.__oscar.api.start(); return window.__oscar.process.S.run || window.__oscar.process.S.removed > 0; }, null, 60000);
+    await until(
+      page,
+      () => {
+        window.__oscar.api.start();
+        return window.__oscar.process.S.run || window.__oscar.process.S.removed > 0;
+      },
+      null,
+      60000,
+    );
     await until(page, () => window.__oscar.process.S.removed > 0, null, 120000);
     console.log('  ✓ oscarmax: hĺbenie beží');
-  } catch (e) { fail('oscarmax', e.message.split('\n')[0]); }
+  } catch (e) {
+    fail('oscarmax', e.message.split('\n')[0]);
+  }
   problems.forEach((p) => fail('oscarmax', p));
   await ctx.close();
 }
 
 await browser.close();
 server.close();
-if (failures.length) { console.error(`\n${failures.length} chýb v teste prehliadača`); process.exit(1); }
+if (failures.length) {
+  console.error(`\n${failures.length} chýb v teste prehliadača`);
+  process.exit(1);
+}
 console.log('\nTest v prehliadači prešiel.');

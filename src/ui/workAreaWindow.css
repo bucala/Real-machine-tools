@@ -1,87 +1,473 @@
 /* The working view has no chrome except its close control. */
-.work-area-dialog[open]{display:block;position:fixed;width:min(1000px,96vw);height:min(750px,94dvh);max-width:96vw;max-height:94dvh;padding:0;border:1px solid #526574;border-radius:10px;overflow:hidden;background:#101820;color:#e8f1f6}
-.work-area-dialog::backdrop{background:#02070be8}
-.work-area-live-frame{width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;background:#101820}
-.work-area-live-frame>.live-work-area{display:block;width:100%;height:100%;margin:0;object-fit:contain;touch-action:none}
-.work-area-live-frame p{padding:30px}
-.work-area-close{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid #7d909c;border-radius:8px;background:#101820e8;color:white;font:24px/1 sans-serif;cursor:pointer}
-.work-area-close:focus-visible{outline:3px solid #6bbcff;outline-offset:2px}
-.work-area-split-pane{grid-area:feed;position:relative;min-height:0;min-width:0;overflow:hidden;background:#101820;border:1px solid #506572}
-.work-area-actions{display:inline-flex;gap:4px;flex-wrap:nowrap;align-items:center;flex:none;white-space:nowrap}
-.work-area-actions .scene-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;margin:0!important;white-space:nowrap}
-.work-area-actions .scene-btn[aria-pressed=true]{background:#c14431;color:white}
+.work-area-dialog[open] {
+  display: block;
+  position: fixed;
+  width: min(1000px, 96vw);
+  height: min(750px, 94dvh);
+  max-width: 96vw;
+  max-height: 94dvh;
+  padding: 0;
+  border: 1px solid #526574;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #101820;
+  color: #e8f1f6;
+}
+.work-area-dialog::backdrop {
+  background: #02070be8;
+}
+.work-area-live-frame {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #101820;
+}
+.work-area-live-frame > .live-work-area {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: contain;
+  touch-action: none;
+}
+.work-area-live-frame p {
+  padding: 30px;
+}
+.work-area-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #7d909c;
+  border-radius: 8px;
+  background: #101820e8;
+  color: white;
+  font: 24px/1 sans-serif;
+  cursor: pointer;
+}
+.work-area-close:focus-visible {
+  outline: 3px solid #6bbcff;
+  outline-offset: 2px;
+}
+.work-area-split-pane {
+  grid-area: feed;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: #101820;
+  border: 1px solid #506572;
+}
+.work-area-actions {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  align-items: center;
+  flex: none;
+  white-space: nowrap;
+}
+.work-area-actions .scene-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+.work-area-actions .scene-btn[aria-pressed='true'] {
+  background: #c14431;
+  color: white;
+}
 
 /* A fixed single toolbar row leaves all remaining space to the machine. */
-.hmi-fullscreen>.hmi-full-toolbar,.brake-hmi[open]>.bh-header,.deep-hmi[open]>header{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;height:44px;min-height:44px;max-height:44px;box-sizing:border-box;padding:5px 8px;gap:6px;overflow:hidden}
-.hmi-fullscreen>.hmi-full-toolbar>strong,.brake-hmi[open]>.bh-header>div,.deep-hmi[open]>header>strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.hmi-fullscreen>.hmi-full-toolbar>strong span,.hmi-fullscreen>.hmi-full-toolbar>.hmi-full-message,.hmi-fullscreen>.hmi-full-toolbar>span[role=status],.brake-hmi[open]>.bh-header>div>span{display:none}
-.hmi-fullscreen>.hmi-full-toolbar .scene-btn,.brake-hmi[open]>.bh-header .scene-btn,.deep-hmi[open]>header .scene-btn{height:32px;min-height:0;margin:0;padding:5px 8px;font-size:12px;flex-shrink:0}
-.hmi-fullscreen>.hmi-full-toolbar .hmi-exit,.brake-hmi[open]>.bh-header .hmi-exit,.deep-hmi[open]>header .hmi-exit{flex:0 0 32px;display:grid;place-items:center;width:32px;height:32px;min-height:0;margin:0;padding:0;font:24px/1 sans-serif}
-.brake-hmi[open]>.bh-header .bh-brand{display:none}
-.brake-hmi[open]>.bh-header h2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
-.brake-hmi[open]>.bh-header .section-info-button{width:30px;height:30px;margin:0}
-.hmi-fullscreen{grid-template-rows:44px minmax(0,1.5fr) minmax(0,1fr)}
+.hmi-fullscreen > .hmi-full-toolbar,
+.brake-hmi[open] > .bh-header,
+.deep-hmi[open] > header {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  gap: 6px;
+  overflow: hidden;
+}
+.hmi-fullscreen > .hmi-full-toolbar > strong,
+.brake-hmi[open] > .bh-header > div,
+.deep-hmi[open] > header > strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.hmi-fullscreen > .hmi-full-toolbar > strong span,
+.hmi-fullscreen > .hmi-full-toolbar > .hmi-full-message,
+.hmi-fullscreen > .hmi-full-toolbar > span[role='status'],
+.brake-hmi[open] > .bh-header > div > span {
+  display: none;
+}
+.hmi-fullscreen > .hmi-full-toolbar .scene-btn,
+.brake-hmi[open] > .bh-header .scene-btn,
+.deep-hmi[open] > header .scene-btn {
+  height: 32px;
+  min-height: 0;
+  margin: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.hmi-fullscreen > .hmi-full-toolbar .hmi-exit,
+.brake-hmi[open] > .bh-header .hmi-exit,
+.deep-hmi[open] > header .hmi-exit {
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  font: 24px/1 sans-serif;
+}
+.brake-hmi[open] > .bh-header .bh-brand {
+  display: none;
+}
+.brake-hmi[open] > .bh-header h2 {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.brake-hmi[open] > .bh-header .section-info-button {
+  width: 30px;
+  height: 30px;
+  margin: 0;
+}
+.hmi-fullscreen {
+  grid-template-rows: 44px minmax(0, 1.5fr) minmax(0, 1fr);
+}
 
 /* Size both dimensions of the monitor inside its cell, including Hermle's inset LCD. */
-.hmi-fullscreen>.hmi-live-display{container-type:size;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden;padding:10px 14px}
-.hmi-fullscreen>.hmi-live-display>.hmi-screen-bezel{--monitor-ratio:calc(640 / 460);flex:0 0 auto;width:min(calc(100cqw - 20px),calc((100cqh - 20px)*var(--monitor-ratio)));height:auto;aspect-ratio:var(--monitor-ratio);max-width:100%;max-height:100%;align-self:center}
-.hmi-fullscreen>.hmi-live-display>.hmi-screen-bezel>canvas{width:100%;height:100%;object-fit:contain}
-.hmi-fullscreen>.hmi-live-display>.hermle-screen-bezel{--monitor-ratio:calc(6.2 / 4.72)}
-.hmi-fullscreen>.hmi-live-display>.hermle-screen-bezel>canvas{left:8.2258%;top:11.4407%;width:83.5484%;height:73.3051%;object-fit:fill}
-.hmi-fullscreen>.hmi-live-display>.rms-reference-bezel{--monitor-ratio:calc(4 / 3);width:min(calc(100cqw - 100px),calc((100cqh - 24px)*var(--monitor-ratio)));max-width:calc(100% - 90px)}
-.hmi-fullscreen.edm-fullscreen>.hmi-live-display>.hmi-screen-bezel{--monitor-ratio:calc(1040 / 650)}
-.hmi-fullscreen>.hmi-live-display>.rms-reference-pendant{box-sizing:border-box;width:62px;height:min(90cqh,260px);min-height:0;max-height:100%;margin:0 0 0 18px;gap:7px;padding:7px 3px;overflow:hidden}
-.hmi-fullscreen>.hmi-live-display>.rms-reference-pendant>*{flex-shrink:0}
-.hmi-fullscreen>.hmi-full-controls,.hmi-fullscreen>.rms-reference-controls,.hmi-fullscreen>.edm-full-controls{min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
-.hmi-fullscreen .hmi-control-position .hmi-machine-button{width:100%;height:100%;min-width:0;min-height:0}
-.hmi-fullscreen .hmi-compact-buttons{display:flex;flex-wrap:nowrap;gap:5px;min-width:0}
-.hmi-fullscreen .hmi-compact-buttons>span,.hmi-fullscreen .hmi-compact-buttons>button{flex:1;min-width:0}
-.hmi-fullscreen .hmi-compact-buttons .hmi-key{position:static;transform:none;min-width:0;min-height:36px;padding:3px}
-.hmi-fullscreen .hmi-compact-buttons .hmi-machine-button{width:36px;height:36px;min-width:0;min-height:0;font-size:14px;padding:0}
-.hmi-fullscreen .hmi-compact-buttons .hmi-emergency{border-width:6px;font-size:6px}
+.hmi-fullscreen > .hmi-live-display {
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 14px;
+}
+.hmi-fullscreen > .hmi-live-display > .hmi-screen-bezel {
+  --monitor-ratio: calc(640 / 460);
+  flex: 0 0 auto;
+  width: min(calc(100cqw - 20px), calc((100cqh - 20px) * var(--monitor-ratio)));
+  height: auto;
+  aspect-ratio: var(--monitor-ratio);
+  max-width: 100%;
+  max-height: 100%;
+  align-self: center;
+}
+.hmi-fullscreen > .hmi-live-display > .hmi-screen-bezel > canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.hmi-fullscreen > .hmi-live-display > .hermle-screen-bezel {
+  --monitor-ratio: calc(6.2 / 4.72);
+}
+.hmi-fullscreen > .hmi-live-display > .hermle-screen-bezel > canvas {
+  left: 8.2258%;
+  top: 11.4407%;
+  width: 83.5484%;
+  height: 73.3051%;
+  object-fit: fill;
+}
+.hmi-fullscreen > .hmi-live-display > .rms-reference-bezel {
+  --monitor-ratio: calc(4 / 3);
+  width: min(calc(100cqw - 100px), calc((100cqh - 24px) * var(--monitor-ratio)));
+  max-width: calc(100% - 90px);
+}
+.hmi-fullscreen.edm-fullscreen > .hmi-live-display > .hmi-screen-bezel {
+  --monitor-ratio: calc(1040 / 650);
+}
+.hmi-fullscreen > .hmi-live-display > .rms-reference-pendant {
+  box-sizing: border-box;
+  width: 62px;
+  height: min(90cqh, 260px);
+  min-height: 0;
+  max-height: 100%;
+  margin: 0 0 0 18px;
+  gap: 7px;
+  padding: 7px 3px;
+  overflow: hidden;
+}
+.hmi-fullscreen > .hmi-live-display > .rms-reference-pendant > * {
+  flex-shrink: 0;
+}
+.hmi-fullscreen > .hmi-full-controls,
+.hmi-fullscreen > .rms-reference-controls,
+.hmi-fullscreen > .edm-full-controls {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+.hmi-fullscreen .hmi-control-position .hmi-machine-button {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.hmi-fullscreen .hmi-compact-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  min-width: 0;
+}
+.hmi-fullscreen .hmi-compact-buttons > span,
+.hmi-fullscreen .hmi-compact-buttons > button {
+  flex: 1;
+  min-width: 0;
+}
+.hmi-fullscreen .hmi-compact-buttons .hmi-key {
+  position: static;
+  transform: none;
+  min-width: 0;
+  min-height: 36px;
+  padding: 3px;
+}
+.hmi-fullscreen .hmi-compact-buttons .hmi-machine-button {
+  width: 36px;
+  height: 36px;
+  min-width: 0;
+  min-height: 0;
+  font-size: 14px;
+  padding: 0;
+}
+.hmi-fullscreen .hmi-compact-buttons .hmi-emergency {
+  border-width: 6px;
+  font-size: 6px;
+}
 
 /* The feed precedes the HMI: left in landscape, above in portrait. */
-.hmi-fullscreen.work-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:44px minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:'toolbar toolbar' 'feed display' 'feed controls'}
-.work-split>.hmi-full-toolbar,.work-split>.bh-header,.work-split>header{grid-area:toolbar}
-.work-split>.hmi-live-display,.work-split>canvas{grid-area:display}
-.work-split>.hmi-full-controls,.work-split>.rms-reference-controls,.work-split>.edm-full-controls,.work-split>.deep-hmi-controls{grid-area:controls;min-width:0;min-height:0;overflow:auto}
-.brake-hmi[open].work-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:44px auto minmax(0,1fr) auto;grid-template-areas:'toolbar toolbar' 'feed tabs' 'feed content' 'footer footer'}
-.brake-hmi.work-split>.bh-tabs{grid-area:tabs}
-.brake-hmi.work-split>.bh-content{grid-area:content;min-width:0;min-height:0}
-.brake-hmi.work-split>.bh-footer{grid-area:footer}
-.brake-hmi.work-split .bh-grid{grid-template-columns:1fr}
-.brake-hmi[open]>.bh-tabs{flex-wrap:nowrap;min-width:0;gap:3px;padding:7px 8px 0}
-.brake-hmi[open]>.bh-tabs button{min-width:0;padding:9px 3px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brake-hmi[open]>.bh-tabs button span{display:none}
-.brake-hmi[open]>.bh-footer{padding:7px 8px}
-.brake-hmi[open] .bh-status{min-height:28px;padding:6px 9px;font-size:12px;white-space:nowrap}
-.brake-hmi[open] .bh-status-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brake-hmi[open] .bh-actions{flex-wrap:nowrap;gap:4px;margin-top:6px;min-width:0}
-.brake-hmi[open] .bh-actions>.bh-button{flex:1 1 0;min-width:0;margin:0;padding:8px 4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brake-hmi[open] .bh-actions>.bh-stop{flex:1.1 1 0}
-.brake-hmi[open] .bh-stop>span{margin-right:3px}
-.brake-hmi[open] .bh-phases li{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.deep-hmi[open].work-split{height:94dvh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:44px minmax(0,1fr) auto;grid-template-areas:'toolbar toolbar' 'feed display' 'feed controls'}
-.deep-hmi.work-split>canvas{width:100%;height:100%;min-height:0;object-fit:contain;margin:0}
-.deep-hmi[open]>.deep-hmi-controls{display:flex;flex-wrap:nowrap;gap:5px}
-.deep-hmi[open]>.deep-hmi-controls>button{flex:1;min-width:0;padding:8px 4px;white-space:nowrap}
-@media(orientation:portrait){
-  .hmi-fullscreen.work-split{grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr);grid-template-areas:'toolbar' 'feed' 'display' 'controls'}
-  .brake-hmi[open].work-split{grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(0,1fr) auto minmax(0,1fr) auto;grid-template-areas:'toolbar' 'feed' 'tabs' 'content' 'footer'}
-  .deep-hmi[open].work-split{grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(0,1fr) minmax(0,1fr) auto;grid-template-areas:'toolbar' 'feed' 'display' 'controls'}
+.hmi-fullscreen.work-split {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-areas: 'toolbar toolbar' 'feed display' 'feed controls';
 }
-@media(max-width:600px){
-  .work-area-actions .work-area-label{display:none}
-  .work-area-actions .scene-btn{width:32px;padding:5px!important}
-  .hmi-fullscreen>.hmi-full-toolbar>strong,.brake-hmi[open]>.bh-header h2{font-size:12px}
-  .brake-hmi[open] .bh-action-label{display:none}
-  .hmi-fullscreen>.hmi-live-display{padding:8px}
-  .hmi-fullscreen>.hmi-live-display>.rms-reference-bezel{width:min(calc(100cqw - 72px),calc((100cqh - 16px)*var(--monitor-ratio)));max-width:calc(100% - 60px)}
-  .hmi-fullscreen>.hmi-live-display>.rms-reference-pendant{width:45px;margin-left:12px;padding:5px 2px;gap:5px}
-  .hmi-fullscreen>.hmi-live-display>.rms-reference-pendant strong{font-size:9px}
+.work-split > .hmi-full-toolbar,
+.work-split > .bh-header,
+.work-split > header {
+  grid-area: toolbar;
 }
-.hmi-fullscreen .reference-terminal-deck{box-sizing:border-box;min-width:0}
-.hmi-fullscreen .reference-deck-controls{flex-wrap:nowrap;min-width:0;gap:4px}
-.hmi-fullscreen .reference-deck-controls>.reference-override{min-width:0;flex:1;max-width:125px;font-size:clamp(8px,1vw,10px);white-space:nowrap;overflow:hidden}
-.hmi-fullscreen .reference-deck-controls>.reference-key{flex:0 1 34px;min-width:20px;max-width:34px;padding:0}
-.hmi-fullscreen .reference-deck-controls>.reference-key.emergency{flex-basis:42px;max-width:42px;min-width:29px}
+.work-split > .hmi-live-display,
+.work-split > canvas {
+  grid-area: display;
+}
+.work-split > .hmi-full-controls,
+.work-split > .rms-reference-controls,
+.work-split > .edm-full-controls,
+.work-split > .deep-hmi-controls {
+  grid-area: controls;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.brake-hmi[open].work-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 44px auto minmax(0, 1fr) auto;
+  grid-template-areas: 'toolbar toolbar' 'feed tabs' 'feed content' 'footer footer';
+}
+.brake-hmi.work-split > .bh-tabs {
+  grid-area: tabs;
+}
+.brake-hmi.work-split > .bh-content {
+  grid-area: content;
+  min-width: 0;
+  min-height: 0;
+}
+.brake-hmi.work-split > .bh-footer {
+  grid-area: footer;
+}
+.brake-hmi.work-split .bh-grid {
+  grid-template-columns: 1fr;
+}
+.brake-hmi[open] > .bh-tabs {
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 3px;
+  padding: 7px 8px 0;
+}
+.brake-hmi[open] > .bh-tabs button {
+  min-width: 0;
+  padding: 9px 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brake-hmi[open] > .bh-tabs button span {
+  display: none;
+}
+.brake-hmi[open] > .bh-footer {
+  padding: 7px 8px;
+}
+.brake-hmi[open] .bh-status {
+  min-height: 28px;
+  padding: 6px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.brake-hmi[open] .bh-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brake-hmi[open] .bh-actions {
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin-top: 6px;
+  min-width: 0;
+}
+.brake-hmi[open] .bh-actions > .bh-button {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brake-hmi[open] .bh-actions > .bh-stop {
+  flex: 1.1 1 0;
+}
+.brake-hmi[open] .bh-stop > span {
+  margin-right: 3px;
+}
+.brake-hmi[open] .bh-phases li {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deep-hmi[open].work-split {
+  height: 94dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr) auto;
+  grid-template-areas: 'toolbar toolbar' 'feed display' 'feed controls';
+}
+.deep-hmi.work-split > canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  margin: 0;
+}
+.deep-hmi[open] > .deep-hmi-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+.deep-hmi[open] > .deep-hmi-controls > button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  white-space: nowrap;
+}
+@media (orientation: portrait) {
+  .hmi-fullscreen.work-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr);
+    grid-template-areas: 'toolbar' 'feed' 'display' 'controls';
+  }
+  .brake-hmi[open].work-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    grid-template-areas: 'toolbar' 'feed' 'tabs' 'content' 'footer';
+  }
+  .deep-hmi[open].work-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas: 'toolbar' 'feed' 'display' 'controls';
+  }
+}
+@media (max-width: 600px) {
+  .work-area-actions .work-area-label {
+    display: none;
+  }
+  .work-area-actions .scene-btn {
+    width: 32px;
+    padding: 5px !important;
+  }
+  .hmi-fullscreen > .hmi-full-toolbar > strong,
+  .brake-hmi[open] > .bh-header h2 {
+    font-size: 12px;
+  }
+  .brake-hmi[open] .bh-action-label {
+    display: none;
+  }
+  .hmi-fullscreen > .hmi-live-display {
+    padding: 8px;
+  }
+  .hmi-fullscreen > .hmi-live-display > .rms-reference-bezel {
+    width: min(calc(100cqw - 72px), calc((100cqh - 16px) * var(--monitor-ratio)));
+    max-width: calc(100% - 60px);
+  }
+  .hmi-fullscreen > .hmi-live-display > .rms-reference-pendant {
+    width: 45px;
+    margin-left: 12px;
+    padding: 5px 2px;
+    gap: 5px;
+  }
+  .hmi-fullscreen > .hmi-live-display > .rms-reference-pendant strong {
+    font-size: 9px;
+  }
+}
+.hmi-fullscreen .reference-terminal-deck {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.hmi-fullscreen .reference-deck-controls {
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 4px;
+}
+.hmi-fullscreen .reference-deck-controls > .reference-override {
+  min-width: 0;
+  flex: 1;
+  max-width: 125px;
+  font-size: clamp(8px, 1vw, 10px);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.hmi-fullscreen .reference-deck-controls > .reference-key {
+  flex: 0 1 34px;
+  min-width: 20px;
+  max-width: 34px;
+  padding: 0;
+}
+.hmi-fullscreen .reference-deck-controls > .reference-key.emergency {
+  flex-basis: 42px;
+  max-width: 42px;
+  min-width: 29px;
+}

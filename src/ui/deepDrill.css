@@ -1,9 +1,50 @@
-.deep-hmi{width:min(1100px,96vw);max-height:96dvh;padding:16px;background:#19242c;color:#edf3f7;border:1px solid #61727e;border-radius:12px;overflow:auto}
-.deep-hmi::backdrop{background:#030a10e8}
-.deep-hmi header,.deep-hmi-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.deep-hmi canvas{display:block;width:100%;height:auto;margin:14px 0;background:#cbd6df}
-.deep-start{background:#087863!important;color:white!important}
-.deep-hole-rows{display:grid;gap:8px}
-.deep-hole-row{display:grid;grid-template-columns:20px repeat(3,minmax(0,1fr)) 32px;gap:6px;align-items:end}
-.deep-hole-row input{width:100%;min-width:0;padding:7px 4px}
-.deep-hole-row .btn{padding:7px 4px}
+.deep-hmi {
+  width: min(1100px, 96vw);
+  max-height: 96dvh;
+  padding: 16px;
+  background: #19242c;
+  color: #edf3f7;
+  border: 1px solid #61727e;
+  border-radius: 12px;
+  overflow: auto;
+}
+.deep-hmi::backdrop {
+  background: #030a10e8;
+}
+.deep-hmi header,
+.deep-hmi-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.deep-hmi canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 14px 0;
+  background: #cbd6df;
+}
+.deep-start {
+  background: #087863 !important;
+  color: white !important;
+}
+.deep-hole-rows {
+  display: grid;
+  gap: 8px;
+}
+.deep-hole-row {
+  display: grid;
+  grid-template-columns: 20px repeat(3, minmax(0, 1fr)) 32px;
+  gap: 6px;
+  align-items: end;
+}
+.deep-hole-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 4px;
+}
+.deep-hole-row .btn {
+  padding: 7px 4px;
+}

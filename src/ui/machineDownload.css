@@ -1,3 +1,20 @@
-.machine-download{margin:auto;width:min(460px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:0 20px 80px #0008;pointer-events:auto}
-.machine-download::backdrop{background:#0009}
-.machine-download button:disabled{opacity:.55;cursor:wait}
+.machine-download {
+  margin: auto;
+  width: min(460px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 80px #0008;
+  pointer-events: auto;
+}
+.machine-download::backdrop {
+  background: #0009;
+}
+.machine-download button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
