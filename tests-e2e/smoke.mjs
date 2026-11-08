@@ -1,6 +1,7 @@
 // Test v prehliadači nad zostaveným public/: otvorí menu a každý stroj, zlyhá pri chybe v konzole,
 // výnimke na stránke, zlyhanej požiadavke alebo porušení CSP. Potom prejde CNC program na Hermle
-// (vrátane zámku dverí), jeden ohyb na Bystronic, štart elektroerózie, BOZP v úlohe a úzku scénu (mobil).
+// (vrátane zámku dverí), jeden ohyb na Bystronic, štart a dotykové HMI elektroerózie, BOZP v úlohe a úzku scénu
+// (mobil).
 // Spustenie: npm run build && npm run test:e2e   (prehliadač: npx playwright install chromium)
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -186,6 +187,39 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     fail('oscarmax', e.message.split('\n')[0]);
   }
   problems.forEach((p) => fail('oscarmax', p));
+  await ctx.close();
+}
+
+// 4b) OSCARMAX: dotykové HMI cez celé okno – stránky menu, rýchlosť simulácie na displeji, okrúhly STOP
+{
+  const { page, ctx, problems } = await open('oscarmax', { debug: true });
+  try {
+    await until(page, () => window.__oscar?.process);
+    await page.getByRole('button', { name: 'Ručné ovládanie' }).click();
+    await page.getByRole('button', { name: 'HMI cez celé okno' }).click();
+    const screen = page.locator('.edm-touch-screen');
+    await screen.waitFor();
+    if (await page.locator('#edm-full-speed').count()) fail('oscarmax HMI', 'posuvník rýchlosti mimo displeja');
+    const box = await screen.boundingBox(),
+      s = Math.min(box.width / 1040, box.height / 650),
+      at = (x, y) => [box.x + (box.width - 1040 * s) / 2 + x * s, box.y + (box.height - 650 * s) / 2 + y * s];
+    await page.mouse.click(...at(7 + 4 * 172 + 60, 57)); // záložka MONITOR
+    const tab = await page.evaluate(() => window.__oscar.c.hmiTab);
+    if (tab !== 'monitor') fail('oscarmax HMI', `záložka sa neprepla (${tab})`);
+    await page.mouse.move(...at(900, 622));
+    await page.mouse.down();
+    await page.mouse.move(...at(1012, 622), { steps: 4 });
+    await page.mouse.up();
+    const speed = await page.evaluate(() => window.__oscar.c.speed);
+    if (speed !== 80) fail('oscarmax HMI', `ťahanie posuvníka rýchlosti dalo ×${speed}`);
+    const stop = await page.locator('.edm-fullscreen .reference-key.emergency').boundingBox();
+    if (Math.abs(stop.width - stop.height) > 0.5)
+      fail('oscarmax HMI', `STOP nie je kruh (${stop.width} × ${stop.height})`);
+    console.log('  ✓ oscarmax: dotykové HMI, rýchlosť na displeji, okrúhly STOP');
+  } catch (e) {
+    fail('oscarmax HMI', e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail('oscarmax HMI', p));
   await ctx.close();
 }
 

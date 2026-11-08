@@ -466,8 +466,26 @@
   max-width: 34px;
   padding: 0;
 }
+/* núdzový STOP je hríbik: rovnaká šírka aj výška, neskracuje sa vo flex riadku (inak ovál) */
 .hmi-fullscreen .reference-deck-controls > .reference-key.emergency {
-  flex-basis: 42px;
-  max-width: 42px;
-  min-width: 29px;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  min-width: 0;
+  max-width: none;
+}
+.hmi-fullscreen .reference-terminal-deck.ex .reference-deck-controls > .reference-key.emergency {
+  width: 32px;
+  height: 32px;
+  border-width: 6px;
+  font-size: 6px;
+}
+/* dotykový displej EX 500 */
+.hmi-fullscreen .edm-touch-screen {
+  touch-action: none;
+  cursor: default;
+}
+.hmi-fullscreen .edm-touch-screen:focus-visible {
+  outline: 3px solid #e8d740;
+  outline-offset: 2px;
 }
