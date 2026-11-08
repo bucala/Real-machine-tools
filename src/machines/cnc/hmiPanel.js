@@ -4,13 +4,14 @@ import * as THREE from 'three';
 export const HMI_CONTROL_LAYOUT = {
   width: 6.04,
   depth: 4.7,
-  brand: { x: 0.5, z: 3.58, width: 0.95, height: 0.2 },
+  brand: { x: 0.5, z: 3.56, width: 0.95, height: 0.2 },
+  // stop / štart a korekcie posuvu v mriežke 2 × 2 s okrajom od spodnej hrany dosky
   buttons: {
-    emergency: { x: -2.62, z: 4.1, r: 0.25 },
-    hold: { x: 0.72, z: 3.95, r: 0.19 },
-    start: { x: 0.72, z: 4.45, r: 0.19 },
+    emergency: { x: -2.62, z: 4.05, r: 0.25 },
+    hold: { x: 0.72, z: 3.86, r: 0.19 },
+    start: { x: 0.72, z: 4.3, r: 0.19 },
   },
-  dials: { feed: { x: 1.35, z: 3.95, r: 0.21 }, rapid: { x: 1.35, z: 4.45, r: 0.21 } },
+  dials: { feed: { x: 1.33, z: 3.86, r: 0.2 }, rapid: { x: 1.33, z: 4.3, r: 0.2 } },
   selector: { x: -2.65, z: 2.4, r: 0.21 },
   keySwitch: { x: -2.65, z: 2.9, r: 0.15 },
   blank: { x: -2.65, z: 3.42, r: 0.13 },

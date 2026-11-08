@@ -491,7 +491,7 @@
 }
 
 /* Telefón na výšku: displej len v potrebnej výške (bez prázdnych pásov), ovládače hneď pod ním. */
-@media (max-width: 700px) and (orientation: portrait) {
+@media (max-width: 1100px) and (orientation: portrait) {
   .hmi-fullscreen:not(.work-split) {
     grid-template-rows: 44px auto minmax(0, 1fr);
   }
@@ -536,4 +536,16 @@
     height: 34px;
     max-width: none;
   }
+}
+
+/* Konzola TNC drží pomer strán dosky 6,04 × 4,7 – tlačidlá a gombíky sa nikdy neodrežú ani nezdeformujú. */
+.hmi-fullscreen > .hmi-full-controls {
+  container-type: size;
+}
+.hmi-fullscreen > .hmi-full-controls > .hmi-console-deck {
+  height: auto;
+  aspect-ratio: 6.04 / 4.7;
+  width: min(1120px, calc(100cqw - 8px), calc((100cqh - 26px) * 6.04 / 4.7));
+  margin: 0 auto;
+  align-self: start;
 }

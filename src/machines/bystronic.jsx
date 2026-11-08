@@ -599,7 +599,6 @@ export default function BystronicSimulator({ onBack, params }) {
       )}
       <aside className="panel">
         <WorkResume machine="bystronic" apiRef={apiRef} skip={!!params?.uloha} />
-        <Guide steps={BRAKE_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · CNC ohraňovací lis', 'Modern machines · CNC press brake')}</p>
           <div className="section-heading">
@@ -919,6 +918,7 @@ export default function BystronicSimulator({ onBack, params }) {
           ]}
         />
         <PartsSection parts={p} {...{ selected, selectPart }} />
+        <Guide steps={BRAKE_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <HelpFooter apiRef={apiRef} ui={ui} />
       </aside>
     </div>

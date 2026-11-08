@@ -202,7 +202,6 @@ function LatheCore({ onBack, params, model, onModel }) {
         apiRef={apiRef}
       />
       <aside className="panel">
-        <Guide steps={LATHE_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}
@@ -763,6 +762,7 @@ function LatheCore({ onBack, params, model, onModel }) {
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
+          <Guide steps={LATHE_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
           <HelpFooter apiRef={apiRef} ui={ui} />
         </fieldset>
       </aside>

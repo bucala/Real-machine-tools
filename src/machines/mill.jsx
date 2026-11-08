@@ -177,7 +177,6 @@ function MillSimulator({ onBack, params }) {
         apiRef={apiRef}
       />
       <aside className="panel">
-        <Guide steps={MILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}
@@ -657,6 +656,7 @@ function MillSimulator({ onBack, params }) {
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
+          <Guide steps={MILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
           <HelpFooter apiRef={apiRef} ui={ui} />
         </fieldset>
       </aside>

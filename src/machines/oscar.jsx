@@ -888,7 +888,6 @@ export default function OscarSimulator({ onBack, params }) {
       {hmiOpen && <EdmFullscreen {...{ apiRef, ui, tele }} onClose={() => setHmiOpen(false)} />}
       <aside className="panel">
         <WorkResume machine="oscarmax" apiRef={apiRef} skip={!!params?.uloha} />
-        <Guide steps={EDM_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <div className="sec">
           <p className="sec-title">{L('Moderné stroje · hĺbiaca EDM', 'Modern machines · sinker EDM')}</p>
           <div className="section-heading">
@@ -1275,6 +1274,7 @@ export default function OscarSimulator({ onBack, params }) {
           ]}
         />
         <PartsSection parts={p} {...{ selected, selectPart }} />
+        <Guide steps={EDM_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <HelpFooter apiRef={apiRef} ui={ui} />
       </aside>
     </div>

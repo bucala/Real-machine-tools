@@ -687,7 +687,6 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       )}
       <aside className="panel">
         <WorkResume machine={rxu ? 'roeders' : `hermle-${MC.id}`} apiRef={apiRef} skip={!!params?.uloha} />
-        <Guide steps={guideSteps} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="hermle-settings" disabled={ui.unclamped}>
           <div className="sec">
             <p className="sec-title" style={{ letterSpacing: '.14em' }}>
@@ -1360,6 +1359,7 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
+          <Guide steps={guideSteps} ui={ui} tele={tele} apiRef={apiRef} />
           <HelpFooter apiRef={apiRef} ui={ui} />
         </fieldset>
       </aside>
