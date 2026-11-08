@@ -1,6 +1,6 @@
 import { PartLabelsButton } from '../ui/common';
 import { createEdmSparks } from './precision/edmSparks';
-import { drawOscarScreen } from '../ui/machineScreens';
+import { drawOscarScreen, oscarHmiHit, oscarHmiKey } from '../ui/oscarScreen';
 import { compileEdmGcode, EDM_GCODE_SAMPLE } from './precision/edmGcode';
 import { workAreaFeed } from '../core/workAreaFeed';
 import { SectionInfo } from '../ui/sectionInfo';
@@ -257,6 +257,7 @@ export default function OscarSimulator({ onBack, params }) {
     estop: false,
     hmiLocked: false,
     hmiAngle: 0,
+    hmiTab: 'machine',
     speed: 20,
     current: 30,
     gap: 0.05,
@@ -380,7 +381,11 @@ export default function OscarSimulator({ onBack, params }) {
     let stock,
       process,
       ncCommands = null,
-      ncEndApplied = false;
+      ncEndApplied = false,
+      hist = [], // priebeh hĺbky a úberu pre stránku MONITOR
+      histT = -Infinity,
+      histStep = 0.5,
+      hmiMsg = null; // krátka hláška v stavovom riadku HMI { text, until }
     // obrobok: povrch po blokoch, do GPU zlúčený po 2 × 2 × 2 blokoch (cnc/stockMesh.js)
     let stockMesh = null;
     const flush = () => stockMesh.apply(stock.takeDirty());
@@ -393,6 +398,9 @@ export default function OscarSimulator({ onBack, params }) {
       process = createEdmProcess(stock);
       ncCommands = null;
       ncEndApplied = false;
+      hist = [];
+      histT = -Infinity;
+      histStep = 0.5;
       flush();
       c.running = false;
       setNotice('');
@@ -504,6 +512,30 @@ export default function OscarSimulator({ onBack, params }) {
       },
       coolant: () => set('flushing', !c.flushing),
       light: () => set('light', !c.light),
+      fill: () => {
+        if (c.door || c.unclamped) return say(L('Najprv zatvor nádrž.', 'Close the tank first.'));
+        setNotice('');
+        set('fill', !c.fill);
+      },
+    };
+    // hláška pre panel aj stavový riadok HMI (vidno ju aj v HMI cez celé okno)
+    const say = (text) => {
+      setNotice(text);
+      hmiMsg = { text, until: performance.now() + 4000 };
+    };
+    const editLocked = () => !!process.job || process.S.run || c.unclamped;
+    // dotyk / klávesnica na HMI: stránky menu, rýchlosť simulácie, prúd, prepínače a softvérové tlačidlá
+    const hmiApply = (hit) => {
+      if (!hit) return null;
+      if (hit.id === 'tab') set('hmiTab', hit.tab);
+      else if (hit.id === 'speed') set('speed', hit.value);
+      else if (hit.id === 'current') {
+        if (editLocked())
+          say(L('Prúd zmeníš po Resete (nový polotovar).', 'Change the current after Reset (new blank).'));
+        else set('current', hit.value);
+      } else actions[hit.id]?.();
+      screen.redraw();
+      return hit;
     };
     apiRef.current = {
       ...apiRef.current,
@@ -515,6 +547,10 @@ export default function OscarSimulator({ onBack, params }) {
         if (!process.job && !process.S.run && !c.unclamped) set('ncText', text);
       },
       hmiAction: (id) => actions[id]?.(),
+      hmiPoint: (x, y, drag) => hmiApply(oscarHmiHit(c, x, y, drag)),
+      hmiHover: (x, y) => !!oscarHmiHit(c, x, y),
+      hmiKey: (key) => hmiApply(oscarHmiKey(c, key)),
+      toggleFill: () => actions.fill(),
       setSpeed: (v) => set('speed', v),
       getHmiCanvas: () => screen.tx.image,
       snapshot,
@@ -538,7 +574,17 @@ export default function OscarSimulator({ onBack, params }) {
       flush();
       return exportStl(stockG);
     };
-    const screen = tex(1040, 650, (g, w, h) => drawOscarScreen(g, w, h, { S: process.S, c, oilLevel }));
+    const screen = tex(1040, 650, (g, w, h) =>
+      drawOscarScreen(g, w, h, {
+        S: process.S,
+        c,
+        oilLevel,
+        job: process.job,
+        locked: editLocked(),
+        hist,
+        msg: hmiMsg && performance.now() < hmiMsg.until ? hmiMsg.text : null,
+      }),
+    );
     model.display.material.map = screen.tx;
     const v = (x, y, z) => new THREE.Vector3(x, y, z);
     const views = {
@@ -665,6 +711,15 @@ export default function OscarSimulator({ onBack, params }) {
         estop: c.estop,
       });
       c.running = process.S.run;
+      if (process.S.run && process.S.t - histT >= histStep) {
+        histT = process.S.t;
+        hist.push({ t: process.S.t, d: Math.max(0, process.S.depth), r: process.S.removed });
+        // dlhý program: polovičné vzorkovanie, graf ostane do 360 bodov
+        if (hist.length > 360) {
+          hist = hist.filter((_, i) => i % 2 === 0);
+          histStep *= 2;
+        }
+      }
       if (process.S.done && !ncEndApplied) {
         ncEndApplied = true;
         const end = process.job?.ncCommands?.endFlushing;
@@ -896,14 +951,7 @@ export default function OscarSimulator({ onBack, params }) {
           <Toggle
             on={ui.fill}
             label={L('Napustiť dielektrikum', 'Fill dielectric')}
-            onClick={() => {
-              if (ui.door || ui.unclamped) {
-                setNotice(L('Najprv zatvor nádrž.', 'Close the tank first.'));
-                return;
-              }
-              setNotice('');
-              set('fill', !ui.fill);
-            }}
+            onClick={() => apiRef.current.toggleFill?.()}
           />
           <Toggle
             on={ui.sparks}

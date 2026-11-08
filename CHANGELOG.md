@@ -6,6 +6,9 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
 ## 8. 11. 2026
 
+- OSCARMAX: živé dotykové HMI – stránky MACHINE, PROGRAM, TOOL, GENERATOR, MONITOR a HELP (prúd generátora,
+  dielektrikum a výplach, softvérové tlačidlá cyklu, graf hĺbky a úberu, kontrola podmienok štartu); posuvník
+  rýchlosti simulácie je v stavovom riadku displeja, ovládanie aj klávesmi 1 – 6 a šípkami; núdzový STOP okrúhly.
 - Výkon: obrobok CNC a elektroerózie sa do GPU posiela po 2 × 2 × 2 blokoch, zlučovanie sietí sa učí, ktoré diely sa
   naozaj hýbu (Hermle 715 → 281, Röders 957 → 212 vykreslení po behu programu), `?noopt` na porovnanie.
 - Elektroerózia: operácie s elektródou E1 / E2 a vlastným prúdom, výmena elektródy, servo podľa plochy v zábere;
