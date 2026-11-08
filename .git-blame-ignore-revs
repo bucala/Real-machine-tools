@@ -1,2 +1,5 @@
-# Hromadné formátovanie Prettierom – git blame ho preskočí (git config blame.ignoreRevsFile .git-blame-ignore-revs)
-fd315cb1c5a22be75b40b5bc0a69964d54e16025
+# Hromadné formátovanie Prettierom (git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# PR #24 bol zlúčený squashom, takže tento commit obsahuje formátovanie spolu s úlohami moderných
+# strojov, modelom elektroerózie a rozdelením CNC jadra – git blame pre tieto riadky ukáže
+# predchádzajúci commit.
+199aa96c8a6c29e8978202da2e8e1154b269746c
