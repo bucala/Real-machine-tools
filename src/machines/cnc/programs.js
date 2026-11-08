@@ -1,6 +1,7 @@
 // Ukážkové programy (generované, aby boli presné): polotovar 100 × 80 × 40 mm, nulový bod G54 v strede hornej plochy.
 // Hlavičky nástrojov sú vo formáte postprocesora Fusion („T3 D=10. CR=0. - flat end mill“), aby sa dali prevziať.
 import { L } from '../../core/i18n';
+import { progDomeFlange } from './complexPrograms';
 
 const f = (v) => {
   const s = (Math.round(v * 1000) / 1000).toFixed(3).replace(/\.?0+$/, '');
@@ -260,6 +261,16 @@ export const SAMPLES = () => [
     id: 'p5',
     name: L('5-osé simultánne: čap s úkosom – TCP G43.4 (ISO)', '5-axis simultaneous: tapered boss – TCP G43.4 (ISO)'),
     text: prog5axis(),
+  },
+  {
+    id: 'cx5',
+    name: L(
+      'Zložitý diel: príruba s kupolou – 8 nástrojov, 3+2 a 5-osé TCP (ISO, dlhý)',
+      'Complex part: dome flange – 8 tools, 3+2 and 5-axis TCP (ISO, long)',
+    ),
+    get text() {
+      return progDomeFlange();
+    },
   },
   {
     id: 'ph',

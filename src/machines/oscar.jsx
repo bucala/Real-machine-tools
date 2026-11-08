@@ -5,7 +5,7 @@ import { createEdmSparks } from './precision/edmSparks';
 import { drawOscarScreen, oscarHmiHit, oscarHmiKey } from '../ui/oscarScreen';
 import { stockSnapshot } from '../core/workSession';
 import { WorkResume } from '../ui/workResume';
-import { compileEdmGcode, EDM_GCODE_SAMPLE } from './precision/edmGcode';
+import { compileEdmGcode, EDM_COMPLEX_ELECTRODES, EDM_GCODE_SAMPLE, edmComplexProgram } from './precision/edmGcode';
 import { workAreaFeed } from '../core/workAreaFeed';
 import { SectionInfo } from '../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
@@ -1119,6 +1119,22 @@ export default function OscarSimulator({ onBack, params }) {
                   </button>
                   <button className="btn" onClick={() => apiRef.current.setNcText(EDM_GCODE_SAMPLE)}>
                     {L('Ukážkový program', 'Sample program')}
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      set('electrode', EDM_COMPLEX_ELECTRODES.electrode);
+                      set('electrode2', EDM_COMPLEX_ELECTRODES.electrode2);
+                      apiRef.current.setNcText(edmComplexProgram());
+                      setNotice(
+                        L(
+                          'Zložitý program: 9 dutín, 27 hĺbení, E1 a E2 sú nastavené. Zatvor nádrž, napusti dielektrikum a spusti cyklus.',
+                          'Complex program: 9 cavities, 27 burns, E1 and E2 are set. Close the tank, fill the dielectric and start the cycle.',
+                        ),
+                      );
+                    }}
+                  >
+                    {L('Zložitý program: forma 3 × 3 (E1 + E2)', 'Complex program: 3 × 3 mould (E1 + E2)')}
                   </button>
                   <label className="btn">
                     {L('Otvoriť NC súbor', 'Open NC file')}

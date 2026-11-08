@@ -4,6 +4,7 @@ import { PartLabelsButton } from '../../ui/common';
 import { SectionInfo } from '../../ui/sectionInfo';
 import { useEffect, useRef, useState } from 'react';
 import { WorkResume } from '../../ui/workResume';
+import { progMold } from './complexPrograms';
 import { L } from '../../core/i18n';
 import {
   HelpFooter,
@@ -210,7 +211,17 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
   const samples = rxu
     ? [
         { id: 'rxu', name: L('ISO: kruhová kapsa', 'ISO: circular pocket'), text: RXU_PROGRAM },
-        ...SAMPLES().filter((s) => s.id !== 'p3' && s.id !== 'ph'),
+        {
+          id: 'rxm',
+          name: L(
+            'Zložitý diel: forma s voľnou plochou – HSC rastre, 4 nástroje (ISO, dlhý)',
+            'Complex part: freeform mould – HSC rasters, 4 tools (ISO, long)',
+          ),
+          get text() {
+            return progMold();
+          },
+        },
+        ...SAMPLES().filter((s) => !['p3', 'ph', 'cx5'].includes(s.id)),
       ]
     : SAMPLES();
   const [check, setCheck] = useState({
