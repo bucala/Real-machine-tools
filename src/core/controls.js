@@ -9,7 +9,14 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   const push = (k, v) => { c[k] = v; pend[k] = v; };
   const reg = (k, obj) => {
     Object.assign(k, { pivot: obj, meshes: [], glow: 0, pressT: -9, pressed: false });
-    obj.traverse((o) => { if (o.isMesh && !meshCtl.has(o)) { o.material = o.material.clone(); meshCtl.set(o, k); k.meshes.push(o); } });
+    // diely jedného ovládača s rovnakým materiálom zdieľajú jednu kópiu (svietenie je pre celý ovládač rovnaké),
+    // takže sa ich siete dajú zlúčiť (core/sceneOptimize)
+    const clones = new Map();
+    obj.traverse((o) => {
+      if (!o.isMesh || meshCtl.has(o)) return;
+      if (!clones.has(o.material)) clones.set(o.material, o.material.clone());
+      o.material = clones.get(o.material); meshCtl.set(o, k); k.meshes.push(o);
+    });
     if (k.type === 'lever') { k.angle = k.angles[k.getIdx()]; obj.rotation.z = k.angle; }
     if (k.type === 'button') k.z0 = obj.position[k.pressAxis || 'z'];
     ctrls.push(k);
@@ -39,7 +46,8 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     }) || null;
   };
   const ctlAt = (cx, cy) => {
-    const h = pickAt(cx,cy), k=h && meshCtl.get(h.object);
+    // zlúčená sieť (sceneOptimize) patrí ovládaču svojich pôvodných sietí
+    const h = pickAt(cx,cy), k=h && meshCtl.get(h.object.userData.mergedFrom?.[0] || h.object);
     return k ? { k, point:h.point } : null;
   };
   // otáčanie: pohyb myši sa premietne na dotyčnicu k obvodu v mieste uchopenia

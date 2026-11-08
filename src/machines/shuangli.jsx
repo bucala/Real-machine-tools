@@ -4,6 +4,7 @@ import { useEffect,useRef,useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
 import { createStage } from '../core/stage';
+import { optimizeMachine } from '../core/sceneOptimize';
 import { createInspector } from '../core/inspector';
 import { createControls } from '../core/controls';
 import { createWorkInspect } from '../core/workInspect';
@@ -74,8 +75,8 @@ export default function ShuangliSimulator({onBack}){
       if(time-teleTime>.15){teleTime=time;screen.redraw();setTele({...process.S,started:!!process.job});}
       if(render)renderer.render(scene,camera);
     };
-    const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
-    if(/[?&]debug/.test(window.location.search))window.__shuangli={c,root,camera,model,stockG,insp,ctrl,wi,api:apiRef.current,advance:dt=>tick(dt,false),get process(){return process;},get stock(){return stock;}};
+    const sceneOpt=optimizeMachine({root,scene,renderer});const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
+    if(/[?&]debug/.test(window.location.search))window.__shuangli={sceneOpt,c,root,camera,model,stockG,insp,ctrl,wi,api:apiRef.current,advance:dt=>tick(dt,false),get process(){return process;},get stock(){return stock;}};
     return()=>{cancelAnimationFrame(raf);dom.removeEventListener('dblclick',openHmi);ctrl.dispose();wi.dispose();insp.dispose();snd.dispose();delete window.__shuangli;disposeStage();};
   },[]);
   const p=parts(),locked=tele.run||tele.started||ui.unclamped;

@@ -28,6 +28,7 @@ import { ToolPicker } from '../../ui/toolPicker';
 import { installTool, MAX_FILE_BYTES } from './toolLibrary';
 import { createStock } from './voxel';
 import { createCabinLighting } from './cabinLighting';
+import { optimizeMachine } from '../../core/sceneOptimize';
 import { RXU, validateRxuTool, RXU_PROGRAM } from '../precision/profiles';
 
 // =====================================================================
@@ -420,8 +421,10 @@ function CncCore({ onBack, model, setModel, text, setText, tools, setTools, prog
       }
       renderer.render(scene, camera);
     };
+    // zlúčenie statických sietí a menej vrhačov tieňa (stovky vykreslení menej na snímok)
+    const sceneOpt = optimizeMachine({ root, scene, renderer });
     raf = requestAnimationFrame(loop);
-    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { api:apiRef.current,c, lighting, chipPan:accessories.chipPan, chipCart:accessories.chipCart, equipment: accessories.equipment, root, camera, serviceDoors:geometry.serviceDoors, serviceOpen:geometry.serviceOpen, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
+    try { if (/[?&]debug/.test(window.location.search)) window.__hermle = { sceneOpt, api:apiRef.current,c, lighting, chipPan:accessories.chipPan, chipCart:accessories.chipCart, equipment: accessories.equipment, root, camera, serviceDoors:geometry.serviceDoors, serviceOpen:geometry.serviceOpen, armPivot, armElbow, panG, hmiControls:hmi.controls, workInspect:wi, stockG, clampPins, insp, manualControls:ctrl, doors, get doorTravel(){return doorK;}, driveShaft, magazine: magG, magDrive: saddle, get ex() { return ex; }, get prog() { return prog; }, get stock() { return stock; } }; } catch (err) { /* ignorované */ }
     return () => { cancelAnimationFrame(raf); dom.removeEventListener('dblclick',openHmi);dom.removeEventListener('pointerdown', panelDown, true); dom.removeEventListener('pointermove', panelMove, true); dom.removeEventListener('pointerup', panelUp, true); dom.removeEventListener('pointercancel', panelUp, true); snd.dispose(); ctrl.dispose(); wi.dispose(); insp.dispose(); clearStock(); if (mat) mat.dispose(); try { delete window.__hermle; } catch (err) { /* ignorované */ } disposeStage(); };
   }, []);
 

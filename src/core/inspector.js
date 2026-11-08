@@ -44,7 +44,7 @@ function createInspector({ dom, mount, camera, root, G, anchors, labelEls, views
     hlMeshes = []; hlKey = key;
     if (key && G[key]) {
       G[key].traverse((o) => {
-        if (!o.isMesh) return;
+        if (!o.isMesh || o.userData.mergedInto) return;          // skrytá pôvodná sieť zlúčenej skupiny
         let p = o; while (p && !p.userData.part) p = p.parent;
         if (!p || p.userData.part !== key) return;
         o.userData.om = o.material; const m2 = o.material.clone();

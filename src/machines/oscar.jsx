@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
 import { createStage } from '../core/stage';
+import { optimizeMachine } from '../core/sceneOptimize';
 import { createInspector } from '../core/inspector';
 import { createControls } from '../core/controls';
 import { createWorkInspect } from '../core/workInspect';
@@ -107,8 +108,8 @@ export default function OscarSimulator({onBack}){
       if(t-teleT>.15){teleT=t;screen.redraw();setTele({...process.S,oilLevel,started:!!process.job});}
       if(render)renderer.render(scene,camera);
     };
-    const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
-    if(/[?&]debug/.test(window.location.search))window.__oscar={c,root,camera,model,sparks,stockG,insp,ctrl,wi,advance:dt=>tick(dt,false),api:apiRef.current,get process(){return process;},get stock(){return stock;}};
+    const sceneOpt=optimizeMachine({root,scene,renderer});const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
+    if(/[?&]debug/.test(window.location.search))window.__oscar={sceneOpt,c,root,camera,model,sparks,stockG,insp,ctrl,wi,advance:dt=>tick(dt,false),api:apiRef.current,get process(){return process;},get stock(){return stock;}};
     return()=>{cancelAnimationFrame(raf);dom.removeEventListener('dblclick',openHmi);snd.dispose();ctrl.dispose();wi.dispose();insp.dispose();delete window.__oscar;disposeStage();};
   },[]);
   const p=parts(),locked=tele.run||tele.started||ui.unclamped;
