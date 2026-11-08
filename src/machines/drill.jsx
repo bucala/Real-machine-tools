@@ -1008,7 +1008,6 @@ function DrillSimulator({ onBack, params }) {
         apiRef={apiRef}
       />
       <aside className="panel">
-        <Guide steps={DRILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           <PanelHeader
             ui={ui}
@@ -1283,6 +1282,7 @@ function DrillSimulator({ onBack, params }) {
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
+          <Guide steps={DRILL_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />
           <HelpFooter apiRef={apiRef} ui={ui} />
         </fieldset>
       </aside>

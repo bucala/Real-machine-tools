@@ -6,6 +6,9 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
 ## 8. 11. 2026
 
+- Oprava: lišta „Rozpracovaná práca“ (Invalid Date) sa ukázala aj bez uloženej práce; konzola TNC drží pomer strán
+  a štart / stop a korekcie posuvu sú v mriežke s okrajom od spodnej hrany (predtým sa odrezávali).
+- Sprievodca je na konci panela za časťami stroja; kroky sa zobrazujú v samostatnom plávajúcom okne nad scénou.
 - Zložité dlhé programy pre moderné stroje: Hermle – príruba s kupolou (8 nástrojov, 3+2 aj simultánne 5-osé
   s TCP, ~2 800 blokov), Röders – forma s voľnou plochou (HSC rastre, ~5 200 blokov), OSCARMAX – vložka formy
   3 × 3 (27 hĺbení, E1 + E2, G-kód s T1/T2 M6 a prúdom S), Bystronic – program ohybov C-profilu s lemami

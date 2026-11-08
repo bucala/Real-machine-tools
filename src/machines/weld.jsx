@@ -469,7 +469,6 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
         }
       />
       <aside className="panel">
-        {!MIG && <Guide steps={WELD_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />}
         <fieldset className="machine-settings" disabled={ui.unclamped}>
           {MIG ? (
             <PanelHeader
@@ -1323,6 +1322,7 @@ function WeldingSimulator({ onBack, params, process = 'mma' }) {
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
+          {!MIG && <Guide steps={WELD_GUIDE} ui={ui} tele={tele} apiRef={apiRef} />}
           <HelpFooter apiRef={apiRef} ui={ui} />
         </fieldset>
       </aside>

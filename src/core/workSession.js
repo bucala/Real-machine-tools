@@ -38,7 +38,11 @@ const run = async (mode, fn) => {
 };
 
 export const saveWork = (machine, data) => run('readwrite', (s) => s.put({ ...data, savedAt: Date.now() }, machine));
-export const loadWork = (machine) => run('readonly', (s) => s.get(machine));
+// prázdne úložisko vráti null (nie true z run) – inak by sa ukázala lišta s „Invalid Date“
+export const loadWork = async (machine) => {
+  const r = await run('readonly', (s) => s.get(machine));
+  return r && typeof r === 'object' && Number.isFinite(r.savedAt) ? r : null;
+};
 export const clearWork = (machine) => run('readwrite', (s) => s.delete(machine));
 
 // súhrn obrobku do uloženia: vzdialenostné pole, odobraný objem a podpis rozmerov

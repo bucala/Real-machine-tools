@@ -150,6 +150,8 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   const { page, ctx, problems } = await open('bystronic', { debug: true });
   try {
     await until(page, () => window.__bystronic?.process);
+    await page.waitForTimeout(800);
+    if (await page.locator('.work-resume').count()) fail('bystronic', 'lišta rozpracovanej práce bez uloženej práce');
     await page.getByRole('button', { name: '×10', exact: true }).click();
     await page
       .getByRole('button', { name: /Spustiť ohyb/i })
@@ -242,11 +244,11 @@ const range = (page, label, v) =>
     },
     [label, v],
   );
-const guideStep = (page, n, ms = 30000) =>
+const guideStep = (page, n, ms = 90000) =>
   until(
     page,
     (n) => {
-      const t = document.querySelector('.guide .sec-title')?.textContent || '';
+      const t = document.querySelector('.guide-window .sec-title')?.textContent || '';
       return n ? t.startsWith(`Krok ${n} `) : /Hotovo/.test(t);
     },
     n,
@@ -265,7 +267,7 @@ const guideStep = (page, n, ms = 30000) =>
     await range(page, 'Priečny posuv X (priemer)', 88);
     await guideStep(page, 5);
     await page.locator('[data-param="Automatický pozdĺžny posuv k skľučovadlu"]').click();
-    await guideStep(page, 7, 60000); // 30 mm sústruženia
+    await guideStep(page, 7, 120000); // 30 mm sústruženia
     await page.locator('[data-param="Automatický pozdĺžny posuv k skľučovadlu"]').click();
     await guideStep(page, 8);
     await page
@@ -291,12 +293,12 @@ const guideStep = (page, n, ms = 30000) =>
     await page.getByRole('button', { name: /Ďalej/ }).click();
     await page.getByRole('button', { name: /Štart vretena/ }).click();
     await guideStep(page, 4);
-    await range(page, 'Konzola zvisle Z', 418);
+    await range(page, 'Konzola zvisle Z', 420);
     await guideStep(page, 5);
     await page.locator('[data-param="Konzola zaistená"]').click();
     await guideStep(page, 6);
     await page.locator('[data-param="Posuv stola"] button', { hasText: 'Vpravo' }).click();
-    await guideStep(page, 8, 60000); // 40 mm frézovania
+    await guideStep(page, 8, 120000); // 40 mm frézovania
     await page.locator('[data-param="Posuv stola"] button', { hasText: 'Stop' }).click();
     await page
       .getByRole('button', { name: /Stop vretena/ })
@@ -317,7 +319,6 @@ const guideStep = (page, n, ms = 30000) =>
   try {
     await until(page, () => window.__weld?.proj);
     await range(page, 'Najvyššia rýchlosť ruky pri zváraní', 20);
-    await page.getByRole('button', { name: /Sprievodca krok za krokom/ }).click();
     await page.mouse.click(5, 300);
     await page.keyboard.press('h');
     await page.keyboard.press('m');

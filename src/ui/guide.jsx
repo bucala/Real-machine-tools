@@ -3,6 +3,7 @@
 // Krok: { title, text, part?: kľúč dielu, param?: popis ovládača (data-param), button?: text tlačidla,
 //         done?: (ui, tele, start) => bool – start = { ui, tele } pri začiatku kroku }
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { L } from '../core/i18n';
 
 function target(step) {
@@ -53,17 +54,39 @@ export function Guide({ steps, ui, tele, apiRef }) {
       if (step.part) apiRef.current.onPick?.(null);
     };
   }, [i]);
-  if (i < 0)
-    return (
-      <div className="sec guide">
+  const launcher = (
+    <div className="sec guide">
+      <h2 className="sec-title mb-2">{L('Sprievodca', 'Guide')}</h2>
+      {i < 0 ? (
         <button type="button" className="btn w-full" onClick={() => go(0)}>
           ▶ {L('Sprievodca krok za krokom', 'Step-by-step guide')}
         </button>
-      </div>
-    );
+      ) : (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span>
+            {i >= list.length
+              ? L('Sprievodca je dokončený.', 'The guide is finished.')
+              : `${L('Sprievodca beží – krok', 'Guide running – step')} ${i + 1} / ${list.length}`}
+          </span>
+          <button type="button" className="btn" onClick={() => setI(-1)}>
+            {L('Ukončiť', 'Close')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  if (i < 0) return launcher;
   const finished = i >= list.length;
-  return (
-    <div className="sec guide active" role="region" aria-label={L('Sprievodca', 'Guide')} aria-live="polite">
+  // samostatné navigačné okno nad scénou (pri každom kroku sa znova objaví)
+  const win = (
+    <div
+      key={i}
+      className="guide-window"
+      role="dialog"
+      aria-modal="false"
+      aria-label={L('Sprievodca krok za krokom', 'Step-by-step guide')}
+      aria-live="polite"
+    >
       <div className="flex items-center justify-between gap-2">
         <b className="sec-title">{finished ? L('Hotovo', 'Done') : `${L('Krok', 'Step')} ${i + 1} / ${list.length}`}</b>
         <button
@@ -110,5 +133,11 @@ export function Guide({ steps, ui, tele, apiRef }) {
         </>
       )}
     </div>
+  );
+  return (
+    <>
+      {launcher}
+      {createPortal(win, document.body)}
+    </>
   );
 }
