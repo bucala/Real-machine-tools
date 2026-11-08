@@ -1,6 +1,7 @@
 // Service worker – offline režim. Vygenerovaný pri builde (vite.config.js), needitovať v public/.
-// Pri inštalácii uloží všetky súbory aplikácie, takže po prvej návšteve fungujú všetky stroje aj bez internetu.
-const CACHE = 'rmt-695006ea44d9';
+// Pri inštalácii uloží menu a 3D jadro. Každý otvorený stroj sa uloží pri prvom otvorení; všetky stroje
+// naraz uloží správa {type: 'cache-all'} (tlačidlo v menu). Po novej verzii sa nezmenené súbory prenesú.
+const CACHE = 'rmt-b5d225133bc5';
 const PRECACHE = [
   "/",
   "/apple-touch-icon.png",
@@ -23,60 +24,123 @@ const PRECACHE = [
   "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
   "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
   "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
-  "/assets/bender-DLlYACOB.js",
+  "/assets/index-ByLY2gY9.css",
+  "/assets/index-lQwYheac.js",
+  "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
+  "/assets/util-BIqoJFFx.js"
+];
+const ALL = [
+  "/",
+  "/apple-touch-icon.png",
+  "/boot.css",
+  "/boot.js",
+  "/favicon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/manifest.webmanifest",
+  "/assets/CncCore-CKtQMyTm.css",
+  "/assets/CncCore-XiikxipG.js",
+  "/assets/barlow-condensed-latin-600-normal-DepVgxBB.woff2",
+  "/assets/barlow-condensed-latin-700-normal-v1xN8_Wq.woff2",
+  "/assets/barlow-condensed-latin-ext-600-normal-18ESti3H.woff2",
+  "/assets/barlow-condensed-latin-ext-700-normal-CwuXbfVR.woff2",
+  "/assets/barlow-latin-400-normal-qiz4-Cze.woff2",
+  "/assets/barlow-latin-500-normal-BPAOfeC8.woff2",
+  "/assets/barlow-latin-600-normal-DILqtrty.woff2",
+  "/assets/barlow-latin-700-normal-A9pxMQ4z.woff2",
+  "/assets/barlow-latin-ext-400-normal-HxX4XjxC.woff2",
+  "/assets/barlow-latin-ext-500-normal-DOaysfXq.woff2",
+  "/assets/barlow-latin-ext-600-normal-B8NK_A3D.woff2",
+  "/assets/barlow-latin-ext-700-normal-BLuWmldJ.woff2",
+  "/assets/bender-Dk0KHv9G.js",
   "/assets/benderMath-d1cNdKwu.js",
-  "/assets/bystronic-B0iqMyG6.js",
+  "/assets/bystronic-CNkpKe2u.js",
   "/assets/bystronic-CNtSkLmt.css",
-  "/assets/core3d-B9BU--T4.js",
-  "/assets/cylgrind-nx6Rtbvq.js",
-  "/assets/drill-DDkLWoFO.js",
-  "/assets/folder-uKc2ZqM3.js",
-  "/assets/grinder-CjWIBz3R.js",
-  "/assets/hermle-CKtQMyTm.css",
-  "/assets/hermle-ztvmZcak.js",
+  "/assets/core3d-Blm2qdoL.js",
+  "/assets/cylgrind-BrfPc1jW.js",
+  "/assets/drill-yhud7ZEo.js",
+  "/assets/folder-eo8B0NmA.js",
+  "/assets/grinder-Cv_r5Id3.js",
+  "/assets/hermle-C0U0BbCX.js",
   "/assets/hfMath-B0JgUNbA.js",
-  "/assets/hob-Bvccgu90.js",
-  "/assets/horiz-6cgduziD.js",
-  "/assets/index-BFgNrQmI.js",
-  "/assets/index-Bk9O5q5G.css",
-  "/assets/lathe-BqgHZyCN.js",
-  "/assets/machineExport-B1LxTQxZ.js",
+  "/assets/hob-CveCTnxu.js",
+  "/assets/horiz-DgHrpqZy.js",
+  "/assets/index-ByLY2gY9.css",
+  "/assets/index-lQwYheac.js",
+  "/assets/lathe-4bbnFmr0.js",
+  "/assets/machineExport-BFVO8pCN.js",
   "/assets/machineExport.worker-Csk2pWCh.js",
-  "/assets/machineWorkInspect-PqdVk40z.js",
-  "/assets/mill-CnKKe6KT.js",
-  "/assets/modelKit-DSwhnhmE.css",
-  "/assets/modelKit-dySQfiif.js",
-  "/assets/oscar-D8sSGGSI.js",
-  "/assets/plate-hw5TcjuG.js",
-  "/assets/press-BO23Xs27.js",
-  "/assets/profiles-C1MIL2jZ.js",
+  "/assets/machineWorkInspect-EHmA44tm.js",
+  "/assets/mill-C2qVsqZr.js",
+  "/assets/modelKit-BKD3in3Z.js",
+  "/assets/oscar-DQyaxepK.js",
+  "/assets/plate-DShB05Gp.js",
+  "/assets/press-6YMdVcJf.js",
+  "/assets/profiles-Cujqx7ur.js",
   "/assets/profiles-K4q7Vx22.css",
-  "/assets/radial-mLwcRFc1.js",
-  "/assets/roeders-DvGh-SZL.js",
-  "/assets/saw-CPVTvPTS.js",
-  "/assets/shaper-C8IrTAmu.js",
+  "/assets/radial--kpe6siz.js",
+  "/assets/roeders-DjHtTLIH.js",
+  "/assets/saw-DKUL8W6h.js",
   "/assets/shaperMath-BfNySK0Q.js",
   "/assets/share-tech-mono-latin-400-normal-CCqdbj5z.woff2",
-  "/assets/shear-DKpdLAqt.js",
+  "/assets/shear-DFIXpmJO.js",
   "/assets/shopMath-B3CAL8Sc.js",
-  "/assets/shuangli-Dj6OEjB9.css",
-  "/assets/shuangli-KmGPFN3y.js",
-  "/assets/sketch-4lwW6eB1.js",
-  "/assets/slotter-CQ9cbKzD.js",
-  "/assets/src-B2Tu5CbP.js",
-  "/assets/tools-ybyFBE7K.js",
+  "/assets/sketch-CAU7qFbN.js",
+  "/assets/slotter-DMpJqBoO.js",
+  "/assets/src-makANGAR.js",
+  "/assets/tools-B0vcbbls.js",
+  "/assets/util-BIqoJFFx.js",
   "/assets/voxel-BpIlcVgH.js",
-  "/assets/weld-WvXJCbCt.js"
+  "/assets/weld-QlKZeXiS.js",
+  "/assets/workAreaWindow-BKO46YuZ.js",
+  "/assets/workAreaWindow-DSwhnhmE.css"
 ];
+const FULL = '/__rmt-offline-all';                  // značka: používateľ si uložil všetky stroje
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
 });
 
+const cacheAll = async (report) => {
+  const c = await caches.open(CACHE), missing = [];
+  for (const f of ALL) if (!(await c.match(f))) missing.push(f);
+  let done = ALL.length - missing.length;
+  report?.(done, ALL.length);
+  for (let i = 0; i < missing.length; i += 6) {
+    await c.addAll(missing.slice(i, i + 6));
+    done += Math.min(6, missing.length - i);
+    report?.(done, ALL.length);
+  }
+  await c.put(FULL, new Response('1'));
+};
+
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((k) => k.startsWith('rmt-') && k !== CACHE).map((k) => caches.delete(k))))
-    .then(() => self.clients.claim()));
+  e.waitUntil((async () => {
+    const keys = (await caches.keys()).filter((k) => k.startsWith('rmt-') && k !== CACHE);
+    const cache = await caches.open(CACHE), wanted = new Set(ALL);
+    let full = false;
+    for (const k of keys) {
+      const old = await caches.open(k);
+      // hashované súbory, ktoré sa nezmenili, netreba sťahovať znova
+      for (const req of await old.keys()) {
+        const path = new URL(req.url).pathname;
+        if (path === FULL) full = true;
+        else if (path !== '/' && wanted.has(path) && !(await cache.match(req))) await cache.put(req, await old.match(req));
+      }
+      await caches.delete(k);
+    }
+    await self.clients.claim();
+    if (full) cacheAll().catch(() => { /* bez siete – doplní sa pri ďalšej návšteve */ });
+  })());
+});
+
+self.addEventListener('message', (e) => {
+  if (e.data?.type !== 'cache-all') return;
+  const reply = (msg) => e.source?.postMessage(msg);
+  e.waitUntil(cacheAll((done, total) => reply({ type: 'cache-all-progress', done, total }))
+    .then(() => reply({ type: 'cache-all-done', ok: true }))
+    .catch(() => reply({ type: 'cache-all-done', ok: false })));
 });
 
 self.addEventListener('fetch', (e) => {
@@ -91,7 +155,7 @@ self.addEventListener('fetch', (e) => {
       .catch(() => caches.match('/')));
     return;
   }
-  // ostatné súbory: z vyrovnávacej pamäte, inak zo siete (a hashované súbory sa uložia)
+  // ostatné súbory: z vyrovnávacej pamäte, inak zo siete (hashované súbory sa uložia – otvorený stroj funguje offline)
   e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
     if (res.ok && url.pathname.startsWith('/assets/')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
     return res;

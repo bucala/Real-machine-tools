@@ -1,21 +1,22 @@
+import { L } from '../../core/i18n';
 // Educational ZJA13-family drilling cycle. These are simulator limits, not a
 // certified parameter table for the ZJA13-2013F / Siemens controller firmware.
 export const DEEP_BLANK={min:[-500,-80,-120],max:[0,80,120],res:2};
 export function validateDeepJob(c,stock){
   const inRange=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
-  if(!Array.isArray(c.rows)||!c.rows.length||c.rows.length>20)throw new Error('Zadaj 1–20 otvorov / Enter 1–20 holes.');
-  if(!inRange(c.diameter,8,40)||!inRange(c.feed,5,400)||!inRange(c.rpm,100,6000))throw new Error('Neplatný nástroj alebo rezné parametre / Invalid tool or cutting parameters.');
+  if(!Array.isArray(c.rows)||!c.rows.length||c.rows.length>20)throw new Error(L('Zadaj 1–20 otvorov.','Enter 1–20 holes.'));
+  if(!inRange(c.diameter,8,40)||!inRange(c.feed,5,400)||!inRange(c.rpm,100,6000))throw new Error(L('Neplatný nástroj alebo rezné parametre.','Invalid tool or cutting parameters.'));
   const r=c.diameter/2;
   for(const row of c.rows){
-    if(!inRange(row.x,-stock.max[2]+r,-stock.min[2]-r)||!inRange(row.y,stock.min[1]+r,stock.max[1]-r))throw new Error('Otvor presahuje polotovar / Hole exceeds the blank.');
-    if(!inRange(row.depth,1,stock.max[0]-stock.min[0]-5))throw new Error('Hĺbka presahuje bezpečnú dĺžku polotovaru / Depth exceeds safe blank length.');
+    if(!inRange(row.x,-stock.max[2]+r,-stock.min[2]-r)||!inRange(row.y,stock.min[1]+r,stock.max[1]-r))throw new Error(L('Otvor presahuje polotovar.','Hole exceeds the blank.'));
+    if(!inRange(row.depth,1,stock.max[0]-stock.min[0]-5))throw new Error(L('Hĺbka presahuje bezpečnú dĺžku polotovaru.','Depth exceeds safe blank length.'));
   }
 }
 export function createDeepDrillProcess(stock){
   const S={phase:'idle',run:false,done:false,row:0,x:0,y:0,depth:-30,t:0,removed:0,alarm:null};let job=null;
   const hold=()=>{S.run=false;};
   const stop=msg=>{hold();S.alarm=msg;};
-  const guard=({door=false,estop=false,clamped=true,coolant=true,pressure=40}={})=>door?'Zatvor všetky dvere / Close all doors.':estop?'Núdzový STOP / Emergency STOP.':!clamped?'Upni obrobok / Clamp the workpiece.':!coolant||!Number.isFinite(pressure)||pressure<10?'Zapni tlakové chladenie (≥10 bar) / Enable pressure coolant (≥10 bar).':null;
+  const guard=({door=false,estop=false,clamped=true,coolant=true,pressure=40}={})=>door?L('Zatvor všetky dvere.','Close all doors.'):estop?L('Núdzový STOP.','Emergency STOP.'):!clamped?L('Upni obrobok.','Clamp the workpiece.'):!coolant||!Number.isFinite(pressure)||pressure<10?L('Zapni tlakové chladenie (≥10 bar)','Enable pressure coolant (≥10 bar).'):null;
   const start=(config,conditions)=>{
     const error=guard(conditions);if(error){stop(error);return false;}
     try{validateDeepJob(config,stock);}catch(e){stop(e.message);return false;}

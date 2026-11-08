@@ -1,3 +1,4 @@
+import { L as tx } from '../../core/i18n';
 // Interpreter CNC programov pre 5-osé centrum: ISO / Fanuc (aj výstupy CAM postprocesorov) a Heidenhain Klartext.
 // Výstup je zoznam elementárnych pohybov s koncovými polohami v priestore stroja ('mach') alebo obrobku ('work').
 // Priestor 'mach': lineárna interpolácia osí stroja (bez TCP). Priestor 'work': špička nástroja ide po priamke /
@@ -53,15 +54,15 @@ export function interpret(text, ctx) {
   const machOf = (q, a, c, sp) => (sp === 'mach' ? q : toMach(add(q, o54), a, c, hA));
   const checkLim = (mm, a) => {
     const nose = mm[2] + Lact();
-    if (mm[0] < MC.X[0] - 1e-6 || mm[0] > MC.X[1] + 1e-6) err(`os X mimo rozsahu (${mm[0].toFixed(1)} mm)`);
-    if (mm[1] < MC.Y[0] - 1e-6 || mm[1] > MC.Y[1] + 1e-6) err(`os Y mimo rozsahu (${mm[1].toFixed(1)} mm)`);
-    if (nose > MC.nose[1] + 1e-6 || nose < MC.nose[0] - 1e-6) err(`os Z mimo rozsahu (${(nose - NOSE_MAX).toFixed(1)} mm)`);
-    if (a < MC.A[0] - 1e-6 || a > MC.A[1] + 1e-6) err(`os A mimo rozsahu ${MC.A[0]}…${MC.A[1]}° (${a.toFixed(1)}°)`);
+    if (mm[0] < MC.X[0] - 1e-6 || mm[0] > MC.X[1] + 1e-6) err(tx(`os X mimo rozsahu (${mm[0].toFixed(1)} mm)`, `X axis out of range (${mm[0].toFixed(1)} mm)`));
+    if (mm[1] < MC.Y[0] - 1e-6 || mm[1] > MC.Y[1] + 1e-6) err(tx(`os Y mimo rozsahu (${mm[1].toFixed(1)} mm)`, `Y axis out of range (${mm[1].toFixed(1)} mm)`));
+    if (nose > MC.nose[1] + 1e-6 || nose < MC.nose[0] - 1e-6) err(tx(`os Z mimo rozsahu (${(nose - NOSE_MAX).toFixed(1)} mm)`, `Z axis out of range (${(nose - NOSE_MAX).toFixed(1)} mm)`));
+    if (a < MC.A[0] - 1e-6 || a > MC.A[1] + 1e-6) err(tx(`os A mimo rozsahu ${MC.A[0]}…${MC.A[1]}° (${a.toFixed(1)}°)`, `A axis out of range ${MC.A[0]}…${MC.A[1]}° (${a.toFixed(1)}°)`));
   };
   const feed = () => ({ F: st.perRev ? st.F * st.S : st.F, inv: st.inv });
   const lin = (p1, a1, c1, rapid) => {
     const sp = space(), q0 = sp === 'mach' ? m : toWork(m, st.a, st.c), q1 = toSpace(p1, a1, c1);
-    if (!rapid && !st.inv && !(feed().F > 0)) err('posuv F nie je zadaný');
+    if (!rapid && !st.inv && !(feed().F > 0)) err(tx('posuv F nie je zadaný', 'feed F is not programmed'));
     const mv = { kind: 'lin', rapid, space: sp, line: st.line, q0, q1, a0: st.a, a1, c0: st.c, c1, T: st.T, ...feed() };
     const m1 = machOf(q1, a1, c1, sp);
     if (len(sub(m1, m)) > 1e-7 || Math.abs(a1 - st.a) > 1e-9 || Math.abs(c1 - st.c) > 1e-9) moves.push(mv);
@@ -75,8 +76,8 @@ export function interpret(text, ctx) {
   const arc = (p1, ctr, cw) => {
     const [i, j, k] = planeAx(), p0 = pos;
     const r0p = [p0[i] - ctr[i], p0[j] - ctr[j]], r1p = [p1[i] - ctr[i], p1[j] - ctr[j]], r = Math.hypot(r0p[0], r0p[1]);
-    if (r < 1e-6) { err('kruhový oblúk s nulovým polomerom'); return; }
-    if (Math.abs(Math.hypot(r1p[0], r1p[1]) - r) > Math.max(0.01, r * 1e-3)) err('koncový bod oblúka nie je na kružnici');
+    if (r < 1e-6) { err(tx('kruhový oblúk s nulovým polomerom', 'circular arc with zero radius')); return; }
+    if (Math.abs(Math.hypot(r1p[0], r1p[1]) - r) > Math.max(0.01, r * 1e-3)) err(tx('koncový bod oblúka nie je na kružnici', 'arc end point is not on the circle'));
     let sw = (Math.atan2(r1p[1], r1p[0]) - Math.atan2(r0p[1], r0p[0])) * 180 / Math.PI;
     if (cw) { while (sw >= -1e-9) sw -= 360; } else { while (sw <= 1e-9) sw += 360; }
     const full = Math.hypot(r1p[0] - r0p[0], r1p[1] - r0p[1]) < 1e-6;
@@ -86,13 +87,13 @@ export function interpret(text, ctx) {
     const sp = space(), c = toSpace(cP), q0 = sp === 'mach' ? m : toWork(m, st.a, st.c), q1 = toSpace(p1);
     const n = st.frame ? norm(matVec(st.frame.R, nP)) : nP, h = dot(sub(q1, q0), n);
     const r0 = sub(sub(q0, c), mul(n, dot(sub(q0, c), n)));
-    if (!(feed().F > 0) && !st.inv) err('posuv F nie je zadaný');
+    if (!(feed().F > 0) && !st.inv) err(tx('posuv F nie je zadaný', 'feed F is not programmed'));
     moves.push({ kind: 'arc', rapid: false, space: sp, line: st.line, q0, q1, c, n, r0, sweep: sw, h, r, a0: st.a, a1: st.a, c0: st.c, c1: st.c, T: st.T, ...feed() });
     m = machOf(q1, st.a, st.c, sp); pos = p1; checkLim(m, st.a);
   };
   const toolChange = (t) => {
-    if (!tool(t)) { err(`nástroj T${t} nie je v tabuľke nástrojov`); return; }
-    if (st.dir) warn('pred výmenou nástroja zastav vreteno (M5) – riadenie ho zastaví samo');
+    if (!tool(t)) { err(tx(`nástroj T${t} nie je v tabuľke nástrojov`, `tool T${t} is not in the tool table`)); return; }
+    if (st.dir) warn(tx('pred výmenou nástroja zastav vreteno (M5) – riadenie ho zastaví samo', 'stop the spindle (M5) before a tool change – the control stops it automatically'));
     moves.push({ kind: 'tc', line: st.line, from: st.T, to: t, q0: m, a0: st.a, c0: st.c });
     st.T = t; st.dir = 0; m = [0, MC.tcY, NOSE_MAX - tool(t).l]; resync();
   };
@@ -100,7 +101,7 @@ export function interpret(text, ctx) {
   const orient = (move) => {              // natočenie A/C tak, aby os nástroja = os Z naklonenej roviny
     const v = st.frame ? matVec(st.frame.R, [0, 0, 1]) : [0, 0, 1];
     const s = axisToAC(v, st.c, MC.A);
-    if (!s) { err(`naklonenú rovinu nedosiahne os A (${MC.A[0]}…${MC.A[1]}°)`); return; }
+    if (!s) { err(tx(`naklonenú rovinu nedosiahne os A (${MC.A[0]}…${MC.A[1]}°)`, `the A axis cannot reach the tilted plane (${MC.A[0]}…${MC.A[1]}°)`)); return; }
     if (move) machRapid(m, s.a, s.c); else { st.a = s.a; st.c = s.c; resync(); }
   };
   // vŕtacie cykly (v aktívnom ráme, os vŕtania = Z rámu)
@@ -124,10 +125,10 @@ export function interpret(text, ctx) {
     const sc = s.indexOf(';'); if (sc >= 0) { comments.push(s.slice(sc + 1)); s = s.slice(0, sc); }
     s = s.trim().toUpperCase();
     if (!s || s === '%' || /^O\d+/.test(s)) return;
-    if (/[#[\]]|\bIF\b|\bGOTO\b|\bWHILE\b/.test(s)) { err('premenné a skoky (makrá) nie sú podporované'); return; }
+    if (/[#[\]]|\bIF\b|\bGOTO\b|\bWHILE\b/.test(s)) { err(tx('premenné a skoky (makrá) nie sú podporované', 'variables and jumps (macros) are not supported')); return; }
     if (/\bTRAORI\b/.test(s)) { st.tcp = true; resync(); return; }
     if (/\bTRAFOOF\b/.test(s)) { st.tcp = false; resync(); return; }
-    if (/CYCLE800/.test(s)) { warn('CYCLE800 (Siemens) nie je podporovaný – použi G68.2 / G53.1 alebo TCP'); return; }
+    if (/CYCLE800/.test(s)) { warn(tx('CYCLE800 (Siemens) nie je podporovaný – použi G68.2 / G53.1 alebo TCP', 'CYCLE800 (Siemens) is not supported – use G68.2 / G53.1 or TCP')); return; }
     const toks = s.match(/[A-Z][+-]?\d*\.?\d*/g) || [];
     const w = {}, gs = [], ms = [];
     toks.forEach((t) => { const L = t[0], v = parseFloat(t.slice(1)); if (L === 'G') gs.push(Math.round(v * 10) / 10); else if (L === 'M') ms.push(v); else if (!Number.isNaN(v)) w[L] = v; });
@@ -137,12 +138,12 @@ export function interpret(text, ctx) {
       if ([0, 1, 2, 3].includes(g)) { st.mot = g; motion = g; st.cyc = null; }
       else if (g === 4) { moves.push({ kind: 'dwell', line: st.line, t: w.P != null ? w.P / 1000 : (w.X || 0) }); delete w.X; delete w.P; }
       else if (g === 17 || g === 18 || g === 19) st.plane = g;
-      else if (g === 20) { st.scale = 25.4; warn('program v palcoch (G20) – prepočítané na mm'); }
+      else if (g === 20) { st.scale = 25.4; warn(tx('program v palcoch (G20) – prepočítané na mm', 'program in inches (G20) – converted to mm')); }
       else if (g === 21) st.scale = 1;
       else if (g === 90) st.abs = true; else if (g === 91) st.abs = false;
       else if (g === 93) st.inv = true; else if (g === 94) { st.inv = false; st.perRev = false; } else if (g === 95) { st.inv = false; st.perRev = true; }
       else if (g === 54) { /* jediný nulový bod */ }
-      else if (g >= 55 && g <= 59.9) warn(`G${g}: použije sa nulový bod G54 (stred hornej plochy polotovaru)`);
+      else if (g >= 55 && g <= 59.9) warn(tx(`G${g}: použije sa nulový bod G54 (stred hornej plochy polotovaru)`, `G${g}: datum G54 is used (centre of the top face of the blank)`));
       else if (g === 43) { st.lenComp = true; st.H = w.H != null ? w.H : st.T; resync(); }
       else if (g === 43.4 || g === 43.5) { st.lenComp = true; st.H = w.H != null ? w.H : st.T; st.tcp = true; resync(); }
       else if (g === 49) { st.lenComp = false; st.tcp = false; resync(); }
@@ -150,17 +151,17 @@ export function interpret(text, ctx) {
         if (g === 80) st.cyc = null;
         if (g === 69) setFrame(null);
       }
-      else if (g === 41 || g === 42) warn('korekcia polomeru G41/G42 sa ignoruje – program musí mať dráhu stredu nástroja (CAM: kompenzácia „v počítači“)');
+      else if (g === 41 || g === 42) warn(tx('korekcia polomeru G41/G42 sa ignoruje – program musí mať dráhu stredu nástroja (CAM: kompenzácia „v počítači“)', 'cutter compensation G41/G42 is ignored – the program must use the tool centre path (CAM: compensation "in computer")'));
       else if (g === 53) g53 = true;
       else if (g === 28) g28 = true;
       else if (g === 68.2) g682 = true;
       else if (g === 53.1) g531 = true;
       else if (g === 98) st.ret98 = true; else if (g === 99) st.ret98 = false;
       else if ([73, 81, 82, 83].includes(g)) { st.cyc = { type: g, zInit: pos[2], R: 0, Z: 0, Q: 0, P: 0, F: 0 }; cycleCall = true; }
-      else if (g === 10 || g === 52 || g === 92) warn(`G${g} sa ignoruje (posunutie súradníc)`);
-      else warn(`G${g} nie je podporovaný`);
+      else if (g === 10 || g === 52 || g === 92) warn(tx(`G${g} sa ignoruje (posunutie súradníc)`, `G${g} is ignored (coordinate shift)`));
+      else warn(tx(`G${g} nie je podporovaný`, `G${g} is not supported`));
     });
-    if (w.B != null) err('stroj nemá os B (len A a C)');
+    if (w.B != null) err(tx('stroj nemá os B (len A a C)', 'the machine has no B axis (only A and C)'));
     if (w.F != null) st.F = w.F * (st.inv ? 1 : k);
     if (w.S != null) { st.S = w.S; if (st.dir) spin(); }
     if (w.T != null) st.pendT = w.T;
@@ -192,7 +193,7 @@ export function interpret(text, ctx) {
         if (mo === 2 || mo === 3) {
           if (w.R != null) {
             const [i, j] = planeAx(), dx = tgt[i] - pos[i], dy = tgt[j] - pos[j], d = Math.hypot(dx, dy), R = Math.abs(w.R * k);
-            if (d > 2 * R + 1e-6) err('polomer oblúka R je menší ako polovica tetivy');
+            if (d > 2 * R + 1e-6) err(tx('polomer oblúka R je menší ako polovica tetivy', 'arc radius R is smaller than half the chord'));
             const hh = Math.sqrt(Math.max(0, R * R - d * d / 4)), sgn = (mo === 2 ? -1 : 1) * (w.R < 0 ? -1 : 1);
             const ctr = [...pos]; ctr[i] = pos[i] + dx / 2 - sgn * hh * dy / (d || 1); ctr[j] = pos[j] + dy / 2 + sgn * hh * dx / (d || 1);
             arc(tgt, ctr, mo === 2);
@@ -221,7 +222,7 @@ export function interpret(text, ctx) {
     return { tgt, a1: A ? (A.inc ? st.a + A.v : A.v) : st.a, c1: C ? (C.inc ? st.c + C.v : C.v) : st.c, has: ['X', 'Y', 'Z', 'A', 'C'].some((L) => num(s, L)) };
   };
   const runCyc200 = () => {
-    if (!cyc200) { err('CYCL CALL bez definície cyklu'); return; }
+    if (!cyc200) { err(tx('CYCL CALL bez definície cyklu', 'CYCL CALL without a cycle definition')); return; }
     const q = cyc200, zs = q[203] || 0, safe = zs + (q[200] || 2), bot = zs + (q[201] || -5), top = zs + Math.max(q[204] || 50, q[200] || 2), x = pos[0], y = pos[1];
     lin([x, y, Math.max(pos[2], safe)], st.a, st.c, true); lin([x, y, safe], st.a, st.c, true);
     const F0 = st.F; st.F = q[206] || st.F;
@@ -242,14 +243,14 @@ export function interpret(text, ctx) {
     if (/^BLK FORM 0\.2/.test(S)) { blk.max = ['X', 'Y', 'Z'].map((L) => (num(S, L) || { v: 0 }).v); return; }
     if (/^Q(\d+)\s*=\s*([+-]?\d*\.?\d+)/.test(S) && pendingCyc) { const mm = S.match(/^Q(\d+)\s*=\s*([+-]?\d*\.?\d+)/); pendingCyc[Number(mm[1])] = parseFloat(mm[2]); return; }
     if (/^CYCL DEF\s+200\b/.test(S)) { cyc200 = {}; pendingCyc = cyc200; return; }
-    if (/^CYCL DEF/.test(S)) { pendingCyc = {}; if (!/CYCL DEF\s+(32|7|19|247)\b/.test(S)) warn(`${S.slice(0, 16)} – cyklus nie je podporovaný`); return; }
+    if (/^CYCL DEF/.test(S)) { pendingCyc = {}; if (!/CYCL DEF\s+(32|7|19|247)\b/.test(S)) warn(tx(`${S.slice(0, 16)} – cyklus nie je podporovaný`, `${S.slice(0, 16)} – cycle is not supported`)); return; }
     pendingCyc = null;
     if (/^CYCL CALL/.test(S)) { runCyc200(); return; }
     if (/^TOOL DEF/.test(S)) return;
     if (/^TOOL CALL/.test(S)) {
       const mm = S.match(/^TOOL CALL\s+(\d+)/), nm = s.match(/TOOL CALL\s+"([^"]+)"/i);
       let t = mm ? Number(mm[1]) : null;
-      if (t == null && nm) { const f = tools.find((x) => x.name && x.name.toUpperCase() === nm[1].toUpperCase()); t = f ? f.t : null; if (t == null) err(`nástroj „${nm[1]}“ nie je v tabuľke`); }
+      if (t == null && nm) { const f = tools.find((x) => x.name && x.name.toUpperCase() === nm[1].toUpperCase()); t = f ? f.t : null; if (t == null) err(tx(`nástroj „${nm[1]}“ nie je v tabuľke`, `tool "${nm[1]}" is not in the table`)); }
       if (t != null && t !== st.T) toolChange(t); else if (t != null) resync();
       st.lenComp = true; st.H = st.T; resync();
       const sv = S.match(/\bS(\d+\.?\d*)/); if (sv) st.S = parseFloat(sv[1]);
@@ -263,10 +264,10 @@ export function interpret(text, ctx) {
     if (/^PLANE SPATIAL/.test(S)) {
       const g = (k2) => { const mm = S.match(new RegExp(`${k2}([+-]?\\d*\\.?\\d+)`)); return mm ? parseFloat(mm[1]) : 0; };
       setFrame([0, 0, 0], spatialABC(g('SPA'), g('SPB'), g('SPC')));
-      if (/STAY/.test(S)) warn('PLANE … STAY: os A a C natoč blokom L A… C…'); else { mbMax(); orient(true); }
+      if (/STAY/.test(S)) warn(tx('PLANE … STAY: os A a C natoč blokom L A… C…', 'PLANE … STAY: rotate A and C with a block L A… C…')); else { mbMax(); orient(true); }
       return;
     }
-    if (/^PLANE/.test(S)) { err('podporované sú len PLANE SPATIAL a PLANE RESET'); return; }
+    if (/^PLANE/.test(S)) { err(tx('podporované sú len PLANE SPATIAL a PLANE RESET', 'only PLANE SPATIAL and PLANE RESET are supported')); return; }
     if (/^STOP/.test(S)) { moves.push({ kind: 'stop', line: st.line, opt: false }); return; }
     if (/^CC\b/.test(S)) {
       const c = [...pos]; ['X', 'Y', 'Z'].forEach((L, i) => { const v = num(S, L); if (v) c[i] = v.inc ? pos[i] + v.v : v.v; });
@@ -288,9 +289,9 @@ export function interpret(text, ctx) {
     const fm = S.match(/\bF(MAX|AUTO|\d+\.?\d*)/);
     const rapid = fm && fm[1] === 'MAX';
     if (fm && fm[1] !== 'MAX' && fm[1] !== 'AUTO') st.F = parseFloat(fm[1]);
-    if (/\bR[LR]\b/.test(S)) warn('korekcia polomeru RL/RR sa ignoruje – program musí mať dráhu stredu nástroja (R0)');
+    if (/\bR[LR]\b/.test(S)) warn(tx('korekcia polomeru RL/RR sa ignoruje – program musí mať dráhu stredu nástroja (R0)', 'radius compensation RL/RR is ignored – the program must use the tool centre path (R0)'));
     if (/^L\b/.test(S)) {
-      if (/\bB[+-]?\d/.test(S)) err('stroj nemá os B (len A a C)');
+      if (/\bB[+-]?\d/.test(S)) err(tx('stroj nemá os B (len A a C)', 'the machine has no B axis (only A and C)'));
       pre(); const { tgt, a1, c1, has } = heidXYZ(S); if (has) lin(tgt, a1, c1, rapid); post(); return;
     }
     if (/^C\b/.test(S) || /^CR\b/.test(S)) {
@@ -298,19 +299,19 @@ export function interpret(text, ctx) {
       const { tgt } = heidXYZ(S), cw = /DR-/.test(S);
       if (/^CR\b/.test(S)) {
         const R = (num(S, 'R') || { v: 0 }).v, [i, j] = planeAx(), dx = tgt[i] - pos[i], dy = tgt[j] - pos[j], d = Math.hypot(dx, dy), Ra = Math.abs(R);
-        if (d > 2 * Ra + 1e-6) err('polomer CR je menší ako polovica tetivy');
+        if (d > 2 * Ra + 1e-6) err(tx('polomer CR je menší ako polovica tetivy', 'radius CR is smaller than half the chord'));
         const hh = Math.sqrt(Math.max(0, Ra * Ra - d * d / 4)), sgn = (cw ? -1 : 1) * (R < 0 ? -1 : 1);
         const ctr = [...pos]; ctr[i] = pos[i] + dx / 2 - sgn * hh * dy / (d || 1); ctr[j] = pos[j] + dy / 2 + sgn * hh * dx / (d || 1);
         arc(tgt, ctr, cw);
-      } else { if (!st.cc) err('kruhový pohyb C bez stredu CC'); else arc(tgt, st.cc, cw); }
+      } else { if (!st.cc) err(tx('kruhový pohyb C bez stredu CC', 'circular move C without centre CC')); else arc(tgt, st.cc, cw); }
       post(); return;
     }
-    if (/^CT\b/.test(S)) { warn('CT (tangenciálny oblúk) sa nahrádza priamkou'); pre(); const { tgt, a1, c1 } = heidXYZ(S); lin(tgt, a1, c1, false); post(); return; }
+    if (/^CT\b/.test(S)) { warn(tx('CT (tangenciálny oblúk) sa nahrádza priamkou', 'CT (tangential arc) is replaced by a line')); pre(); const { tgt, a1, c1 } = heidXYZ(S); lin(tgt, a1, c1, false); post(); return; }
     if (/^(LBL|CALL LBL|FN|Q\d|FUNCTION|DECLARE|SEL|M\d)/.test(S)) {
       if (/^M\d/.test(S)) { pre(); post(); return; }
-      err(`${S.split(/\s/)[0]} (podprogramy / parametre) nie je podporované`); return;
+      err(tx(`${S.split(/\s/)[0]} (podprogramy / parametre) nie je podporované`, `${S.split(/\s/)[0]} (subprograms / parameters) is not supported`)); return;
     }
-    warn(`neznámy blok: ${S.slice(0, 24)}`);
+    warn(tx(`neznámy blok: ${S.slice(0, 24)}`, `unknown block: ${S.slice(0, 24)}`));
   };
 
   lines.forEach((raw, idx) => { st.line = idx; try { (isH ? heid : iso)(raw); } catch (e) { err(String(e && e.message ? e.message : e)); } });

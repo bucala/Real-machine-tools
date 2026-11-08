@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "npm run lint && npm test && npm run build && git diff --exit-code -- public",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test:e2e": "node tests-e2e/smoke.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "5.3.0",
@@ -35,6 +36,7 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.14.0",
+    "playwright": "1.63.0",
     "postcss": "8.5.32",
     "tailwindcss": "3.4.16",
     "vite": "8.3.5",

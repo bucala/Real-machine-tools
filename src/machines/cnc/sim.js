@@ -1,3 +1,4 @@
+import { L as tx } from '../../core/i18n';
 // Vykonávanie CNC programu: postup po pohyboch v čase simulácie, úber materiálu voxelovým poľom, kontroly
 // (koncové spínače, rýchloposuv do materiálu, stojace vreteno, kolízia drieku / držiaka, náraz do stola a upínača,
 // preťaženie vretena), úberová rýchlosť a zaťaženie vretena. Bez three.js – testované v tests/cnc.test.js.
@@ -17,30 +18,30 @@ export function createExecutor({ moves, tools, o54, stock, fixture = { r: 45, h:
   let sinceCheck = 0;
   const stamp = (p, rapid, ds) => {
     const t = tool(S.T), nose = p.m[2] + L();
-    if (p.m[0] < MC.X[0] - 0.01 || p.m[0] > MC.X[1] + 0.01) { alarm(`Softvérový koncový spínač X (${p.m[0].toFixed(1)} mm)`, 'limit'); return 0; }
-    if (p.m[1] < MC.Y[0] - 0.01 || p.m[1] > MC.Y[1] + 0.01) { alarm(`Softvérový koncový spínač Y (${p.m[1].toFixed(1)} mm)`, 'limit'); return 0; }
-    if (nose < MC.nose[0] - 0.01 || nose > MC.nose[1] + 0.01) { alarm(`Softvérový koncový spínač Z (${(nose - NOSE_MAX).toFixed(1)} mm)`, 'limit'); return 0; }
-    if (p.a < MC.A[0] - 0.01 || p.a > MC.A[1] + 0.01) { alarm(`Softvérový koncový spínač A (${p.a.toFixed(1)}°)`, 'limit'); return 0; }
+    if (p.m[0] < MC.X[0] - 0.01 || p.m[0] > MC.X[1] + 0.01) { alarm(tx(`Softvérový koncový spínač X (${p.m[0].toFixed(1)} mm)`, `Software limit switch X (${p.m[0].toFixed(1)} mm)`), 'limit'); return 0; }
+    if (p.m[1] < MC.Y[0] - 0.01 || p.m[1] > MC.Y[1] + 0.01) { alarm(tx(`Softvérový koncový spínač Y (${p.m[1].toFixed(1)} mm)`, `Software limit switch Y (${p.m[1].toFixed(1)} mm)`), 'limit'); return 0; }
+    if (nose < MC.nose[0] - 0.01 || nose > MC.nose[1] + 0.01) { alarm(tx(`Softvérový koncový spínač Z (${(nose - NOSE_MAX).toFixed(1)} mm)`, `Software limit switch Z (${(nose - NOSE_MAX).toFixed(1)} mm)`), 'limit'); return 0; }
+    if (p.a < MC.A[0] - 0.01 || p.a > MC.A[1] + 0.01) { alarm(tx(`Softvérový koncový spínač A (${p.a.toFixed(1)}°)`, `Software limit switch A (${p.a.toFixed(1)}°)`), 'limit'); return 0; }
     if (!t) return 0;
     // stôl a upínač (rám stola): špička a spodok držiaka
     const pts = [p.pT, add(p.pT, mul(p.vT, t.s))];
     for (const q of pts) {
-      if (q[2] < 0.3 && Math.hypot(q[0], q[1]) < (MC.table || 650) / 2) { alarm('Kolízia: nástroj narazil do stola'); return 0; }
-      if (q[2] < fixture.h - 0.3 && q[2] > 0 && Math.hypot(q[0], q[1]) < fixture.r) { alarm('Kolízia: nástroj narazil do upínača'); return 0; }
+      if (q[2] < 0.3 && Math.hypot(q[0], q[1]) < (MC.table || 650) / 2) { alarm(tx('Kolízia: nástroj narazil do stola', 'Collision: the tool hit the table')); return 0; }
+      if (q[2] < fixture.h - 0.3 && q[2] > 0 && Math.hypot(q[0], q[1]) < fixture.r) { alarm(tx('Kolízia: nástroj narazil do upínača', 'Collision: the tool hit the fixture')); return 0; }
     }
     const r = stock.cut(p.pT, p.vT, t);
     sinceCheck += ds;
     if (r.n > 0) {
       // do 2 voxelov za krok = zaokrúhlenie siete (napr. návrat vrtáka nad dno diery), nie kolízia
-      if (rapid && r.n > 2) { alarm('Kolízia: rýchloposuv (G0) do materiálu'); return r.ops; }
-      if ((!S.dir || S.spin < 1) && r.n > 2) { alarm('Kolízia: nástroj vošiel do materiálu so stojacim vretenom'); return r.ops; }
+      if (rapid && r.n > 2) { alarm(tx('Kolízia: rýchloposuv (G0) do materiálu', 'Collision: rapid traverse (G0) into the material')); return r.ops; }
+      if ((!S.dir || S.spin < 1) && r.n > 2) { alarm(tx('Kolízia: nástroj vošiel do materiálu so stojacim vretenom', 'Collision: the tool entered the material with the spindle stopped')); return r.ops; }
       S.removed += r.n * stock.vox; S.cutting = true;
     }
     if (sinceCheck > 1 || (r.n > 0 && sinceCheck > 0.4)) {
       sinceCheck = 0;
       const shank = Math.min(t.d, 20) / 2 * 0.98;
-      if (t.s > t.lc + 0.5 && stock.hits(p.pT, p.vT, shank, t.lc + 0.5, t.s) > 4) alarm('Kolízia: driek nástroja nad reznou časťou sa dotkol materiálu (vyloženie / dĺžka reznej časti)');
-      else if (stock.hits(p.pT, p.vT, t.dh / 2, t.s, t.s + 70) > 0) alarm('Kolízia: držiak nástroja narazil do obrobku');
+      if (t.s > t.lc + 0.5 && stock.hits(p.pT, p.vT, shank, t.lc + 0.5, t.s) > 4) alarm(tx('Kolízia: driek nástroja nad reznou časťou sa dotkol materiálu (vyloženie / dĺžka reznej časti)', 'Collision: the tool shank above the flutes touched the material (stick-out / flute length)'));
+      else if (stock.hits(p.pT, p.vT, t.dh / 2, t.s, t.s + 70) > 0) alarm(tx('Kolízia: držiak nástroja narazil do obrobku', 'Collision: the tool holder hit the workpiece'));
     }
     return r.ops;
   };
@@ -66,7 +67,7 @@ export function createExecutor({ moves, tools, o54, stock, fixture = { r: 45, h:
       const mv = moves[S.idx];
       if (!mv) { S.done = true; break; }
       S.line = mv.line;
-      if (mv.kind === 'spin') { S.spin = mv.S; S.dir = mv.dir; if (mv.dir && mv.S > MC.smax) alarm(`Otáčky S${mv.S} sú nad maximom vretena ${MC.smax} ot/min`, 'limit'); S.idx++; continue; }
+      if (mv.kind === 'spin') { S.spin = mv.S; S.dir = mv.dir; if (mv.dir && mv.S > MC.smax) alarm(tx(`Otáčky S${mv.S} sú nad maximom vretena ${MC.smax} ot/min`, `Speed S${mv.S} exceeds the spindle maximum of ${MC.smax} rpm`), 'limit'); S.idx++; continue; }
       if (mv.kind === 'cool') { S.cool = mv.on; S.idx++; continue; }
       if (mv.kind === 'stop') { S.idx++; if (!mv.opt) S.paused = true; continue; }
       if (mv.kind === 'end') { S.done = true; S.dir = 0; S.cool = false; break; }
@@ -103,7 +104,7 @@ export function createExecutor({ moves, tools, o54, stock, fixture = { r: 45, h:
       S.mrr = tb > ta ? (vb - va) / (tb - ta) : 0;                       // mm³/s
       S.power = S.mrr * kc / 1e6;                                       // kW
       const pmax = Math.min(MC.pmax, MC.mmax * 2 * Math.PI * Math.max(S.spin, 1) / 60 / 1000);
-      if (S.power > pmax * 1.15 && S.dir) alarm(`Preťaženie vretena: ${S.power.toFixed(1)} kW pri ${S.spin} ot/min (max. ${pmax.toFixed(1)} kW) – zníž posuv alebo záber`, 'load');
+      if (S.power > pmax * 1.15 && S.dir) alarm(tx(`Preťaženie vretena: ${S.power.toFixed(1)} kW pri ${S.spin} ot/min (max. ${pmax.toFixed(1)} kW) – zníž posuv alebo záber`, `Spindle overload: ${S.power.toFixed(1)} kW at ${S.spin} rpm (max. ${pmax.toFixed(1)} kW) – reduce feed or depth of cut`), 'load');
       S.load = pmax > 0 ? S.power / pmax : 0;
     }
     S.nose = S.pose.m[2] + L();

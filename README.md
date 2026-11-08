@@ -123,7 +123,7 @@ Iskrenie schematicky zvýrazňuje aktívnu výbojovú zónu. Je viazané na preb
 
 ### Bystronic: ohýbanie plechu
 
-Vybraná verzia je **Xpert Pro 320/4300 v štandardnej výške** podľa [technického listu](docs/references/bystronic-xpert-pro-technical-data.pdf).
+Vybraná verzia je **Xpert Pro 320/4300 v štandardnej výške** podľa technického listu výrobcu (Bystronic Xpert Pro, technické údaje, s. 4 – dokument je dostupný u výrobcu, v repozitári sa nešíri).
 
 - Jeden ohyb vo vzduchu so segmentovaným 85° horným nástrojom a skutočným V-výrezom matrice.
 - Materiál, prírez, hrúbka, vnútorný uhol, zadný doraz X, výška R a otvorenie V.
@@ -239,7 +239,11 @@ Samotné `npx wrangler deploy` používa už vytvorený `public/`. Úspešný bu
 - [Rozmery, fotografie, rekonštrukcie a obmedzenia presných strojov](docs/precision-machines.md)
 - [Výmena dát s PowerMill](docs/cam/powermill-exchange.md)
 - [Audit aplikácie](docs/AUDIT.md)
-- [Technický list Bystronic Xpert Pro](docs/references/bystronic-xpert-pro-technical-data.pdf)
+- [Audit 2. kolo – moderné stroje (november 2026)](docs/AUDIT-2026-11.md)
 - [Používateľov STEP podklad krytovania Röders](docs/references/roeders-cover-user.STEP)
 
 Zdrojový kód projektu je pod [licenciou MIT](LICENSE).
+
+## Ochranné známky
+
+Názvy, logá a označenia strojov (Hermle, Röders, OSCARMAX, Bystronic, ShuangliCNC, Heidenhain, Siemens, Fronius, TOS a ďalšie) sú ochranné známky ich vlastníkov a slúžia len na identifikáciu predlohy. Projekt nie je spojený s výrobcami ani nimi podporovaný. 3D modely sú výučbové rekonštrukcie podľa verejných katalógov a fotografií, nie výrobná dokumentácia. Licencia MIT sa vzťahuje len na zdrojový kód projektu, nie na značky a dokumenty výrobcov.

@@ -4,6 +4,7 @@ import { useEffect,useRef,useState } from 'react';
 import * as THREE from 'three';
 import { L } from '../core/i18n';
 import { createStage } from '../core/stage';
+import { optimizeMachine } from '../core/sceneOptimize';
 import { createInspector } from '../core/inspector';
 import { createControls } from '../core/controls';
 import { createWorkInspect } from '../core/workInspect';
@@ -73,8 +74,8 @@ export default function BystronicSimulator({onBack}){
       if(t-lastTele>.12){lastTele=t;screen.redraw();setTele(control.snapshot());}
       if(render)renderer.render(scene,camera);
     };
-    tick(0);const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
-    if(/[?&]debug/.test(window.location.search))window.__bystronic={c,root,camera,model,process,control,insp,ctrl,wi,api:apiRef.current,advance:dt=>tick(dt,false)};
+    tick(0);const sceneOpt=optimizeMachine({root,scene,renderer});const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;tick(dt);};raf=requestAnimationFrame(loop);
+    if(/[?&]debug/.test(window.location.search))window.__bystronic={sceneOpt,c,root,camera,model,process,control,insp,ctrl,wi,api:apiRef.current,advance:dt=>tick(dt,false)};
     return()=>{cancelAnimationFrame(raf);snd.dispose();ctrl.dispose();wi.dispose();insp.dispose();delete window.__bystronic;disposeStage();};
   },[]);
   const setup=getSetup(ui),locked=tele.hasJob||ui.unclamped,angle=180-tele.beta*360/Math.PI,p=parts();

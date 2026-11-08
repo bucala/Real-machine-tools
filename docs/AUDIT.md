@@ -1,5 +1,7 @@
 # Audit aplikácie Real machine tools
 
+> **Novší audit:** [AUDIT-2026-11.md](AUDIT-2026-11.md) – 2. kolo po pridaní moderných strojov (8. 11. 2026).
+
 *Stav kódu: commit `0cef01b` (2. 11. 2026) · rozsah: `public/index.html`, `src/machines.jsx`, `wrangler.jsonc`, `README.md`*
 
 ## 1. Zhrnutie

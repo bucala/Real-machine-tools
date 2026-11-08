@@ -1,0 +1,1 @@
+var e=Math.PI*2,t=(e,t,n)=>Math.min(n,Math.max(t,e)),n=(e,t,n)=>{let r=t-e;return Math.abs(r)<=n?t:e+Math.sign(r)*n},r=(e,t)=>e.reduce((n,r,i)=>Math.abs(Math.log(r/t))<Math.abs(Math.log(e[n]/t))?i:n,0),i=(e,t)=>Array.from({length:e},(n,r)=>e===1?0:t-r*2*t/(e-1));export{r as a,i,n,t as r,e as t};

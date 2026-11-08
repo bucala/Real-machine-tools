@@ -19,7 +19,7 @@ describe('Portable CNC tool cabinet',()=>{
     for(const change of [{d:NaN},{d:81},{lc:100,s:40},{z:1000},{kind:'unknown'},{name:''},{l:null},{t:1.5},{kind:'cone',cr:.5}])expect(()=>validateTool({...data[0],...change})).toThrow();
     expect(()=>decodeCsv('t,name\n3,"unfinished')).toThrow();
     expect(()=>decodeCsv(encodeCsv(data)+'\npartial')).toThrow();
-    expect(()=>encodeLibrary([data[0],data[0]])).toThrow(/Duplicate/);
+    expect(()=>encodeLibrary([data[0],data[0]])).toThrow(/Duplicitné ID/);
   });
   it('persists a cabinet independently of the machine table and never overwrites a corrupt store on reading',()=>{
     const map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};
