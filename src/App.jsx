@@ -29,16 +29,7 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
-import {
-  BenchGrinderArt,
-  CenterlessArt,
-  FguArt,
-  FnkArt,
-  GearShaperArt,
-  KaruselArt,
-  SvArt,
-  ToolGrinderArt,
-} from './ui/art2';
+import { BenchGrinderArt, CenterlessArt, FguArt, FnkArt, HovArt, KaruselArt, SvArt, ToolGrinderArt } from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -67,7 +58,7 @@ const KaruselSimulator = lazy(() => import('./machines/karusel'));
 const BnSimulator = lazy(() => import('./machines/bn'));
 const BbtSimulator = lazy(() => import('./machines/bbt'));
 const BbjSimulator = lazy(() => import('./machines/bbj'));
-const OhaSimulator = lazy(() => import('./machines/oha'));
+const HovSimulator = lazy(() => import('./machines/hov'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -237,21 +228,21 @@ const MACHINES = [
     }),
   },
   {
-    id: 'oha',
-    Art: GearShaperArt,
-    Comp: OhaSimulator,
+    id: 'hov',
+    Art: HovArt,
+    Comp: HovSimulator,
     t: () => ({
-      meta: L('Obrážačka ozubenia', 'Gear shaper'),
-      name: L('Obrážačka ozubenia nožovým kolesom', 'Gear shaper with a shaper cutter'),
-      model: 'TOS Čelákovice OHA 32 A',
+      meta: L('Zvislá obrážačka', 'Vertical slotter'),
+      name: L('Zvislá obrážačka s otočným stolom', 'Vertical slotter with rotary table'),
+      model: 'TOS HOV 25',
       desc: L(
-        'Vnútorné ozubenie, ktoré odvalovacia fréza nevyrobí: nožové koleso kmitá zvisle a odvaľuje sa s prstencom, výmenné kolesá delenia, dĺžka a poloha zdvihu s nábehom a výbehom, radiálny prísuv do hĺbky 2,25 · m.',
-        'Internal gears a hob cannot cut: the shaper cutter reciprocates vertically and generates with the ring, index change gears, stroke length and position with run-in and run-out, radial infeed to 2.25 · m.',
+        'Oblúkový stojan so smykadlom vpredu, krížový a otočný stôl Ø500: viac drážok v náboji s delením otočného stola, vonkajší oblúk kruhovým posuvom, dĺžka a poloha zdvihu, narážky posuvov, nárazy do stola a upínok.',
+        'Arched column with the ram at the front, compound and rotary table Ø500: several keyways in a hub indexed on the rotary table, an outside arc with the rotary feed, stroke length and position, feed stops, crashes into the table and clamps.',
       ),
       specs: [
-        L('Modul do 6, vnútorné do Ø370', 'Module up to 6, internal up to Ø370'),
-        L('125 – 500 zdvihov/min', '125 – 500 strokes/min'),
-        L('Prstenec z 60, m 3', 'Ring z 60, m 3'),
+        L('Zdvih do 250 mm', 'Stroke up to 250 mm'),
+        L('Otočný stôl Ø500', 'Rotary table Ø500'),
+        L('Posuvy 560 × 450 mm', 'Travels 560 × 450 mm'),
       ],
     }),
   },

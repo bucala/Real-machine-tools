@@ -1,7 +1,7 @@
-// Výkresy úloh nových klasických strojov (FGU, FNK, karusel, BN 102, bezhrotová brúska, OHA, buchar, píla, ohýbačka
+// Výkresy úloh nových klasických strojov (FGU, FNK, karusel, BN 102, bezhrotová brúska, HOV 25, buchar, píla, ohýbačka
 // rúr). Rovnaký štýl ako sketch.jsx: viewBox 300 × h, kóty DimH / DimV / DimAng.
 import { L } from '../core/i18n';
-import { Axis, DimAng, DimH, DimV, T } from './sketch';
+import { Axis, DimAng, DimH, DimV, Lead, T } from './sketch';
 import { Cap, Ln, Svg, body, r2 } from './sketch';
 
 // frézka: hranol 180 × 100 × 60 s drážkou šírky b a hĺbky h pod uhlom a (pohľad zhora a rez)
@@ -215,6 +215,91 @@ export function PipeBendDrawing({ D = 28, R = 84, a = 90 }) {
       />
       <DimAng cx={cx} cy={cy} r={r * 0.45} a1={-90} a2={-90 + a} text={`${a}° ±1°`} tr={r * 0.45 + 12} />
       <T x={cx + 8} y={cy - r * 0.2} s={9}>{`R${R}`}</T>
+    </Svg>
+  );
+}
+
+// zvislá obrážačka HOV 25: náboj Ø120 / Ø40 – 4 drážky 10 × 3 po 90° alebo vonkajší oblúk R55 na 120°
+export function HovDrawing({ kind = 'drazky' }) {
+  const cx = 96,
+    cy = 66,
+    k = 0.42,
+    R = 60 * k,
+    r = 20 * k;
+  const P = (rr, a) => [cx + rr * Math.cos((a * Math.PI) / 180), cy - rr * Math.sin((a * Math.PI) / 180)];
+  let outer = `M${r2(cx + R)} ${cy}A${r2(R)} ${r2(R)} 0 1 0 ${r2(cx - R)} ${cy}A${r2(R)} ${r2(R)} 0 1 0 ${r2(cx + R)} ${cy}Z`,
+    inner = `M${r2(cx + r)} ${cy}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx - r)} ${cy}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx + r)} ${cy}Z`,
+    dims;
+  if (kind === 'drazky') {
+    const h = 5 * k,
+      d = 23 * k,
+      s = Math.sqrt(r * r - h * h);
+    const pts = [];
+    for (let q = 0; q < 4; q++) {
+      const rot = (p) => {
+        const a = (q * Math.PI) / 2,
+          x = p[0],
+          y = p[1];
+        return [cx + x * Math.cos(a) - y * Math.sin(a), cy - (x * Math.sin(a) + y * Math.cos(a))];
+      };
+      const seq = [
+        [s, -h],
+        [d, -h],
+        [d, h],
+        [s, h],
+      ].map(rot);
+      pts.push(seq);
+    }
+    // otvor so štyrmi drážkami: oblúky otvoru medzi drážkami
+    inner =
+      pts
+        .map((seq, q) => {
+          const next = pts[(q + 1) % 4][0];
+          return `${q ? 'L' : 'M'}${seq.map((p) => `${r2(p[0])} ${r2(p[1])}`).join('L')}A${r2(r)} ${r2(r)} 0 0 0 ${r2(next[0])} ${r2(next[1])}`;
+        })
+        .join('') + 'Z';
+    dims = (
+      <g>
+        <DimV y1={cy - h} y2={cy + h} x={cx + R + 16} f1={cx + d} text={L('10 ±0,2', '10 ±0.2')} />
+        <Lead x={cx + d} y={cy - h + 1} x2={cx + R + 30} y2={24} text={L('t2 = 3 ±0,1', 't2 = 3 ±0.1')} />
+        <T x={cx + R + 52} y={cy + 30} s={9}>
+          {L('4 × 90° ±0,5°', '4 × 90° ±0.5°')}
+        </T>
+        <Lead x={P(r, 225)[0]} y={P(r, 225)[1]} x2={34} y2={118} text="Ø40" a="l" />
+      </g>
+    );
+  } else {
+    const R5 = 55 * k,
+      a0 = -60,
+      a1 = 60,
+      A = P(R, a0 - 8),
+      B = P(R5, a0),
+      C = P(R5, a1),
+      D = P(R, a1 + 8);
+    outer = `M${r2(D[0])} ${r2(D[1])}A${r2(R)} ${r2(R)} 0 1 1 ${r2(A[0])} ${r2(A[1])}L${r2(B[0])} ${r2(B[1])}A${r2(R5)} ${r2(R5)} 0 0 0 ${r2(C[0])} ${r2(C[1])}Z`;
+    dims = (
+      <g>
+        <DimAng cx={cx} cy={cy} r={R + 10} a1={-a1} a2={-a0} text={L('120° ±5°', '120° ±5°')} tr={R + 22} />
+        <Lead x={P(R5, 20)[0]} y={P(R5, 20)[1]} x2={cx + R + 40} y2={20} text={L('R55 ±0,2', 'R55 ±0.2')} />
+        <Lead x={P(r, 225)[0]} y={P(r, 225)[1]} x2={34} y2={118} text="Ø40" a="l" />
+      </g>
+    );
+  }
+  const o = P(R, 135);
+  return (
+    <Svg h={130} label={kind}>
+      <path
+        d={`${outer} ${inner}`}
+        fill="currentColor"
+        fillOpacity="0.14"
+        fillRule="evenodd"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <Axis a={[cx - R - 8, cy]} b={[cx + R + 6, cy]} />
+      <Axis a={[cx, cy - R - 6]} b={[cx, cy + R + 6]} />
+      <Lead x={o[0]} y={o[1]} x2={30} y2={14} text={L('Ø120 × 60', 'Ø120 × 60')} a="l" />
+      {dims}
     </Svg>
   );
 }

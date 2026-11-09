@@ -122,18 +122,22 @@ export function CenterlessArt() {
   );
 }
 
-// obrážačka ozubenia: stojan s vreteníkom nožového kolesa a stôl s obrobkom
-export function GearShaperArt() {
+// zvislá obrážačka HOV 25: oblúkový stojan, smykadlo vpredu, krížový stôl s otočným stolom a obrobkom
+export function HovArt() {
   return (
     <Svg>
       <g fillOpacity=".16">
-        <rect x="40" y="30" width="90" height="130" rx="4" />
-        <rect x="130" y="40" width="70" height="40" rx="3" />
-        <rect x="150" y="120" width="110" height="40" rx="3" />
+        <path d="M60 160V48q0-26 30-26h60q24 0 24 22v34H110v82z" />
+        <rect x="150" y="18" width="26" height="70" rx="3" />
+        <rect x="120" y="128" width="170" height="32" rx="3" />
+        <rect x="292" y="96" width="20" height="40" rx="2" />
       </g>
-      <path d="M170 80v28" fill="none" strokeWidth="6" />
-      <ellipse cx="170" cy="112" rx="14" ry="5" fillOpacity=".5" />
-      <ellipse cx="210" cy="116" rx="38" ry="8" fill="none" strokeDasharray="4 3" />
+      <path d="M163 88v22" fill="none" strokeWidth="6" />
+      <rect x="148" y="112" width="34" height="14" rx="2" fillOpacity=".55" />
+      <ellipse cx="200" cy="128" rx="62" ry="9" fill="none" />
+      <circle cx="96" cy="62" r="14" fill="none" />
+      <path d="M96 62l9-6" fill="none" />
+      <circle cx="128" cy="146" r="9" fill="none" />
     </Svg>
   );
 }
