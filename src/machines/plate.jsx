@@ -413,10 +413,15 @@ function PlateRollSimulator({ onBack, params }) {
     const pan = grp('ovladanie');
     box(pan, 6.0, 6.8, 0, 9.5, -HW - 4.5, -HW - 3.7, M.green);
     box(pan, 5.9, 6.9, 9.5, 11.4, -HW - 4.6, -HW - 3.6, M.panel);
+    // čelo skrinky s tlačidlami otočené k obsluhe (+X, pred valcami), nie k stojanu stroja
+    const face = new THREE.Group();
+    face.position.set(6.4, 0, -HW - 4.1);
+    face.rotation.y = Math.PI / 2;
+    pan.add(face);
     const pbtn = (y, x, m) => {
       const g = new THREE.Group();
-      g.position.set(x, y, -HW - 3.6);
-      pan.add(g);
+      g.position.set(x - 6.4, y, 0.5);
+      face.add(g);
       cylZ(g, 0.13, 0.13, 0, 0.07, 0, 0, m, 20);
       hitProxy(g, 0.18, 0, 0, 0.05);
       return g;
@@ -425,19 +430,19 @@ function PlateRollSimulator({ onBack, params }) {
       bStop = pbtn(10.9, 6.4, M.black),
       bFwd = pbtn(10.9, 6.7, M.btnGreen);
     const eStop = new THREE.Group();
-    eStop.position.set(6.4, 10.1, -HW - 3.6);
-    pan.add(eStop);
+    eStop.position.set(0, 10.1, 0.5);
+    face.add(eStop);
     cylZ(eStop, 0.08, 0.08, 0, 0.07, 0, 0, M.steelDark, 16);
     cylZ(eStop, 0.18, 0.17, 0.07, 0.15, 0, 0, M.red, 24);
     hitProxy(eStop, 0.24, 0, 0, 0.1);
     const mainSw = new THREE.Group();
-    mainSw.position.set(6.4, 9.65, -HW - 3.6);
-    pan.add(mainSw);
+    mainSw.position.set(0, 9.65, 0.5);
+    face.add(mainSw);
     cylZ(mainSw, 0.12, 0.12, 0, 0.06, 0, 0, M.black, 20);
     box(mainSw, -0.035, 0.035, -0.16, 0.16, 0.06, 0.12, M.red);
     hitProxy(mainSw, 0.18, 0, 0, 0.06);
     const lampRun = std(0x1f5f33, 0.4, 0.1);
-    ball(pan, 0.07, 6.4, 11.2, -HW - 3.58, lampRun);
+    ball(face, 0.07, 0, 11.2, 0.52, lampRun);
     // ---------- plech ----------
     const shG = grp('plech');
     let sheet = null,

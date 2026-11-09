@@ -1,6 +1,7 @@
 // Test v prehliadači nad zostaveným public/: otvorí menu a každý stroj, zlyhá pri chybe v konzole,
 // výnimke na stránke, zlyhanej požiadavke alebo porušení CSP. Potom prejde CNC program na Hermle
-// (vrátane zámku dverí), celý program krabičky na Bystronic (5 ohybov s otáčaním plechu), štart a dotykové HMI elektroerózie, sústruženie a frézovanie
+// (vrátane zámku dverí), všetky ovládače klasických strojov, celý program krabičky na Bystronic (5 ohybov
+// s otáčaním plechu), štart a dotykové HMI elektroerózie, sústruženie a frézovanie
 // cez sprievodcu krok za krokom, zvar MMA, BOZP v úlohe a úzku scénu (mobil).
 // Spustenie: npm run build && npm run test:e2e   (prehliadač: npx playwright install chromium)
 import http from 'node:http';
@@ -103,6 +104,61 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   }
   problems.forEach((p) => fail(name, p));
   console.log(`  ${problems.length ? '✗' : '✓'} ${name} (${Date.now() - t0} ms)`);
+  await ctx.close();
+}
+
+// 1b) klasické stroje: každý ovládač v scéne (tlačidlo, páka, koleso, posuvný diel) sa dá aktivovať bez výnimky
+//     a ovládacie panely sú z predvoleného pohľadu klikateľné (zakružovačka mala panel otočený k stojanu)
+for (const route of MACHINES.filter((m) => !['hermle', 'roeders', 'shuangli', 'oscarmax', 'bystronic'].includes(m))) {
+  const { page, ctx, problems } = await open(route, { debug: true });
+  try {
+    await until(page, () => window.__stage?.controls?.entries().length);
+    await page.waitForTimeout(600);
+    const r = await page.evaluate(async (route) => {
+      const S = window.__stage.controls,
+        errs = [],
+        cv = document.querySelector('canvas').getBoundingClientRect();
+      // klikateľnosť z predvoleného pohľadu: aspoň jeden vrchol ovládača na obrazovke zasiahne ten ovládač
+      const pickable = (k) =>
+        k.meshes.some((m) => {
+          const pos = m.geometry.attributes.position,
+            v = m.position.clone();
+          for (let i = 0; i < pos.count; i += Math.max(1, Math.floor(pos.count / 20))) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).project(S.camera);
+            if (Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
+            const x = cv.left + ((v.x + 1) / 2) * cv.width,
+              y = cv.top + ((1 - v.y) / 2) * cv.height;
+            if (S.hitAt(x, y) === k) return true;
+          }
+          return false;
+        });
+      const panel = route === 'zakruzovacka' ? S.entries().filter((k) => k.type === 'button' && !pickable(k)) : [];
+      for (const k of S.entries()) {
+        try {
+          if (k.type === 'button') k.action();
+          else if (k.type === 'lever') k.onSet((k.getIdx() + 1) % k.angles.length);
+          else if (k.type === 'wheel') {
+            if (!k.guard || k.guard() !== false) k.turn(0.5);
+          } else if (k.type === 'slide') {
+            k.start?.();
+            k.slide?.(0.2);
+            k.end?.({ cancelled: false, click: false });
+          }
+        } catch (e) {
+          errs.push(`${k.label}: ${e.message}`);
+        }
+        await new Promise((res) => setTimeout(res, 60));
+      }
+      return { n: S.entries().length, errs, hidden: panel.map((k) => String(k.label)) };
+    }, route);
+    await page.waitForTimeout(500);
+    r.errs.forEach((e) => fail(`${route} ovládače`, e));
+    if (r.hidden.length) fail(`${route} ovládače`, `nekliknuteľné z predvoleného pohľadu: ${r.hidden.join(', ')}`);
+    if (!r.errs.length && !r.hidden.length) console.log(`  ✓ ${route}: ${r.n} ovládačov`);
+  } catch (e) {
+    fail(`${route} ovládače`, e.message.split('\n')[0]);
+  }
+  problems.forEach((p) => fail(`${route} ovládače`, p));
   await ctx.close();
 }
 

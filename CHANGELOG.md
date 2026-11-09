@@ -1,11 +1,17 @@
 # História zmien
 
 Zoznam zmien po dňoch. Podrobnosti sú v jednotlivých pull requestoch a commitoch; zdroje a obmedzenia modelov
-moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md), audity v [docs/AUDIT.md](docs/AUDIT.md)
-a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
+moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md), audity v [docs/AUDIT.md](docs/AUDIT.md),
+[docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md) a
+[docs/AUDIT-2026-11-klasicke-stroje.md](docs/AUDIT-2026-11-klasicke-stroje.md).
 
 ## 9. 11. 2026
 
+- Audit klasických strojov: všetkých 180 ovládačov v scéne (tlačidlá, páky, kolesá, posuvné diely) funguje bez
+  chyby, kolízie nástroja so stojacim strojom a upínačmi sa zastavia; návrhy dizajnu a nových strojov TOS
+  v [docs/AUDIT-2026-11-klasicke-stroje.md](docs/AUDIT-2026-11-klasicke-stroje.md).
+- Zakružovačka: ovládací panel otočený k obsluhe – tlačidlá sa z predvoleného pohľadu dali kliknúť len zozadu.
+- Test v prehliadači aktivuje každý ovládač klasických strojov a kontroluje klikateľnosť panela zakružovačky.
 - Bystronic: nový vzorový program – krabička 200 × 150 × 60 mm z plechu 2 mm s vonkajším lemom 25 mm na stene A,
   5 ohybov na jednom prírezu (lem rubom hore, dlhé steny, krátke steny medzi ohnutými). Po každom ohybe tlačidlo
   „↻ Otočiť plech“ prevráti / otočí diel s animáciou a nastaví doraz X, uhol a dĺžku ďalšieho ohybu; Štart bez
