@@ -585,9 +585,9 @@ function buildFgu(x) {
   makeWork();
   // ---------- ovládací panel na stojane ----------
   const pan = grp('ovladanie', col);
-  rbox(pan, 2.0, 2.12, 5.4, 8.4, -4.8, -3.0, M.panel, 0.04);
+  rbox(pan, 2.0, 2.12, 3.4, 6.4, -4.4, -2.6, M.panel, 0.04);
   const face = new THREE.Group();
-  face.position.set(2.12, 0, -3.9);
+  face.position.set(2.12, -2.0, -3.5);
   face.rotation.y = Math.PI / 2;
   pan.add(face);
   const mSw = mainSwitch(kit, M, face, 0, 7.6, 0.01);
@@ -598,8 +598,8 @@ function buildFgu(x) {
   ball(face, 0.07, 0.6, 7.6, 0.03, lampRun);
   const levDir = pivotLever(col, 1.5, SY + 1.2, -2.3, 0.4, 1.2); // smer otáčania
   cable(col, [
-    [2.06, 5.4, -3.9],
-    [2.3, 3.0, -3.6],
+    [2.06, 3.4, -3.5],
+    [2.3, 2.0, -3.4],
     [2.4, 0.6, -3.3],
   ]);
   const lamp = x.lamp({

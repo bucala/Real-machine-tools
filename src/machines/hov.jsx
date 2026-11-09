@@ -593,7 +593,7 @@ function buildHov(x) {
   tb.add(sadZ);
   rbox(sadZ, -3.0, 3.0, 5.75, 6.7, -3.0, 3.2, M.green, 0.12);
   [-2.0, 2.0].forEach((zz) => rbox(sadZ, -3.0, 3.0, 6.7, 6.82, zz - 0.3, zz + 0.3, M.ways, 0.03));
-  const wZ = handwheel(sadZ, 0.42, -3.35, 6.2, 1.6, '-x', 0.26);
+  const wZ = handwheel(sadZ, 0.42, -2.2, 6.2, 3.4, 'z', 0.26);
   const sadX = new THREE.Group();
   sadZ.add(sadX);
   rbox(sadX, -2.9, 2.9, 6.82, 7.6, -2.6, 2.6, M.green, 0.12);

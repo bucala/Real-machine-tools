@@ -512,7 +512,7 @@ function buildFnk(x) {
   };
   buildTool();
   const wTilt = handwheel(hd, 0.22, 1.45, HY - 1.15, -0.55, 'z', 0.12); // šnek natáčania (1 otáčka = 3°)
-  const levHead = pivotLever(hd, -1.45, HY - 1.15, -0.58, 0.34, 1.2); // upnutie hlavy
+  const levHead = pivotLever(hd, 1.45, HY - 0.55, -0.58, 0.34, 1.2); // upnutie hlavy (na strane k obsluhe)
   const wQ = handwheel(head, 0.26, 0.95, 0.0, 0.0, 'x', 0.14); // koliesko pinoly (1 otáčka = 2 mm)
   // ---------- konzola, sane, stôl, zverák ----------
   const knee = grp('konzola');
@@ -557,9 +557,9 @@ function buildFnk(x) {
   makeWork();
   // ---------- panel ----------
   const pan = grp('ovladanie', col);
-  rbox(pan, 1.8, 1.92, 5.0, 8.0, -4.6, -2.8, M.panel, 0.04);
+  rbox(pan, 1.8, 1.92, 3.0, 6.0, -4.2, -2.4, M.panel, 0.04);
   const face = new THREE.Group();
-  face.position.set(1.92, 0, -3.7);
+  face.position.set(1.92, -2.0, -3.3);
   face.rotation.y = Math.PI / 2;
   pan.add(face);
   const mSw = mainSwitch(kit, M, face, 0, 7.2, 0.01);
@@ -569,8 +569,8 @@ function buildFnk(x) {
   const lampRun = M.lamp.clone();
   ball(face, 0.07, 0.6, 7.2, 0.03, lampRun);
   cable(col, [
-    [1.86, 5.0, -3.7],
-    [2.1, 2.6, -3.4],
+    [1.86, 3.0, -3.3],
+    [2.1, 1.8, -3.2],
     [2.2, 0.6, -3.1],
   ]);
   const lamp = x.lamp({
