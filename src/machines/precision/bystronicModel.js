@@ -2,8 +2,11 @@ import * as THREE from 'three';
 import { modelKit } from './modelKit';
 import { createBystronicControls } from './bystronicControls';
 import { XPERT320, OPEN_TIP, profileSection, supportDepth } from './pressBrakeProcess';
+import { BOX_PART, boxPose, buildBoxPart, setBoxAngles } from './brakePart';
 
 export const BRAKE_DIE_TOP = 11;
+// sada segmentov razníka (mm) – skladá sa od najdlhšieho na dĺžku ohybu mínus vôľa
+export const PUNCH_SEGMENTS = [100, 50, 40, 20, 15, 10];
 // Millimetres from the supplied 320/4300 data sheet, converted at 1 unit = 100 mm.
 // Covers, optional supports and controls are reconstructed from the photographs.
 export function createBystronicModel({ root, G, M, tex }) {
@@ -202,28 +205,39 @@ export function createBystronicModel({ root, G, M, tex }) {
     box(ram, x, 14.63, 2, 0.91, 0.35, 0.75, M.steelD);
     cyl(ram, x, 14.62, 2.43, 0.045, 0.035, M.black, 'z');
   }
+  const PUNCH_PTS = [
+    [1.72, 14.9],
+    [2.28, 14.9],
+    [2.28, 14.55],
+    [2.5, 14.55],
+    [2.5, 14.1],
+    [2.06, 12.865],
+    [2, 12.8],
+    [1.94, 12.865],
+    [1.5, 13.75],
+    [1.5, 14.4],
+    [1.72, 14.4],
+  ];
   const punch = group('segmented-85-degree-punch', ram);
-  for (let i = 0; i < 20; i++)
-    profile(
-      punch,
-      'punch-segment',
-      [
-        [1.72, 14.9],
-        [2.28, 14.9],
-        [2.28, 14.55],
-        [2.5, 14.55],
-        [2.5, 14.1],
-        [2.06, 12.865],
-        [2, 12.8],
-        [1.94, 12.865],
-        [1.5, 13.75],
-        [1.5, 14.4],
-        [1.72, 14.4],
-      ],
-      2.145,
-      M.tool,
-      -21.5 + (i + 0.5) * 2.15,
-    );
+  for (let i = 0; i < 20; i++) profile(punch, 'punch-segment', PUNCH_PTS, 2.145, M.tool, -21.5 + (i + 0.5) * 2.15);
+  // Krabička: razník zložený zo segmentov na dĺžku ohybu (krátke steny sa ohýbajú medzi už ohnutými dlhými)
+  const boxPunch = group('box-punch-assembled-segments', ram);
+  boxPunch.visible = false;
+  let boxPunchLen;
+  const rebuildBoxPunch = (len) => {
+    if (len === boxPunchLen) return;
+    boxPunchLen = len;
+    clear(boxPunch);
+    const segs = [];
+    let rest = len - 6;
+    for (const s of PUNCH_SEGMENTS) while (rest >= s) (segs.push(s), (rest -= s));
+    let x = -segs.reduce((a, b) => a + b, 0) / 2;
+    for (const s of segs) {
+      profile(boxPunch, `punch-segment-${s}mm`, PUNCH_PTS, s * 0.01 - 0.004, M.tool, (x + s / 2) * 0.01);
+      x += s;
+    }
+    boxPunch.userData.segments = segs.join('+');
+  };
   // Bed, crowning cassette and V die. The V opening is an actual concave section.
   const bed = part('stol');
   box(bed, 0, 4.45, 0.2, 43, 8, 6.6, M.anth);
@@ -367,6 +381,9 @@ export function createBystronicModel({ root, G, M, tex }) {
   const stock = part('plech');
   stock.name = 'bent-sheet';
   stock.userData.stepJoin = true;
+  const sheetG = new THREE.Group();
+  sheetG.name = 'bent-sheet-profile';
+  stock.add(sheetG);
   let sheetKey;
   const rebuildSheet = (c, beta, prog) => {
     const key = [c.length, c.depth, c.flange, c.thickness, c.v, beta.toFixed(5), prog ? JSON.stringify(prog) : ''].join(
@@ -374,7 +391,7 @@ export function createBystronicModel({ root, G, M, tex }) {
     );
     if (key === sheetKey) return;
     sheetKey = key;
-    clear(stock);
+    clear(sheetG);
     const points = profileSection(c, beta, prog),
       t = c.thickness / 2,
       poly = [
@@ -391,11 +408,61 @@ export function createBystronicModel({ root, G, M, tex }) {
     const mesh = new THREE.Mesh(g, M.sheet);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    stock.add(mesh);
+    sheetG.add(mesh);
+  };
+  // Krabička z panelov (brakePart.js): poloha podľa práve ohýbanej hrany; pri otáčaní plechu sa medzi
+  // polohou po predchádzajúcom ohybe a polohou pre ďalší ohyb plynulo prechádza (zdvih a odsun k obsluhe).
+  let boxPart = null,
+    boxHolder = null,
+    boxT = 0;
+  const pa = new THREE.Vector3(),
+    pb = new THREE.Vector3(),
+    qa = new THREE.Quaternion(),
+    qb = new THREE.Quaternion(),
+    sc = new THREE.Vector3();
+  const updateBox = (c, S, prog) => {
+    if (!boxPart || boxT !== c.thickness) {
+      if (boxHolder) (clear(boxHolder), stock.remove(boxHolder));
+      boxT = c.thickness;
+      boxHolder = new THREE.Group();
+      boxHolder.name = 'box-part';
+      boxHolder.scale.setScalar(0.01);
+      boxPart = buildBoxPart(BOX_PART, c.thickness, M.sheet);
+      boxPart.root.traverse((o) => {
+        if (o.isMesh) o.userData.noMerge = true;
+      });
+      boxHolder.add(boxPart.root);
+      stock.add(boxHolder);
+    }
+    sheetG.visible = false;
+    boxHolder.visible = true;
+    const r = boxPart.root;
+    r.position.set(0, 0, 0);
+    r.quaternion.identity();
+    r.scale.setScalar(1);
+    setBoxAngles(boxPart, prog.bends, prog.cur, S.beta);
+    const h = boxPose(boxPart, prog.cur, S.beta);
+    if (prog.turn) {
+      const u = prog.turn.u,
+        e = u * u * (3 - 2 * u),
+        from = boxPose(boxPart, prog.turn.from.hinge, prog.turn.from.beta);
+      from.decompose(pa, qa, sc);
+      h.decompose(pb, qb, sc);
+      // hotový ohyb ležal hlbšie vo V – rozdiel výšky sa pri otáčaní vyrovná
+      pa.y -= supportDepth(c, prog.turn.from.beta) - supportDepth(c, S.beta);
+      pa.lerp(pb, e);
+      qa.slerp(qb, e);
+      const lift = Math.sin(Math.PI * u);
+      pa.y += 90 * lift;
+      pa.z += 380 * lift;
+      r.position.copy(pa);
+      r.quaternion.copy(qa);
+    } else h.decompose(r.position, r.quaternion, r.scale);
   };
   return {
     ram,
     punch,
+    boxPunch,
     die,
     xSlide,
     rSlide,
@@ -415,16 +482,29 @@ export function createBystronicModel({ root, G, M, tex }) {
         o.visible = !c.cutaway;
       });
       ram.position.y = -S.y * 0.01;
-      if (previousV !== c.v) {
-        previousV = c.v;
+      const isBox = prog?.part === 'box',
+        dieKey = `${c.v}:${isBox}`;
+      if (previousV !== dieKey) {
+        previousV = dieKey;
         clear(die);
         const half = c.v * 0.005,
           depth = half / Math.tan((42.5 * Math.PI) / 180);
-        for (let i = 0; i < 20; i++)
-          profile(
-            die,
-            'V-die-segment',
-            [
+        // krabička: úzka matrica (40 mm pri hrane), aby sa zahnutý lem a steny zmestili vedľa nej
+        const pts = isBox
+          ? [
+              [1.65, 10],
+              [2.35, 10],
+              [2.35, 10.55],
+              [2.2, 10.75],
+              [2.2, 11],
+              [2 + half, 11],
+              [2, 11 - depth],
+              [2 - half, 11],
+              [1.8, 11],
+              [1.8, 10.75],
+              [1.65, 10.55],
+            ]
+          : [
               [1.2, 10],
               [2.8, 10],
               [2.8, 11],
@@ -432,12 +512,13 @@ export function createBystronicModel({ root, G, M, tex }) {
               [2, 11 - depth],
               [2 - half, 11],
               [1.2, 11],
-            ],
-            2.145,
-            M.tool,
-            -21.5 + (i + 0.5) * 2.15,
-          );
+            ];
+        for (let i = 0; i < 20; i++)
+          profile(die, isBox ? 'narrow-V-die-segment' : 'V-die-segment', pts, 2.145, M.tool, -21.5 + (i + 0.5) * 2.15);
       }
+      punch.visible = !isBox;
+      boxPunch.visible = isBox;
+      if (isBox) rebuildBoxPunch(c.length);
       xSlide.position.z = 2 - c.flange * 0.01 - 2.49;
       rSlide.position.y = c.r * 0.01;
       const z = Math.min(14.5, Math.min(c.length * 0.003, c.length * 0.005 - 0.3));
@@ -452,7 +533,12 @@ export function createBystronicModel({ root, G, M, tex }) {
       light.visible = c.light;
       lightMat.emissiveIntensity = c.light ? 1.4 : 0;
       if (!c.unclamped) {
-        rebuildSheet(c, S.beta, prog);
+        if (isBox) updateBox(c, S, prog);
+        else {
+          if (boxHolder) boxHolder.visible = false;
+          sheetG.visible = true;
+          rebuildSheet(c, S.beta, prog);
+        }
         stock.position.set(0, BRAKE_DIE_TOP + (c.thickness / 2 - supportDepth(c, S.beta)) * 0.01, 2);
       }
       consolePivot.rotation.y = (c.hmiAngle * Math.PI) / 180;

@@ -185,25 +185,93 @@ describe('program ohybov', () => {
       expect(p.y).toBeCloseTo(a[i].y, 6);
     });
   });
-  it('C-profil: štyri ohyby riadi ovládanie lisu a hotové ohyby zostanú v priereze', async () => {
+  it('krabička: päť ohybov s otáčaním plechu, štart bez otočenia sa odmietne', async () => {
     const { createBrakeControl } = await import('../src/machines/precision/brakeControl.js');
-    const { profileSection } = await import('../src/machines/precision/pressBrakeProcess.js');
+    const { BRAKE_PROGRAMS } = await import('../src/machines/precision/pressBrakeProcess.js');
     const c = { hydraulic: true, estop: false, guardOpen: false, obstructed: false, unclamped: false, r: 0, speed: 1 };
     const ctl = createBrakeControl({ c });
-    expect(ctl.loadProgram('cprofil')).toBe(true);
-    for (let i = 0; i < 4; i++) {
+    expect(ctl.loadProgram('krabicka')).toBe(true);
+    const steps = BRAKE_PROGRAMS.find((p) => p.id === 'krabicka').steps;
+    expect(ctl.action('turn')).toBe(false); // pred prvým ohybom sa neotáča
+    for (let i = 0; i < steps.length; i++) {
+      expect([c.flange, c.length, c.depth, c.angle]).toEqual([
+        steps[i].flange,
+        steps[i].length,
+        steps[i].depth,
+        steps[i].angle,
+      ]);
       expect(ctl.action('start')).toBe(true);
       for (let k = 0; k < 2000 && !ctl.process.S.done; k++) ctl.advance(0.05);
       expect(ctl.process.S.complete).toBe(true);
-      expect(ctl.snapshot().program.index).toBe(i);
-      expect(c.flange).toBe(i < 2 ? 25 : 95);
+      expect(ctl.snapshot().program.bends).toBe(i + 1);
+      if (i === steps.length - 1) break;
+      expect(ctl.snapshot().program.needsTurn).toBe(true);
+      expect(ctl.action('start')).toBe(false); // najprv otočiť plech
+      expect(ctl.action('turn')).toBe(true);
+      expect(ctl.snapshot().program.turning).toBe(true);
+      expect(ctl.action('start')).toBe(false); // plech sa ešte otáča
+      for (let k = 0; k < 100 && ctl.snapshot().program.turning; k++) ctl.advance(0.05);
+      expect(ctl.snapshot().program.index).toBe(i + 1);
+      expect(ctl.profile().cur).toBe(steps[i + 1].hinge);
     }
+    expect(ctl.snapshot().program.needsTurn).toBe(false);
     expect(ctl.action('start')).toBe(false); // program je dokončený
-    const prog = ctl.profile();
-    expect(prog.bends).toHaveLength(3);
-    const pts = profileSection(c, ctl.process.S.beta, prog);
-    // oba konce (lemy) sú nad matricou a smerujú k sebe – uzavretý C-profil
-    expect(pts[0].y).toBeGreaterThan(50);
-    expect(pts.at(-1).y).toBeGreaterThan(50);
+    expect(Object.keys(ctl.profile().bends)).toEqual(['F', 'A', 'B', 'C']);
+    expect(ctl.action('reset')).toBe(true);
+    expect(ctl.snapshot().program).toMatchObject({ index: 0, bends: 0 });
+    expect(c.flange).toBe(25);
+  });
+  it('krabička: hotový dielec má steny 60 mm a lem 25 mm smerom von, ohýbaná hrana leží na matrici', async () => {
+    const { BOX_PART, boxPose, buildBoxPart, setBoxAngles } = await import('../src/machines/precision/brakePart.js');
+    const part = buildBoxPart(BOX_PART, 2, new THREE.MeshBasicMaterial()),
+      q = Math.PI / 4;
+    setBoxAngles(part, { F: q, A: q, B: q, C: q }, 'D', q);
+    part.root.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(part.root);
+    expect(bb.max.y - bb.min.y).toBeCloseTo(62, 0); // steny 60 mm + polovice hrúbky dna a lemu
+    expect(bb.max.x - bb.min.x).toBeCloseTo(202, 0);
+    // lem trčí von zo zadnej steny A o 25 mm
+    expect(-bb.min.z).toBeCloseTo(75 + 25, 0);
+    expect(bb.max.z).toBeCloseTo(76, 0);
+    // poloha v lise: pivot práve ohýbanej hrany je na ohybovej čiare, ohýbaný panel smeruje dozadu k dorazu
+    for (const cur of ['F', 'A', 'C']) {
+      setBoxAngles(part, { F: q }, cur, 0);
+      const h = boxPose(part, cur, 0);
+      part.root.updateMatrixWorld(true);
+      const toRoot = part.root.matrixWorld.clone().invert(),
+        pivot = new THREE.Vector3().setFromMatrixPosition(toRoot.clone().multiply(part.joints[cur].pivot.matrixWorld));
+      expect(pivot.applyMatrix4(h).length()).toBeLessThan(1e-6);
+      const tip = new THREE.Vector3(0, 0, 10).applyMatrix4(toRoot.clone().multiply(part.joints[cur].hinge.matrixWorld));
+      tip.applyMatrix4(h);
+      expect(tip.z).toBeCloseTo(-10, 6);
+      expect(Math.abs(tip.y)).toBeLessThan(1e-6);
+    }
+  });
+  it('model lisu: krabička, úzka matrica a razník zložený na dĺžku ohybu', () => {
+    const { m } = model();
+    const S = { y: 0, beta: 0 },
+      c = { ...cfg, thickness: 2, v: 16, length: 150, depth: 320, flange: 60 };
+    m.update({
+      S,
+      c,
+      guardAngle: 0,
+      prog: { part: 'box', bends: { F: 0.78, A: 0.78, B: 0.78 }, cur: 'C', turn: null },
+    });
+    expect(m.punch.visible).toBe(false);
+    expect(m.boxPunch.visible).toBe(true);
+    expect(m.boxPunch.userData.segments).toBe('100+40');
+    expect(m.die.children[0].name).toBe('narrow-V-die-segment');
+    expect(m.stock.getObjectByName('box-part').visible).toBe(true);
+    m.update({
+      S,
+      c: { ...c, length: 200 },
+      guardAngle: 0,
+      prog: { part: 'box', bends: {}, cur: 'F', turn: { u: 0.5, from: { hinge: 'F', beta: 0.78 } } },
+    });
+    expect(m.boxPunch.userData.segments).toBe('100+50+40');
+    m.update({ S, c: cfg, guardAngle: 0 });
+    expect(m.punch.visible).toBe(true);
+    expect(m.stock.getObjectByName('box-part').visible).toBe(false);
+    expect(m.die.children[0].name).toBe('V-die-segment');
   });
 });

@@ -1,5 +1,5 @@
 import { L } from '../../core/i18n';
-import { BRAKE_PROGRAMS, brakeSetup, createBrakeProcess } from './pressBrakeProcess';
+import { BRAKE_PROGRAMS, TURN_LABEL, brakeSetup, createBrakeProcess } from './pressBrakeProcess';
 
 export const BRAKE_TABS = ['part', 'tools', 'bend', 'machine', 'diagnostics'];
 export const RECIPE_LIMITS = {
@@ -150,7 +150,7 @@ export function createBrakeControl({
     counted = null,
     lastAlarm = null,
     notice = '',
-    program = null; // program ohybov: { id, name, steps, index, bends: [{ s, beta }] }
+    program = null; // program ohybov: { id, name, steps, index, bends: { hinge: beta }, turn: null | { u, from } }
   const safety = () => ({ ...c, guardOpen: c.guardOpen || !guardClosed() });
   const event = (sk, en, level = 'info') => {
     events = [{ id: ++sequence, time: now(), sk, en, level }, ...events].slice(0, 40);
@@ -179,12 +179,10 @@ export function createBrakeControl({
       );
     }
   };
-  // program ohybov: poloha ohybu od hrany A, nastavenie dorazu a uhla pre aktuálny krok
-  const stepPos = (st) => (st.side === 'B' ? c.depth - st.flange : st.flange);
+  // program ohybov: doraz, uhol, dĺžka a hĺbka prírezu pre aktuálny krok
   const applyStep = () => {
     const st = program.steps[program.index];
-    write('flange', st.flange);
-    write('angle', st.angle);
+    for (const k of ['flange', 'angle', 'length', 'depth']) write(k, st[k]);
   };
   const loadProgram = (id) => {
     const p = BRAKE_PROGRAMS.find((x) => x.id === id);
@@ -192,10 +190,33 @@ export function createBrakeControl({
     if (process.S.run || c.unclamped || process.S.y > 0.01)
       return reject('Najprv zdvihni baran a zastav cyklus.', 'Retract the ram and stop the cycle first.');
     process.reset();
-    for (const k of ['material', 'thickness', 'length', 'depth', 'v', 'r']) write(k, p[k]);
-    program = { id: p.id, name: p.name(), steps: p.steps, index: 0, bends: [] };
+    for (const k of ['material', 'thickness', 'v', 'r']) write(k, p[k]);
+    program = { id: p.id, name: p.name(), part: p.part, steps: p.steps, index: 0, bends: {}, turn: null };
     applyStep();
     event(`Program ohybov: ${program.name}`, `Bend program: ${program.name}`);
+    return true;
+  };
+  // po dokončenom ohybe treba plech otočiť podľa ďalšieho kroku (tlačidlo Otočiť plech)
+  const needsTurn = () =>
+    !!program && !program.turn && process.S.done && process.S.complete && program.index < program.steps.length - 1;
+  const turn = () => {
+    if (!needsTurn())
+      return reject(
+        'Plech sa otáča až po dokončenom ohybe programu.',
+        'The sheet is turned only after a finished program bend.',
+      );
+    const prev = program.steps[program.index];
+    program.bends = { ...program.bends, [prev.hinge]: process.S.beta };
+    program.turn = { u: 0, from: { hinge: prev.hinge, beta: process.S.beta } };
+    program.index++;
+    process.reset();
+    applyStep();
+    const st = program.steps[program.index];
+    event(
+      `${TURN_LABEL[st.turn]()} – ohyb ${program.index + 1}/${program.steps.length}: X ${st.flange} mm, ${st.angle}°, dĺžka ${st.length} mm.`,
+      `${TURN_LABEL[st.turn]()} – bend ${program.index + 1}/${program.steps.length}: X ${st.flange} mm, ${st.angle}°, length ${st.length} mm.`,
+    );
+    observe();
     return true;
   };
   const set = (key, value) => {
@@ -266,20 +287,14 @@ export function createBrakeControl({
     let ok = true;
     if (id === 'start') {
       if (c.r !== 0) return reject('Pre plochý plech nastav R = 0 mm.', 'Set R = 0 mm for the flat sheet.');
-      // program: po dokončenom ohybe sa diel otočí a pokračuje ďalší krok na tom istom plechu
-      if (program && process.S.done) {
-        if (!process.S.complete)
-          return reject('Ohyb nebol dokončený – vlož nový plech.', 'The bend was not completed – load a new sheet.');
+      // program: ďalší ohyb až po otočení plechu
+      if (program && program.turn) return reject('Plech sa ešte otáča.', 'The sheet is still turning.');
+      if (program && process.S.done && process.S.complete) {
         if (program.index >= program.steps.length - 1)
           return reject('Program je dokončený – vlož nový plech.', 'The program is finished – load a new sheet.');
-        program.bends.push({ s: stepPos(program.steps[program.index]), beta: process.S.beta });
-        program.index++;
-        process.reset();
-        applyStep();
-        const st = program.steps[program.index];
-        event(
-          `Ohyb ${program.index + 1}/${program.steps.length}: hrana ${st.side} k dorazu, X ${st.flange} mm, ${st.angle}°.`,
-          `Bend ${program.index + 1}/${program.steps.length}: edge ${st.side} to the gauge, X ${st.flange} mm, ${st.angle}°.`,
+        return reject(
+          `Najprv otoč plech: ${TURN_LABEL[program.steps[program.index + 1].turn]()} (tlačidlo Otočiť plech).`,
+          `Turn the sheet first: ${TURN_LABEL[program.steps[program.index + 1].turn]()} (Turn sheet button).`,
         );
       }
       ok = process.start(c, safety());
@@ -298,7 +313,8 @@ export function createBrakeControl({
         );
       if (program) {
         program.index = 0;
-        program.bends = [];
+        program.bends = {};
+        program.turn = null;
         applyStep();
       }
       event('Vložený nový plech.', 'New sheet loaded.');
@@ -311,12 +327,18 @@ export function createBrakeControl({
     } else if (id === 'acknowledge') {
       ok = process.acknowledge(safety());
       if (ok) event('Hlásenie potvrdené.', 'Alarm acknowledged.');
-    } else if (id === 'light' || id === 'hydraulic') return set(id, !c[id]);
+    } else if (id === 'turn') return turn();
+    else if (id === 'light' || id === 'hydraulic') return set(id, !c[id]);
     else return false;
     observe();
     return ok;
   };
-  const advance = (dt) => {
+  const advance = (dt, real = dt) => {
+    // animácia otočenia plechu (v reálnom čase, nie zrýchlenom)
+    if (program?.turn) {
+      program.turn.u = Math.min(1, program.turn.u + real / 1.6);
+      if (program.turn.u >= 1) program.turn = null;
+    }
     process.advance(dt, safety());
     observe();
   };
@@ -332,15 +354,18 @@ export function createBrakeControl({
       name: program.name,
       index: program.index,
       steps: program.steps,
-      bends: program.bends.length + (process.S.complete ? 1 : 0),
+      bends: Object.keys(program.bends).length + (process.S.complete ? 1 : 0),
+      needsTurn: needsTurn(),
+      turning: !!program.turn,
     },
   });
-  // prierez dielu pre model: hotové ohyby a práve ohýbaný
+  // stav dielca pre 3D model: hotové ohyby, práve ohýbaný a prípadné otáčanie
   const profile = () =>
     program && {
+      part: program.part,
       bends: program.bends,
-      cur: stepPos(program.steps[program.index]),
-      side: program.steps[program.index].side,
+      cur: program.steps[program.index].hinge,
+      turn: program.turn && { u: program.turn.u, from: program.turn.from },
     };
   event('Ovládanie pripravené.', 'Control ready.');
   return {

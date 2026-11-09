@@ -32,7 +32,7 @@ import { BendDrawing } from '../ui/sketch';
 import { brakeChecks, measureBrake } from './precision/modernTasks';
 import { BystronicHmi, drawBrakeHmi } from '../ui/bystronicHmi';
 import { createBystronicModel } from './precision/bystronicModel';
-import { BRAKE_PROGRAMS, brakeSetup, XPERT320 } from './precision/pressBrakeProcess';
+import { BOX_EDGE, BRAKE_PROGRAMS, brakeSetup, TURN_LABEL, XPERT320 } from './precision/pressBrakeProcess';
 import { createBrakeControl } from './precision/brakeControl';
 import '../ui/bystronic.css';
 
@@ -209,6 +209,42 @@ const BRAKE_SAFETY = () => [
   ),
 ];
 
+// otočenie plechu medzi ohybmi programu – aktívne až po dokončenom ohybe
+function TurnButton({ program, onTurn }) {
+  const next = program.steps[program.index + 1],
+    last = program.index >= program.steps.length - 1;
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        className={`btn w-full brake-turn ${program.needsTurn ? 'active' : ''}`}
+        disabled={!program.needsTurn}
+        onClick={onTurn}
+      >
+        ↻ {L('Otočiť plech', 'Turn sheet')}
+        {next && !last ? ` – ${TURN_LABEL[next.turn]()}` : ''}
+      </button>
+      <p className="text-xs mt-1 opacity-80">
+        {program.turning
+          ? L('Plech sa otáča k ďalšiemu ohybu…', 'The sheet is turning to the next bend…')
+          : program.needsTurn
+            ? L(
+                `Ohyb ${program.index + 1} je hotový. Otoč plech a ohni ďalšiu hranu: ${BOX_EDGE[next.hinge]?.() || next.hinge}.`,
+                `Bend ${program.index + 1} is done. Turn the sheet and bend the next edge: ${BOX_EDGE[next.hinge]?.() || next.hinge}.`,
+              )
+            : program.bends >= program.steps.length
+              ? L(
+                  'Krabička je hotová – Nový plech začne program znova.',
+                  'The box is finished – New sheet restarts the program.',
+                )
+              : L(
+                  `Ohyb ${program.index + 1}/${program.steps.length}: ${BOX_EDGE[program.steps[program.index].hinge]?.() || ''} k dorazu, Štart ohne hranu.`,
+                  `Bend ${program.index + 1}/${program.steps.length}: ${BOX_EDGE[program.steps[program.index].hinge]?.() || ''} to the gauge, Start bends the edge.`,
+                )}
+      </p>
+    </div>
+  );
+}
 export default function BystronicSimulator({ onBack, params }) {
   const mountRef = useRef(null),
     layerRef = useRef(null),
@@ -315,13 +351,22 @@ export default function BystronicSimulator({ onBack, params }) {
       raf;
     const control = createBrakeControl({ c, onChange: set, guardClosed: () => guardAngle < 0.01 }),
       process = control.process;
-    // predvolený je program C-profilu so štyrmi ohybmi; jeden ohyb a úlohy ho nahradia
-    control.loadProgram('cprofil');
+    // predvolený je program krabičky s piatimi ohybmi a otáčaním plechu; jeden ohyb a úlohy ho nahradia
+    control.loadProgram('krabicka');
     const snd = createSound('bender');
     const actions = Object.fromEntries(
-      ['start', 'hold', 'retract', 'reset', 'emergency', 'releaseStop', 'acknowledge', 'light', 'hydraulic'].map(
-        (id) => [id, () => control.action(id)],
-      ),
+      [
+        'start',
+        'hold',
+        'retract',
+        'reset',
+        'emergency',
+        'releaseStop',
+        'acknowledge',
+        'light',
+        'hydraulic',
+        'turn',
+      ].map((id) => [id, () => control.action(id)]),
     );
     // pri úlohe s kontrolou BOZP sa prvý ohyb spustí až po potvrdení zoznamu (TaskSection → SafetyGate)
     actions.start = () => {
@@ -471,7 +516,7 @@ export default function BystronicSimulator({ onBack, params }) {
     const tick = (dt, render = true) => {
       t += dt;
       guardAngle += ((c.guardOpen ? 1.15 : 0) - guardAngle) * Math.min(1, dt * 5);
-      control.advance(dt * c.speed);
+      control.advance(dt * c.speed, dt);
       c.running = process.S.run;
       model.update({ S: process.S, c, guardAngle, prog: control.profile() });
       wi.update(dt);
@@ -677,6 +722,7 @@ export default function BystronicSimulator({ onBack, params }) {
               {L('Pozastaviť', 'Pause')}
             </button>
           </div>
+          {tele.program && <TurnButton program={tele.program} onTurn={() => apiRef.current.hmiAction('turn')} />}
           <div className="flex flex-wrap gap-2 mt-2">
             <button className="btn" disabled={ui.unclamped} onClick={() => apiRef.current.hmiAction('retract')}>
               {L('Zdvihnúť baran', 'Retract ram')}
@@ -770,8 +816,8 @@ export default function BystronicSimulator({ onBack, params }) {
             <SectionInfo title={L('Program ohybov', 'Bend program')}>
               <p>
                 {L(
-                  'Viac ohybov na jednom plechu: po každom ohybe sa diel otočí k dorazu hranou A alebo B a Štart urobí ďalší krok s novým dorazom X a uhlom. Hotové ohyby zostanú na dieli. Nový plech začne program od prvého kroku; ručná zmena nastavenia program zruší.',
-                  'Several bends on one sheet: after each bend the part is turned with edge A or B to the gauge and Start runs the next step with a new X gauge and angle. Finished bends stay on the part. New sheet restarts the program; a manual setting change cancels it.',
+                  'Krabička 200 × 150 × 60 mm z plechu 2 mm s vonkajším lemom 25 mm na zadnej stene, päť ohybov na jednom prírezu: najprv lem (plech rubom hore), potom dlhé steny A a B a nakoniec krátke steny C a D medzi už ohnutými. Po každom ohybe tlačidlo „Otočiť plech“ prevráti alebo otočí diel podľa stĺpca Manipulácia a nastaví doraz X, uhol a dĺžku ďalšieho ohybu; Štart ohne ďalšiu hranu. Hotové ohyby zostanú na dieli. Nový plech začne program od prvého kroku; ručná zmena nastavenia program zruší.',
+                  'Box 200 × 150 × 60 mm from 2 mm sheet with a 25 mm outward flange on the back wall, five bends on one blank: the flange first (sheet face down), then the long walls A and B, and finally the short walls C and D between the already bent ones. After each bend the “Turn sheet” button flips or turns the part as given in the Handling column and sets the X gauge, angle and length of the next bend; Start bends the next edge. Finished bends stay on the part. New sheet restarts the program; a manual setting change cancels it.',
                 )}
               </p>
             </SectionInfo>
@@ -787,13 +833,20 @@ export default function BystronicSimulator({ onBack, params }) {
               {L('Načítať zložitý program', 'Load complex program')}: {p.name()}
             </button>
           ))}
+          {tele.program && BRAKE_PROGRAMS.find((p) => p.id === tele.program.id)?.tooling && (
+            <p className="text-xs mt-2 opacity-80">
+              {L('Nástroje', 'Tooling')}: {BRAKE_PROGRAMS.find((p) => p.id === tele.program.id).tooling()}
+            </p>
+          )}
           {tele.program && (
             <table className="brake-steps mt-2">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>{L('Hrana k dorazu', 'Edge to gauge')}</th>
+                  <th>{L('Manipulácia', 'Handling')}</th>
+                  <th>{L('Hrana', 'Edge')}</th>
                   <th>X [mm]</th>
+                  <th>{L('Dĺžka', 'Length')}</th>
                   <th>{L('Uhol', 'Angle')}</th>
                   <th>{L('Stav', 'State')}</th>
                 </tr>
@@ -802,16 +855,20 @@ export default function BystronicSimulator({ onBack, params }) {
                 {tele.program.steps.map((st, i) => (
                   <tr key={i} className={i === tele.program.index ? 'on' : ''}>
                     <td>{i + 1}</td>
-                    <td>{st.side}</td>
+                    <td>{st.turn ? TURN_LABEL[st.turn]() : L('vložiť rubom hore', 'load face down')}</td>
+                    <td>{BOX_EDGE[st.hinge]?.() || st.hinge}</td>
                     <td>{st.flange}</td>
+                    <td>{st.length}</td>
                     <td>{st.angle}°</td>
                     <td>
                       {i < tele.program.bends
                         ? L('hotový', 'done')
                         : i === tele.program.index
-                          ? tele.run
-                            ? L('ohýba sa', 'bending')
-                            : L('na rade', 'next')
+                          ? tele.program.turning
+                            ? L('otáča sa', 'turning')
+                            : tele.run
+                              ? L('ohýba sa', 'bending')
+                              : L('na rade', 'next')
                           : '—'}
                     </td>
                   </tr>
