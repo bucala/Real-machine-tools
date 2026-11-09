@@ -29,7 +29,7 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
-import { FguArt, FnkArt, SvArt } from './ui/art2';
+import { BenchGrinderArt, CenterlessArt, FguArt, FnkArt, KaruselArt, SvArt, ToolGrinderArt } from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -54,6 +54,10 @@ const ShaperSimulator = lazy(() => import('./machines/shaper'));
 const SlotterSimulator = lazy(() => import('./machines/slotter'));
 const FguSimulator = lazy(() => import('./machines/fgu'));
 const FnkSimulator = lazy(() => import('./machines/fnk'));
+const KaruselSimulator = lazy(() => import('./machines/karusel'));
+const BnSimulator = lazy(() => import('./machines/bn'));
+const BbtSimulator = lazy(() => import('./machines/bbt'));
+const BbjSimulator = lazy(() => import('./machines/bbj'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -124,6 +128,25 @@ const MACHINES = [
         L('Točný Ø 380 mm', 'Swing Ø380 mm'),
         L('Vreteno Ø41, 6 kW', 'Spindle bore Ø41, 6 kW'),
         L('Hroty 750 – 1 250 mm', 'Centres 750 – 1,250 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'karusel',
+    Art: KaruselArt,
+    Comp: KaruselSimulator,
+    t: () => ({
+      meta: L('Karuselový sústruh', 'Vertical lathe'),
+      name: L('Karuselový sústruh', 'Vertical turret lathe'),
+      model: 'TOS Hulín SK 12',
+      desc: L(
+        'Veľké kotúče na otočnej upínacej doske: priečnik so zdvihom, suport so smykadlom, posuv v mm na otáčku, rezná rýchlosť podľa priemeru, čelo a osadenie.',
+        'Large discs on a rotary faceplate: elevating cross rail, rail head with ram, feed in mm per revolution, cutting speed by diameter, facing and shouldering.',
+      ),
+      specs: [
+        L('Doska Ø1 200 mm', 'Faceplate Ø1,200 mm'),
+        L('Točný Ø do 1 300 mm', 'Swing up to Ø1,300 mm'),
+        L('Obrobok do 4 t', 'Work up to 4 t'),
       ],
     }),
   },
@@ -352,6 +375,63 @@ const MACHINES = [
         L('Kotúč Ø300 × 40 mm', 'Wheel Ø300 × 40 mm'),
         L('Stôl 1 – 25 m/min', 'Table 1 – 25 m/min'),
         L('Prísuv 0,005 mm', 'Infeed 0.005 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'bn',
+    Art: ToolGrinderArt,
+    Comp: BnSimulator,
+    t: () => ({
+      meta: L('Nástrojárska brúska', 'Tool grinder'),
+      name: L('Nástrojárska brúska na ostrenie nožov', 'Tool and cutter grinder'),
+      model: 'TOS Hostivař BN 102',
+      desc: L(
+        'Ostrenie sústružníckeho noža hrnčekovým kotúčom: univerzálny naklápací držiak so stupnicou, uhol chrbta α a čela γ, prísuv po stotinách, prepálenie pri veľkom prísuve.',
+        'Sharpening a turning tool with a cup wheel: universal tilting holder with a scale, clearance α and rake γ angles, infeed in hundredths, burning at too large an infeed.',
+      ),
+      specs: [
+        L('Kotúč do Ø280', 'Wheel up to Ø280'),
+        L('2 800 – 5 600 ot/min', '2,800 – 5,600 rpm'),
+        L('Stôl 920 × 140 mm', 'Table 920 × 140 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'bezhrot',
+    Art: CenterlessArt,
+    Comp: BbjSimulator,
+    t: () => ({
+      meta: L('Bezhrotová brúska', 'Centreless grinder'),
+      name: L('Bezhrotová brúska', 'Centreless grinder'),
+      model: 'TOS Hostivař BBJ 6',
+      desc: L(
+        'Priebežné brúsenie kolíkov medzi brúsnym a podávacím kotúčom: medzera = priemer, naklopenie α a rýchlosť prechodu, výška podpery a guľatosť, úber na prechod.',
+        'Throughfeed grinding of pins between the grinding and the regulating wheel: gap = diameter, tilt α and throughfeed rate, rest height and roundness, stock per pass.',
+      ),
+      specs: [
+        L('Priemer do 63 mm', 'Diameter up to 63 mm'),
+        L('Kotúče Ø500 / Ø250', 'Wheels Ø500 / Ø250'),
+        L('Kolíky Ø20 ±0,01', 'Pins Ø20 ±0.01'),
+      ],
+    }),
+  },
+  {
+    id: 'dvojkotuc',
+    Art: BenchGrinderArt,
+    Comp: BbtSimulator,
+    t: () => ({
+      meta: L('Stojanová brúska', 'Pedestal grinder'),
+      name: L('Dvojkotúčová stojanová brúska', 'Double-wheel pedestal grinder'),
+      model: 'TOS BBT 350',
+      desc: L(
+        'Ručné ostrenie nožov na opierke a BOZP: medzera opierky do 3 mm, ochranný štít, hrubý a jemný kotúč, teplota noža a chladenie vo vode.',
+        'Freehand tool sharpening on the rest and safety: rest gap up to 3 mm, eye shield, coarse and fine wheel, tool temperature and quenching in water.',
+      ),
+      specs: [
+        L('Kotúče Ø350', 'Wheels Ø350'),
+        L('Opierka ≤ 3 mm', 'Rest gap ≤ 3 mm'),
+        L('Chladenie vo vode', 'Water quench'),
       ],
     }),
   },
