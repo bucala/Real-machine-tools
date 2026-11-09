@@ -15,6 +15,11 @@ a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 - Oprava: ohýbanie sa zastavilo po prvom ohybe a sprievodca hneď skočil na koniec – sprievodca teraz vedie cez všetkých
   5 ohybov a 4 otočenia plechu; test v prehliadači prejde celý program.
 - Export STL obrobku vynechá skryté siete.
+- Krabička na Bystronic: ohyby majú skutočný oblúk s vnútorným polomerom podľa matrice (ri = max(0,16·V; 0,8·t),
+  pri V16 a plechu 2 mm 2,56 mm) namiesto dvoch prekrývajúcich sa dosiek. Rozvinutá dĺžka sa pri ohýbaní zachováva:
+  na začiatku ohybu je polomer väčší a pri konečnom uhle je presne polomer nástroja. Rovné časti sú skrátené
+  o nábeh ohybu, takže vonkajšie rozmery krabičky ostávajú 200 × 150 × 60 mm, a v rohoch zostáva medzera
+  na odľahčenie.
 
 ## 8. 11. 2026
 

@@ -221,31 +221,70 @@ describe('program ohybov', () => {
     expect(ctl.snapshot().program).toMatchObject({ index: 0, bends: 0 });
     expect(c.flange).toBe(25);
   });
-  it('krabička: hotový dielec má steny 60 mm a lem 25 mm smerom von, ohýbaná hrana leží na matrici', async () => {
+  it('krabička: hotový dielec má steny 60 mm, lem 25 mm smerom von a ohyby s polomerom nástroja', async () => {
     const { BOX_PART, boxPose, buildBoxPart, setBoxAngles } = await import('../src/machines/precision/brakePart.js');
-    const part = buildBoxPart(BOX_PART, 2, new THREE.MeshBasicMaterial()),
+    const { insideRadius } = await import('../src/machines/precision/pressBrakeProcess.js');
+    const ri = insideRadius({ v: 16, thickness: 2 });
+    expect(ri).toBeCloseTo(2.56);
+    const part = buildBoxPart(BOX_PART, 2, new THREE.MeshBasicMaterial(), { ri }),
       q = Math.PI / 4;
+    expect(part.r).toBeCloseTo(ri + 1);
     setBoxAngles(part, { F: q, A: q, B: q, C: q }, 'D', q);
     part.root.updateMatrixWorld(true);
-    const bb = new THREE.Box3().setFromObject(part.root);
-    expect(bb.max.y - bb.min.y).toBeCloseTo(62, 0); // steny 60 mm + polovice hrúbky dna a lemu
-    expect(bb.max.x - bb.min.x).toBeCloseTo(202, 0);
+    const bb = new THREE.Box3().setFromObject(part.root, true);
+    expect(bb.max.y - bb.min.y).toBeCloseTo(62, 1); // steny 60 mm + polovice hrúbky dna a lemu
+    expect(bb.max.x - bb.min.x).toBeCloseTo(202, 1);
     // lem trčí von zo zadnej steny A o 25 mm
-    expect(-bb.min.z).toBeCloseTo(75 + 25, 0);
-    expect(bb.max.z).toBeCloseTo(76, 0);
-    // poloha v lise: pivot práve ohýbanej hrany je na ohybovej čiare, ohýbaný panel smeruje dozadu k dorazu
+    expect(-bb.min.z).toBeCloseTo(75 + 25, 1);
+    expect(bb.max.z).toBeCloseTo(76, 1);
+    // oblúk ohybu: vnútorná plocha má polomer ri okolo stredu ohybu (dno je v rovine XZ, stena C ide nahor)
+    const arc = part.joints.C.arc,
+      pos = arc.geometry.attributes.position,
+      v = new THREE.Vector3(),
+      toRoot = part.root.matrixWorld.clone().invert(),
+      m = toRoot.clone().multiply(arc.matrixWorld),
+      center = new THREE.Vector3(0, part.r, 0).applyMatrix4(toRoot.clone().multiply(part.joints.C.pivot.matrixWorld));
+    let rMin = Infinity,
+      rMax = 0;
+    for (let k = 0; k < pos.count; k++) {
+      v.fromBufferAttribute(pos, k).applyMatrix4(m);
+      const d = Math.hypot(v.x - center.x, v.y - center.y);
+      rMin = Math.min(rMin, d);
+      rMax = Math.max(rMax, d);
+    }
+    expect(rMin).toBeCloseTo(ri, 3);
+    expect(rMax).toBeCloseTo(ri + 2, 3);
+    // rozvinutá dĺžka sa zachová: pri rovnom plechu je oblúk rovný pás dĺžky BA = r · π/2
+    setBoxAngles(part, {}, 'A', 0);
+    expect(part.joints.A.hinge.position.z).toBeCloseTo((part.r * Math.PI) / 2, 6);
+    // poloha v lise: stred oblúka ohýbanej hrany je na ohybovej čiare, ohýbaný panel smeruje dozadu k dorazu
     for (const cur of ['F', 'A', 'C']) {
       setBoxAngles(part, { F: q }, cur, 0);
       const h = boxPose(part, cur, 0);
       part.root.updateMatrixWorld(true);
-      const toRoot = part.root.matrixWorld.clone().invert(),
-        pivot = new THREE.Vector3().setFromMatrixPosition(toRoot.clone().multiply(part.joints[cur].pivot.matrixWorld));
-      expect(pivot.applyMatrix4(h).length()).toBeLessThan(1e-6);
-      const tip = new THREE.Vector3(0, 0, 10).applyMatrix4(toRoot.clone().multiply(part.joints[cur].hinge.matrixWorld));
+      const rootInv = part.root.matrixWorld.clone().invert(),
+        pivot = new THREE.Vector3().setFromMatrixPosition(rootInv.clone().multiply(part.joints[cur].pivot.matrixWorld));
+      const p = pivot.applyMatrix4(h);
+      expect(p.z).toBeCloseTo(part.ba / 2, 6);
+      expect(Math.abs(p.y)).toBeLessThan(1e-6);
+      const tip = new THREE.Vector3(0, 0, 10).applyMatrix4(
+        rootInv.clone().multiply(part.joints[cur].hinge.matrixWorld),
+      );
       tip.applyMatrix4(h);
-      expect(tip.z).toBeCloseTo(-10, 6);
+      expect(tip.z).toBeCloseTo(-10 - part.ba / 2, 6);
       expect(Math.abs(tip.y)).toBeLessThan(1e-6);
     }
+    // pri ohybe sú obe ramená súmerné (V) a stred oblúka zostáva v počiatku
+    setBoxAngles(part, {}, 'B', q);
+    const h = boxPose(part, 'B', q);
+    part.root.updateMatrixWorld(true);
+    const rootInv = part.root.matrixWorld.clone().invert(),
+      a = new THREE.Vector3(0, 0, 30).applyMatrix4(rootInv.clone().multiply(part.joints.B.hinge.matrixWorld)),
+      b = new THREE.Vector3(0, 0, -30).applyMatrix4(rootInv.clone().multiply(part.joints.B.pivot.matrixWorld));
+    a.applyMatrix4(h);
+    b.applyMatrix4(h);
+    expect(a.y).toBeGreaterThan(20);
+    expect(a.y).toBeCloseTo(b.y, 0);
   });
   it('model lisu: krabička, úzka matrica a razník zložený na dĺžku ohybu', () => {
     const { m } = model();

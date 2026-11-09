@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { modelKit } from './modelKit';
 import { createBystronicControls } from './bystronicControls';
-import { XPERT320, OPEN_TIP, profileSection, supportDepth } from './pressBrakeProcess';
+import { XPERT320, OPEN_TIP, insideRadius, profileSection, supportDepth } from './pressBrakeProcess';
 import { BOX_PART, boxPose, buildBoxPart, setBoxAngles } from './brakePart';
 
 export const BRAKE_DIE_TOP = 11;
@@ -414,20 +414,22 @@ export function createBystronicModel({ root, G, M, tex }) {
   // polohou po predchádzajúcom ohybe a polohou pre ďalší ohyb plynulo prechádza (zdvih a odsun k obsluhe).
   let boxPart = null,
     boxHolder = null,
-    boxT = 0;
+    boxT = '';
   const pa = new THREE.Vector3(),
     pb = new THREE.Vector3(),
     qa = new THREE.Quaternion(),
     qb = new THREE.Quaternion(),
     sc = new THREE.Vector3();
   const updateBox = (c, S, prog) => {
-    if (!boxPart || boxT !== c.thickness) {
+    // polomer ohybu podľa nástroja: pri zmene hrúbky alebo matrice sa dielec postaví znova
+    const key = `${c.thickness}:${c.v}`;
+    if (!boxPart || boxT !== key) {
       if (boxHolder) (clear(boxHolder), stock.remove(boxHolder));
-      boxT = c.thickness;
+      boxT = key;
       boxHolder = new THREE.Group();
       boxHolder.name = 'box-part';
       boxHolder.scale.setScalar(0.01);
-      boxPart = buildBoxPart(BOX_PART, c.thickness, M.sheet);
+      boxPart = buildBoxPart(BOX_PART, c.thickness, M.sheet, { ri: insideRadius(c) });
       boxPart.root.traverse((o) => {
         if (o.isMesh) o.userData.noMerge = true;
       });
