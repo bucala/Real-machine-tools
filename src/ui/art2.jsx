@@ -142,18 +142,21 @@ export function HovArt() {
   );
 }
 
-// dvojkotúčová stojanová brúska: stojan, motor, dva kotúče s krytmi a štítmi
+// brúska nožov BBT 350: stredné teleso na stojane, dva kryty kotúčov, naklápacie stoly nad vaňami
 export function BenchGrinderArt() {
   return (
     <Svg>
       <g fillOpacity=".16">
-        <rect x="140" y="90" width="40" height="70" />
-        <rect x="120" y="60" width="80" height="34" rx="14" />
+        <rect x="135" y="96" width="50" height="64" rx="3" />
+        <rect x="132" y="36" width="56" height="60" rx="6" />
+        <rect x="96" y="34" width="36" height="56" rx="10" />
+        <rect x="188" y="34" width="36" height="56" rx="10" />
+        <path d="M40 92h92v14H40zM188 92h92v14H188z" />
       </g>
-      <circle cx="90" cy="74" r="28" fillOpacity=".3" />
-      <circle cx="230" cy="74" r="28" fillOpacity=".3" />
-      <path d="M62 60a30 30 0 0 1 56 0M202 60a30 30 0 0 1 56 0" fill="none" strokeWidth="5" />
-      <path d="M70 104h40M210 104h40" fill="none" strokeWidth="4" />
+      <path d="M44 76l70 8M276 76l-70 8" fill="none" strokeWidth="5" />
+      <path d="M132 40v48M188 40v48" fill="none" strokeDasharray="4 3" />
+      <circle cx="160" cy="58" r="7" fill="none" />
+      <path d="M145 112h30v28h-30z" fill="none" />
     </Svg>
   );
 }
