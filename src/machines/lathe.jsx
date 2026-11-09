@@ -26,6 +26,7 @@ import {
   LATHE_FEEDS,
   LATHE_MODELS,
   LATHE_SAFETY,
+  LATHE_VARIANTS,
   LATHE_TASKS,
   LATHE_TOOLS,
   MODEL_KEY,
@@ -37,8 +38,8 @@ import { createLatheScene } from './latheScene';
 // =====================================================================
 // HROTOVÝ SÚSTRUH
 // =====================================================================
-function LatheCore({ onBack, params, model, onModel }) {
-  const MD = LATHE_MODELS[model] || LATHE_MODELS.sn50,
+function LatheCore({ onBack, params, model, onModel, fixed = false }) {
+  const MD = LATHE_MODELS[model] || LATHE_VARIANTS[model] || LATHE_MODELS.sn50,
     S = MD.S,
     U = 100 * S,
     U2 = 2 * U,
@@ -242,14 +243,16 @@ function LatheCore({ onBack, params, model, onModel }) {
                 </p>
               </SectionInfo>
             </div>
-            <SegRow
-              label="TOS"
-              value={model}
-              options={Object.entries(LATHE_MODELS).map(([k, m]) => [k, m.name])}
-              onChange={(m) => {
-                if (stopped && m !== model) onModel(m);
-              }}
-            />
+            {!fixed && (
+              <SegRow
+                label="TOS"
+                value={model}
+                options={Object.entries(LATHE_MODELS).map(([k, m]) => [k, m.name])}
+                onChange={(m) => {
+                  if (stopped && m !== model) onModel(m);
+                }}
+              />
+            )}
           </div>
 
           <div className="sec">
@@ -791,6 +794,11 @@ function LatheSimulator(props) {
   return <LatheCore key={model} {...props} model={model} onModel={onModel} />;
 }
 
-export { LatheSimulator };
+// hrotový sústruh TOS Trenčín SV 18 RA – rovnaký simulátor, pevná veľkosť
+function SvSimulator(props) {
+  return <LatheCore {...props} model="sv18" onModel={() => {}} fixed />;
+}
+
+export { LatheSimulator, SvSimulator };
 export { LATHE_MODELS, LATHE_TOOLS, SPEEDS, LATHE_FEEDS, FEED_BASE, FEED_MULT } from './latheData';
 export default LatheSimulator;

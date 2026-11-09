@@ -29,6 +29,7 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
+import { FguArt, FnkArt, SvArt } from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -51,6 +52,9 @@ const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
 const SlotterSimulator = lazy(() => import('./machines/slotter'));
+const FguSimulator = lazy(() => import('./machines/fgu'));
+const FnkSimulator = lazy(() => import('./machines/fnk'));
+const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
 const MigSimulator = lazy(() => import('./machines/weld').then((m) => ({ default: m.MigSimulator })));
@@ -101,6 +105,63 @@ const MACHINES = [
         L('18 otáčok 40 – 2000 ot/min', '18 speeds 40 – 2000 rpm'),
         L('Posuv 19 – 950 mm/min', 'Feed 19 – 950 mm/min'),
         L('Zdvihy X 800 · Y 300 · Z 420 mm', 'Travel X 800 · Y 300 · Z 420 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'sv',
+    Art: SvArt,
+    Comp: SvSimulator,
+    t: () => ({
+      meta: L('Sústruh', 'Lathe'),
+      name: L('Univerzálny hrotový sústruh', 'Universal centre lathe'),
+      model: 'TOS Trenčín SV 18 RA',
+      desc: L(
+        'Najčastejší školský sústruh: menší a ľahší než SN – točný priemer 380 mm nad lôžkom, výška hrotov 190 mm. Rovnaké ovládanie, nože, závity a úlohy ako na SN, na porovnanie veľkostí.',
+        'The most common school lathe: smaller and lighter than the SN – 380 mm swing over the bed, 190 mm centre height. Same controls, tools, threads and tasks as the SN, for comparing sizes.',
+      ),
+      specs: [
+        L('Točný Ø 380 mm', 'Swing Ø380 mm'),
+        L('Vreteno Ø41, 6 kW', 'Spindle bore Ø41, 6 kW'),
+        L('Hroty 750 – 1 250 mm', 'Centres 750 – 1,250 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'fgu',
+    Art: FguArt,
+    Comp: FguSimulator,
+    t: () => ({
+      meta: L('Univerzálna frézka', 'Universal mill'),
+      name: L('Univerzálna konzolová frézka', 'Universal knee-type milling machine'),
+      model: 'TOS Olomouc FGU 32',
+      desc: L(
+        'Vodorovné vreteno s tŕňom a podperou, kotúčová fréza, otočný stôl ±45° pre šikmé drážky, súsledné a nesúsledné frézovanie s vymedzením vôle.',
+        'Horizontal spindle with arbor and support, side-and-face cutter, ±45° swivel table for inclined slots, climb and conventional milling with backlash eliminator.',
+      ),
+      specs: [
+        L('Stôl 320 × 1 250 mm', 'Table 320 × 1,250 mm'),
+        L('12 otáčok 31,5 – 1 400', '12 speeds 31.5 – 1,400'),
+        L('Natočenie stola ±45°', 'Table swivel ±45°'),
+      ],
+    }),
+  },
+  {
+    id: 'fnk',
+    Art: FnkArt,
+    Comp: FnkSimulator,
+    t: () => ({
+      meta: L('Nástrojárska frézka', 'Toolroom mill'),
+      name: L('Nástrojárska frézka s natáčacou hlavou', 'Toolroom mill with swivelling head'),
+      model: 'TOS Kuřim FNK 25',
+      desc: L(
+        'Zvislá hlava natáčaná o ±45° podľa stupnice, pinola, stopkové frézy Ø12 / Ø16: úkosy čelom frézy a drážky, krížový stôl s posuvmi X a Y.',
+        'Vertical head swivelling ±45° by its scale, quill, Ø12 / Ø16 end mills: bevels with the cutter face and slots, compound table with X and Y feeds.',
+      ),
+      specs: [
+        L('Stôl 1 250 × 290 mm', 'Table 1,250 × 290 mm'),
+        L('X 800 / Y 370 / Z 450', 'X 800 / Y 370 / Z 450'),
+        L('Hlava ±45°', 'Head ±45°'),
       ],
     }),
   },
