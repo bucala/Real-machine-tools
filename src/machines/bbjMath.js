@@ -16,7 +16,12 @@ export function roundness(h, d) {
 export function grindPass(d, gap, h) {
   if (gap >= d) return { d, cut: 0, round: null, heavy: false };
   const cut = d - gap;
-  return { d: gap + (cut > BBJ.maxCut + 1e-6 ? 0.004 : 0), cut, round: roundness(h, d), heavy: cut > BBJ.maxCut + 1e-6 };
+  return {
+    d: gap + (cut > BBJ.maxCut + 1e-6 ? 0.004 : 0),
+    cut,
+    round: roundness(h, d),
+    heavy: cut > BBJ.maxCut + 1e-6,
+  };
 }
 export function pinsInfo(pins, target = 20, tol = 0.01) {
   const done = pins.filter((p) => p.passes > 0);
