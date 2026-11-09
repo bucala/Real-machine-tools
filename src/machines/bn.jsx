@@ -25,8 +25,9 @@ import { TOOL, area, clipPoly, grindChecksTool, toolAngles, toolPoly } from './t
 // =====================================================================
 // NÁSTROJÁRSKA BRÚSKA TOS HOSTIVAŘ BN 102 – hrnčekový kotúč, univerzálny držiak noža s naklápaním, stôl X / Y
 // =====================================================================
-const XW = 1.2, // čelo hrnčekového kotúča (svet x)
-  WY = 6.6, // os kotúča
+const XW = 0.0, // čelo hrnčekového kotúča (svet x) – vreteník je natočený nad zadný okraj stola
+  TY = 9.4, // horná plocha stola
+  WY = 11.0, // os kotúča
   WZ = 0, // os kotúča (z)
   RR = 0.62; // vonkajší polomer okraja hrnčeka
 
@@ -38,8 +39,17 @@ const bnParts = () =>
       'Base',
       'Podstavec s vedením stola',
       'Base with table ways',
-      'Skriňový podstavec nesie pozdĺžny stôl a priečne sane. Predloha: TOS Hostivař BN 102 – stôl 920 × 140 mm, X 510 / Y 250 mm, ≈ 1 000 kg.',
-      'The box base carries the table and the cross slide. Model: TOS Hostivař BN 102 – table 920 × 140 mm, X 510 / Y 250 mm, ≈ 1,000 kg.',
+      'Skriňový podstavec s dvierkami a ovládacím panelom vpredu nesie priečne sane a pozdĺžny stôl. Predloha: TOS Hostivař BN 102 – stôl 920 × 140 mm, X 510 / Y 250 mm, ≈ 1 000 kg.',
+      'The box base with a door and the control panel at the front carries the cross slide and the table. Model: TOS Hostivař BN 102 – table 920 × 140 mm, X 510 / Y 250 mm, ≈ 1,000 kg.',
+    ],
+    [
+      'stol',
+      'Stôl',
+      'Table',
+      'Pozdĺžny stôl 920 × 140 mm',
+      'Table 920 × 140 mm',
+      'Stôl s T-drážkou a narážkami jazdí pozdĺž kolesom vpredu (nôž prechádza po čele kotúča). Priečne sane s bubnom a stupnicou prisúvajú stôl ku kotúču. Stred stola je otočný so stupnicou.',
+      'The table with a T-slot and dogs travels lengthwise with the front handwheel (the tool traverses the wheel face). The cross slide with its drum and dial feeds the table to the wheel. The table centre swivels on a scale.',
     ],
     [
       'vretennik',
@@ -47,8 +57,8 @@ const bnParts = () =>
       'Wheelhead',
       'Vreteník s hrnčekovým kotúčom',
       'Wheelhead with cup wheel',
-      'Na stĺpe je vreteník s motorom 1,2 kW a otáčkami 2 800 – 5 600 ot/min. Čelo hrnčekového kotúča brúsi rovinnú plochu noža.',
-      'The column carries the wheelhead with a 1.2 kW motor, 2,800 – 5,600 rpm. The face of the cup wheel grinds a flat face on the tool.',
+      'Stĺp pod mechom nesie otočný vreteník s motorom 1,2 kW a otáčkami 2 800 – 5 600 ot/min, na oboch koncoch vretena sú kotúče. Čelo hrnčekového kotúča brúsi rovinnú plochu noža.',
+      'The column under the bellows carries the swivelling wheelhead with a 1.2 kW motor, 2,800 – 5,600 rpm, with wheels on both spindle ends. The face of the cup wheel grinds a flat face on the tool.',
     ],
     [
       'drziak',
@@ -154,7 +164,7 @@ function BnSimulator({ onBack, params }) {
       set,
       setUi,
       setTele,
-      colors: [0x8fa9b5, 0x768f9b, 0x5a717c],
+      colors: [0x93c2a6, 0x7aa98e, 0x5f8a73],
       mats: {
         wheelM: [0x9aa4c4, 0.95, 0.0],
         tool: [0xc7ccd1, 0.3, 0.85],
@@ -344,6 +354,7 @@ function BnSimulator({ onBack, params }) {
               ['celok', L('Celok', 'Overview')],
               ['rez', L('Detail brúsenia', 'Grinding detail')],
               ['zboku', L('Zboku', 'Side')],
+              ['obsluha', L('Miesto obsluhy', 'Operator')],
             ]}
           />
           <PartsSection parts={parts} selected={selected} selectPart={selectPart} />
@@ -356,24 +367,114 @@ function BnSimulator({ onBack, params }) {
 
 function buildBn(x) {
   const { kit, det, M, grp, v3, c, st, ctrl, push, pend, say, sayOnce, needPower, anchors, views, apiRef } = x;
-  const { add, cylX, cylY, ball, handwheel, pivotLever } = kit;
+  const { add, box, cylX, cylY, cylZ, ball, handwheel, pivotLever } = kit;
   const { rbox, nameplate, oilGlass, cable } = det;
-  // ---------- podstavec, stôl ----------
+  // ---------- podstavec (obsluha stojí na strane −x, stôl je pozdĺžne v z) ----------
   const base = grp('podstavec');
-  rbox(base, -4.0, 4.0, 0, 4.6, -1.8, 1.8, M.green, 0.2);
-  rbox(base, -4.1, 4.1, 0, 0.25, -1.9, 1.9, M.greenDeep, 0.06);
-  nameplate(base, -2.4, 3.2, 1.805, 0, 'TOS Hostivař', 'BN 102', 1.05);
-  oilGlass(base, 2.6, 1.0, 1.8);
+  rbox(base, -2.25, 2.55, 0, 0.3, -2.75, 2.75, M.greenDeep, 0.05); // sokel
+  rbox(base, -2.1, 2.4, 0.3, 7.25, -2.6, 2.6, M.green, 0.16);
+  rbox(base, -2.6, 2.75, 7.25, 8.2, -3.4, 3.4, M.green, 0.14); // lôžko s vedením
+  const front = (x0, y0, z0) => {
+    const g = new THREE.Group();
+    g.position.set(x0, y0, z0);
+    g.rotation.y = -Math.PI / 2; // lokálna +z = čelo k obsluhe (−x)
+    base.add(g);
+    return g;
+  };
+  // dvierka s rukoväťou a vetracou mriežkou, štítok s návodom
+  const door = front(-2.11, 0, 0);
+  rbox(door, -1.9, 1.5, 0.7, 5.2, 0, 0.06, M.greenDark, 0.05);
+  for (let k = 0; k < 6; k++) box(door, -1.4, -0.2, 1.3 + k * 0.22, 1.36 + k * 0.22, 0.06, 0.08, M.greenDeep);
+  box(door, 0.1, 1.2, 1.4, 3.6, 0.06, 0.07, M.white);
+  cylZ(door, 0.08, 0.08, 0.06, 0.2, 1.25, 4.4, M.black, 12);
+  nameplate(front(-2.61, 0, 0), -0.4, 7.72, 0, 0, 'TOS Hostivař', 'BN 102 B', 1.0);
+  oilGlass(front(-2.11, 0, 0), -2.0, 6.6, 0);
+  // vedenie priečnych saní
+  [-1.4, 1.4].forEach((zz) => rbox(base, -2.4, 2.2, 8.2, 8.3, zz - 0.25, zz + 0.25, M.ways, 0.02));
+  // ---------- priečne sane (prísuv X) a pozdĺžny stôl (Z) ----------
+  const tblX = new THREE.Group();
+  base.add(tblX);
+  rbox(tblX, -2.5, 0.4, 8.3, 8.85, -2.0, 2.0, M.greenDark, 0.08);
+  const tblG = grp('stol', tblX);
   const tbl = new THREE.Group();
-  base.add(tbl);
-  rbox(tbl, -3.0, 0.6, 4.6, 5.0, -2.2, 2.2, M.greenDark, 0.06); // priečne sane a stôl
-  const wX = handwheel(tbl, 0.4, -3.35, 4.8, 0, '-x', 0.26); // prísuv (1 otáčka = 1 mm)
-  const wZ = handwheel(base, 0.42, 0, 3.6, 1.95, 'z', 0.28); // pozdĺžny stôl
-  // ---------- stĺp a vreteník s hrnčekovým kotúčom ----------
+  tblG.add(tbl);
+  rbox(tbl, -2.05, -0.55, 8.85, 9.05, -4.6, 4.6, M.greenDark, 0.04); // spodný stôl
+  const top = new THREE.Group(); // horný otočný stôl
+  tbl.add(top);
+  rbox(top, -2.0, -0.6, 9.05, TY, -4.6, 4.6, M.steelDark, 0.03);
+  box(top, -1.36, -1.24, TY - 0.06, TY + 0.002, -4.6, 4.6, M.black); // T-drážka
+  [-4.6, 4.6].forEach((zz) => {
+    for (let k = 0; k < 4; k++) {
+      const st2 = box(top, -2.0, -0.6, TY - 0.002, TY + 0.004, zz - 0.06, zz + 0.06, k % 2 ? M.black : M.yellow);
+      st2.position.z = zz + (zz > 0 ? -0.15 - k * 0.12 : 0.15 + k * 0.12);
+    }
+  });
+  cylY(tbl, 0.55, 0.55, 8.85, 9.08, -1.3, 0, M.steel, 40); // stredový čap so stupnicou
+  const tScale = angleScaleTex(45, 1, { numR: 0.78, step: 15, len: 0.12 });
+  if (tScale) {
+    const sc = add(
+      tbl,
+      new THREE.CircleGeometry(0.55, 48),
+      new THREE.MeshStandardMaterial({ map: tScale, roughness: 0.4, metalness: 0.4 }),
+      -1.3,
+      9.081,
+      0,
+    );
+    sc.rotation.x = -Math.PI / 2;
+    sc.userData.noMerge = true;
+    sc.castShadow = false;
+  }
+  // predná lišta s narážkami pozdĺžneho pohybu
+  rbox(tbl, -2.25, -2.05, 8.75, 9.0, -4.6, 4.6, M.steelDark, 0.02);
+  [-2.2, 2.2].forEach((zz) => {
+    rbox(tbl, -2.4, -2.2, 8.7, 9.05, zz - 0.15, zz + 0.15, M.steel, 0.03);
+    cylX(tbl, 0.04, 0.04, -2.75, -2.4, 8.95, zz, M.black, 8);
+  });
+  const wZ = handwheel(front(-2.62, 0, 0), 0.62, 0.55, 7.3, 0.05, 'z', 0.34); // pozdĺžny stôl (veľké koleso vpredu)
+  handwheel(front(-2.62, 0, 0), 0.38, 3.1, 7.6, 0.05, 'z', 0.2); // druhé koleso stola na ľavom konci (len pre vzhľad)
+  // bubon priečneho prísuvu so stupnicou vpravo vpredu
+  const drum = front(-2.62, 0, 0);
+  cylZ(drum, 0.42, 0.42, 0, 0.32, -2.7, 7.6, M.green, 32);
+  const wX = handwheel(drum, 0.3, -2.7, 7.6, 0.4, 'z', 0.18); // prísuv (1 otáčka = 1 mm)
+  // ---------- stĺp s mechom a vreteník s kotúčmi ----------
   const wh = grp('vretennik');
-  rbox(wh, 1.6, 3.2, 4.6, 8.4, -1.0, 1.0, M.green, 0.15);
-  cylX(wh, 0.62, 0.62, 2.1, 3.4, WY, WZ, M.green, 28); // motor a vreteno
-  for (let k = 0; k < 6; k++) cylX(wh, 0.66, 0.66, 2.2 + k * 0.2, 2.26 + k * 0.2, WY, WZ, M.greenDark, 28);
+  rbox(wh, 1.4, 3.0, 8.2, 8.5, -0.8, 0.8, M.green, 0.06);
+  for (let k = 0; k < 10; k++) {
+    const r = 0.72 - (k % 2) * 0.06;
+    cylY(wh, r, r, 8.5 + k * 0.17, 8.5 + (k + 1) * 0.17, 2.2, 0, k % 2 ? M.steelDark : M.steel, 32); // mech
+  }
+  cylY(wh, 0.85, 0.85, 10.2, 10.35, 2.2, 0, M.green, 40); // otočná doska vreteníka
+  const hScale = angleScaleTex(90, 1, { numR: 0.8, step: 30, len: 0.1 });
+  if (hScale) {
+    const sc = add(
+      wh,
+      new THREE.RingGeometry(0.6, 0.85, 48),
+      new THREE.MeshStandardMaterial({ map: hScale, roughness: 0.4, metalness: 0.4 }),
+      2.2,
+      10.355,
+      0,
+    );
+    sc.rotation.x = -Math.PI / 2;
+    sc.userData.noMerge = true;
+    sc.castShadow = false;
+  }
+  rbox(wh, 1.7, 2.8, 10.35, WY - 0.35, -0.45, 0.45, M.green, 0.08);
+  cylX(wh, 0.42, 0.42, XW + 0.55, 3.0, WY, WZ, M.green, 28); // teleso vretena
+  cylX(wh, 0.6, 0.6, 3.0, 4.3, WY, WZ, M.green, 28); // motor
+  for (let k = 0; k < 6; k++) cylX(wh, 0.64, 0.64, 3.1 + k * 0.2, 3.16 + k * 0.2, WY, WZ, M.greenDark, 28);
+  rbox(wh, 3.3, 3.9, WY + 0.5, WY + 0.75, -0.25, 0.25, M.greenDark, 0.05); // svorkovnica
+  cylX(wh, 0.15, 0.15, 4.3, 4.7, WY, WZ, M.steel, 16);
+  // druhý kotúč (tanierový) na zadnom konci vretena v kryte
+  cylX(wh, 0.55, 0.55, 4.7, 4.85, WY, WZ, M.wheelM, 40);
+  const g2 = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.66, 0.66, 0.3, 40, 1, true, Math.PI * 0.1, Math.PI * 1.3),
+    M.yellow,
+  );
+  g2.geometry.rotateZ(Math.PI / 2);
+  g2.material = g2.material.clone();
+  g2.material.side = THREE.DoubleSide;
+  g2.position.set(4.78, WY, WZ);
+  wh.add(g2);
   const spin = new THREE.Group();
   spin.position.set(XW, WY, WZ);
   wh.add(spin);
@@ -385,7 +486,12 @@ function buildBn(x) {
   spin.add(cup);
   cylX(spin, RR * 0.8, RR * 0.8, 0.48, 0.52, 0, 0, M.wheelM, 48);
   add(spin, new THREE.TorusGeometry(RR - 0.05, 0.05, 8, 48), M.wheelM).rotation.y = Math.PI / 2;
-  cylX(spin, 0.18, 0.18, 0.5, 1.0, 0, 0, M.steel, 20);
+  cylX(spin, 0.18, 0.18, 0.5, 0.6, 0, 0, M.steel, 20);
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * TAU,
+      mk = box(spin, 0.3, 0.46, -0.03, 0.03, -0.02, 0.02, M.black); // značky na náboji (viditeľné otáčanie)
+    mk.position.set(0.38, Math.cos(a) * 0.4, Math.sin(a) * 0.4);
+  }
   // kryt kotúča (otvorený k nožu)
   const guard = new THREE.Mesh(
     new THREE.CylinderGeometry(RR + 0.12, RR + 0.12, 0.7, 40, 1, true, Math.PI * 0.15, Math.PI * 1.2),
@@ -396,11 +502,20 @@ function buildBn(x) {
   guard.geometry.rotateZ(Math.PI / 2);
   guard.position.set(XW + 0.3, WY, WZ);
   wh.add(guard);
-  // ---------- univerzálny držiak a nôž ----------
+  x.lamp({
+    parent: wh,
+    base: v3(2.6, WY + 0.75, -0.3),
+    elbow: v3(2.0, WY + 2.6, -1.4),
+    head: v3(0.4, WY + 1.6, -1.2),
+    aim: v3(XW - 0.3, WY, 0),
+    angle: 0.55,
+    power: 2.2,
+  });
+  // ---------- univerzálny držiak a nôž (na stole) ----------
   const hold = grp('drziak', tbl);
-  rbox(hold, -1.6, -0.4, 5.0, 5.4, -0.7, 0.7, M.steelDark, 0.06);
-  rbox(hold, -1.15, -0.65, 5.4, WY - 0.3, -0.25, 0.25, M.steelDark, 0.05); // stĺpik držiaka
-  cylY(hold, 0.5, 0.5, 5.4, 5.55, -1.0, 0, M.steelDark, 32);
+  rbox(hold, -1.6, -0.4, TY, TY + 0.4, -0.7, 0.7, M.steelDark, 0.06);
+  rbox(hold, -1.15, -0.65, TY + 0.4, WY - 0.24, -0.25, 0.25, M.steelDark, 0.05); // stĺpik držiaka pod zveráčikom
+  cylY(hold, 0.5, 0.5, TY + 0.4, TY + 0.55, -1.0, 0, M.steelDark, 32);
   const piv = new THREE.Group(); // čap naklápania v rohu noža (špička)
   hold.add(piv);
   const scTx = angleScaleTex(30, 2, { numR: 0.8, step: 10, len: 0.1 });
@@ -410,7 +525,7 @@ function buildBn(x) {
       new THREE.CircleGeometry(0.5, 48),
       new THREE.MeshStandardMaterial({ map: scTx, roughness: 0.4, metalness: 0.4 }),
       -1.0,
-      5.56,
+      TY + 0.56,
       0,
     );
     sc.rotation.x = -Math.PI / 2;
@@ -439,30 +554,35 @@ function buildBn(x) {
   };
   // zveráčik okolo zadnej časti noža
   rbox(toolInner, 0.05, 0.45, -0.06, 0.22, -0.15, 0.15, M.steel, 0.02);
-  const levMode = pivotLever(hold, -1.45, 5.2, 0.72, 0.34, 1.2);
-  const wTilt = handwheel(hold, 0.2, -1.62, 5.2, 0.3, '-x', 0.1);
-  // ---------- panel ----------
+  const levMode = pivotLever(hold, -1.45, TY + 0.2, 0.72, 0.34, 1.2);
+  const wTilt = handwheel(hold, 0.2, -1.62, TY + 0.2, 0.3, '-x', 0.1);
+  // ---------- panel na čele podstavca ----------
   const pan = grp('ovladanie', base);
-  rbox(pan, 3.2, 3.9, 2.0, 4.0, 1.8, 1.9, M.panel, 0.03);
-  const mSw = mainSwitch(kit, M, pan, 3.55, 3.5, 1.91);
-  const bStart = panelButton(kit, M, pan, 3.4, 2.6, 1.91, M.btnGreen),
-    bStop = panelButton(kit, M, pan, 3.75, 2.6, 1.91, M.red);
+  const pf = new THREE.Group();
+  pf.position.set(-2.11, 0, 0);
+  pf.rotation.y = -Math.PI / 2;
+  pan.add(pf);
+  rbox(pf, -1.85, -0.35, 5.5, 6.9, 0, 0.12, M.panel, 0.03);
+  const mSw = mainSwitch(kit, M, pf, -1.45, 6.45, 0.13);
+  const bStart = panelButton(kit, M, pf, -0.75, 6.55, 0.13, M.btnGreen),
+    bStop = panelButton(kit, M, pf, -0.75, 6.0, 0.13, M.red);
   const lampRun = M.lamp.clone();
-  ball(pan, 0.06, 3.55, 2.2, 1.92, lampRun);
+  ball(pf, 0.06, -1.1, 5.75, 0.14, lampRun);
   cable(base, [
-    [3.4, 2.0, 1.85],
-    [3.6, 1.0, 1.95],
-    [3.8, 0.2, 2.1],
+    [2.4, 6.0, 1.6],
+    [2.7, 3.0, 2.0],
+    [2.9, 0.2, 2.4],
   ]);
   const sparks = [];
   const sparkG = new THREE.Group();
   x.scene.add(sparkG);
   // ---------- stav ----------
   Object.assign(st, { x: c.x, z: c.z, tilt: c.tilt, rpm: 0, a: 0, grindT: -9, burn: false });
-  // poloha špičky noža (čap) vo svete: 5 mm pred čelom kotúča pri x = 0
+  // poloha špičky noža (čap) vo svete: 2 mm pred čelom kotúča pri x = 0 (pri naklopení 8° sa nôž dotkne okolo x = 0)
   const place = () => {
-    tbl.position.set(st.x / 100, 0, st.z / 100);
-    piv.position.set(XW - 0.05, WY, 0);
+    tblX.position.x = st.x / 100;
+    tbl.position.z = st.z / 100;
+    piv.position.set(XW - 0.02, WY, 0);
     const phi = (c.mode === 'end' ? st.tilt : -90 + st.tilt) * (Math.PI / 180);
     piv.rotation.z = phi;
     toolInner.position.set(-TOOL.L / 100, -TOOL.H / 100, 0);
@@ -470,19 +590,24 @@ function buildBn(x) {
   buildTool();
   place();
   Object.assign(anchors, {
-    podstavec: () => v3(-4.0, 2.0, 1.8),
-    vretennik: () => v3(2.4, 8.4, 0),
-    drziak: () => v3(st.x / 100 - 1.0, 5.6, st.z / 100),
+    podstavec: () => v3(-2.1, 4.0, -1.8),
+    stol: () => v3(st.x / 100 - 1.3, TY, st.z / 100 + 3.5),
+    vretennik: () => v3(3.6, WY + 0.75, 0),
+    drziak: () => v3(st.x / 100 - 1.0, TY + 0.6, st.z / 100),
     noz: () => v3(st.x / 100 + XW - 0.6, WY + 0.2, st.z / 100),
-    ovladanie: () => v3(3.55, 4.0, 1.9),
+    ovladanie: () => v3(-2.2, 6.9, -1.1),
   });
   Object.assign(views, {
     celok: () => [
-      [-6, 10, 10],
-      [0.5, 5.6, 0],
+      [-12, 15.5, 8.5],
+      [0.4, 8.6, 0],
     ],
     rez: () => [[XW - 0.6, WY + 0.9, 2.2], [XW - 0.1, WY, 0], true],
     zboku: () => [[XW - 0.4, WY + 0.2, 4], [XW - 0.3, WY, 0], true],
+    obsluha: () => [
+      [-6.5, 14.5, 1.2],
+      [0.6, WY - 0.6, 0],
+    ],
   });
   const stopped = () => !c.running && st.rpm < 1;
   const start = needPower(() => {
@@ -717,7 +842,7 @@ function buildBn(x) {
     },
     measure: () => ({ ang: toolAngles(poly), burn: st.burn, area: area(poly) }),
     workObj: () => toolG,
-    workSpot: () => v3(-1, 7.5, 4),
+    workSpot: () => v3(-2, WY + 1, 4),
     canInspect: () => (!stopped() ? L('Najprv zastav kotúč.', 'Stop the wheel first.') : null),
     prepareInspect: () => buildTool(),
     sound: () => ({ motor: st.rpm / 2800, grind: x.time() - st.grindT < 0.3 ? 0.8 : 0 }),
