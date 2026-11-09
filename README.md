@@ -271,6 +271,7 @@ Samotné `npx wrangler deploy` používa už vytvorený `public/`. Úspešný bu
 - [História zmien](CHANGELOG.md)
 - [Audit aplikácie](docs/AUDIT.md)
 - [Audit 2. kolo – moderné stroje (november 2026)](docs/AUDIT-2026-11.md)
+- [Audit klasických strojov – ovládače, kolízie, dizajn (november 2026)](docs/AUDIT-2026-11-klasicke-stroje.md)
 - [Používateľov STEP podklad krytovania Röders](docs/references/roeders-cover-user.STEP)
 
 Zdrojový kód projektu je pod [licenciou MIT](LICENSE).
