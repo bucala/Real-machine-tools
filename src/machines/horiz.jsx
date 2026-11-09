@@ -7,6 +7,7 @@ import { createMachineWorkInspect } from '../core/machineWorkInspect';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail, angleScaleTex } from '../core/detail';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
@@ -228,19 +229,56 @@ function HorizSimulator({ onBack, params }) {
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
     // ---------- stojan a lôžko ----------
+    const { rbox, ribs, nameplate, valuePlate, oilGlass, cable, bolts } = makeDetail(kit, M);
     const colG = grp('stojan');
-    box(colG, -10.2, -3.6, 0, 1.0, -3.2, 3.2, M.greenDark);
-    box(colG, -9.6, -7.0, 1.0, 15.5, -2.2, 2.2, M.green);
+    rbox(colG, -10.2, -3.6, 0, 1.0, -3.2, 3.2, M.greenDark, 0.14);
+    rbox(colG, -9.6, -7.0, 1.0, 15.5, -2.2, 2.2, M.green, 0.22);
+    ribs(colG, 'x', -9.4, -7.2, 3, 1.4, 15.0, -2.38, 0.18, 0.12, M.greenDark); // rebrá vzadu
+    ribs(colG, 'y', 2.0, 14.5, 6, -9.45, -7.15, 2.2, 0.08, 0.1, M.greenDark); // vodorovné rebrá vpredu
     box(colG, -7.0, -6.85, 1.2, 15.0, -1.9, -1.5, M.ways);
     box(colG, -7.0, -6.85, 1.2, 15.0, 1.5, 1.9, M.ways);
-    box(colG, -9.7, -6.9, 15.5, 15.9, -2.3, 2.3, M.greenDark);
-    box(colG, -3.6, 7.8, 0, 1.2, -5.6, 5.6, M.greenDark); // lôžko stola
+    rbox(colG, -9.7, -6.9, 15.5, 15.9, -2.3, 2.3, M.greenDark, 0.1);
+    // motor rýchloposuvu a protizávažie na vrchu stojana
+    cylX(colG, 0.55, 0.55, -9.4, -8.0, 16.5, 0, M.green, 28);
+    rbox(colG, -9.5, -7.9, 15.9, 16.0, -0.6, 0.6, M.greenDark, 0.03);
+    cylX(colG, 0.58, 0.58, -8.05, -7.95, 16.5, 0, M.greenDark, 28);
+    cable(colG, [
+      [-9.0, 16.6, 0.45],
+      [-9.75, 16.0, 0.9],
+      [-9.78, 12.0, 1.4],
+      [-9.78, 4.0, 1.6],
+      [-9.9, 1.1, 2.2],
+    ]);
+    oilGlass(colG, -8.0, 2.0, 2.2);
+    nameplate(colG, -8.3, 13.6, 2.21, 0, 'TOS Varnsdorf', 'W 9', 1.3);
+    // lôžko stola s krytmi vedenia a rebrami
+    rbox(colG, -3.6, 7.8, 0, 1.2, -5.6, 5.6, M.greenDark, 0.14);
+    ribs(colG, 'x', -3.0, 7.2, 8, 0.15, 1.05, 5.6, 0.07, 0.1, M.greenDeep);
+    bolts(
+      colG,
+      [-2.6, 0, 2.6, 5.2].map((x) => [x, 0.5]),
+      5.67,
+    );
     [-1, 1].forEach((s) => box(colG, -3.4, 7.6, 1.2, 1.28, s * 3.2 - 0.3, s * 3.2 + 0.3, M.ways));
+    oilGlass(colG, 6.8, 0.6, 5.6);
     // ---------- vreteník ----------
     const headY = grp('vretennik');
-    box(headY, -7.0, -4.6, -1.4, 1.6, -1.6, 1.6, M.green);
+    rbox(headY, -7.0, -4.6, -1.4, 1.6, -1.6, 1.6, M.green, 0.16);
+    ribs(headY, 'y', -1.2, 1.4, 3, -6.9, -4.75, -1.76, 0.16, 0.08, M.greenDark);
     cylY(headY, 0.7, 0.7, 1.6, 3.0, -5.8, 0, M.green, 28);
+    cylY(headY, 0.74, 0.74, 2.95, 3.05, -5.8, 0, M.greenDark, 28);
     cylX(headY, 0.62, 0.62, -4.6, -4.3, 0, 0, M.greenDark, 32);
+    oilGlass(headY, -4.95, -0.9, 1.6);
+    valuePlate(
+      headY,
+      -5.4,
+      1.15,
+      1.61,
+      0,
+      'n [1/min]',
+      [8, 12.5, 20, 31.5, 50, 80, 125, 200, 315, 500, 800, 1250],
+      0.95,
+    );
     const spin = new THREE.Group();
     headY.add(spin);
     cylX(spin, 1.15, 1.15, -4.3, -4.15, 0, 0, M.steelDark, 40); // planžeta
@@ -281,16 +319,44 @@ function HorizSimulator({ onBack, params }) {
     cylZ(colG, 0.1, 0.1, 2.2, 2.4, -8.3, 3.0, M.steel, 12);
     // ---------- sane, stôl, otočný stôl ----------
     const sad = grp('stol');
-    box(sad, -2.4, 2.4, 1.28, 2.0, -4.6, 4.6, M.green);
+    rbox(sad, -2.4, 2.4, 1.28, 2.0, -4.6, 4.6, M.green, 0.1);
+    // teleskopické kryty vedenia saní (vpredu a vzadu)
+    for (const s2 of [-1, 1])
+      for (let k = 0; k < 3; k++)
+        box(
+          sad,
+          -2.2 + k * 0.05,
+          2.2 - k * 0.05,
+          1.3 + k * 0.03,
+          1.36 + k * 0.03,
+          s2 * (4.6 + k * 0.25),
+          s2 * (4.85 + k * 0.25),
+          M.steelDark,
+        );
     const wZ = handwheel(sad, 0.45, 2.7, 1.6, 3.8, 'x', 0.26);
     const tbl = new THREE.Group();
     sad.add(tbl);
-    box(tbl, -2.2, 2.2, 2.0, 2.8, -2.4, 2.4, M.green);
+    rbox(tbl, -2.2, 2.2, 2.0, 2.8, -2.4, 2.4, M.green, 0.1);
+    // stupnica otočného stola B na obvode dosky (po 1°, čísla po 30°), ryska je na stole
+    const bTx = angleScaleTex(180, 1, { numR: 0.86, step: 30, len: 0.08 });
     const wX = handwheel(tbl, 0.42, 0, 2.4, 2.7, 'z', 0.25);
     const turn = new THREE.Group();
     turn.position.y = 2.8;
     tbl.add(turn);
     cylY(turn, 2.1, 2.1, 0, 0.5, 0, 0, M.steelDark, 64);
+    if (bTx) {
+      const ring = add(
+        turn,
+        new THREE.RingGeometry(1.82, 2.08, 128),
+        new THREE.MeshStandardMaterial({ map: bTx, roughness: 0.4, metalness: 0.4 }),
+        0,
+        0.504,
+        0,
+      );
+      ring.rotation.set(-Math.PI / 2, 0, -Math.PI / 2); // 0° proti ryske na strane +X
+      ring.userData.noMerge = true;
+      ring.castShadow = false;
+    }
     for (let k = 0; k < 4; k++) {
       const s2 = add(turn, new THREE.BoxGeometry(3.6, 0.012, 0.12), M.black, 0, 0.502, 0);
       s2.rotation.y = (k * Math.PI) / 4;

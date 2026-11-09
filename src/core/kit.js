@@ -4,6 +4,7 @@ import { LIGHT_K } from './stage';
 import { TAU } from './util';
 
 // ---------- materiály a súprava tvarov ----------
+const DIAL_IN = 0.44; // vnútorný polomer stupnice voči vonkajšiemu
 const std = (hex, roughness, metalness, o = {}) =>
   new THREE.MeshStandardMaterial({ color: new THREE.Color(hex).convertSRGBToLinear(), roughness, metalness, ...o });
 const mkTex = (w, h, draw, rx, ry) => {
@@ -105,6 +106,54 @@ function makeKit(M) {
   };
   const detents = (p, x, y, z, r, angles, s = 0.035) =>
     angles.forEach((a) => cylZ(p, s, s, z, z + 0.012, x - Math.sin(a) * r, y + Math.cos(a) * r, M.white, 10));
+  // ryskovaná stupnica (nonius) za ručným kolesom: 50 dielikov, čísla po 10; pevná ryska je na ráme
+  const dialMat = (() => {
+    let mat = null;
+    return () => {
+      if (mat || typeof document === 'undefined') return mat;
+      const tx = mkTex(
+        256,
+        256,
+        (g, w) => {
+          const c = w / 2,
+            rO = c - 1,
+            rI = rO * DIAL_IN;
+          g.clearRect(0, 0, w, w);
+          g.fillStyle = '#d9dcdc';
+          g.beginPath();
+          g.arc(c, c, rO, 0, TAU);
+          g.arc(c, c, rI, 0, TAU, true);
+          g.fill();
+          g.strokeStyle = '#1b1d1f';
+          g.fillStyle = '#1b1d1f';
+          g.font = 'bold 22px Arial';
+          g.textAlign = 'center';
+          g.textBaseline = 'middle';
+          for (let i = 0; i < 50; i++) {
+            const a = (i / 50) * TAU - Math.PI / 2,
+              len = i % 10 ? (i % 5 ? 0.16 : 0.26) : 0.34;
+            g.lineWidth = i % 5 ? 2 : 3;
+            g.beginPath();
+            g.moveTo(c + Math.cos(a) * rO * 0.98, c + Math.sin(a) * rO * 0.98);
+            g.lineTo(c + Math.cos(a) * rO * (0.98 - len), c + Math.sin(a) * rO * (0.98 - len));
+            g.stroke();
+            if (i % 10 === 0) {
+              g.save();
+              g.translate(c + Math.cos(a) * rO * 0.5, c + Math.sin(a) * rO * 0.5);
+              g.rotate(a + Math.PI / 2);
+              g.fillText(String(i), 0, 0);
+              g.restore();
+            }
+          }
+        },
+        1,
+        1,
+      );
+      tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping;
+      mat = new THREE.MeshStandardMaterial({ map: tx, roughness: 0.35, metalness: 0.55, transparent: true });
+      return mat;
+    };
+  })();
   // ručné koleso: os otáčania = lokálna Z (pre 'x' / '-x' otočená na svetovú ±X)
   const handwheel = (p, R, x, y, z, axis, crankLen) => {
     const outer = new THREE.Group();
@@ -133,6 +182,20 @@ function makeKit(M) {
       hy = Math.sin(-Math.PI / 6) * R * 0.95;
     cylZ(spin, R * 0.07, R * 0.06, 0, crankLen, hx, hy, M.black, 12);
     ball(spin, R * 0.1, hx, hy, crankLen, M.black);
+    // stupnica sa točí s kolesom, ryska stojí; dvojklik na koleso nastaví nulu (core/controls)
+    const dm = dialMat();
+    if (dm) {
+      const rO = Math.max(R * 0.46, R * 0.2 + 0.1),
+        dial = new THREE.Mesh(new THREE.RingGeometry(rO * DIAL_IN, rO, 48, 1), dm);
+      dial.position.z = -0.135;
+      dial.name = 'graduated-dial';
+      dial.userData.noMerge = true;
+      spin.add(dial);
+      spin.userData.dial = dial;
+      cylZ(spin, rO * 1.02, rO * 1.02, -0.17, -0.14, 0, 0, M.steelDark, 40);
+      const mark = add(outer, new THREE.BoxGeometry(R * 0.035, rO * 0.22, 0.02), M.red, 0, rO * 1.08, -0.13);
+      mark.name = 'dial-index-mark';
+    }
     return spin;
   };
   // kľuka s jedným ramenom, os otáčania = lokálna Z

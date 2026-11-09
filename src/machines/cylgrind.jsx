@@ -6,6 +6,7 @@ import { createMachineWorkInspect } from '../core/machineWorkInspect';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail, angleScaleTex } from '../core/detail';
 import { createDrops, createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
@@ -43,10 +44,19 @@ const cylParts = () =>
       'lozko',
       'Lôžko',
       'Bed',
-      'Lôžko s hydraulikou',
-      'Bed with hydraulics',
-      'V lôžku je hydraulický agregát, ktorý posúva stôl tam a späť medzi dorazmi. Vpredu sú ručné kolesá stola a prísuvu a páka hydrauliky.',
-      'The bed holds the hydraulic unit that moves the table back and forth between the dogs. The table and infeed handwheels and the hydraulic lever are at the front.',
+      'Lôžko s vaňou chladenia',
+      'Bed with coolant tray',
+      'Liatinové lôžko nesie stôl a brúsny vreteník. Vpredu sú ručné kolesá stola a prísuvu, páka hydrauliky a vaňa na chladiacu kvapalinu.',
+      'The cast-iron bed carries the table and the wheelhead. The table and infeed handwheels, the hydraulic lever and the coolant tray are at the front.',
+    ],
+    [
+      'hydraulika',
+      'Hydraulický agregát',
+      'Hydraulic unit',
+      'Hydraulický agregát',
+      'Hydraulic power unit',
+      'Nádrž s olejom, motor s čerpadlom a potrubie do lôžka. Tlakový olej posúva stôl tam a späť medzi dorazmi.',
+      'Oil tank, motor with pump and piping into the bed. Pressure oil moves the table back and forth between the dogs.',
     ],
     [
       'stol',
@@ -215,11 +225,59 @@ function CylGrinderSimulator({ onBack, params }) {
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
     // ---------- lôžko ----------
+    const { rbox, ribs, nameplate, oilGlass, cable, bolts } = makeDetail(kit, M);
     const bed = grp('lozko');
-    box(bed, -9, 9, 0, 8.0, -4.6, 2.6, M.green);
-    box(bed, -9.1, 9.1, 0, 0.3, -4.7, 2.7, M.greenDeep);
+    rbox(bed, -9, 9, 0.25, 8.0, -4.6, 2.6, M.green, 0.22);
+    rbox(bed, -9.1, 9.1, 0, 0.32, -4.7, 2.7, M.greenDeep, 0.06);
     box(bed, -8.6, 8.6, 7.9, 8.02, 0.1, 1.9, M.ways);
-    box(bed, -2.6, 2.6, 8.0, 8.6, -4.4, -0.6, M.greenDark); // lôžko brúsneho vreteníka
+    // vaňa chladiacej kvapaliny pred stolom s okrajom a výpustom
+    rbox(bed, -8.9, 8.9, 7.75, 8.25, 2.05, 2.6, M.greenDark, 0.08);
+    box(bed, -8.7, 8.7, 7.9, 7.95, 1.95, 2.45, M.steelDark);
+    cylZ(bed, 0.1, 0.1, 2.6, 2.95, 8.4, 7.75, M.steelDark, 12);
+    rbox(bed, -2.6, 2.6, 8.0, 8.6, -4.4, -0.6, M.greenDark, 0.08); // lôžko brúsneho vreteníka
+    ribs(bed, 'x', -8.5, 8.5, 9, 0.6, 7.5, -4.75, 0.15, 0.12, M.greenDark); // rebrá lôžka vzadu
+    // dvierka skríň v lôžku, výrobný štítok, olejoznaky
+    [-7.4, -3.4].forEach((x) => {
+      rbox(bed, x, x + 2.6, 0.9, 4.2, 2.6, 2.66, M.greenDark, 0.04);
+      cylZ(bed, 0.07, 0.07, 2.66, 2.74, x + 2.3, 2.6, M.steel, 12);
+    });
+    nameplate(bed, 6.4, 3.4, 2.61, 0, 'TOS Hostivař', 'BUA 25', 1.15);
+    oilGlass(bed, 5.4, 1.4, 2.6);
+    oilGlass(bed, -8.4, 6.9, 2.6);
+    bolts(
+      bed,
+      [-8.5, -4.5, 0, 4.5, 8.5].map((x) => [x, 0.16]),
+      2.7,
+    );
+    // hydraulický agregát vedľa stroja: nádrž, motor s čerpadlom, potrubie do lôžka
+    const hyd = grp('hydraulika');
+    rbox(hyd, -12.6, -9.8, 0, 2.4, -3.2, 0.4, M.greenDark, 0.12);
+    cylY(hyd, 0.55, 0.55, 2.4, 3.9, -11.6, -1.4, M.green, 28);
+    cylY(hyd, 0.58, 0.58, 3.85, 3.95, -11.6, -1.4, M.greenDark, 28);
+    cylY(hyd, 0.3, 0.3, 2.4, 2.95, -10.5, -1.4, M.steelDark, 18);
+    oilGlass(hyd, -11.2, 1.2, 0.4);
+    cable(
+      hyd,
+      [
+        [-10.5, 2.9, -1.4],
+        [-10.1, 3.1, -1.2],
+        [-9.4, 2.6, -0.8],
+        [-9.0, 2.2, -0.6],
+      ],
+      0.07,
+      M.steelDark,
+    );
+    cable(
+      hyd,
+      [
+        [-10.6, 2.9, -1.6],
+        [-10.0, 3.3, -2.0],
+        [-9.3, 3.0, -2.4],
+        [-9.0, 2.8, -2.4],
+      ],
+      0.07,
+      M.steelDark,
+    );
     const wTable = handwheel(bed, 0.6, -3.2, 5.6, 2.75, 'z', 0.4);
     cylZ(bed, 0.12, 0.12, 2.6, 2.75, -3.2, 5.6, M.steel, 12);
     const wFeed = handwheel(bed, 0.72, 3.2, 5.6, 2.8, 'z', 0.45);
@@ -264,10 +322,29 @@ function CylGrinderSimulator({ onBack, params }) {
     hitProxy(eStop, 0.26, 0, 0, 0.1);
     // ---------- stôl s vreteníkom a koníkom ----------
     const tbl = grp('stol');
-    box(tbl, -8.0, 8.0, 8.02, 8.5, 0.0, 2.0, M.greenDark);
+    rbox(tbl, -8.0, 8.0, 8.02, 8.5, 0.0, 2.0, M.greenDark, 0.08);
+    box(tbl, -7.9, 7.9, 8.5, 8.56, 0.25, 1.75, M.steelDark); // horný otočný stôl
+    // stupnica natočenia horného stola (kužele) uprostred prednej hrany
+    const tTx = angleScaleTex(10, 4, { numR: 0.7, step: 5 });
+    if (tTx) {
+      const sc = add(
+        tbl,
+        new THREE.CircleGeometry(0.42, 48),
+        new THREE.MeshStandardMaterial({ map: tTx, roughness: 0.4, metalness: 0.4 }),
+        0,
+        8.26,
+        2.004,
+      );
+      sc.userData.noMerge = true;
+      sc.castShadow = false;
+    }
     const head = new THREE.Group();
     tbl.add(head);
-    box(head, -1.9, 0, 8.5, 11.4, 0.0, 2.0, M.green);
+    rbox(head, -1.9, 0, 8.5, 11.4, 0.0, 2.0, M.green, 0.12);
+    // motor pracovného vreteníka s krytom remeňa
+    cylX(head, 0.42, 0.42, -1.75, -0.35, 11.95, 1.0, M.green, 24);
+    rbox(head, -0.4, -0.1, 11.4, 12.4, 0.5, 1.5, M.greenDark, 0.06);
+    oilGlass(head, -1.0, 9.3, 2.0);
     cylX(head, 0.32, 0.32, 0, 0.3, AX, ZA, M.steelDark, 24);
     const drive = new THREE.Group();
     drive.position.set(0.32, AX, ZA);
@@ -277,7 +354,8 @@ function CylGrinderSimulator({ onBack, params }) {
     cylX(head, 0.0, 0.13, 0.42, 0.75, AX, ZA, M.steel, 20); // pevný hrot
     const tail = new THREE.Group();
     tbl.add(tail);
-    box(tail, 0.5, 2.2, 8.5, 11.0, 0.15, 1.85, M.green);
+    rbox(tail, 0.5, 2.2, 8.5, 11.0, 0.15, 1.85, M.green, 0.1);
+    rbox(tail, 0.35, 2.35, 8.5, 8.75, 0.05, 1.95, M.greenDark, 0.04);
     cylX(tail, 0.28, 0.28, 0.0, 0.5, AX, ZA, M.steel, 24);
     cylX(tail, 0.13, 0.0, -0.33, 0.0, AX, ZA, M.steel, 20);
     ball(tail, 0.12, 1.4, 11.15, 1.0, M.black);
@@ -374,10 +452,14 @@ function CylGrinderSimulator({ onBack, params }) {
     const wh = grp('vretennik');
     const whz = new THREE.Group();
     wh.add(whz);
-    box(whz, -2.2, 2.2, 8.6, 9.0, -1.4, 1.4, M.green);
-    box(whz, 0.3, 2.0, AX - 0.9, AX + 0.9, -1.0, 1.0, M.green); // skriňa vretena
+    rbox(whz, -2.2, 2.2, 8.6, 9.0, -1.4, 1.4, M.green, 0.08);
+    rbox(whz, 0.3, 2.0, AX - 0.9, AX + 0.9, -1.0, 1.0, M.green, 0.14); // skriňa vretena
     cylY(whz, 0.55, 0.55, AX + 0.9, AX + 2.0, 1.15, -0.2, M.green, 24); // motor
-    box(whz, -2.0, 2.0, 9.0, AX - 0.9, -1.2, 0.2, M.greenDark);
+    for (let k = 0; k < 6; k++)
+      cylY(whz, 0.58, 0.58, AX + 1.0 + k * 0.17, AX + 1.06 + k * 0.17, 1.15, -0.2, M.greenDark, 24);
+    rbox(whz, 0.35, 1.95, AX + 0.9, AX + 2.1, -1.35, -0.75, M.greenDark, 0.1); // kryt remeňa
+    rbox(whz, -2.0, 2.0, 9.0, AX - 0.9, -1.2, 0.2, M.greenDark, 0.1);
+    oilGlass(whz, 1.4, AX - 0.4, 1.0);
     const wheel = new THREE.Group();
     whz.add(wheel);
     wheel.position.set(0, AX, 0);
@@ -471,6 +553,7 @@ function CylGrinderSimulator({ onBack, params }) {
     // ---------- pohľady ----------
     const anchors = {
       lozko: () => v3(-7.5, 4.0, 2.7),
+      hydraulika: () => v3(-11.2, 4.2, -1.4),
       stol: () => v3(st.xt + 6.5, 8.6, 2.0),
       vretennik: () => v3(1.4, AX + 2.2, wheelZ(st.d) - 0.2),
       obrobok: () => v3(st.xt - wL / 4, AX + 0.45, ZA),

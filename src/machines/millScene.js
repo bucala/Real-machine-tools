@@ -4,6 +4,7 @@ import { L, LL, RPM } from '../core/i18n';
 import { TAU, approach, clamp, logNear } from '../core/util';
 import * as THREE from 'three';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createControls } from '../core/controls';
 import { createDrops, createParticles } from '../core/particles';
 import { createHeightField } from '../core/heightField';
@@ -85,6 +86,11 @@ export function createMillScene({ apiRef, ctl, layerRef, mountRef, setTele, setU
   const col = grp('stojan');
   box(col, -1.5, 1.5, 0.45, 13.4, -4.4, -1.6, M.green);
   box(col, -1.6, 1.6, 13.4, 13.6, -4.5, -1.5, M.greenDark);
+  {
+    const det = makeDetail(kit, M);
+    det.nameplate(col, 1.505, 10.6, -3.0, Math.PI / 2, 'TOS Olomouc', 'FA 3 B', 1.15);
+    det.oilGlass(col, 1.5, 4.2, -3.0, Math.PI / 2);
+  }
   box(col, -1.15, -0.75, 0.45, 13.4, -1.6, -1.52, M.ways); // rybinové vedenie konzoly
   box(col, 0.75, 1.15, 0.45, 13.4, -1.6, -1.52, M.ways);
   box(col, -1.52, -1.5, 1.4, 6.0, -4.0, -2.0, M.greenDark); // bočné dvierka

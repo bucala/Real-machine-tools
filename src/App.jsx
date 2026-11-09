@@ -29,6 +29,17 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
+import {
+  BenchGrinderArt,
+  CenterlessArt,
+  FguArt,
+  FnkArt,
+  HBandSawArt,
+  HovArt,
+  KaruselArt,
+  SvArt,
+  ToolGrinderArt,
+} from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -51,6 +62,15 @@ const GrinderSimulator = lazy(() => import('./machines/grinder'));
 const CylGrinderSimulator = lazy(() => import('./machines/cylgrind'));
 const ShaperSimulator = lazy(() => import('./machines/shaper'));
 const SlotterSimulator = lazy(() => import('./machines/slotter'));
+const FguSimulator = lazy(() => import('./machines/fgu'));
+const FnkSimulator = lazy(() => import('./machines/fnk'));
+const KaruselSimulator = lazy(() => import('./machines/karusel'));
+const BnSimulator = lazy(() => import('./machines/bn'));
+const BbtSimulator = lazy(() => import('./machines/bbt'));
+const BbjSimulator = lazy(() => import('./machines/bbj'));
+const HovSimulator = lazy(() => import('./machines/hov'));
+const PasovkaSimulator = lazy(() => import('./machines/pasovka'));
+const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
 const MigSimulator = lazy(() => import('./machines/weld').then((m) => ({ default: m.MigSimulator })));
@@ -105,6 +125,82 @@ const MACHINES = [
     }),
   },
   {
+    id: 'sv',
+    Art: SvArt,
+    Comp: SvSimulator,
+    t: () => ({
+      meta: L('Sústruh', 'Lathe'),
+      name: L('Univerzálny hrotový sústruh', 'Universal centre lathe'),
+      model: 'TOS Trenčín SV 18 RA',
+      desc: L(
+        'Najčastejší školský sústruh: menší a ľahší než SN – točný priemer 380 mm nad lôžkom, výška hrotov 190 mm. Rovnaké ovládanie, nože, závity a úlohy ako na SN, na porovnanie veľkostí.',
+        'The most common school lathe: smaller and lighter than the SN – 380 mm swing over the bed, 190 mm centre height. Same controls, tools, threads and tasks as the SN, for comparing sizes.',
+      ),
+      specs: [
+        L('Točný Ø 380 mm', 'Swing Ø380 mm'),
+        L('Vreteno Ø41, 6 kW', 'Spindle bore Ø41, 6 kW'),
+        L('Hroty 750 – 1 250 mm', 'Centres 750 – 1,250 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'karusel',
+    Art: KaruselArt,
+    Comp: KaruselSimulator,
+    t: () => ({
+      meta: L('Karuselový sústruh', 'Vertical lathe'),
+      name: L('Karuselový sústruh', 'Vertical turret lathe'),
+      model: 'TOS Hulín SK 12',
+      desc: L(
+        'Veľké kotúče na otočnej upínacej doske: priečnik so zdvihom, suport so smykadlom, posuv v mm na otáčku, rezná rýchlosť podľa priemeru, čelo a osadenie.',
+        'Large discs on a rotary faceplate: elevating cross rail, rail head with ram, feed in mm per revolution, cutting speed by diameter, facing and shouldering.',
+      ),
+      specs: [
+        L('Doska Ø1 200 mm', 'Faceplate Ø1,200 mm'),
+        L('Točný Ø do 1 300 mm', 'Swing up to Ø1,300 mm'),
+        L('Obrobok do 4 t', 'Work up to 4 t'),
+      ],
+    }),
+  },
+  {
+    id: 'fgu',
+    Art: FguArt,
+    Comp: FguSimulator,
+    t: () => ({
+      meta: L('Univerzálna frézka', 'Universal mill'),
+      name: L('Univerzálna konzolová frézka', 'Universal knee-type milling machine'),
+      model: 'TOS Olomouc FGU 32',
+      desc: L(
+        'Vodorovné vreteno s tŕňom a podperou, kotúčová fréza, otočný stôl ±45° pre šikmé drážky, súsledné a nesúsledné frézovanie s vymedzením vôle.',
+        'Horizontal spindle with arbor and support, side-and-face cutter, ±45° swivel table for inclined slots, climb and conventional milling with backlash eliminator.',
+      ),
+      specs: [
+        L('Stôl 320 × 1 250 mm', 'Table 320 × 1,250 mm'),
+        L('12 otáčok 31,5 – 1 400', '12 speeds 31.5 – 1,400'),
+        L('Natočenie stola ±45°', 'Table swivel ±45°'),
+      ],
+    }),
+  },
+  {
+    id: 'fnk',
+    Art: FnkArt,
+    Comp: FnkSimulator,
+    t: () => ({
+      meta: L('Nástrojárska frézka', 'Toolroom mill'),
+      name: L('Nástrojárska frézka s natáčacou hlavou', 'Toolroom mill with swivelling head'),
+      model: 'TOS Kuřim FNK 25',
+      desc: L(
+        'Zvislá hlava natáčaná o ±45° podľa stupnice, pinola, stopkové frézy Ø12 / Ø16: úkosy čelom frézy a drážky, krížový stôl s posuvmi X a Y.',
+        'Vertical head swivelling ±45° by its scale, quill, Ø12 / Ø16 end mills: bevels with the cutter face and slots, compound table with X and Y feeds.',
+      ),
+      specs: [
+        L('Stôl 1 250 × 290 mm', 'Table 1,250 × 290 mm'),
+        L('X 800 / Y 370 / Z 450', 'X 800 / Y 370 / Z 450'),
+        L('Hlava ±45°', 'Head ±45°'),
+      ],
+    }),
+  },
+  {
     id: 'vrtacka',
     Art: DrillArt,
     Comp: DrillSimulator,
@@ -130,7 +226,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Odvalovacia frézka', 'Gear hobber'),
       name: L('Odvalovacia frézka na ozubenie', 'Gear hobbing machine'),
-      model: 'TOS Čelákovice',
+      model: 'TOS Čelákovice OFA 32',
       desc: L(
         'Výroba čelných ozubených kolies odvalovaním: výmenné kolesá delenia i = 24 / z, sklon frézy na stúpací uhol, radiálny prísuv na hĺbku 2,25 · m, zvislý posuv a kontrola rozmeru cez zuby Wk.',
         'Generating spur gears by hobbing: index change gears i = 24 / z, hob swivel to the lead angle, radial infeed to 2.25 · m, vertical feed and span-over-teeth Wk check.',
@@ -139,6 +235,25 @@ const MACHINES = [
         L('Modul 2, z 20 – 40', 'Module 2, z 20 – 40'),
         L('Fréza Ø70 jednochodá', 'Single-start Ø70 hob'),
         L('Kontrola Wk ±0,05', 'Wk check ±0.05'),
+      ],
+    }),
+  },
+  {
+    id: 'hov',
+    Art: HovArt,
+    Comp: HovSimulator,
+    t: () => ({
+      meta: L('Zvislá obrážačka', 'Vertical slotter'),
+      name: L('Zvislá obrážačka s otočným stolom', 'Vertical slotter with rotary table'),
+      model: 'TOS HOV 25',
+      desc: L(
+        'Oblúkový stojan so smykadlom vpredu, krížový a otočný stôl Ø500: viac drážok v náboji s delením otočného stola, vonkajší oblúk kruhovým posuvom, dĺžka a poloha zdvihu, narážky posuvov, nárazy do stola a upínok.',
+        'Arched column with the ram at the front, compound and rotary table Ø500: several keyways in a hub indexed on the rotary table, an outside arc with the rotary feed, stroke length and position, feed stops, crashes into the table and clamps.',
+      ),
+      specs: [
+        L('Zdvih do 250 mm', 'Stroke up to 250 mm'),
+        L('Otočný stôl Ø500', 'Rotary table Ø500'),
+        L('Posuvy 560 × 450 mm', 'Travels 560 × 450 mm'),
       ],
     }),
   },
@@ -168,7 +283,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Horizontálka', 'Horizontal borer'),
       name: L('Horizontálna vŕtačka a frézka', 'Horizontal boring mill'),
-      model: 'TOS Varnsdorf W',
+      model: 'TOS Varnsdorf W 9',
       desc: L(
         'Vyvrtávanie otvorov v skriňových odliatkoch: vreteník na stojane, vysúvacie vreteno W, krížový stôl a otočný stôl s aretáciou po 90°, mikrometrická vyvrtávacia hlava a priehyb tyče podľa vyloženia.',
         'Boring holes in box castings: headstock on the column, extending W spindle, compound table and a rotary table locking every 90°, micrometer boring head and bar deflection by overhang.',
@@ -282,7 +397,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Brúska', 'Grinder'),
       name: L('Rovinná brúska', 'Surface grinder'),
-      model: 'BPH 300',
+      model: 'TOS Hostivař BPH 300',
       desc: L(
         'Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.',
         'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.',
@@ -295,13 +410,70 @@ const MACHINES = [
     }),
   },
   {
+    id: 'bn',
+    Art: ToolGrinderArt,
+    Comp: BnSimulator,
+    t: () => ({
+      meta: L('Nástrojárska brúska', 'Tool grinder'),
+      name: L('Nástrojárska brúska na ostrenie nožov', 'Tool and cutter grinder'),
+      model: 'TOS Hostivař BN 102',
+      desc: L(
+        'Ostrenie sústružníckeho noža hrnčekovým kotúčom: univerzálny naklápací držiak so stupnicou, uhol chrbta α a čela γ, prísuv po stotinách, prepálenie pri veľkom prísuve.',
+        'Sharpening a turning tool with a cup wheel: universal tilting holder with a scale, clearance α and rake γ angles, infeed in hundredths, burning at too large an infeed.',
+      ),
+      specs: [
+        L('Kotúč do Ø280', 'Wheel up to Ø280'),
+        L('2 800 – 5 600 ot/min', '2,800 – 5,600 rpm'),
+        L('Stôl 920 × 140 mm', 'Table 920 × 140 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'bezhrot',
+    Art: CenterlessArt,
+    Comp: BbjSimulator,
+    t: () => ({
+      meta: L('Bezhrotová brúska', 'Centreless grinder'),
+      name: L('Bezhrotová brúska', 'Centreless grinder'),
+      model: 'TOS Hostivař BBJ 6',
+      desc: L(
+        'Priebežné brúsenie kolíkov medzi brúsnym a podávacím kotúčom: medzera = priemer, naklopenie α a rýchlosť prechodu, výška podpery a guľatosť, úber na prechod.',
+        'Throughfeed grinding of pins between the grinding and the regulating wheel: gap = diameter, tilt α and throughfeed rate, rest height and roundness, stock per pass.',
+      ),
+      specs: [
+        L('Priemer do 63 mm', 'Diameter up to 63 mm'),
+        L('Kotúče Ø500 / Ø250', 'Wheels Ø500 / Ø250'),
+        L('Kolíky Ø20 ±0,01', 'Pins Ø20 ±0.01'),
+      ],
+    }),
+  },
+  {
+    id: 'dvojkotuc',
+    Art: BenchGrinderArt,
+    Comp: BbtSimulator,
+    t: () => ({
+      meta: L('Brúska nožov', 'Tool grinder'),
+      name: L('Brúska nožov s naklápacími stolmi', 'Tool grinder with tilting tables'),
+      model: 'TOS BBT 350',
+      desc: L(
+        'Ostrenie sústružníckych nožov čelom kotúča: hrubý a jemný kotúč, naklápací stôl so stupnicou určuje uhol chrbta, medzera stola do 3 mm, mokré brúsenie a prepálenie nasucho.',
+        'Sharpening turning tools on the wheel face: coarse and fine wheel, the tilting table with a scale sets the clearance angle, table gap up to 3 mm, wet grinding and burning when dry.',
+      ),
+      specs: [
+        L('Stoly 560 × 210 mm', 'Tables 560 × 210 mm'),
+        L('Vreteno ≈ 1 560 ot/min', 'Spindle ≈ 1,560 rpm'),
+        L('Hrubý + jemný kotúč', 'Coarse + fine wheel'),
+      ],
+    }),
+  },
+  {
     id: 'gulato',
     Art: CylGrinderArt,
     Comp: CylGrinderSimulator,
     t: () => ({
       meta: L('Brúska na guľato', 'Cylindrical grinder'),
       name: L('Hrotová brúska na guľato', 'Cylindrical grinder'),
-      model: 'TOS BUA',
+      model: 'TOS Hostivař BUA 25',
       desc: L(
         'Brúsenie hriadeľov medzi hrotmi na mikróny: hydraulický stôl s dorazmi, prísuv kotúča po 0,005 mm, automatický prísuv na obrate, vyiskrovanie, prepal pri veľkom zábere a meranie mikrometrom.',
         'Grinding shafts between centres to microns: hydraulic table with dogs, 0.005 mm wheel infeed, automatic infeed at reversal, spark-out, burning at too large an infeed and micrometer measurement.',
@@ -369,6 +541,25 @@ const MACHINES = [
         L('Kolesá Ø720 mm', 'Wheels Ø720 mm'),
         L('Pás 3 / 10 / 25 m/s', 'Blade 3 / 10 / 25 m/s'),
         L('Rez do 150 mm', 'Cut up to 150 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'pasovka',
+    Art: HBandSawArt,
+    Comp: PasovkaSimulator,
+    t: () => ({
+      meta: L('Pásová píla', 'Band saw'),
+      name: L('Pásová píla na kov', 'Metal-cutting band saw'),
+      model: 'Pilous ARG 200 PLUS',
+      desc: L(
+        'Delenie tyčí na kusy: zverák, dĺžkový doraz so stupnicou, otočné rameno na šikmé rezy, rýchlosť klesania ramena hydraulikou, rýchlosť pásu podľa materiálu, chladenie a preťaženie pásu.',
+        'Cutting bars to length: vise, length stop with a scale, swivelling arm for mitre cuts, hydraulic arm feed, band speed by material, coolant and band overload.',
+      ),
+      specs: [
+        L('Kruh do Ø200 mm', 'Round up to Ø200 mm'),
+        L('Pás 20 × 0,9 mm, 40 / 80 m/min', 'Band 20 × 0.9 mm, 40 / 80 m/min'),
+        L('Šikmo 60° vpravo, 45° vľavo', 'Mitre 60° right, 45° left'),
       ],
     }),
   },

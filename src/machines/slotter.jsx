@@ -6,6 +6,7 @@ import { L, LL } from '../core/i18n';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp, fanAngles, logNear } from '../core/util';
@@ -330,6 +331,11 @@ function SlotterSimulator({ onBack, params }) {
     // ---------- stojan s hlavou; bok hlavy na strane obsluhy má okno ku kulise ----------
     const col = grp('stojan');
     box(col, -5.0, -2.3, 1.1, 8.8, -1.3, 1.3, M.green);
+    {
+      const det = makeDetail(kit, M);
+      det.nameplate(col, -3.65, 6.2, 1.305, 0, 'TOS', 'ST 350', 1.1);
+      det.oilGlass(col, -4.5, 2.2, 1.3);
+    }
     box(col, -5.2, -2.1, 1.1, 1.5, -1.5, 1.5, M.greenDark);
     box(col, -5.0, 0.8, 8.8, 9.0, -1.2, 1.2, M.green); // dno hlavy
     box(col, -5.0, 0.8, 10.95, 11.2, -1.2, 1.2, M.green); // strop hlavy

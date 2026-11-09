@@ -21,6 +21,7 @@ import { L, LL, RPM } from '../core/i18n';
 import { TAU, approach, clamp, logNear } from '../core/util';
 import * as THREE from 'three';
 import { baseMats, createLamp, makeKit, mkTex, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createControls } from '../core/controls';
 import { createDrops, createParticles } from '../core/particles';
 import { createInspector } from '../core/inspector';
@@ -216,6 +217,13 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
     power: 3.4,
   });
 
+  // výrobný štítok na dvierkach podstavca a olejoznaky vretenníka
+  {
+    const det = makeDetail(kit, M);
+    det.nameplate(base, -7.6, 2.5, 1.945, 0, 'TOS Trenčín', MD.name, 1.15);
+    det.oilGlass(hs, -9.4, 5.7, 1.85);
+    det.oilGlass(base, 10.8, 1.0, 1.74);
+  }
   // ---------- prevodovka posuvov ----------
   const gb = grp('prevodovka');
   box(gb, -9.9, -5.25, 2.5, 4.95, 1.5, 2.35, M.green);

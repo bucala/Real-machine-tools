@@ -7,6 +7,38 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 9. 11. 2026
 
+- Nové stroje (body 13 – 22 auditu, overené konkrétne modely):
+  - univerzálna konzolová frézka TOS Olomouc FGU 32 – kotúčová fréza na tŕni, otočný stôl, súsledné / nesúsledné
+    frézovanie; nástrojárska frézka TOS Kuřim FNK 25 – natáčacia hlava a úkos; karuselový sústruh TOS Hulín SK 12;
+    hrotový sústruh TOS Trenčín SV 18 RA; bezhrotová brúska TOS Hostivař BBJ 6 (priebežné brúsenie kolíkov);
+  - zvislá obrážačka TOS HOV 25 (nahradila obrážačku ozubenia OHA 32 A): oblúkový stojan, smykadlo so zdvihom do
+    250 mm, krížový a otočný stôl Ø500 so šnekom a zaistením, samočinný priečny a kruhový posuv s narážkami;
+    úlohy štyri drážky 10 × 3 po 90° s delením a vonkajší oblúk R55 kruhovým posuvom; nárazy do stola, podložky
+    a upínok, preťaženie noža;
+  - pásová píla Pilous ARG 200 PLUS: zverák, dĺžkový doraz so stupnicou, otočné rameno na šikmé rezy so zaistením,
+    hydraulické klesanie ramena, rýchlosť pásu 40 / 80 m/min, chladenie, preťaženie pásu, koncový spínač; úlohy
+    tri kusy 250 mm a dva kusy 150 mm pod 45°.
+- TOS Hostivař BN 102 prerobená podľa fotiek: skriňový podstavec s dvierkami a panelom, pozdĺžny stôl 920 mm
+  s T-drážkou a narážkami, bubon priečneho prísuvu, stĺp s mechom, otočný vreteník s kotúčmi na oboch koncoch,
+  lampa. Oprava: nôž sa dal prisunúť len o 4 mm, takže pri naklopení 8° sa nedalo prebrúsiť celé čelo.
+- TOS BBT 350 prerobená podľa fotiek: nie je to stojanová dvojkotúčová brúska, ale brúska nožov – dva kotúče
+  brúsia čelom, pred každým je naklápací stôl so segmentovou stupnicou (sklon = uhol chrbta), vane s chladiacou
+  emulziou, prísuv stola ku kotúču (medzera do 3 mm). Úloha: hrubovanie na hrubom a dokončenie na jemnom kotúči.
+- Unit testy výpočtov nových strojov (FGU, FNK, SK 12, brúsenie noža, BBJ 6, HOV 25, píla).
+
+- Klasické stroje – ovládanie (body 5 – 7 auditu):
+  - ryskovaná stupnica (nonius) na všetkých ručných kolesách s pevnou ryskou, dvojklik nastaví nulu;
+  - odvalovačka: skriňa výmenných kolies s dvierkami (s otvorenými sa stroj nespustí), výmena kolies na kvadrante
+    a šnek natáčania hlavy so stupnicou sklonu priamo v scéne;
+  - rovinná brúska: narážky stola sa ťahajú po drážke stola;
+  - nožnice: hlavný vypínač na čele skrine pohonu (bol zapustený v stolíku), radiálka: páka upnutia vreteníka na
+    čele (zakrývalo ju rameno); test overí, že každý viditeľný ovládač je z predvoleného pohľadu klikateľný.
+- Klasické stroje – dizajn (body 8 – 12): spoločný modul detailov (zaoblené odliatky, rebrá, výrobné štítky TOS,
+  olejoznaky, tabuľky otáčok, káble, stupnice uhla); prepracované odvalovačka TOS Čelákovice OFA 32, horizontálka
+  TOS Varnsdorf W 9 (rebrá, motor na stojane, kryty vedenia, stupnica stola B), brúska na guľato TOS Hostivař
+  BUA 25 (dvierka, vaňa chladenia, hydraulický agregát, stupnica stola) a pásová píla (ukazovateľ napnutia pásu,
+  pravítko, uhlový doraz, odsávanie); štítky a olejoznaky aj na sústruhu, frézke, rovinnej brúske, zvislej
+  obrážačke a zakružovačke.
 - Audit klasických strojov: všetkých 180 ovládačov v scéne (tlačidlá, páky, kolesá, posuvné diely) funguje bez
   chyby, kolízie nástroja so stojacim strojom a upínačmi sa zastavia; návrhy dizajnu a nových strojov TOS
   v [docs/AUDIT-2026-11-klasicke-stroje.md](docs/AUDIT-2026-11-klasicke-stroje.md).

@@ -6,6 +6,7 @@ import { createMachineWorkInspect } from '../core/machineWorkInspect';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
 import { createSound } from '../core/sound';
@@ -404,6 +405,11 @@ function PlateRollSimulator({ onBack, params }) {
     box(drv, -2.6, 2.6, 0.3, Y0 - 0.5, -HW - FW - 3.4, -HW - FW - 0.2, M.greenDark);
     cylX(drv, 1.0, 1.0, 2.6, 5.4, 2.6, -HW - FW - 1.8, M.green, 32);
     box(drv, 2.6, 5.4, 0, 1.6, -HW - FW - 3.0, -HW - FW - 0.6, M.greenDark);
+    {
+      const det = makeDetail(kit, M);
+      det.nameplate(drv, 2.605, Y0 - 2.2, -HW - FW - 1.8, Math.PI / 2, 'TOS', 'XZC 3000/10', 1.2);
+      det.oilGlass(drv, 2.6, 2.6, -HW - FW - 0.9, Math.PI / 2);
+    }
     const colW = new THREE.Group();
     colW.position.set(-3.4, 0, -HW - FW - 1.2);
     hL.add(colW);

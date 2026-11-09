@@ -108,13 +108,14 @@ for (const route of ['', 'moderne', ...MACHINES]) {
 }
 
 // 1b) klasické stroje: každý ovládač v scéne (tlačidlo, páka, koleso, posuvný diel) sa dá aktivovať bez výnimky
-//     a ovládacie panely sú z predvoleného pohľadu klikateľné (zakružovačka mala panel otočený k stojanu)
+//     a každý viditeľný ovládač na obrazovke je z predvoleného pohľadu klikateľný (zakružovačka mala panel otočený
+//     k stojanu, nožnice hlavný vypínač v stolíku)
 for (const route of MACHINES.filter((m) => !['hermle', 'roeders', 'shuangli', 'oscarmax', 'bystronic'].includes(m))) {
   const { page, ctx, problems } = await open(route, { debug: true });
   try {
     await until(page, () => window.__stage?.controls?.entries().length);
     await page.waitForTimeout(600);
-    const r = await page.evaluate(async (route) => {
+    const r = await page.evaluate(async () => {
       const S = window.__stage.controls,
         errs = [],
         cv = document.querySelector('canvas').getBoundingClientRect();
@@ -132,7 +133,15 @@ for (const route of MACHINES.filter((m) => !['hermle', 'roeders', 'shuangli', 'o
           }
           return false;
         });
-      const panel = route === 'zakruzovacka' ? S.entries().filter((k) => k.type === 'button' && !pickable(k)) : [];
+      // viditeľný ovládač, ktorý je na obrazovke, musí byť z predvoleného pohľadu klikateľný
+      const shown = (k) => {
+        for (let o = k.pivot; o; o = o.parent) if (!o.visible) return false;
+        return k.meshes.some((m) => {
+          const v = m.position.clone().setFromMatrixPosition(m.matrixWorld).project(S.camera);
+          return Math.abs(v.x) < 0.95 && Math.abs(v.y) < 0.95 && v.z < 1;
+        });
+      };
+      const panel = S.entries().filter((k) => shown(k) && !pickable(k));
       for (const k of S.entries()) {
         try {
           if (k.type === 'button') k.action();
@@ -150,7 +159,7 @@ for (const route of MACHINES.filter((m) => !['hermle', 'roeders', 'shuangli', 'o
         await new Promise((res) => setTimeout(res, 60));
       }
       return { n: S.entries().length, errs, hidden: panel.map((k) => String(k.label)) };
-    }, route);
+    });
     await page.waitForTimeout(500);
     r.errs.forEach((e) => fail(`${route} ovládače`, e));
     if (r.hidden.length) fail(`${route} ovládače`, `nekliknuteľné z predvoleného pohľadu: ${r.hidden.join(', ')}`);

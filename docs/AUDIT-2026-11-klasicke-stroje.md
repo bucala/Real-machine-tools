@@ -164,3 +164,24 @@ Pri nových strojoch platia rovnaké zásady ako doteraz:
 - kontrola kolízií;
 - úlohy s výkresom a protokolom;
 - sprievodca krok za krokom a test v prehliadači.
+
+## Stav realizácie (9. 11. 2026)
+
+Body 5 – 12 sú hotové (ovládače v scéne, stupnice na kolesách, pohľad k obsluhe, detailnejšie modely a spoločné
+detaily). Nové stroje boli postavené podľa konkrétnych overených modelov:
+
+| #   | Stroj v aplikácii                                    | Overený model a zdroj údajov                                                                 |
+| --- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 13  | Univerzálna konzolová frézka (`#fgu`)                | TOS Olomouc FGU 32 – inzeráty exapro, fermatmachinery                                        |
+| 14  | Nástrojárska frézka (`#fnk`)                         | TOS Kuřim FNK 25 – unimachines, amaron-trading                                               |
+| 15  | Karuselový sústruh (`#karusel`)                      | TOS Hulín SK 12 – unimachines, fermatmachinery                                               |
+| 16  | Hrotový sústruh (`#sv`)                              | TOS Trenčín SV 18 RA (nie Svitavy) – inzeráty, smlouvy.gov.cz                                |
+| 17  | Nástrojárska brúska (`#bn`)                          | TOS Hostivař BN 102 – model prerobený podľa fotiek používateľa (podstavec, stôl, mech, dva kotúče) |
+| 18  | Bezhrotová brúska (`#bezhrot`)                       | TOS Hostivař BBJ 6 – priemer do 63 mm                                                         |
+| 19  | Zvislá obrážačka s otočným stolom (`#hov`)           | TOS HOV 25 – zdvih 250 mm, stôl Ø500, posuvy 560 × 450 mm, vyloženie 365 mm, 4,5 kW, ≈ 2,85 t (inzeráty aptint, unimachines, machineryline); na želanie používateľa nahradila obrážačku ozubenia OHA 32 A |
+| 20  | Brúska nožov (`#dvojkotuc`)                          | TOS BBT 350 – dva kotúče brúsiace čelom, naklápacie stoly 560 × 210 mm, vreteno ≈ 1 560 ot/min (inzerát equipt, fotky používateľa) |
+| 21  | Vodorovná pásová píla (`#pasovka`)                   | Pilous ARG 200 PLUS (Česko, nie TOS) – kruh do Ø200, pás 20 × 0,9 mm, 40 / 80 m/min, 60° / 45° (directindustry) |
+| 21  | Ohýbačka rúr                                         | konkrétny model TOS sa nenašiel – zostáva na ďalšie kolo                                      |
+| 22  | Buchar                                               | Šmeral KJH 2 (hydraulicko-pneumatický, baran 650 kg, 20 kJ, smeral.cz) – zostáva na ďalšie kolo |
+
+Údaje, ktoré sa nepodarilo overiť (napr. stupne zdvihov HOV 25), sú v simulátore označené ako orientačné.

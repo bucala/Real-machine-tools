@@ -899,3 +899,6 @@ export function PocketDrawing({ bx = 100, by = 80, bz = 40, px, py, depth, tol, 
     </Svg>
   );
 }
+
+// pomocné prvky pre ďalšie výkresy (sketch2.jsx)
+export { Svg, Cap, Ln, r2, body, bodyN, thin };
