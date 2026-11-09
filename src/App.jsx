@@ -29,7 +29,17 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
-import { BenchGrinderArt, CenterlessArt, FguArt, FnkArt, HovArt, KaruselArt, SvArt, ToolGrinderArt } from './ui/art2';
+import {
+  BenchGrinderArt,
+  CenterlessArt,
+  FguArt,
+  FnkArt,
+  HBandSawArt,
+  HovArt,
+  KaruselArt,
+  SvArt,
+  ToolGrinderArt,
+} from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -59,6 +69,7 @@ const BnSimulator = lazy(() => import('./machines/bn'));
 const BbtSimulator = lazy(() => import('./machines/bbt'));
 const BbjSimulator = lazy(() => import('./machines/bbj'));
 const HovSimulator = lazy(() => import('./machines/hov'));
+const PasovkaSimulator = lazy(() => import('./machines/pasovka'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -530,6 +541,25 @@ const MACHINES = [
         L('Kolesá Ø720 mm', 'Wheels Ø720 mm'),
         L('Pás 3 / 10 / 25 m/s', 'Blade 3 / 10 / 25 m/s'),
         L('Rez do 150 mm', 'Cut up to 150 mm'),
+      ],
+    }),
+  },
+  {
+    id: 'pasovka',
+    Art: HBandSawArt,
+    Comp: PasovkaSimulator,
+    t: () => ({
+      meta: L('Pásová píla', 'Band saw'),
+      name: L('Pásová píla na kov', 'Metal-cutting band saw'),
+      model: 'Pilous ARG 200 PLUS',
+      desc: L(
+        'Delenie tyčí na kusy: zverák, dĺžkový doraz so stupnicou, otočné rameno na šikmé rezy, rýchlosť klesania ramena hydraulikou, rýchlosť pásu podľa materiálu, chladenie a preťaženie pásu.',
+        'Cutting bars to length: vise, length stop with a scale, swivelling arm for mitre cuts, hydraulic arm feed, band speed by material, coolant and band overload.',
+      ),
+      specs: [
+        L('Kruh do Ø200 mm', 'Round up to Ø200 mm'),
+        L('Pás 20 × 0,9 mm, 40 / 80 m/min', 'Band 20 × 0.9 mm, 40 / 80 m/min'),
+        L('Šikmo 60° vpravo, 45° vľavo', 'Mitre 60° right, 45° left'),
       ],
     }),
   },
