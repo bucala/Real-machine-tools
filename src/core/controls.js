@@ -1,6 +1,7 @@
 // Ručné ovládanie prvkov stroja (kolesá, páky, tlačidlá, posuvné diely).
 import * as THREE from 'three';
 import { approach, clamp } from './util';
+import { L } from './i18n';
 
 // ---------- ručné ovládanie prvkov stroja (kolesá, páky, tlačidlá, posuvné diely) ----------
 function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
@@ -231,6 +232,14 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
     if (k.type === 'lever') leverStep(k, k.getIdx() + dir);
     else k.nudge(dir);
   };
+  // dvojklik na ručné koleso nastaví nulu ryskovanej stupnice (nonius) proti pevnej ryske
+  const mDbl = (e) => {
+    if (!c.manual || c.unclamped) return;
+    const h = ctlAt(e.clientX, e.clientY),
+      dial = h?.k.type === 'wheel' && h.k.pivot.userData.dial;
+    if (dial) dial.rotation.z = -h.k.pivot.rotation.z;
+  };
+  dom.addEventListener('dblclick', mDbl);
   dom.addEventListener('pointerdown', mDown);
   dom.addEventListener('pointermove', mMove);
   dom.addEventListener('pointerup', mUp);
@@ -292,7 +301,13 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
         : 'default';
     if (dom.style.cursor !== cur) dom.style.cursor = cur;
     const html =
-      k && k.tooltip !== false ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>` : '';
+      k && k.tooltip !== false
+        ? `<b>${k.label}</b>${k.read ? ` · ${k.read()}` : ''}<span>${k.hint}</span>${
+            k.pivot.userData.dial
+              ? `<span>${L('Dvojklik nastaví nulu stupnice.', 'Double-click sets the dial to zero.')}</span>`
+              : ''
+          }`
+        : '';
     if (html !== tipHtml) {
       tipHtml = html;
       tipEl.innerHTML = html;
@@ -306,6 +321,7 @@ function createControls({ dom, mount, camera, root, tipEl, c, getT, getHL }) {
   };
   const dispose = () => {
     if (drag.ctl?.type === 'slide') drag.ctl.end?.({ cancelled: true, click: false });
+    dom.removeEventListener('dblclick', mDbl);
     dom.removeEventListener('pointerdown', mDown);
     dom.removeEventListener('pointermove', mMove);
     dom.removeEventListener('pointerup', mUp);

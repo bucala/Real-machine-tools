@@ -6,6 +6,7 @@ import { L, LL } from '../core/i18n';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, makeKit, mkTex, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
@@ -307,6 +308,26 @@ function BandSawSimulator({ onBack, params }) {
     tens.rotation.x = -Math.PI / 2;
     wh.add(tens);
     const wheelTension = handwheel(tens, 0.55, 0, 0, 0, 'z', 0.35);
+    // ukazovateľ napnutia pásu na hornom kryte (ryska sa posúva s napnutím)
+    const { nameplate, scalePlate, oilGlass, cable, rbox } = makeDetail(kit, M);
+    scalePlate(wh, WX + 1.55, UY + 1.2, 0.575, 0, 0.32, 1.1);
+    const tensPtr = add(wh, new THREE.BoxGeometry(0.26, 0.035, 0.03), M.red, WX + 1.6, UY + 0.7, 0.6);
+    tensPtr.userData.noMerge = true;
+    // odsávacie hrdlo na dolnom kryte s hadicou k podlahe
+    cylZ(wh, 0.32, 0.32, -0.95, -0.6, WX + 2.0, LY - 2.4, M.greenDark, 24);
+    cylZ(wh, 0.27, 0.27, -1.05, -0.94, WX + 2.0, LY - 2.4, M.black, 24);
+    cable(
+      wh,
+      [
+        [WX + 2.0, LY - 2.4, -1.05],
+        [WX + 2.2, LY - 2.9, -1.9],
+        [WX + 2.6, 0.6, -2.8],
+        [WX + 3.4, 0.3, -3.6],
+      ],
+      0.26,
+      M.black,
+    );
+    nameplate(wh, WX - 1.6, LY + 0.2, 0.575, 0, 'TOS', 'PPN', 0.95);
 
     // ---------- pílový pás (viditeľný úsek medzi krytmi) ----------
     const bandG = grp('pas');
@@ -321,6 +342,14 @@ function BandSawSimulator({ onBack, params }) {
     box(tbl, -3.25, 3.45, TT - 0.45, TT - 0.3, -3.05, 3.05, M.green);
     box(tbl, -KERF, KERF, TT - 0.002, TT + 0.003, 0.15, 3.0, M.kerf); // drážka k pásu
     cylY(tbl, 0.32, 0.32, TT - 0.005, TT + 0.001, 0, 0, M.black, 32); // vložka stola
+    // vodiaca lišta pravítka vpredu, odložené pravítko vpravo a uhlový doraz v drážke vľavo
+    box(tbl, -3.2, 3.4, TT - 0.36, TT - 0.12, 3.05, 3.22, M.steelDark);
+    rbox(tbl, 3.0, 3.25, TT, TT + 0.36, -2.8, 2.9, M.steel, 0.03);
+    rbox(tbl, 2.9, 3.35, TT - 0.4, TT + 0.36, 2.9, 3.3, M.greenDark, 0.04);
+    box(tbl, -2.32, -2.18, TT - 0.04, TT + 0.002, -3.0, 3.0, M.black); // drážka uhlového dorazu
+    rbox(tbl, -2.9, -1.6, TT, TT + 0.3, 2.3, 2.5, M.steel, 0.03);
+    cylY(tbl, 0.3, 0.3, TT, TT + 0.04, -2.25, 2.4, M.steelDark, 32);
+    oilGlass(base, -3.4, 0.5, 1.0);
 
     // ---------- horné vodidlo s krytom ----------
     const guideG = grp('vodidlo');
@@ -732,6 +761,7 @@ function BandSawSimulator({ onBack, params }) {
         w.rotation.z -= st.v * dt * 0.25;
       });
       wheelTension.rotation.z = st.tension * 0.12;
+      tensPtr.position.y = UY + 0.698 + (Math.min(100, st.tension) / 100) * 1.004; // stupnica 0 – 100 %
 
       // horné vodidlo
       const gT = clamp(c.guide, 10, 300) / 100;

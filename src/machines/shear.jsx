@@ -307,8 +307,9 @@ function ShearSimulator({ onBack, params }) {
     cylX(drv, 0.22, 0.22, -2.75, -2.62, 3.9, ZD - 1.0, M.steel, 20); // otočný prepínač
     handwheel(drv, 0.3, -2.75, 5.0, ZD - 3.2, '-x', 0.08); // ručné koliesko spojky
     const mainSw = new THREE.Group();
-    mainSw.position.set(-2.6, 4.9, ZD - 1.0);
-    mainSw.rotation.y = -Math.PI / 2;
+    // na čele skrine pohonu k obsluhe (predtým na boku – zakrytý stolíkom s náradím)
+    mainSw.position.set(1.4, 4.6, ZD - 4.4);
+    mainSw.rotation.y = Math.PI;
     drv.add(mainSw);
     box(mainSw, -0.4, 0.4, -0.4, 0.4, -0.05, 0.02, M.yellow);
     cylZ(mainSw, 0.24, 0.24, 0, 0.06, 0, 0, M.black, 24);

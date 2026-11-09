@@ -130,7 +130,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Odvalovacia frézka', 'Gear hobber'),
       name: L('Odvalovacia frézka na ozubenie', 'Gear hobbing machine'),
-      model: 'TOS Čelákovice',
+      model: 'TOS Čelákovice OFA 32',
       desc: L(
         'Výroba čelných ozubených kolies odvalovaním: výmenné kolesá delenia i = 24 / z, sklon frézy na stúpací uhol, radiálny prísuv na hĺbku 2,25 · m, zvislý posuv a kontrola rozmeru cez zuby Wk.',
         'Generating spur gears by hobbing: index change gears i = 24 / z, hob swivel to the lead angle, radial infeed to 2.25 · m, vertical feed and span-over-teeth Wk check.',
@@ -168,7 +168,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Horizontálka', 'Horizontal borer'),
       name: L('Horizontálna vŕtačka a frézka', 'Horizontal boring mill'),
-      model: 'TOS Varnsdorf W',
+      model: 'TOS Varnsdorf W 9',
       desc: L(
         'Vyvrtávanie otvorov v skriňových odliatkoch: vreteník na stojane, vysúvacie vreteno W, krížový stôl a otočný stôl s aretáciou po 90°, mikrometrická vyvrtávacia hlava a priehyb tyče podľa vyloženia.',
         'Boring holes in box castings: headstock on the column, extending W spindle, compound table and a rotary table locking every 90°, micrometer boring head and bar deflection by overhang.',
@@ -282,7 +282,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Brúska', 'Grinder'),
       name: L('Rovinná brúska', 'Surface grinder'),
-      model: 'BPH 300',
+      model: 'TOS Hostivař BPH 300',
       desc: L(
         'Rovinné brúsenie na magnetickej doske: hydraulický pohyb stola tam a späť, priečny posuv na konci zdvihu, prísuv po stotinách mm, chladenie emulziou.',
         'Surface grinding on a magnetic chuck: hydraulic table reciprocation, cross feed at the stroke end, infeed in hundredths of a mm, emulsion cooling.',
@@ -301,7 +301,7 @@ const MACHINES = [
     t: () => ({
       meta: L('Brúska na guľato', 'Cylindrical grinder'),
       name: L('Hrotová brúska na guľato', 'Cylindrical grinder'),
-      model: 'TOS BUA',
+      model: 'TOS Hostivař BUA 25',
       desc: L(
         'Brúsenie hriadeľov medzi hrotmi na mikróny: hydraulický stôl s dorazmi, prísuv kotúča po 0,005 mm, automatický prísuv na obrate, vyiskrovanie, prepal pri veľkom zábere a meranie mikrometrom.',
         'Grinding shafts between centres to microns: hydraulic table with dogs, 0.005 mm wheel infeed, automatic infeed at reversal, spark-out, burning at too large an infeed and micrometer measurement.',

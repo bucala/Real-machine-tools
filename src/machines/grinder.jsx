@@ -7,6 +7,7 @@ import { L, LL, RPM } from '../core/i18n';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail } from '../core/detail';
 import { createDrops, createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
@@ -226,6 +227,11 @@ function GrinderSimulator({ onBack, params }) {
     box(bed, -2.6, -2.2, 6.2, 6.25, -1.6, 1.6, M.ways);
     box(bed, 2.2, 2.6, 6.2, 6.25, -1.6, 1.6, M.ways);
     box(bed, -3.0, -0.1, 4.7, 6.1, 1.9, 2.55, M.green); // konzola kolies
+    {
+      const det = makeDetail(kit, M);
+      det.nameplate(bed, 1.6, 1.15, 1.905, 0, 'TOS Hostivař', 'BPH 300', 1.0);
+      det.oilGlass(bed, 2.7, 5.6, 1.9);
+    }
     cylZ(bed, 0.14, 0.14, 2.55, 2.7, -2.3, 5.4, M.steel, 14);
     cylZ(bed, 0.12, 0.12, 2.55, 2.7, -1.05, 5.4, M.steel, 14);
     const wX = handwheel(bed, 0.55, -2.3, 5.4, 2.75, 'z', 0.4),
@@ -797,6 +803,30 @@ function GrinderSimulator({ onBack, params }) {
       lamp.shade,
     );
 
+    // narážky stola: ťahaním po drážke vpredu stola (ako na skutočnej brúske), pozícia v mm dráhy stola
+    [
+      ['xL', dogL, LL('Ľavá narážka stola', 'Left table dog')],
+      ['xR', dogR, LL('Pravá narážka stola', 'Right table dog')],
+    ].forEach(([key, mesh, label]) => {
+      let x0 = 0;
+      ctrl.reg(
+        {
+          type: 'slide',
+          label,
+          hint: LL(
+            'Ťahaj narážku po drážke stola – na nej sa stôl obráti. Kolieskom myši po 10 mm.',
+            'Drag the dog along the table slot – the table reverses on it. Mouse wheel moves it by 10 mm.',
+          ),
+          read: () => `${Math.round(c[key])} mm`,
+          start: () => {
+            x0 = c[key];
+          },
+          slide: (dx) => push(key, clamp(Math.round(x0 - dx * 100), 0, 600)),
+          nudge: (dir) => push(key, clamp(Math.round(c[key] - dir * 10), 0, 600)),
+        },
+        mesh,
+      );
+    });
     insp.goView('celok', true);
 
     // ---------- hlavná slučka ----------

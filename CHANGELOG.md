@@ -7,6 +7,19 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 9. 11. 2026
 
+- Klasické stroje – ovládanie (body 5 – 7 auditu):
+  - ryskovaná stupnica (nonius) na všetkých ručných kolesách s pevnou ryskou, dvojklik nastaví nulu;
+  - odvalovačka: skriňa výmenných kolies s dvierkami (s otvorenými sa stroj nespustí), výmena kolies na kvadrante
+    a šnek natáčania hlavy so stupnicou sklonu priamo v scéne;
+  - rovinná brúska: narážky stola sa ťahajú po drážke stola;
+  - nožnice: hlavný vypínač na čele skrine pohonu (bol zapustený v stolíku), radiálka: páka upnutia vreteníka na
+    čele (zakrývalo ju rameno); test overí, že každý viditeľný ovládač je z predvoleného pohľadu klikateľný.
+- Klasické stroje – dizajn (body 8 – 12): spoločný modul detailov (zaoblené odliatky, rebrá, výrobné štítky TOS,
+  olejoznaky, tabuľky otáčok, káble, stupnice uhla); prepracované odvalovačka TOS Čelákovice OFA 32, horizontálka
+  TOS Varnsdorf W 9 (rebrá, motor na stojane, kryty vedenia, stupnica stola B), brúska na guľato TOS Hostivař
+  BUA 25 (dvierka, vaňa chladenia, hydraulický agregát, stupnica stola) a pásová píla (ukazovateľ napnutia pásu,
+  pravítko, uhlový doraz, odsávanie); štítky a olejoznaky aj na sústruhu, frézke, rovinnej brúske, zvislej
+  obrážačke a zakružovačke.
 - Audit klasických strojov: všetkých 180 ovládačov v scéne (tlačidlá, páky, kolesá, posuvné diely) funguje bez
   chyby, kolízie nástroja so stojacim strojom a upínačmi sa zastavia; návrhy dizajnu a nových strojov TOS
   v [docs/AUDIT-2026-11-klasicke-stroje.md](docs/AUDIT-2026-11-klasicke-stroje.md).

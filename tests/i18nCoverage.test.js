@@ -6,8 +6,9 @@ import * as espree from 'espree';
 import { KEYS } from 'eslint-visitor-keys';
 
 const SK = /[áäčďéíĺľňóôŕšťúýžÁČĎÉÍĽŇÓŠŤÚÝŽ]/;
-// vlastné mená, české štítky na stroji Elektrokov, dvojjazyčné hlavičky
-const ALLOW = /Čelákovice|SVAŘ|NABÍJ|PŘÍSTŘEŠKEM|CSV hlavička \/ CSV header|^Mosadz|^Oceľ|^Hliník/;
+// vlastné mená (výrobcovia TOS, Šmeral), české štítky na stroji Elektrokov, dvojjazyčné hlavičky
+const ALLOW =
+  /Čelákovice|Trenčín|Hostivař|Kuřim|Hulín|Šmeral|SVAŘ|NABÍJ|PŘÍSTŘEŠKEM|CSV hlavička \/ CSV header|^Mosadz|^Oceľ|^Hliník/;
 const files = [];
 (function walk(d) {
   for (const f of readdirSync(d)) {

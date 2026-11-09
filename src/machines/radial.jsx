@@ -455,8 +455,9 @@ function RadialSimulator({ onBack, params }) {
       ball(arm, 0.12, 1.0, 0, 0.18, M.black);
     }
     const wR = handwheel(head, 0.42, -1.12, -0.6, 1.6, '-x', 0.24); // koleso posuvu vreteníka po ramene
-    const levHead = pivotLever(head, -1.02, 1.3, 1.0, 0.42, 1.2); // upnutie vreteníka
-    levHead.rotation.y = -Math.PI / 2;
+    // upnutie vreteníka na čele k obsluhe (na boku ho z pohľadu obsluhy zakrývalo rameno)
+    cylZ(head, 0.12, 0.1, 2.45, 2.52, -0.85, 0.35, M.steelDark, 16);
+    const levHead = pivotLever(head, -0.85, 0.35, 2.52, 0.42, 1.2);
     armY.position.y = c.H / 100;
     head.position.x = c.R / 100;
     armRot.updateMatrixWorld(true);

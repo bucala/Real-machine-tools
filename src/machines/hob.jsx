@@ -7,6 +7,7 @@ import { createMachineWorkInspect } from '../core/machineWorkInspect';
 import { exportStep } from '../core/step';
 import { createInspector } from '../core/inspector';
 import { baseMats, createLamp, makeKit, std } from '../core/kit';
+import { makeDetail, angleScaleTex } from '../core/detail';
 import { createParticles } from '../core/particles';
 import { createStage } from '../core/stage';
 import { TAU, approach, clamp } from '../core/util';
@@ -77,6 +78,15 @@ const hobParts = () =>
       'Hob',
       'Jednochodá fréza Ø70 mm, modul 2. Jej zuby tvoria závitovku – pri odvalovaní so stolom vytvárajú evolventné boky zubov kolesa.',
       'Single-start Ø70 mm hob, module 2. Its teeth form a worm – rolling with the table they generate the involute tooth flanks.',
+    ],
+    [
+      'kolesa',
+      'Výmenné kolesá',
+      'Change gears',
+      'Skriňa výmenných kolies delenia',
+      'Index change-gear box',
+      'Za dvierkami je kvadrant s výmennými kolesami a/b (príp. c/d), ktoré delia otáčku stola i = 24 / z. Kolesá sa menia pri stojacom stroji a otvorených dvierkach; s otvorenými dvierkami sa stroj nespustí.',
+      'Behind the door the quadrant carries the change gears a/b (or c/d) dividing the table turn i = 24 / z. The gears are changed with the machine stopped and the door open; with the door open the machine does not start.',
     ],
     [
       'stol',
@@ -163,6 +173,7 @@ function HobberSimulator({ onBack, params }) {
     feed: 1,
     timeScale: 10,
     zT: 30,
+    gearDoor: false,
   };
   const { ctl, ui, setUi, set, selected, selectPart, apiRef } = useMachine(init);
   const [tele, setTele] = useTele({ rpm: 0, d: 0, y: 0, cutting: false, msg: null });
@@ -199,21 +210,108 @@ function HobberSimulator({ onBack, params }) {
     const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
     // ---------- lôžko, stôl, protistojan ----------
+    const det = makeDetail(kit, M);
+    const { rbox, ribs, nameplate, oilGlass, cable, bolts } = det;
     const bed = grp('lozko');
-    box(bed, -6.5, 6.0, 0, 1.2, -2.8, 2.8, M.greenDark);
-    [-1, 1].forEach((s) => box(bed, -6.3, 0.5, 1.2, 1.28, s * 1.6 - 0.25, s * 1.6 + 0.25, M.ways));
+    box(bed, -7.8, 6.1, 0, 0.22, -2.9, 2.9, M.greenDeep); // pätka lôžka
+    rbox(bed, -6.5, 6.0, 0.2, 1.2, -2.8, 2.8, M.greenDark, 0.14);
+    [-1, 1].forEach((s) => {
+      box(bed, -6.3, 0.5, 1.2, 1.28, s * 1.6 - 0.25, s * 1.6 + 0.25, M.ways);
+      box(bed, -6.3, 0.5, 1.28, 1.31, s * 1.6 - 0.27, s * 1.6 - 0.2, M.steelDark); // stierač vedenia
+    });
+    // vaňa na triesky a chladiacu kvapalinu okolo stola s výpustom
+    rbox(bed, 0.6, 6.0, 1.2, 1.5, -2.8, -2.55, M.greenDark, 0.05);
+    rbox(bed, 0.6, 6.0, 1.2, 1.5, 2.55, 2.8, M.greenDark, 0.05);
+    rbox(bed, 5.75, 6.0, 1.2, 1.5, -2.8, 2.8, M.greenDark, 0.05);
+    cylX(bed, 0.12, 0.1, 6.0, 6.45, 0.85, 1.6, M.steelDark, 14);
+    oilGlass(bed, 3.6, 0.7, 2.8);
+    nameplate(bed, -1.4, 0.72, 2.805, 0, 'TOS Čelákovice', 'OFA 32', 1.05);
+    bolts(
+      bed,
+      [-5.8, -3.8, -1.8, 0.2, 2.2, 4.2].map((x) => [x, 0.11]),
+      2.9,
+    );
     const wR = handwheel(bed, 0.45, -2.0, 0.65, 2.95, 'z', 0.28); // radiálny prísuv stojana
+    cylZ(bed, 0.2, 0.2, 2.8, 2.95, -2.0, 0.65, M.greenDeep, 20);
+    // skriňa výmenných kolies delenia na ľavom konci lôžka s dvierkami
+    const gearBox = grp('kolesa');
+    rbox(gearBox, -7.75, -6.45, 0.22, 3.4, -1.7, 1.6, M.green, 0.12);
+    const gearSet = new THREE.Group();
+    gearSet.position.set(-7.1, 1.75, 1.62);
+    gearBox.add(gearSet);
+    const gearsG = new THREE.Group();
+    gearSet.add(gearsG);
+    hitProxy(gearSet, 0.75, 0, -0.2, 0); // úchop kvadrantu (kolesá sa pri výmene stavajú znova)
+    const gearDoor = new THREE.Group();
+    gearDoor.position.set(-7.75, 0.35, 1.62);
+    gearBox.add(gearDoor);
+    rbox(gearDoor, 0, 1.3, 0, 2.9, 0, 0.07, M.greenDark, 0.03);
+    ribs(gearDoor, 'y', 0.4, 2.5, 3, 0.15, 1.15, 0.07, 0.03, 0.06, M.greenDark);
+    cylZ(gearDoor, 0.06, 0.06, 0.07, 0.2, 1.12, 1.45, M.steel, 12);
+    ball(gearDoor, 0.09, 1.12, 1.45, 0.22, M.black);
+    hitProxy(gearDoor, 0.5, 0.65, 1.45, 0.1);
+    // ozubené koleso na kvadrante: polomer podľa počtu zubov (mierka m 2,5)
+    const gearMesh = (z, m = M.steelDark) => {
+      const r = (z * 0.25) / 20,
+        g = new THREE.Group();
+      cylZ(g, r * 0.92, r * 0.92, -0.06, 0.06, 0, 0, m, 32);
+      cylZ(g, r * 0.25, r * 0.25, -0.1, 0.1, 0, 0, M.steel, 16);
+      for (let k = 0; k < z; k += 2) {
+        const a = (k / z) * TAU,
+          tooth = add(g, new THREE.BoxGeometry(r * 0.12, 0.05, 0.12), m, Math.cos(a) * r, Math.sin(a) * r, 0);
+        tooth.rotation.z = a;
+      }
+      g.userData.r = r;
+      return g;
+    };
+    const rebuildGears = (z) => {
+      while (gearsG.children.length) {
+        const o = gearsG.children[0];
+        gearsG.remove(o);
+        o.traverse((n) => n.geometry?.dispose());
+      }
+      const gs = indexGears(z) || { a: 24, b: z, c: 1, d: 1 };
+      const ga = gearMesh(gs.a, M.insert),
+        gb = gearMesh(gs.b);
+      ga.position.set(0, -0.85, 0);
+      gb.position.set(0, -0.85 + ga.userData.r + gb.userData.r + 0.02, 0.0);
+      gearsG.add(ga, gb);
+      if (gs.c !== 1) {
+        const gc = gearMesh(gs.c, M.insert),
+          gd = gearMesh(gs.d);
+        gc.position.set(0, gb.position.y, 0.14);
+        gd.position.set(0, gb.position.y + gc.userData.r + gd.userData.r + 0.02, 0.14);
+        gearsG.add(gc, gd);
+      }
+      // kliknutie prejde cez kolesá na úchop kvadrantu (registrovaný ovládač)
+      gearsG.traverse((o) => {
+        if (o.isMesh) o.userData.controlPassThrough = true;
+      });
+      gearSet.userData.z = z;
+    };
+    rebuildGears(c.zSel);
     const tbl = grp('stol');
-    cylY(tbl, 1.6, 1.7, 1.2, 2.4, WX, 0, M.green, 48);
+    rbox(tbl, WX - 1.75, WX + 1.75, 1.2, 1.55, -1.75, 1.75, M.greenDark, 0.1);
+    cylY(tbl, 1.6, 1.7, 1.5, 2.4, WX, 0, M.green, 48);
+    cylY(tbl, 1.72, 1.72, 2.25, 2.3, WX, 0, M.steel, 64); // ryskovaný krúžok stola
     const turn = new THREE.Group();
     turn.position.set(WX, 2.4, 0);
     tbl.add(turn);
     cylY(turn, 1.4, 1.4, 0, 0.2, 0, 0, M.steelDark, 48);
+    for (let k = 0; k < 4; k++) {
+      const s = add(turn, new THREE.BoxGeometry(2.6, 0.03, 0.12), M.black, 0, 0.2, 0);
+      s.rotation.y = (k * Math.PI) / 4; // T-drážky
+    }
     cylY(turn, 0.16, 0.16, 0.2, 4.6, 0, 0, M.steel, 20); // tŕň
     cylY(turn, 0.45, 0.45, 0.2, WY0 - 2.4, 0, 0, M.steel, 28); // podložka
-    box(tbl, WX + 1.8, WX + 3.0, 1.2, 7.6, -0.6, 0.6, M.green); // protistojan
-    box(tbl, WX - 0.4, WX + 3.0, 6.9, 7.3, -0.4, 0.4, M.green); // rameno
+    cylY(turn, 0.3, 0.3, WY0 - 2.4 + 0.22, WY0 - 2.4 + 0.45, 0, 0, M.steelDark, 6); // matica tŕňa
+    // protistojan s rebrami a ramenom s ložiskom podpery tŕňa
+    rbox(tbl, WX + 1.8, WX + 3.0, 1.2, 7.6, -0.65, 0.65, M.green, 0.12);
+    ribs(tbl, 'y', 2.0, 7.0, 4, WX + 1.95, WX + 2.85, 0.65, 0.06, 0.08, M.greenDark);
+    rbox(tbl, WX - 0.45, WX + 3.05, 6.85, 7.35, -0.42, 0.42, M.green, 0.1); // rameno
+    cylY(tbl, 0.3, 0.3, 6.8, 7.4, WX, 0, M.greenDark, 24);
     cylY(tbl, 0.22, 0.12, 6.4, 6.9, WX, 0, M.steelDark, 16);
+    cylZ(tbl, 0.1, 0.1, 0.42, 0.55, WX + 2.4, 7.1, M.black, 12); // upínacia matica ramena
     // ---------- obrobok ----------
     const gearG = grp('obrobok', turn);
     let gear = null,
@@ -278,18 +376,24 @@ function HobberSimulator({ onBack, params }) {
     makeGear();
     // ---------- stojan s hlavou a frézou ----------
     const colG = grp('stojan');
-    box(colG, -6.2, -3.6, 1.28, 10.2, -1.9, 1.9, M.green);
+    rbox(colG, -6.2, -3.6, 1.28, 10.2, -1.9, 1.9, M.green, 0.18);
+    ribs(colG, 'x', -6.0, -3.8, 3, 1.6, 9.8, -2.05, 0.15, 0.1, M.greenDark); // rebrá vzadu
     box(colG, -3.6, -3.45, 1.6, 9.8, -1.5, -1.2, M.ways);
     box(colG, -3.6, -3.45, 1.6, 9.8, 1.2, 1.5, M.ways);
-    box(colG, -6.3, -3.5, 10.2, 10.6, -2.0, 2.0, M.greenDark);
+    rbox(colG, -6.3, -3.5, 10.2, 10.6, -2.0, 2.0, M.greenDark, 0.1);
+    rbox(colG, -6.3, -3.5, 1.28, 1.6, -2.0, 2.0, M.greenDark, 0.08); // sane stojana na lôžku
+    oilGlass(colG, -4.2, 2.3, 1.9);
+    // kryt skrutky zvislého posuvu (mechy) medzi saňami a hlavou
+    for (let k = 0; k < 10; k++) box(colG, -3.55, -3.42, 1.7 + k * 0.32, 1.86 + k * 0.32, -0.6, 0.6, M.black);
     const wY = handwheel(colG, 0.42, -4.9, 8.6, 2.05, 'z', 0.26); // zvislý posuv hlavy
     cylZ(colG, 0.09, 0.09, 1.9, 2.05, -4.9, 8.6, M.steel, 12);
     const pan = grp('ovladanie', colG);
-    box(pan, -6.0, -4.4, 3.2, 5.4, 1.9, 1.98, M.panel);
+    rbox(pan, -6.05, -4.35, 3.15, 5.45, 1.85, 1.98, M.panel, 0.04);
     const pbtn = (x, y, m) => {
       const g = new THREE.Group();
       g.position.set(x, y, 1.98);
       pan.add(g);
+      cylZ(g, 0.15, 0.15, -0.02, 0.02, 0, 0, M.steelDark, 20);
       cylZ(g, 0.12, 0.12, 0, 0.07, 0, 0, m, 20);
       hitProxy(g, 0.16, 0, 0, 0.05);
       return g;
@@ -304,14 +408,43 @@ function HobberSimulator({ onBack, params }) {
     pan.add(mainSw);
     cylZ(mainSw, 0.17, 0.17, 0, 0.06, 0, 0, M.black, 24);
     box(mainSw, -0.045, 0.045, -0.2, 0.2, 0.06, 0.16, M.red);
+    // kábel z rozvádzača do stojana
+    cable(colG, [
+      [-5.2, 3.15, 1.92],
+      [-5.2, 2.2, 2.15],
+      [-5.6, 1.4, 2.1],
+      [-5.9, 1.3, 1.6],
+    ]);
     const headG = new THREE.Group();
     colG.add(headG);
-    box(headG, -3.45, -1.6, -0.9, 0.9, -1.4, 1.4, M.green);
+    rbox(headG, -3.45, -1.6, -0.9, 0.9, -1.4, 1.4, M.green, 0.12);
+    box(headG, -3.5, -3.42, -0.85, 0.85, -1.55, -1.42, M.steelDark); // lišty vedenia
+    box(headG, -3.5, -3.42, -0.85, 0.85, 1.42, 1.55, M.steelDark);
+    oilGlass(headG, -2.4, -0.45, 1.4);
     cylX(headG, 1.0, 1.0, -1.7, -1.55, 0, 0, M.greenDark, 40); // otočná doska (sklon)
     const swG = new THREE.Group();
     swG.position.x = -1.55;
     headG.add(swG);
-    box(swG, 0, 0.35, -0.5, 0.5, -1.5, 1.5, M.green);
+    rbox(swG, 0, 0.35, -0.5, 0.5, -1.5, 1.5, M.green, 0.06);
+    // stupnica sklonu: ±15° (v scéne 3× zväčšené), ryska je na hlave
+    const scaleTx = angleScaleTex(15, 3);
+    if (scaleTx) {
+      const sc = add(
+        swG,
+        new THREE.CircleGeometry(0.95, 64),
+        new THREE.MeshStandardMaterial({ map: scaleTx, roughness: 0.4, metalness: 0.4 }),
+        -0.006,
+        0,
+        0,
+      );
+      sc.rotation.y = Math.PI / 2;
+      sc.rotation.z = 0;
+      sc.userData.noMerge = true;
+      sc.castShadow = false;
+    }
+    box(headG, -1.58, -1.5, 0.95, 1.12, -0.03, 0.03, M.red); // ryska stupnice sklonu
+    // šnek natáčania hlavy (1 otáčka = 1°)
+    const wAng = handwheel(headG, 0.22, -2.55, 0.45, 1.42, 'z', 0.14);
     const hobArm = new THREE.Group();
     swG.add(hobArm);
     const hobG = grp('freza', hobArm);
@@ -375,6 +508,7 @@ function HobberSimulator({ onBack, params }) {
       stol: () => v3(WX + 1.6, 2.5, 1.0),
       obrobok: () => v3(WX + ra() / 100, WY0 + 0.25, 0.3),
       ovladanie: () => v3(-5.2, 5.5, 1.98),
+      kolesa: () => v3(-7.1, 3.5, 1.6),
     };
     const views = {
       celok: () => [
@@ -384,6 +518,7 @@ function HobberSimulator({ onBack, params }) {
       rez: () => [[WX - 0.4, WY0 + 1.6, 2.6], [WX - 0.3, WY0 + 0.15, 0], true],
       zhora: () => [[WX - 0.5, 12, 0.6], [WX - 0.5, WY0, 0], true],
       panel: () => [[-3.5, 5.5, 7], [-5.2, 4.4, 1.9], true],
+      kolesa: () => [[-5.2, 3.2, 6.5], [-7.1, 1.8, 1.6], true],
     };
     const insp = createInspector({
       dom,
@@ -487,7 +622,13 @@ function HobberSimulator({ onBack, params }) {
         type: 'button',
         label: LL('ŠTART', 'START'),
         hint: LL('Spustí frézu a stôl (odvalovanie).', 'Starts the hob and the table (generating).'),
-        action: needPower(() => push('running', true)),
+        action: needPower(() => {
+          if (c.gearDoor) {
+            say(L('Zatvor dvierka výmenných kolies.', 'Close the change-gear door.'));
+            return;
+          }
+          push('running', true);
+        }),
       },
       bStart,
     );
@@ -542,6 +683,81 @@ function HobberSimulator({ onBack, params }) {
       },
       wY,
     );
+    // dvierka skrine výmenných kolies (s otvorenými sa stroj nespustí) a výmena kolies na kvadrante
+    const stoppedNow = () => !c.running && st.rpm <= 1;
+    ctrl.reg(
+      {
+        type: 'button',
+        label: LL('Dvierka výmenných kolies', 'Change-gear door'),
+        hint: LL(
+          'Otvorí alebo zatvorí skriňu výmenných kolies – len pri stojacom stroji.',
+          'Opens or closes the change-gear box – only with the machine stopped.',
+        ),
+        still: true,
+        action: () => {
+          if (!c.gearDoor && !stoppedNow()) {
+            say(L('Najprv zastav stroj.', 'Stop the machine first.'));
+            return;
+          }
+          push('gearDoor', !c.gearDoor);
+        },
+        read: () => (c.gearDoor ? L('otvorené', 'open') : L('zatvorené', 'closed')),
+      },
+      gearDoor,
+    );
+    ctrl.reg(
+      {
+        type: 'button',
+        label: LL('Výmenné kolesá delenia', 'Index change gears'),
+        hint: LL(
+          'Kliknutím nasadíš kolesá pre ďalší počet zubov z (pri otvorených dvierkach).',
+          'Click to fit the gears for the next tooth count z (with the door open).',
+        ),
+        still: true,
+        action: () => {
+          if (!c.gearDoor) {
+            say(L('Najprv otvor dvierka skrine kolies.', 'Open the gear box door first.'));
+            return;
+          }
+          if (!stoppedNow()) {
+            say(L('Najprv zastav stroj.', 'Stop the machine first.'));
+            return;
+          }
+          const i = HOB_Z.indexOf(c.zSel);
+          push('zSel', HOB_Z[(i + 1) % HOB_Z.length]);
+        },
+        read: () => {
+          const gs = indexGears(c.zSel);
+          return gs ? `z ${c.zSel} · i = ${gs.a}/${gs.b}${gs.c !== 1 ? ` · ${gs.c}/${gs.d}` : ''}` : `z ${c.zSel}`;
+        },
+      },
+      gearSet,
+    );
+    ctrl.reg(
+      {
+        type: 'wheel',
+        minR: 0.15,
+        inc: 1,
+        label: LL('Šnek natáčania hlavy (sklon frézy)', 'Head swivel worm (hob swivel)'),
+        hint: LL(
+          '1 otáčka = 1° sklonu frézy; len pri stojacom stroji. Stupnica je na otočnej doske.',
+          '1 turn = 1° of hob swivel; only with the machine stopped. The scale is on the swivel plate.',
+        ),
+        guard: () => {
+          if (stoppedNow()) return true;
+          say(
+            L(
+              'Sklon frézy sa mení len pri stojacom stroji.',
+              'The hob swivel is changed only with the machine stopped.',
+            ),
+          );
+          return false;
+        },
+        turn: (d) => push('ang', clamp(Math.round((c.ang + d / TAU) * 100) / 100, -5, 5)),
+        read: () => `${st.ang.toFixed(2)}°`,
+      },
+      wAng,
+    );
     insp.goView('celok', true);
 
     // ---------- hlavná slučka ----------
@@ -560,6 +776,7 @@ function HobberSimulator({ onBack, params }) {
       }
 
       if (!c.power && c.running) push('running', false);
+      if (c.gearDoor && c.running) push('running', false);
       // nastavenie delenia a sklonu – len pri stojacom stroji
       if ((c.zSel !== st.zSel || Math.abs(c.ang - st.ang) > 1e-9) && st.rpm > 1) {
         sayOnce(
@@ -667,6 +884,11 @@ function HobberSimulator({ onBack, params }) {
       colG.position.x = hobX() - (-1.55 + 0.0);
       headG.position.y = WY0 + st.y / 100;
       swG.rotation.x = ((st.ang * Math.PI) / 180) * 3;
+      wAng.rotation.z = st.ang * TAU;
+      st.door = approach(st.door || 0, c.gearDoor ? 1 : 0, 2.5 * dt);
+      gearDoor.rotation.y = -st.door * 1.9;
+      gearSet.visible = st.door > 0.02;
+      if (gearSet.userData.z !== st.zSel) rebuildGears(st.zSel);
       hobSpin.rotation.z = st.hA;
       turn.rotation.y = -st.cA;
       wR.rotation.z = -st.d * TAU;
