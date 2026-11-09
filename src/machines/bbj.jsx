@@ -418,7 +418,6 @@ function buildBbj(x) {
   bin.position.set(0, 4.0, -3.4);
   rest.add(bin);
   rbox(bin, -1.0, 1.0, 0, 0.9, -0.7, 0.7, M.steelDark, 0.05);
-  kit.hitProxy(bin, 0.8, 0, 0.5, 0);
   // ---------- panel ----------
   const pan = grp('ovladanie', bed);
   rbox(pan, -2.0, 1.8, 3.4, 5.6, 2.4, 2.5, M.panel, 0.04);
@@ -427,7 +426,8 @@ function buildBbj(x) {
     bGs = panelButton(kit, M, pan, -0.6, 4.4, 2.51, M.red),
     bR = panelButton(kit, M, pan, 0.2, 5.0, 2.51, M.btnGreen),
     bRs = panelButton(kit, M, pan, 0.2, 4.4, 2.51, M.red),
-    bC = panelButton(kit, M, pan, 1.0, 5.0, 2.51, M.blue);
+    bC = panelButton(kit, M, pan, 1.0, 5.0, 2.51, M.blue),
+    bBin = panelButton(kit, M, pan, 1.0, 4.4, 2.51, M.yellow); // vrátiť kolík z debny do žľabu (debna je vzadu)
   const lampG = M.lamp.clone(),
     lampR = M.lamp.clone();
   ball(pan, 0.06, -0.6, 3.85, 2.52, lampG);
@@ -587,14 +587,14 @@ function buildBbj(x) {
     {
       type: 'button',
       still: true,
-      label: LL('Debna s kolíkmi', 'Pin bin'),
+      label: LL('Vrátiť kolík z debny', 'Return a pin from the bin'),
       hint: LL(
         'Vráti prvý kolík z debny do žľabu na ďalší prechod.',
         'Returns the first pin from the bin to the chute for another pass.',
       ),
       action: () => apiRef.current.refeed(),
     },
-    bin,
+    bBin,
   );
   ctrl.reg(
     {
