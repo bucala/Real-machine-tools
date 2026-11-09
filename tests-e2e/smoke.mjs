@@ -1,6 +1,6 @@
 // Test v prehliadači nad zostaveným public/: otvorí menu a každý stroj, zlyhá pri chybe v konzole,
 // výnimke na stránke, zlyhanej požiadavke alebo porušení CSP. Potom prejde CNC program na Hermle
-// (vrátane zámku dverí), jeden ohyb na Bystronic, štart a dotykové HMI elektroerózie, sústruženie a frézovanie
+// (vrátane zámku dverí), celý program krabičky na Bystronic (5 ohybov s otáčaním plechu), štart a dotykové HMI elektroerózie, sústruženie a frézovanie
 // cez sprievodcu krok za krokom, zvar MMA, BOZP v úlohe a úzku scénu (mobil).
 // Spustenie: npm run build && npm run test:e2e   (prehliadač: npx playwright install chromium)
 import http from 'node:http';
@@ -145,7 +145,7 @@ for (const route of ['', 'moderne', ...MACHINES]) {
   await ctx.close();
 }
 
-// 3) Bystronic: jeden ohyb
+// 3) Bystronic: celý program krabičky – 5 ohybov a medzi nimi tlačidlo „Otočiť plech“
 {
   const { page, ctx, problems } = await open('bystronic', { debug: true });
   try {
@@ -153,14 +153,27 @@ for (const route of ['', 'moderne', ...MACHINES]) {
     await page.waitForTimeout(800);
     if (await page.locator('.work-resume').count()) fail('bystronic', 'lišta rozpracovanej práce bez uloženej práce');
     await page.getByRole('button', { name: '×10', exact: true }).click();
-    await page
-      .getByRole('button', { name: /Spustiť ohyb/i })
-      .first()
-      .click();
-    await until(page, () => window.__bystronic.process.S.done || window.__bystronic.process.S.alarm, null, 120000);
-    const S = await page.evaluate(() => ({ ...window.__bystronic.process.S }));
-    if (S.alarm || !S.complete) fail('bystronic', `ohyb nedokončený ${S.alarm || ''}`);
-    else console.log(`  ✓ bystronic: ohyb dokončený, sila ${Math.round(S.maxForce)} kN`);
+    const steps = await page.evaluate(() => window.__bystronic.control.snapshot().program?.steps.length);
+    if (steps !== 5) throw new Error(`predvolený program krabičky nenačítaný (${steps})`);
+    let force = 0;
+    for (let i = 0; i < steps; i++) {
+      if (i) {
+        const turn = page.locator('button.brake-turn');
+        await turn.click();
+        await until(page, () => !window.__bystronic.control.snapshot().program.turning, null, 20000);
+      }
+      await page
+        .getByRole('button', { name: /Spustiť ohyb/i })
+        .first()
+        .click();
+      await until(page, () => window.__bystronic.process.S.done || window.__bystronic.process.S.alarm, null, 120000);
+      const S = await page.evaluate(() => ({ ...window.__bystronic.process.S }));
+      if (S.alarm || !S.complete) throw new Error(`ohyb ${i + 1} nedokončený ${S.alarm || ''}`);
+      force = Math.max(force, S.maxForce);
+    }
+    const prog = await page.evaluate(() => window.__bystronic.control.snapshot().program);
+    if (prog.bends !== 5 || prog.needsTurn) fail('bystronic', `program krabičky neukončený (${prog.bends}/5)`);
+    else console.log(`  ✓ bystronic: krabička – 5 ohybov so 4 otočeniami plechu, max. sila ${Math.round(force)} kN`);
   } catch (e) {
     fail('bystronic', e.message.split('\n')[0]);
   }

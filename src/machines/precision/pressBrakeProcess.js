@@ -144,22 +144,44 @@ export function profileSection(c, beta, prog) {
   return points.filter((p, i) => i === 0 || Math.hypot(p.z - points[i - 1].z, p.y - points[i - 1].y) > 1e-7);
 }
 
-// Zložitý program: C-profil s lemami – štyri ohyby, diel sa medzi nimi otáča (hrana A / B k dorazu)
+// manipulácia s plechom pred krokom programu
+export const TURN_LABEL = {
+  flip: () => L('Prevrátiť plech (lícom hore)', 'Flip the sheet (face up)'),
+  rot180: () => L('Otočiť plech o 180°', 'Turn the sheet 180°'),
+  rot90: () => L('Pootočiť plech o 90°', 'Rotate the sheet 90°'),
+};
+
+// hrany krabičky (brakePart.js BOX_PART)
+export const BOX_EDGE = {
+  F: () => L('lem 25 na stene A', 'flange 25 on wall A'),
+  A: () => L('stena A (zadná)', 'wall A (back)'),
+  B: () => L('stena B (predná)', 'wall B (front)'),
+  C: () => L('stena C (ľavá)', 'wall C (left)'),
+  D: () => L('stena D (pravá)', 'wall D (right)'),
+};
+// Zložitý program: krabička 200 × 150 × 60 mm z plechu 2 mm, na zadnej stene vonkajší lem 25 mm (brakePart.js).
+// Lem sa ohýba prvý (plech prevrátený), potom dlhé steny a nakoniec krátke steny medzi už ohnutými – na to sa
+// razník zloží zo segmentov na dĺžku ohybu (box tooling). Pred každým ďalším ohybom sa plech otočí (turn).
 export const BRAKE_PROGRAMS = [
   {
-    id: 'cprofil',
-    name: () => L('C-profil s lemami – 4 ohyby', 'C-channel with lips – 4 bends'),
+    id: 'krabicka',
+    name: () => L('Krabička 200 × 150 × 60 s lemom 25 – 5 ohybov', 'Box 200 × 150 × 60 with 25 flange – 5 bends'),
+    part: 'box',
     material: 'steel',
-    thickness: 3,
-    length: 1500,
-    depth: 360,
-    v: 24,
+    thickness: 2,
+    v: 16,
     r: 0,
+    tooling: () =>
+      L(
+        'Razník 85° so segmentmi zloženými na dĺžku ohybu (200 / 150 mm) – voľný priestor pre steny 60 mm, matrica V16',
+        'Punch 85° with segments assembled to the bend length (200 / 150 mm) – clearance for 60 mm walls, die V16',
+      ),
     steps: [
-      { side: 'A', flange: 25, angle: 90 },
-      { side: 'B', flange: 25, angle: 90 },
-      { side: 'A', flange: 95, angle: 90 },
-      { side: 'B', flange: 95, angle: 90 },
+      { hinge: 'F', flange: 25, length: 200, depth: 295, angle: 90, turn: null },
+      { hinge: 'A', flange: 60, length: 200, depth: 295, angle: 90, turn: 'flip' },
+      { hinge: 'B', flange: 60, length: 200, depth: 295, angle: 90, turn: 'rot180' },
+      { hinge: 'C', flange: 60, length: 150, depth: 320, angle: 90, turn: 'rot90' },
+      { hinge: 'D', flange: 60, length: 150, depth: 320, angle: 90, turn: 'rot180' },
     ],
   },
 ];

@@ -4,6 +4,18 @@ Zoznam zmien po dňoch. Podrobnosti sú v jednotlivých pull requestoch a commit
 moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md), audity v [docs/AUDIT.md](docs/AUDIT.md)
 a [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md).
 
+## 9. 11. 2026
+
+- Bystronic: nový vzorový program – krabička 200 × 150 × 60 mm z plechu 2 mm s vonkajším lemom 25 mm na stene A,
+  5 ohybov na jednom prírezu (lem rubom hore, dlhé steny, krátke steny medzi ohnutými). Po každom ohybe tlačidlo
+  „↻ Otočiť plech“ prevráti / otočí diel s animáciou a nastaví doraz X, uhol a dĺžku ďalšieho ohybu; Štart bez
+  otočenia sa odmietne. Tabuľka programu ukazuje manipuláciu, hranu, X a dĺžku ohybu.
+- Nástroje pre krabičku: razník zložený zo segmentov 100 / 50 / 40 mm na dĺžku ohybu (krátke steny sa ohýbajú medzi
+  dlhými) a úzka matrica V16, vedľa ktorej sa zmestí zahnutý lem.
+- Oprava: ohýbanie sa zastavilo po prvom ohybe a sprievodca hneď skočil na koniec – sprievodca teraz vedie cez všetkých
+  5 ohybov a 4 otočenia plechu; test v prehliadači prejde celý program.
+- Export STL obrobku vynechá skryté siete.
+
 ## 8. 11. 2026
 
 - Oprava: lišta „Rozpracovaná práca“ (Invalid Date) sa ukázala aj bez uloženej práce; konzola TNC drží pomer strán

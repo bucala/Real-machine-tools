@@ -2,6 +2,7 @@
 // start = stav pri začiatku kroku (napr. o koľko sa posunul suport). Popisy param/button sa musia zhodovať
 // s popismi ovládačov v paneli daného stroja.
 import { L } from '../core/i18n';
+import { BOX_EDGE, BRAKE_PROGRAMS, TURN_LABEL } from './precision/pressBrakeProcess';
 
 const s = (title, text, extra = {}) => ({ title, text, ...extra });
 
@@ -357,6 +358,38 @@ export const EDM_GUIDE = () => [
   ),
 ];
 
+// program krabičky: päť ohybov a štyri otočenia plechu na jednom prírezu (pressBrakeProcess.js BRAKE_PROGRAMS)
+const brakeProgramSteps = () =>
+  BRAKE_PROGRAMS[0].steps.flatMap((st, i, all) => [
+    ...(i
+      ? [
+          s(
+            L(`Otoč plech (${i}/${all.length - 1})`, `Turn the sheet (${i}/${all.length - 1})`),
+            L(
+              `${TURN_LABEL[st.turn]()} – stlač „Otočiť plech“. Riadenie nastaví doraz X ${st.flange} mm, uhol ${st.angle}° a dĺžku ohybu ${st.length} mm.`,
+              `${TURN_LABEL[st.turn]()} – press “Turn sheet”. The control sets the X gauge ${st.flange} mm, angle ${st.angle}° and bend length ${st.length} mm.`,
+            ),
+            {
+              part: 'plech',
+              button: L('Otočiť plech', 'Turn sheet'),
+              done: (ui, tele) => (tele.program?.index ?? -1) >= i && !tele.program?.turning,
+            },
+          ),
+        ]
+      : []),
+    s(
+      L(`Ohyb ${i + 1}/${all.length}: ${BOX_EDGE[st.hinge]()}`, `Bend ${i + 1}/${all.length}: ${BOX_EDGE[st.hinge]()}`),
+      L(
+        `${i ? '' : 'Plech leží rubom hore, lem je pri doraze. '}Stlač „Spustiť ohyb“ a počkaj, kým baran ohne hranu na ${st.angle}° a vráti sa hore.${i ? '' : ' Pri úlohe najprv potvrď kontrolu BOZP.'}`,
+        `${i ? '' : 'The sheet lies face down with the flange at the gauge. '}Press “Start bend” and wait until the ram bends the edge to ${st.angle}° and returns up.${i ? '' : ' In a task confirm the safety check first.'}`,
+      ),
+      {
+        part: 'plech',
+        button: L('Spustiť ohyb', 'Start bend'),
+        done: (ui, tele) => (tele.program?.bends || 0) >= i + 1 && tele.done,
+      },
+    ),
+  ]);
 export const BRAKE_GUIDE = () => [
   s(
     L('Zapni hydrauliku', 'Switch on the hydraulics'),
@@ -364,18 +397,18 @@ export const BRAKE_GUIDE = () => [
     { part: 'baran', param: L('Hydraulika', 'Hydraulics'), done: (ui) => ui.hydraulic },
   ),
   s(
-    L('Plech', 'Sheet'),
+    L('Program krabičky', 'Box program'),
     L(
-      'Zadaj hrúbku, dĺžku a hĺbku prírezu v časti Ohyb.',
-      'Enter the thickness, length and depth of the blank in the Bend section.',
+      'V časti Program ohybov je načítaná krabička 200 × 150 × 60 mm s vonkajším lemom 25 mm: 5 ohybov na jednom plechu, medzi nimi sa plech otáča. Tabuľka ukazuje manipuláciu, hranu, doraz X a dĺžku každého ohybu.',
+      'The Bend program section holds a box 200 × 150 × 60 mm with a 25 mm outward flange: 5 bends on one sheet, turned between them. The table lists the handling, edge, X gauge and length of each bend.',
     ),
-    { part: 'plech' },
+    { part: 'plech', button: L('Načítať zložitý program', 'Load complex program') },
   ),
   s(
-    L('Zvoľ matricu', 'Choose the die'),
+    L('Nástroje', 'Tooling'),
     L(
-      'Otvorenie matrice V má byť 6 – 10 × hrúbka plechu.',
-      'The die opening V should be 6 – 10 × the sheet thickness.',
+      'Razník je zložený zo segmentov na dĺžku ohybu (krátke steny sa ohýbajú medzi už ohnutými dlhými) a úzka matrica V16 nechá miesto pre zahnutý lem. Otvorenie V má byť 6 – 10 × hrúbka plechu.',
+      'The punch is assembled from segments to the bend length (the short walls are bent between the long ones) and the narrow V16 die leaves room for the bent flange. The V opening should be 6 – 10 × the sheet thickness.',
     ),
     {
       part: 'stol',
@@ -383,17 +416,13 @@ export const BRAKE_GUIDE = () => [
       done: (ui) => ui.v >= 6 * ui.thickness && ui.v <= 10 * ui.thickness,
     },
   ),
+  ...brakeProgramSteps(),
   s(
-    L('Spusti ohyb', 'Start the bend'),
+    L('Krabička je hotová', 'The box is finished'),
     L(
-      'Stlač „Spustiť ohyb“ – pri úlohe najprv potvrď kontrolu BOZP.',
-      'Press “Start bend” – in a task confirm the safety check first.',
+      'Všetkých 5 ohybov je na dieli. Pozri si krabičku v scéne; tlačidlo „Nový plech“ začne program od prvého ohybu.',
+      'All 5 bends are on the part. Look at the box in the scene; “New sheet” restarts the program from the first bend.',
     ),
-    { button: L('Spustiť ohyb', 'Start bend'), done: (ui, tele) => tele.run || tele.complete },
-  ),
-  s(
-    L('Dokončenie ohybu', 'Bend complete'),
-    L('Počkaj, kým baran ohne plech a vráti sa hore.', 'Wait until the ram bends the sheet and returns up.'),
-    { part: 'plech', done: (ui, tele) => tele.complete },
+    { part: 'plech' },
   ),
 ];
