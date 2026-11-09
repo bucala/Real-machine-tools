@@ -29,7 +29,16 @@ import {
 } from './ui/art';
 import { PrefBar } from './ui/common';
 import { BystronicArt } from './ui/bystronicArt';
-import { BenchGrinderArt, CenterlessArt, FguArt, FnkArt, KaruselArt, SvArt, ToolGrinderArt } from './ui/art2';
+import {
+  BenchGrinderArt,
+  CenterlessArt,
+  FguArt,
+  FnkArt,
+  GearShaperArt,
+  KaruselArt,
+  SvArt,
+  ToolGrinderArt,
+} from './ui/art2';
 
 // každý stroj je samostatný súbor – načíta sa až pri otvorení, menu sa tak zobrazí bez three.js
 const LatheSimulator = lazy(() => import('./machines/lathe'));
@@ -58,6 +67,7 @@ const KaruselSimulator = lazy(() => import('./machines/karusel'));
 const BnSimulator = lazy(() => import('./machines/bn'));
 const BbtSimulator = lazy(() => import('./machines/bbt'));
 const BbjSimulator = lazy(() => import('./machines/bbj'));
+const OhaSimulator = lazy(() => import('./machines/oha'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -223,6 +233,25 @@ const MACHINES = [
         L('Modul 2, z 20 – 40', 'Module 2, z 20 – 40'),
         L('Fréza Ø70 jednochodá', 'Single-start Ø70 hob'),
         L('Kontrola Wk ±0,05', 'Wk check ±0.05'),
+      ],
+    }),
+  },
+  {
+    id: 'oha',
+    Art: GearShaperArt,
+    Comp: OhaSimulator,
+    t: () => ({
+      meta: L('Obrážačka ozubenia', 'Gear shaper'),
+      name: L('Obrážačka ozubenia nožovým kolesom', 'Gear shaper with a shaper cutter'),
+      model: 'TOS Čelákovice OHA 32 A',
+      desc: L(
+        'Vnútorné ozubenie, ktoré odvalovacia fréza nevyrobí: nožové koleso kmitá zvisle a odvaľuje sa s prstencom, výmenné kolesá delenia, dĺžka a poloha zdvihu s nábehom a výbehom, radiálny prísuv do hĺbky 2,25 · m.',
+        'Internal gears a hob cannot cut: the shaper cutter reciprocates vertically and generates with the ring, index change gears, stroke length and position with run-in and run-out, radial infeed to 2.25 · m.',
+      ),
+      specs: [
+        L('Modul do 6, vnútorné do Ø370', 'Module up to 6, internal up to Ø370'),
+        L('125 – 500 zdvihov/min', '125 – 500 strokes/min'),
+        L('Prstenec z 60, m 3', 'Ring z 60, m 3'),
       ],
     }),
   },
