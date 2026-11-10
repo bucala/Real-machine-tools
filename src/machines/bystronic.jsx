@@ -513,10 +513,11 @@ export default function BystronicSimulator({ onBack, params }) {
       }
     };
     insp.goView('celok', true);
-    const tick = (dt, render = true) => {
+    // real: skutočne uplynutý čas snímky – animácia otočenia plechu trvá 1,6 s aj pri nízkej snímkovej frekvencii
+    const tick = (dt, render = true, real = dt) => {
       t += dt;
       guardAngle += ((c.guardOpen ? 1.15 : 0) - guardAngle) * Math.min(1, dt * 5);
-      control.advance(dt * c.speed, dt);
+      control.advance(dt * c.speed, real);
       c.running = process.S.run;
       model.update({ S: process.S, c, guardAngle, prog: control.profile() });
       wi.update(dt);
@@ -539,9 +540,10 @@ export default function BystronicSimulator({ onBack, params }) {
     const sceneOpt = optimizeMachine({ root, scene, renderer, refs: { model, G }, controls: ctrl });
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const dt = Math.min(0.05, (now - last) / 1000),
+        real = Math.min(0.5, Math.max(0, (now - last) / 1000));
       last = now;
-      tick(dt);
+      tick(dt, true, real);
     };
     raf = requestAnimationFrame(loop);
     if (/[?&]debug/.test(window.location.search))
