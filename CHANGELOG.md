@@ -5,6 +5,15 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 [docs/AUDIT-2026-11.md](docs/AUDIT-2026-11.md) a
 [docs/AUDIT-2026-11-klasicke-stroje.md](docs/AUDIT-2026-11-klasicke-stroje.md).
 
+## 10. 11. 2026
+
+- Nový stroj: kovací buchar Šmeral KHZ 2 (energia úderu 20 kJ, baran 920 kg, zdvih 400 mm) podľa fotiek – zúžený
+  rám s pracovným oknom, valec na vrchu, ploché kovadlá, ovládacie stojany a pedál; plynová kovacia pec s dvierkami
+  a regulátorom teploty, kliešte. Kovanie hranola so zachovaním objemu a rozširovaním, energia úderu voličom,
+  otáčanie o 90°, chladnutie na vzduchu, údery pod 850 °C, trhliny pod 750 °C, spálenie nad 1 280 °C, úder
+  naprázdno. Úlohy: plochá tyč 40 × 60 a predĺženie na štvorec 40 × 40.
+- Spoločné jadro klasických strojov prijíma obmedzenia kamery (vysoké stroje sa zmestia do predvoleného pohľadu).
+
 ## 9. 11. 2026
 
 - Nové stroje (body 13 – 22 auditu, overené konkrétne modely):

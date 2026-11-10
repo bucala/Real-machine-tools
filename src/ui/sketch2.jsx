@@ -130,13 +130,13 @@ export function ToolAngleDrawing({ alpha = 8, gamma = 12 }) {
 }
 
 // kovanie: hranol pred a po (prierez a × a → výška h, dĺžka sa predĺži)
-export function ForgeDrawing({ a = 60, h = 40, L0 = 120 }) {
+export function ForgeDrawing({ a = 60, h = 40, w = a, L0 = 120, tw = '±3' }) {
   const k = 0.7,
     x0 = 20,
     y0 = 30,
-    L1 = Math.round((L0 * a) / h);
+    L1 = Math.round((L0 * a * a) / (h * w));
   return (
-    <Svg h={140} label={`${a} → ${h}`}>
+    <Svg h={140} label={`${a} × ${a} → ${h} × ${w}`}>
       <Cap x={x0} y={14}>
         {L('polotovar', 'blank')}
       </Cap>
@@ -150,7 +150,7 @@ export function ForgeDrawing({ a = 60, h = 40, L0 = 120 }) {
       <DimV y1={y0} y2={y0 + h * k} x={140 + L1 * k * 0.6 + 9} f1={140 + L1 * k * 0.6} text={`${h} ±1`} />
       <DimH x1={140} x2={140 + L1 * k * 0.6} y={y0 + h * k + 12} f1={y0 + h * k} text={`≈ ${L1}`} />
       <T x={150} y={y0 + h * k + 36} s={8} o={0.75}>
-        {L('kovať pri 1 200 – 850 °C', 'forge at 1,200 – 850 °C')}
+        {`${L('šírka', 'width')} ${w} ${tw} · ${L('kovať pri 1 200 – 850 °C', 'forge at 1,200 – 850 °C')}`}
       </T>
     </Svg>
   );
