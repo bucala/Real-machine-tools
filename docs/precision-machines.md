@@ -196,10 +196,13 @@ Vláknový laser 3 kW na rezanie plechu. Údaje: pracovný priestor (X × Y × Z
 (oceľ, nerez, hliník), mosadz 8 mm, meď 6 mm, riadenie AMNC 3i – leták Amada BREVIS E133 a stránka produktu
 (amada.eu, thefabricator.com).
 
-Model je vizuálna rekonštrukcia podľa fotografií: sivé kryty, červený ľavý stĺp a pásy, tmavý sokel, zelené ochranné
-okná, polepy (znak a nápis výrobcu, typové označenie, podpis, výstražné štítky) sú zjednodušené textúry. Dverný systém:
-výklopné čelné dvere (tlačidlo na paneli, nožný pedál alebo madlo), tri blokované servisné dvere (ľavý stĺp, dvoje na
-pravom boku) a výsuvný stôl s lamelami. Panel AMNC 3i na otočnom ramene so živou obrazovkou programu, závesný ovládač.
+Model je vizuálna rekonštrukcia podľa 14 fotografií a letákov: červený ľavý hlavový blok so žltým dvojpruhom, strieborné
+čelné panely a skriňa, čierny podstavec, čierne vnútro, zelené ochranné okná a polepy (znak a nápis výrobcu, typové
+označenie, podpis FL, výstražné štítky) ako zjednodušené textúry. Dverný systém: dva veľké posuvné čelné panely
+sa zasunú doprava do skrine a predná polovica strechy sa zdvihne (tlačidlo na paneli, nožný pedál alebo úchytka;
+strecha sa zatvára ako prvá). Tri blokované servisné dvere (ľavý stĺp, dvoje na pravom boku) a výsuvná červená paleta
+so špicatým lôžkom (vyťahuje sa až po úplnom otvorení čela). Robustný tablet AMNC 3i na otočnom ramene so živou
+obrazovkou programu, tlačidlová doska, závesný ovládač. Štart cyklu vyžaduje zatvorené čelo aj strechu.
 
 Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
 hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku
