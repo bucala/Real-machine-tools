@@ -639,6 +639,22 @@ function AmadaSimulator({ onBack, params }) {
 }
 
 // ---------- HMI AMNC 3i na celú obrazovku (dvojklik na obrazovku v ručnom režime alebo tlačidlo HMI) ----------
+// verná kópia tabletu z modelu (brevisModel – súradnice hlavy: šírka 5,0, výška 7,1; stred v strede)
+const HW = 5.0,
+  HH = 7.1;
+const hx = (x) => `${((x + HW / 2) / HW) * 100}%`,
+  hy = (y) => `${((HH / 2 - y) / HH) * 100}%`,
+  hw = (w) => `${(w / HW) * 100}%`,
+  hh = (h) => `${(h / HH) * 100}%`;
+// obdĺžnik v súradniciach modelu (x0..x1, y0..y1)
+const rect = (x0, x1, y0, y1, style = {}) => ({
+  position: 'absolute',
+  left: hx(x0),
+  top: hy(y1),
+  width: hw(x1 - x0),
+  height: hh(y1 - y0),
+  ...style,
+});
 function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
   const canvasRef = useRef(null),
     closeRef = useRef(null);
@@ -672,43 +688,85 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
     };
   }, []);
   const act = (k) => apiRef.current.act?.[k]?.();
-  const sq = (k, label, on, color = '#eef1f3', fg = '#111') => (
-    <button
-      key={k}
-      type="button"
-      aria-pressed={on === undefined ? undefined : !!on}
-      onClick={() => act(k)}
+  const lbl = (t, x, y) => (
+    <span
+      key={`l${t}`}
+      aria-hidden="true"
       style={{
-        minWidth: 74,
-        height: 54,
-        borderRadius: 6,
-        border: `3px solid ${on ? '#5bd27a' : '#2a2f33'}`,
-        background: color,
-        color: fg,
+        position: 'absolute',
+        left: hx(x - 0.4),
+        top: hy(y + 0.06),
+        width: hw(0.8),
+        textAlign: 'center',
+        color: '#e8ebe6',
+        fontSize: '1.05cqh',
         fontWeight: 700,
-        fontSize: 12,
-        letterSpacing: 0.5,
-        boxShadow: '0 3px 0 #0006',
+        whiteSpace: 'nowrap',
+        pointerEvents: 'none',
       }}
     >
-      {label}
-    </button>
+      {t}
+    </span>
   );
-  const phase = { idle: 'READY', ready: 'READY', run: 'CUTTING', hold: 'HOLD', done: 'END' }[tele.phase] || '';
+  // štvorcové tlačidlo (biele s čiernym rámikom), poloha a veľkosť ako na modeli
+  const sq = (k, x, y, r, color, name, on, label, ly) => [
+    ctl(
+      k,
+      name,
+      on,
+      rect(x - r, x + r, y - r, y + r, {
+        background: color,
+        border: `0.35cqh solid ${on ? '#5bd27a' : '#2c3034'}`,
+        borderRadius: '0.5cqh',
+        boxShadow: '0 0.35cqh 0 #000a',
+      }),
+    ),
+    label ? lbl(label, x, y + (ly ?? -r - 0.04)) : null,
+  ];
+  const round = (k, x, y, r, color, name, on, label, ly) => [
+    ctl(
+      k,
+      name,
+      on,
+      rect(x - r, x + r, y - r, y + r, {
+        borderRadius: '50%',
+        background: color,
+        border: `0.45cqh solid ${on ? '#5bd27a' : '#b9bec3'}`,
+        boxShadow: '0 0.35cqh 0 #000a',
+      }),
+    ),
+    label ? lbl(label, x, y + (ly ?? -r - 0.04)) : null,
+  ];
+  // ovládací prvok; bez funkcie (k) len dekoratívny, mimo prístupnosti
+  const ctl = (k, name, on, style) =>
+    k ? (
+      <button
+        key={k}
+        type="button"
+        aria-label={name}
+        title={name}
+        aria-pressed={on === undefined ? undefined : !!on}
+        onClick={() => act(k)}
+        style={{ ...style, cursor: 'pointer' }}
+      />
+    ) : (
+      <i key={`d${style.left}${style.top}`} aria-hidden="true" style={style} />
+    );
   const message = ui.estop
     ? L('Núdzový STOP', 'Emergency STOP')
     : tele.alarm
       ? L('Alarm – stlač RESET', 'Alarm – press RESET')
       : ui.door || ui.cover
         ? L('Dvere alebo kryty otvorené', 'Door or covers open')
-        : phase;
+        : { idle: 'READY', ready: 'READY', run: 'CUTTING', hold: 'HOLD', done: 'END' }[tele.phase] || '';
+  const ovr = (d) => set('ovr', clamp(ui.ovr + d, 50, 150));
   return createPortal(
     <div
       className="hmi-fullscreen"
       role="dialog"
       aria-modal="true"
       aria-labelledby="amada-hmi-title"
-      style={{ gridTemplateRows: '48px minmax(0,1fr) auto' }}
+      style={{ gridTemplateRows: '48px minmax(0,1fr)' }}
       onKeyDown={(e) => e.stopPropagation()}
     >
       <header className="hmi-full-toolbar">
@@ -729,99 +787,223 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
           ×
         </button>
       </header>
-      <section className="hmi-live-display" aria-label={L('Displej HMI', 'HMI display')}>
+      <section
+        aria-label={L('Tablet AMNC 3i', 'AMNC 3i tablet')}
+        style={{
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5dvh 12px',
+          containerType: 'size',
+          background: 'radial-gradient(circle at 50% 40%, #3a4047, #1b1f24)',
+        }}
+      >
         <div
           style={{
-            height: '100%',
-            maxWidth: '100%',
-            aspectRatio: '800/500',
-            border: '18px solid #0b0c0e',
-            borderRadius: 26,
-            boxShadow: '-10px 0 #2b2f33, 10px 0 #2b2f33',
-            background: '#000',
+            position: 'relative',
+            height: `min(100cqh, ${(HH / HW).toFixed(4)} * 100cqw)`,
+            aspectRatio: `${HW}/${HH}`,
+            containerType: 'size',
+            fontFamily: 'Arial, Helvetica, sans-serif',
           }}
         >
+          {/* gumené rohy, telo, bočné úchopy a horné držadlo */}
+          {[-1, 1].flatMap((sx) =>
+            [-1, 1].map((sy) => (
+              <i
+                key={`c${sx}${sy}`}
+                aria-hidden="true"
+                style={rect(sx * 2.15 - 0.6, sx * 2.15 + 0.6, sy * 2.85 - 0.6, sy * 2.85 + 0.6, {
+                  background: '#141618',
+                  borderRadius: '28%',
+                })}
+              />
+            )),
+          )}
+          <i aria-hidden="true" style={rect(-2.5, 2.5, -3.25, 3.25, { background: '#1a1c1f', borderRadius: '4cqh' })} />
+          {[-1, 1].map((sx) => (
+            <i
+              key={`g${sx}`}
+              aria-hidden="true"
+              style={rect(sx * 2.58 - 0.16, sx * 2.58 + 0.16, -2.3, 2.3, {
+                background:
+                  'repeating-linear-gradient(#34373b 0 1.1cqh, #111 1.1cqh 1.9cqh) 0 50% / 100% 40% no-repeat, #34373b',
+                borderRadius: '1cqh',
+              })}
+            />
+          ))}
+          <i
+            aria-hidden="true"
+            style={rect(-1.1, 1.1, 3.1, 3.55, {
+              background: 'repeating-linear-gradient(90deg, #111 0 1.6cqh, #34373b 1.6cqh 2.6cqh)',
+              borderRadius: '1cqh 1cqh 0 0',
+            })}
+          />
+          {/* čierne sklo s obrazovkou a logami */}
+          <i
+            aria-hidden="true"
+            style={rect(-2.38, 2.38, -0.8, 3.05, { background: '#07080a', borderRadius: '1.2cqh' })}
+          />
           <canvas
             ref={canvasRef}
             width="800"
             height="500"
-            style={{ display: 'block', width: '100%', height: '100%' }}
             aria-label={L('Obrazovka AMNC 3i', 'AMNC 3i screen')}
+            style={rect(-2.25, 2.25, 1.2 - 1.405, 1.2 + 1.405, { display: 'block' })}
           />
-        </div>
-      </section>
-      <section
-        aria-label={L('Ovládací panel', 'Control panel')}
-        style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 18px', background: '#c9cdd1' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 14,
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 14,
-            borderRadius: 10,
-            background: '#1b1e21',
-            maxWidth: 1100,
-          }}
-        >
-          <button
-            type="button"
-            aria-pressed={!!ui.estop}
-            aria-label={L('Núdzový STOP', 'Emergency STOP')}
-            onClick={() => act('estop')}
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: '50%',
-              background: '#d0202a',
-              border: '9px solid #f2c200',
-              color: '#fff',
-              fontWeight: 800,
-              boxShadow: ui.estop ? 'inset 0 4px 8px #0008' : '0 4px 0 #0008',
-            }}
+          <span
+            aria-hidden="true"
+            style={{ ...rect(-2.1, -0.6, 2.72, 2.95), color: '#fff', fontWeight: 800, fontSize: '1.7cqh' }}
           >
-            STOP
-          </button>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#e8ebe6', gap: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700 }}>OVERRIDE {ui.ovr} %</span>
-            <input
-              type="range"
-              min={50}
-              max={150}
-              step={5}
-              value={ui.ovr}
-              aria-label={L('Regulátor rýchlosti rezu', 'Cutting speed override')}
-              onChange={(e) => set('ovr', +e.target.value)}
+            ●MADA
+          </span>
+          <span
+            aria-hidden="true"
+            style={{ ...rect(1.1, 2.3, -0.68, -0.42), fontSize: '1.6cqh', fontWeight: 800, fontStyle: 'italic' }}
+          >
+            <b style={{ color: '#d7262e' }}>AMNC</b> <b style={{ color: '#e8ebe6' }}>3i</b>
+          </span>
+          {/* strieborná doska a čierne ovládacie pole */}
+          <i
+            aria-hidden="true"
+            style={rect(-2.3, 2.3, -3.05, -0.92, { background: '#c4c7cb', borderRadius: '1cqh' })}
+          />
+          <i
+            aria-hidden="true"
+            style={rect(-2.1, 2.1, -2.88, -1.08, { background: '#1d1f21', borderRadius: '0.6cqh' })}
+          />
+          <svg
+            aria-hidden="true"
+            viewBox={`0 0 ${HW} ${HH}`}
+            preserveAspectRatio="none"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+          >
+            <polyline
+              points={[
+                [-0.62, -1.42],
+                [-0.62, -1.3],
+                [0.25, -1.3],
+                [0.25, -1.62],
+              ]
+                .map(([x, y]) => `${x + HW / 2},${HH / 2 - y}`)
+                .join(' ')}
+              fill="none"
+              stroke="#e8ebe6"
+              strokeWidth="0.02"
             />
-          </div>
-          {sq('start', 'START', undefined, '#2e9b4a', '#fff')}
-          {sq('hold', 'HOLD')}
-          {sq('reset', 'RESET', undefined, '#2563c9', '#fff')}
-          {sq('door', 'DOOR', ui.door)}
-          {sq('cover', 'COVER', ui.cover)}
-          {sq('drawer', 'PALLET', ui.drawer, '#f2c200')}
-          {sq('light', 'LIGHT', ui.light)}
-          {sq('laser', L('LASER (kľúč)', 'LASER (key)'), ui.laser, '#c9ced2')}
+            <polyline
+              points={[
+                [-0.62, -2.22],
+                [-0.62, -2.15],
+                [0.05, -2.15],
+                [0.05, -2.22],
+              ]
+                .map(([x, y]) => `${x + HW / 2},${HH / 2 - y}`)
+                .join(' ')}
+              fill="none"
+              stroke="#e8ebe6"
+              strokeWidth="0.02"
+            />
+          </svg>
+          {/* núdzový stop so žltým krúžkom */}
+          <i
+            aria-hidden="true"
+            style={rect(-1.6 - 0.39, -1.6 + 0.39, -2.0 - 0.39, -2.0 + 0.39, {
+              background: '#f2b705',
+              borderRadius: '50%',
+            })}
+          />
           <button
             type="button"
-            aria-pressed={!!ui.power}
-            onClick={() => act('power')}
-            style={{
-              width: 64,
-              height: 64,
+            aria-label={
+              ui.estop ? L('Uvoľniť núdzový STOP', 'Release Emergency STOP') : L('Núdzový STOP', 'Emergency STOP')
+            }
+            aria-pressed={!!ui.estop}
+            onClick={() => act('estop')}
+            style={rect(-1.87, -1.33, -2.27, -1.73, {
               borderRadius: '50%',
-              background: '#eef1f3',
-              border: `4px solid ${ui.power ? '#5bd27a' : '#2a2f33'}`,
-              color: '#111',
-              fontWeight: 700,
-              fontSize: 11,
+              background: 'radial-gradient(circle at 40% 35%, #f04848, #b5121c)',
+              border: 'none',
+              boxShadow: ui.estop ? 'inset 0 0.6cqh 1cqh #0009' : '0 0.6cqh 0 #5a0a0e',
+              cursor: 'pointer',
+            })}
+          />
+          {/* regulátor posuvu: klik vľavo / vpravo, koliesko alebo šípky */}
+          <button
+            type="button"
+            aria-label={`${L('Regulátor rýchlosti rezu', 'Cutting speed override')} ${ui.ovr} %`}
+            title={`OVERRIDE ${ui.ovr} %`}
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              ovr(e.clientX < r.left + r.width / 2 ? -5 : 5);
             }}
+            onWheel={(e) => ovr(e.deltaY > 0 ? -5 : 5)}
+            onKeyDown={(e) => {
+              if (['ArrowLeft', 'ArrowDown'].includes(e.key)) ovr(-5);
+              if (['ArrowRight', 'ArrowUp'].includes(e.key)) ovr(5);
+            }}
+            style={rect(-1.21, -0.83, -2.19, -1.81, {
+              borderRadius: '50%',
+              background: '#f4f5f6',
+              border: '0.3cqh solid #9aa0a5',
+              boxShadow: '0 0 0 0.9cqh #2a2d30',
+              cursor: 'pointer',
+              transform: `rotate(${((ui.ovr - 100) / 50) * 135}deg)`,
+              backgroundImage: 'linear-gradient(#111, #111)',
+              backgroundSize: '8% 45%',
+              backgroundPosition: '50% 4%',
+              backgroundRepeat: 'no-repeat',
+            })}
+          />
+          {lbl(`OVERRIDE ${ui.ovr}%`, -1.02, -2.4)}
+          {sq('light', -1.72, -1.32, 0.1, '#f2f3f4', L('Pracovné osvetlenie', 'Work light'), ui.light, 'LIGHT', 0.2)}
+          {sq(null, -1.42, -1.32, 0.1, '#f2f3f4', '')}
+          {sq('cover', -0.45, -1.62, 0.13, '#f2f3f4', L('Bočné kryty', 'Side covers'), ui.cover, 'COVER', 0.26)}
+          {sq(null, -0.12, -1.62, 0.13, '#f2f3f4', '')}
+          {sq('drawer', 0.25, -1.82, 0.13, '#f2c200', L('Rezacia paleta', 'Cutting pallet'), ui.drawer, 'PALLET')}
+          {sq('door', 0.62, -1.48, 0.13, '#f2f3f4', L('Čelné dvere', 'Front door'), ui.door, 'DOOR', 0.26)}
+          {sq('start', -0.45, -2.42, 0.13, '#2e9b4a', L('Štart cyklu', 'Cycle start'), undefined, 'START')}
+          {sq('hold', -0.12, -2.42, 0.13, '#f2f3f4', L('Zastaviť', 'Hold'), undefined, 'HOLD')}
+          {sq('reset', 0.85, -2.5, 0.13, '#2563c9', 'Reset', undefined, 'RESET')}
+          {/* kľúčový spínač laseru */}
+          <button
+            type="button"
+            aria-label={L('Kľúčový spínač laseru', 'Laser key switch')}
+            aria-pressed={!!ui.laser}
+            onClick={() => act('laser')}
+            style={rect(0.68, 1.02, -2.15, -1.81, {
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #8d949a 40%, #c9ced2 42%)',
+              border: `0.35cqh solid ${ui.laser ? '#5bd27a' : '#555'}`,
+              cursor: 'pointer',
+            })}
           >
-            POWER
+            <i
+              style={{
+                position: 'absolute',
+                left: '42%',
+                top: '-30%',
+                width: '16%',
+                height: '80%',
+                background: '#f2b705',
+                borderRadius: '0.4cqh',
+                transform: `rotate(${ui.laser ? 90 : 0}deg)`,
+                transformOrigin: '50% 75%',
+              }}
+            />
           </button>
+          {lbl('LASER', 0.85, -2.21)}
+          {round('power', 1.45, -1.6, 0.15, '#f4f5f6', L('Napájanie', 'Power'), ui.power, 'POWER', 0.3)}
+          {round(null, 1.45, -2.38, 0.15, '#2b2e31', '')}
+          {/* konektory na pravom boku */}
+          {[-2.0, -2.45].map((y) => (
+            <i
+              key={`k${y}`}
+              aria-hidden="true"
+              style={rect(2.5, 2.75, y - 0.12, y + 0.12, { background: '#2b2e31', borderRadius: '0.5cqh' })}
+            />
+          ))}
         </div>
       </section>
     </div>,

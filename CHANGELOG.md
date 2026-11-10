@@ -28,8 +28,10 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
   vyberanie dielov; úlohy príruby z ocele 3 mm a konzoly z nerezu 2 mm. Ovládanie zjednotené ako pri iných strojoch: nad
   scénou len Pozrieť obrobok a HMI, v paneli sekcia Prevádzka s tlačidlami (štart, zastaviť, reset, stroj, laser,
   núdzový STOP, dvere, bočné kryty, paleta) a prepínačom osvetlenia; dvojklik na obrazovku v ručnom režime otvorí HMI
-  AMNC 3i na celú obrazovku s ovládacím panelom. Pedál: krátke stlačenie po krokoch (dvere, kryty, späť kryty, späť
-  dvere), dlhé podržanie otvorí alebo zatvorí všetko; voľné tlačidlá HMI ovládajú svetlo (LIGHT) a bočné kryty (COVER).
+  AMNC 3i na celú obrazovku ako vernú kópiu tabletu z modelu (rovnaký tvar, gumené rohy, úchopy, živá obrazovka, núdzový
+  STOP, regulátor OVERRIDE, kľúčový spínač laseru a tlačidlá na rovnakých miestach a funkčné). Pedál: krátke stlačenie
+  po krokoch (dvere, kryty, späť kryty, späť dvere), dlhé podržanie otvorí alebo zatvorí všetko; voľné tlačidlá HMI
+  ovládajú svetlo (LIGHT) a bočné kryty (COVER).
 - Nový stroj: kovací buchar Šmeral KHZ 2 (energia úderu 20 kJ, baran 920 kg, zdvih 400 mm) podľa fotiek – zúžený
   rám s pracovným oknom, valec na vrchu, ploché kovadlá, ovládacie stojany a pedál; plynová kovacia pec s dvierkami
   a regulátorom teploty, kliešte. Kovanie hranola so zachovaním objemu a rozširovaním, energia úderu voličom,
