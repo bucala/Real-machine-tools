@@ -27,9 +27,10 @@ export function createClassicScene({
   sound,
   debugKey,
   orbitOptions,
+  stageOptions,
   build,
 }) {
-  const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
+  const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount, stageOptions);
   const snd = sound ? createSound(sound) : null;
   const dom = renderer.domElement;
   const M = { ...baseMats(...colors), lampShade: std(colors[1], 0.5, 0.2) };

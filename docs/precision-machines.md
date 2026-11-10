@@ -189,6 +189,22 @@ Terminál má tvarovaný oranžovo-sivý stojan, čierny rám, biely spodný úc
 
 [Model 320/4300](img/bystronic-xpert-pro-320.png) · [Nástroje a ohnutý plech](img/bystronic-bend.png)
 
+## Amada BREVIS 1212 AJ
+
+Vláknový laser 3 kW na rezanie plechu. Údaje: pracovný priestor (X × Y × Z) 1 270 × 1 270 × 200 mm, rýchloposuv
+40 / 40 / 60 m/min, najväčšia hmotnosť tabule 150 kg, rozmery stroja 3 088 × 2 389 × 1 900 mm, hrúbky do 12 mm
+(oceľ, nerez, hliník), mosadz 8 mm, meď 6 mm, riadenie AMNC 3i – leták Amada BREVIS E133 a stránka produktu
+(amada.eu, thefabricator.com).
+
+Model je vizuálna rekonštrukcia podľa fotografií: sivé kryty, červený ľavý stĺp a pásy, tmavý sokel, zelené ochranné
+okná, polepy (znak a nápis výrobcu, typové označenie, podpis, výstražné štítky) sú zjednodušené textúry. Dverný systém:
+výklopné čelné dvere (tlačidlo na paneli, nožný pedál alebo madlo), tri blokované servisné dvere (ľavý stĺp, dvoje na
+pravom boku) a výsuvný stôl s lamelami. Panel AMNC 3i na otočnom ramene so živou obrazovkou programu, závesný ovládač.
+
+Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
+hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku
+zoxiduje hranu. Výrezy otvorov po prerezaní vypadnú, diely ostanú v tabuli až do vybratia.
+
 ## HMI terminály a pracovný priestor
 
 Röders používa červený terminál so strieborným rámom, PC klávesnicou, otočnými korekciami, myšou a samostatným ručným panelom. Obraz RMS6 má červený titulok, modré bloky menu a živé NC riadky a súradnice. OSCARMAX má čierny širokouhlý monitor, bielu klávesnicovú policu, myš, predné tlačidlá, podstavec monitora a spodné madlo. Jeho svetlé zeleno-sivé PC rozhranie zobrazuje skutočné polohy, dutiny, elektródu, generátor, NC blok a výsledok. Nečitateľné položky fotografií sú výučbovou rekonštrukciou, nejde o firmvér výrobcov.

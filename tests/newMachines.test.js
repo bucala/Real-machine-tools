@@ -10,6 +10,16 @@ import { ringCut } from '../src/machines/slotterMath';
 import { HOV_TOOLS, arcInfo, hovBlank, hovChecks, hovToolRect, keywaysInfo, pitchErr } from '../src/machines/hovMath';
 import { ARG, argChecks, chord, cutWidth, piecesInfo, qMax } from '../src/machines/pasovkaMath';
 import { KHZ, blank, blow, bucharChecks, cool, flowStress, heat, turn } from '../src/machines/bucharMath';
+import {
+  PROGRAMS,
+  createLaserProcess,
+  cutQuality,
+  laserChecks,
+  laserInfo,
+  operations,
+  programStats,
+  recommend,
+} from '../src/machines/precision/laserProcess';
 
 describe('frézky FGU 32 a FNK 25', () => {
   it('rezná rýchlosť kotúčovej frézy Ø100 pri 63 ot/min je ≈ 19,8 m/min', () => {
@@ -180,5 +190,44 @@ describe('kovací buchar Šmeral KHZ 2', () => {
     expect(bad.find((c) => c.key === 'w').ok).toBe(false);
     expect(bad.find((c) => c.key === 'cold').ok).toBe(false);
     expect(KHZ.E).toBe(20000);
+  });
+});
+
+describe('vláknový laser Amada BREVIS 1212 AJ', () => {
+  it('odporúčané podmienky dávajú čistý rez, chyby sa prejavia na hrane', () => {
+    const r = recommend('S235', 3);
+    expect(cutQuality('S235', 3, r).edge).toBe('ok');
+    expect(cutQuality('S235', 3, { ...r, speed: r.speed * 1.3 }).through).toBe(false);
+    expect(cutQuality('S235', 3, { ...r, speed: r.speed * 1.1 }).edge).toBe('otrep');
+    expect(cutQuality('S235', 3, { ...r, speed: r.speed * 0.4 }).edge).toBe('prepal');
+    const n = recommend('1.4301', 2);
+    expect(cutQuality('1.4301', 2, n).edge).toBe('ok');
+    expect(cutQuality('1.4301', 2, { ...n, gas: 'O2', pressure: 0.8 }).edge).toBe('oxid');
+  });
+  it('program príruby: 9 dielov, otvory pred obrysom', () => {
+    const ops = operations('priruba');
+    expect(PROGRAMS.priruba.parts).toHaveLength(9);
+    expect(ops).toHaveLength(9 * 8);
+    expect(ops[0].inner).toBe(true);
+    expect(ops[7].inner).toBe(false);
+    const st = programStats('priruba', 'S235', 3, recommend('S235', 3));
+    expect(st.cutLen).toBeGreaterThan(9000);
+    expect(st.time).toBeGreaterThan(100);
+  });
+  it('priebeh programu dorezá všetky diely a vyhodnotí úlohu', () => {
+    const p = createLaserProcess();
+    p.load('priruba', 'S235', 3, recommend('S235', 3));
+    expect(p.start(() => null)).toBe(true);
+    for (let i = 0; i < 4000 && p.S.phase === 'run'; i++) p.advance(0.5);
+    expect(p.S.phase).toBe('done');
+    const info = laserInfo(p.S, 'priruba');
+    expect(info).toMatchObject({ parts: 9, done: 9, good: 9 });
+    const ok = laserChecks.priruba({ prog: 'priruba', mat: 'S235', t: 3, info, doorAlarm: false, unloaded: true });
+    expect(ok.every((c) => c.ok)).toBe(true);
+    expect(
+      laserChecks
+        .priruba({ prog: 'priruba', mat: 'S235', t: 3, info, doorAlarm: true, unloaded: true })
+        .find((c) => c.key === 'door').ok,
+    ).toBe(false);
   });
 });

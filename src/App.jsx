@@ -37,6 +37,7 @@ import {
   HBandSawArt,
   HammerArt,
   HovArt,
+  LaserArt,
   KaruselArt,
   SvArt,
   ToolGrinderArt,
@@ -72,6 +73,7 @@ const BbjSimulator = lazy(() => import('./machines/bbj'));
 const HovSimulator = lazy(() => import('./machines/hov'));
 const PasovkaSimulator = lazy(() => import('./machines/pasovka'));
 const BucharSimulator = lazy(() => import('./machines/buchar'));
+const AmadaSimulator = lazy(() => import('./machines/amada'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -706,6 +708,25 @@ const MODERN = [
         'A shaped copper electrode sinks cavities in steel without rotation. Moving column, dielectric tank, flushing and 60 A generator. Multiple operations, actual cavity geometry and paused-process export.',
       ),
       specs: ['500 / 400 / 450 mm', '850 × 450 mm · 2 300 kg', '60 A · 10 kVA · 850 l'],
+    }),
+  },
+  {
+    id: 'amada',
+    Art: LaserArt,
+    Comp: AmadaSimulator,
+    t: () => ({
+      meta: L('Vláknový laser', 'Fibre laser'),
+      name: 'Amada BREVIS 1212 AJ',
+      model: 'BREVIS 1212 AJ · AMNC 3i',
+      desc: L(
+        'Rezanie plechu vláknovým laserom 3 kW: výklopné čelné dvere a blokované servisné dvere, výsuvný stôl s lamelami, nakladanie tabule, program dielov, rezné podmienky podľa materiálu a hrúbky (plyn, tlak, ohnisko, rýchlosť), kvalita hrany a vyberanie dielov.',
+        'Sheet cutting with a 3 kW fibre laser: tilting front door and interlocked service doors, pull-out slat table, sheet loading, part program, cutting conditions by material and thickness (gas, pressure, focus, speed), edge quality and part unloading.',
+      ),
+      specs: [
+        L('3 kW · 1 270 × 1 270 × 200 mm', '3 kW · 1,270 × 1,270 × 200 mm'),
+        L('Oceľ, nerez, hliník do 12 mm', 'Steel, stainless, aluminium up to 12 mm'),
+        L('Rýchloposuv 40 m/min · AMNC 3i', 'Rapid 40 m/min · AMNC 3i'),
+      ],
     }),
   },
   {
