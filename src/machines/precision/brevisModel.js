@@ -740,11 +740,11 @@ export function buildBrevis({ kit, det, M, grp }) {
     reset: pbtn(0.85, -2.5, M.blue, { sq: true }),
     power: pbtn(1.45, -1.6, M.white, { r: 0.15 }),
     pallet: pbtn(0.25, -1.82, M.yellow, { sq: true }), // vysunutie / zasunutie rezacej palety
+    light: pbtn(-1.72, -1.32, M.white, { sq: true, r: 0.1 }), // osvetlenie priestoru
+    cover: pbtn(-0.45, -1.62, M.white, { sq: true }), // bočné posuvné kryty
   };
   // ďalšie (dekoratívne) tlačidlá a schéma
-  pbtn(-1.72, -1.32, M.white, { sq: true, r: 0.1, ctl: false });
   pbtn(-1.42, -1.32, M.white, { sq: true, r: 0.1, ctl: false });
-  pbtn(-0.45, -1.62, M.white, { sq: true, ctl: false });
   pbtn(-0.12, -1.62, M.white, { sq: true, ctl: false });
   pbtn(1.45, -2.38, M.dark, { r: 0.15, ctl: false });
   lines([
@@ -793,6 +793,8 @@ export function buildBrevis({ kit, det, M, grp }) {
     ['LASER', 0.85, -1.98, -0.27],
     ['DOOR', 0.62, -1.48, 0.24],
     ['PALLET', 0.25, -1.82, -0.24],
+    ['LIGHT', -1.57, -1.32, 0.2],
+    ['COVER', -0.45, -1.62, 0.24],
     ['START', -0.45, -2.42, -0.24],
     ['HOLD', -0.12, -2.42, -0.24],
     ['RESET', 0.85, -2.5, -0.24],
