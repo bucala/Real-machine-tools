@@ -210,6 +210,8 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
+V CI beží test v prehliadači len na vyžiadanie (trvá približne 25 minút): **Actions → CI → Run workflow** so zaškrtnutou voľbou „Spustiť aj test v prehliadači“, alebo štítok `e2e` na pull requeste. Bežné behy CI (push, pull request) robia lint, formátovanie, testy, build a kontrolu `public/`.
+
 Súhrnná kontrola zhodná s CI navyše overí, že pracovná verzia `public/` zodpovedá repozitáru:
 
 ```bash
