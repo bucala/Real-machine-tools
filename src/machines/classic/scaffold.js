@@ -127,6 +127,8 @@ export function createClassicScene({
         getSpot: m.workSpot || (() => v3(0, 8, 8)),
         canInspect: m.canInspect || (() => null),
         prepare: m.prepareInspect,
+        restore: m.restoreInspect,
+        canDetach: m.canDetach,
       })
     : null;
   if (!wi)
@@ -151,6 +153,7 @@ export function createClassicScene({
     t += dt;
     wi?.update(dt);
     if (!c.unclamped) m.update(dt, t);
+    else m.idleUpdate?.(dt, t); // napr. dvere a paleta počas prehliadky obrobku
     ctrl.update(dt);
     insp.update(t, c);
     if (t - teleT > 0.1) {

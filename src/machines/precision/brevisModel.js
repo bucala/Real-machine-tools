@@ -277,7 +277,6 @@ export function buildBrevis({ kit, det, M, grp }) {
   );
   // ---------- rezací priestor: čierne vnútro, podlaha, zadná stena, LED ----------
   box(frame, X0, X1 - 0.04, 4.7, 5.45, ZB, 13.9, M.black); // podlaha / zberná vaňa
-  box(frame, X0 + 0.2, 7.55, 8.9, 9.02, 13.5, 13.86, M.black); // prah s kefou pod dverami (paleta prejde popod)
   box(frame, X0, X1, 5.2, RT, ZB, ZB + 0.2, M.black); // zadná stena
   box(frame, X0, X0 + 0.12, 5.45, RT, ZB, ZP, M.black); // ľavý obklad
   box(frame, X0, X0 + 0.12, RT, 18.4, ZM, ZP, M.black);
