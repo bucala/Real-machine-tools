@@ -216,19 +216,19 @@ export function LaserArt() {
   return (
     <Svg>
       <g fillOpacity=".16">
-        <rect x="70" y="50" width="200" height="90" rx="6" />
-        <rect x="70" y="140" width="200" height="20" rx="3" fillOpacity=".4" />
+        <rect x="74" y="48" width="196" height="104" rx="7" />
       </g>
-      <rect x="70" y="46" width="24" height="94" rx="5" fill="#d2232e" fillOpacity=".8" stroke="none" />
-      <path d="M76 62l4-4h10l-4 4zM76 70l4-4h10l-4 4z" fill="#f2b705" stroke="none" />
-      <rect x="100" y="64" width="62" height="44" rx="3" fill="#2f8f3a" fillOpacity=".45" />
-      <rect x="168" y="64" width="62" height="44" rx="3" fill="#2f8f3a" fillOpacity=".45" />
-      <path d="M166 76v24" stroke="#111" strokeWidth="3" />
-      <path d="M236 112h30M236 118h30M236 124h30" stroke="#d2232e" strokeWidth="2.5" />
-      <path d="M96 138h150" stroke="#d2232e" strokeWidth="3" />
-      <path d="M40 160V70" fill="none" strokeWidth="3" />
-      <rect x="26" y="52" width="30" height="40" rx="4" fillOpacity=".35" />
-      <path d="M150 90l6 10" stroke="#ffb347" strokeWidth="3" />
+      <rect x="74" y="98" width="196" height="54" fillOpacity=".5" />
+      <rect x="74" y="44" width="40" height="108" rx="6" fill="#d2232e" fillOpacity=".85" stroke="none" />
+      <path d="M82 54h16M82 60h16" stroke="#f2b705" strokeWidth="4" />
+      <rect x="124" y="58" width="58" height="24" rx="6" fill="#26402c" fillOpacity=".7" />
+      <rect x="194" y="58" width="58" height="24" rx="6" fill="#26402c" fillOpacity=".7" />
+      <path d="M188 50v46" strokeWidth="1.5" />
+      <path d="M238 96l22-20v20z" fill="#111" stroke="none" />
+      <path d="M114 100h132" stroke="#d2232e" strokeWidth="4" />
+      <path d="M140 112h80" strokeWidth="3" />
+      <path d="M42 160V104M30 104h34" fill="none" strokeWidth="3" />
+      <rect x="28" y="56" width="30" height="44" rx="5" fillOpacity=".35" />
     </Svg>
   );
 }
