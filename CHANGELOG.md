@@ -11,19 +11,22 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
   z fotografií (Meshy) a fotografií, rozmery podľa letáku (šírka 2 389, dĺžka 3 088, výška 1 900 mm): úzke čelo s
   červeným stĺpom (žltý dvojpruh, znak AMADA, BREVIS 1212 AJ), šikmé čelné dvere z dvoch krídel so zaoblenými tmavými
   oknami a čiernym klinom s madlom. Otváranie: krídla sa posúvajú kaskádovo doľava (pravé pod ľavé, potom obe spolu pod
-  pevný červený stĺp, úplne otvorené prečnievajú cez ľavý bok o 20 % krídla), potom sa pravý bok so strechou – delený na
-  predný a stredný diel – kaskádovo zasunie dozadu (predný diel cez stredný, potom oba spolu) nad nižšiu skriňu zdroja
-  aj s pravým predným rohom, bez presahu za stroj, takže čelo, strecha aj pravý bok rezacieho priestoru sú celé
-  prístupné. Pod dverami výsuvná červená paleta s čiernou zásterou, dlhým madlom a špicatým lôžkom; ľavý bok ako čierne
-  pokračovanie červeného stĺpa až za stroj, pravý bok z troch sekcií (predná s oknom, znakom a typovým označením,
-  stredná s podpisom FL, nižšia tmavá skriňa laserového zdroja), päť červených pruhov, čierne kliny s madlami, ustúpený
-  čierny podstavec s podložkami nôh a štítkami. Vnútri čierne steny, LED pás, priečny nosník s čiernou hlavou s červeným
-  krytom a energetická reťaz. Robustný tablet AMNC 3i na výšku (gumené rohy, rebrované úchopy, horné držadlo, strieborná
-  doska s núdzovým stopom, regulátorom, štvorcovými tlačidlami a kľúčovým spínačom) na konzole pripevnenej len na čele
-  červeného stĺpa, závesný ovládač na špirálovom kábli, nožný pedál, tri blokované servisné dvere (ľavá stena, ľavý
-  stĺp, skriňa zdroja), odsávanie a chladič. Rezanie tabule podľa programu (príruby, konzoly) s rezným plynom, tlakom,
-  ohniskom a rýchlosťou, kvalita hrany, vypadávanie výrezov, vyberanie dielov; úlohy príruby z ocele 3 mm a konzoly z
-  nerezu 2 mm.
+  pevný červený stĺp, úplne otvorené celé mimo otvoru, prečnievajú cez ľavý bok pod červeným stĺpom), potom sa pravý bok
+  so strechou – delený na predný a stredný diel – kaskádovo zasunie dozadu (predný diel cez stredný, potom oba spolu)
+  nad nižšiu skriňu zdroja aj s pravým predným rohom, bez presahu za stroj, takže čelo, strecha aj pravý bok rezacieho
+  priestoru sú celé prístupné. Pod dverami výsuvná červená rezacia paleta (párne lamely roštu sa vysúvajú s ňou, nepárne
+  ostávajú v stroji; pri vysúvaní sa paleta s plechom nadvihne, po zasunutí klesne na všetky hroty) s čiernou zásterou,
+  dlhým madlom a špicatým lôžkom; ľavý bok ako odskočené (užšie a nižšie) čierne pokračovanie červeného stĺpa až za
+  stroj, pravý bok z troch sekcií (predná s oknom, znakom a typovým označením, stredná s podpisom FL, nižšia tmavá
+  skriňa laserového zdroja), päť červených pruhov, čierne kliny s madlami, ustúpený čierny podstavec s podložkami nôh a
+  štítkami. Vnútri čierne steny, LED pás, masívny priečny nosník, ktorý jazdí vľavo po vedení v stene a vpravo nohou po
+  spodnom masívnom nosníku, čierna hlava s červeným krytom a energetická reťaz. Robustný tablet AMNC 3i na výšku (gumené
+  rohy, rebrované úchopy, horné držadlo, strieborná doska s núdzovým stopom, regulátorom, štvorcovými tlačidlami a
+  kľúčovým spínačom) na konzole pripevnenej len na čele červeného stĺpa, závesný ovládač na špirálovom kábli, nožný
+  pedál, tri blokované servisné dvere (ľavá stena, ľavý stĺp, skriňa zdroja), odsávanie a chladič. Rezanie tabule podľa
+  programu (príruby, konzoly) s rezným plynom, tlakom, ohniskom a rýchlosťou, kvalita hrany, vypadávanie výrezov,
+  vyberanie dielov; úlohy príruby z ocele 3 mm a konzoly z nerezu 2 mm. Nad scénou tlačidlá ako na HMI: stroj, laser,
+  dvere, paleta, svetlo, štart, stop, reset a núdzový stop.
 - Nový stroj: kovací buchar Šmeral KHZ 2 (energia úderu 20 kJ, baran 920 kg, zdvih 400 mm) podľa fotiek – zúžený
   rám s pracovným oknom, valec na vrchu, ploché kovadlá, ovládacie stojany a pedál; plynová kovacia pec s dvierkami
   a regulátorom teploty, kliešte. Kovanie hranola so zachovaním objemu a rozširovaním, energia úderu voličom,

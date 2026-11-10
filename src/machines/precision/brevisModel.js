@@ -199,7 +199,7 @@ export function buildBrevis({ kit, det, M, grp }) {
     if (yb < DOOR_Y0) {
       s.lineTo(-FZ, yb);
       s.lineTo(-FZ, DOOR_Y0);
-    }
+    } else if (yb < YC) s.lineTo(-zf(yb), yb);
     s.lineTo(-zt, Math.max(yb, YC));
     s.quadraticCurveTo(-(zt - 0.12), yTop, -ze, yTop);
     if (ze > zBack) s.lineTo(-zBack, yTop);
@@ -243,8 +243,8 @@ export function buildBrevis({ kit, det, M, grp }) {
   const { RT, SLIDE1, SLIDE2 } = BV;
   // ľavý červený stĺp: profil s čelom a zaobleným vrcholom, strieborná vnútorná hrana
   profile(frame, -W, X0, sideShape(ZM, 4.7), M.red);
-  box(frame, -W - 0.03, -W, 8.9, 18.85, 12.65, FZ - 0.35, M.black); // čierny bok stĺpa pred servisnými dverami
-  box(frame, X0, X0 + 0.03, 4.75, 18.3, 12.4, FZ - 0.25, M.cab); // vnútorná hrana pri otvore
+  profile(frame, -W - 0.03, -W, sideShape(12.0, 8.9, 18.85), M.black); // čierny bok stĺpa pred servisnými dverami (kopíruje šikmé čelo)
+  profile(frame, X0, X0 + 0.03, sideShape(12.4, 4.75, 18.85), M.cab); // vnútorná hrana pri otvore (kopíruje šikmé čelo)
   decal(frame, 2.0, 0.85, yellowBars, -10.2, 17.75, zf(17.75) + 0.02, 0, 256, slant);
   decal(frame, 3.9, 0.62, (g, w, h) => logo(g, w, h, '#FFFFFF', RED), -9.1, 16.6, zf(16.6) + 0.02, 0, 512, slant);
   decal(
@@ -262,16 +262,14 @@ export function buildBrevis({ kit, det, M, grp }) {
   const ZP = 12.6; // zadná hrana pravého predného rohu (roh je súčasťou predného posuvného dielu)
   // ľavá pevná stena strednej sekcie a spodný pás s pruhmi na ľavom boku
   // ľavý bok: červený stĺp pokračuje v rovnakej výške čiernou stenou až dozadu a ohýba sa za stroj
-  rbox(frame, -11.83, X0, 4.7, 19.0, ZR, ZM + 0.02, M.black, 0.12);
+  rbox(frame, -11.55, X0, 4.7, 18.4, ZR, ZM + 0.02, M.black, 0.12); // odskočená: užšia a nižšia ako stĺp
   rbox(frame, -W - 0.02, -W + 0.35, 4.7, 8.9, ZM - 0.05, FZ - 0.3, M.black, 0.08);
-  rbox(frame, -W, -W + 0.4, 4.7, 8.9, ZR, ZM, M.black, 0.08);
-  rbox(frame, -W, W, 4.7, 19.0, ZR - 0.3, ZR + 0.02, M.black, 0.12); // zadná stena za strojom (posuvné diely končia pri nej)
+  rbox(frame, -11.58, -11.2, 4.7, 8.9, ZR, ZM, M.black, 0.08);
+  rbox(frame, -11.55, W, 4.7, 18.4, ZR - 0.3, ZR + 0.02, M.black, 0.12); // zadná stena za strojom (posuvné diely končia pri nej)
   // pravý spodný rám (pod posuvnými dielmi) a pozdĺžny nosník pravého vedenia portálu
   // (všetko je vnútri x < X1, aby nad tým prešiel pravý predný roh pri zasúvaní)
   box(frame, 7.9, X1 - 0.04, 4.7, 8.0, ZB, 12.8, M.black);
-  box(frame, X1 - 0.22, X1 - 0.02, 13.9, 14.7, ZB, 12.4, M.black);
-  box(frame, X1 - 0.22, X1 - 0.02, 8.0, 13.9, ZB, ZB + 0.6, M.black); // zadný stojan nosníka
-  box(frame, X1 - 0.22, X1 - 0.02, 8.0, 13.9, 12.0, 12.4, M.black); // predný stojan nosníka
+  box(frame, 8.9, 9.3, 8.0, 8.08, ZB, 12.6, M.steel); // vedenie portálu na spodnom masívnom nosníku
   // zadná nižšia tmavá skriňa (laserový zdroj)
   rbox(frame, -11.6, 11.6, 4.7, RT, ZR + 0.02, ZB, M.rear, 0.3);
   [-1, 1].forEach((s) =>
@@ -279,7 +277,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   );
   // ---------- rezací priestor: čierne vnútro, podlaha, zadná stena, LED ----------
   box(frame, X0, X1 - 0.04, 4.7, 5.45, ZB, 13.9, M.black); // podlaha / zberná vaňa
-  box(frame, X0 + 0.2, 7.55, 8.68, 9.02, 13.5, 13.86, M.black); // prah s kefou pod dverami (paleta prejde popod)
+  box(frame, X0 + 0.2, 7.55, 8.9, 9.02, 13.5, 13.86, M.black); // prah s kefou pod dverami (paleta prejde popod)
   box(frame, X0, X1, 5.2, RT, ZB, ZB + 0.2, M.black); // zadná stena
   box(frame, X0, X0 + 0.12, 5.45, RT, ZB, ZP, M.black); // ľavý obklad
   box(frame, X0, X0 + 0.12, RT, 18.4, ZM, ZP, M.black);
@@ -314,7 +312,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   };
   const doorsSide = [
     // ľavá pevná stena strednej sekcie (pánt vpredu, voľná hrana vzadu)
-    sideDoor(-11.83, ZM - 0.05, 9.6, 8.95, 17.6, -Math.PI / 2, -1, M.black, (pv, fe, dir) =>
+    sideDoor(-11.55, ZM - 0.05, 9.6, 8.95, 17.6, -Math.PI / 2, -1, M.black, (pv, fe, dir) =>
       decal(pv, 3.6, 0.6, (g, w, h) => logo(g, w, h), fe + dir * 6.0, 16.3, 0.13),
     ),
     // zadná stena skrine laserového zdroja (pánt vpravo)
@@ -393,8 +391,8 @@ export function buildBrevis({ kit, det, M, grp }) {
   };
 
   // ---------- čelné dvere: dve posuvné krídla so zaoblenými oknami, kaskádovo doľava pod červený stĺp ----------
-  // pravé krídlo zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp; úplne otvorené prečnievajú cez ľavý
-  // bok stroja o 20 % šírky krídla. Pri zatváraní najprv idú obe spolu, potom samo pravé krídlo.
+  // pravé krídlo zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp; úplne otvorené sú celé mimo otvoru
+  // a prečnievajú cez ľavý bok stroja. Pri zatváraní najprv idú obe spolu, potom samo pravé krídlo.
   const door = new THREE.Group();
   fd.add(door);
   const DH = Math.hypot(CEIL - DOOR_Y0, zf(DOOR_Y0) - zf(CEIL)); // výška krídla (pozdĺž šikmého čela)
@@ -453,10 +451,9 @@ export function buildBrevis({ kit, det, M, grp }) {
   rbox(leafR, hx - 0.1, hx + 0.1, -DH + 0.55, -DH + 2.35, 0.0, 0.09, M.dark, 0.04);
   hitProxy(leafR, 1.1, hx, -DH + 1.4, 0.3);
   decal(leafR, 0.8, 0.72, warn, 9.4, -DH + 3.9, 0.01, 0, 128);
-  // dráhy: pravé krídlo najprv samo pod ľavé (D), potom obe spolu, až kým ľavá hrana nepresahuje bok o 20 % krídla
-  const WL = XS + 0.15 - LA;
+  // dráhy: pravé krídlo najprv samo pod ľavé (D), potom obe spolu, až kým nie sú celé mimo otvoru
   const D = XS - 0.15 - LA,
-    T1 = LA - (-W - 0.2 * WL),
+    T1 = XS + 0.15 - (X0 - 0.05), // ľavé krídlo celé z otvoru – prečnieva cez ľavý bok pod červeným stĺpom
     T2 = D + T1;
   const setDoor = (k) => {
     const s = k * T2;
@@ -476,8 +473,8 @@ export function buildBrevis({ kit, det, M, grp }) {
   const ext = [X0 + 0.25, 7.75].map((x) => box(tbl, x - 0.12, x + 0.12, 5.65, 5.85, 3.0, 13.9, M.black)); // výsuvy
   rbox(drawer, PX0, PX0 + 0.45, 5.85, TY - 0.15, PZ0, 14.1, M.red, 0.06);
   rbox(drawer, PX1 - 0.45, PX1, 5.85, TY - 0.15, PZ0, 14.1, M.red, 0.06);
-  rbox(drawer, PX0, PX1, 5.85, 7.9, PZ0, PZ0 + 0.45, M.red, 0.06);
-  box(drawer, PX0 + 0.45, PX1 - 0.45, 5.85, 6.0, PZ0, 14.1, M.black); // zberná vanička
+  rbox(drawer, PX0, PX1, 5.66, 5.8, PZ0, PZ0 + 0.45, M.red, 0.04); // nízka zadná spojka (pod pevnými lamelami)
+  box(drawer, PX0 + 0.45, PX1 - 0.45, 5.66, 5.8, PZ0, 14.1, M.black); // zberná vanička
   rbox(drawer, PX0, PX1, 7.9, TY, 14.0, 14.85, M.red, 0.07); // predný červený nosník
   rbox(drawer, PX0, PX1, 5.85, 7.95, 14.4, 14.85, M.black, 0.06); // čierna zástera
   cylX(drawer, 0.1, 0.1, -4.4, 5.5, 7.1, 15.3, M.black, 12); // dlhé madlo palety
@@ -499,8 +496,9 @@ export function buildBrevis({ kit, det, M, grp }) {
   const slatGeo = new THREE.ExtrudeGeometry(tooth, { depth: 0.05, bevelEnabled: false });
   slatGeo.rotateY(Math.PI / 2);
   slatGeo.translate(-0.025, 0, BV.SZ);
-  for (let x = PX0 + 0.75; x <= PX1 - 0.6; x += 0.6) {
-    const sl = add(drawer, slatGeo, M.slat, x, 0, 0);
+  // rošt: párne lamely sa vysúvajú s paletou, nepárne ostávajú v stroji na pevnej vaničke
+  for (let i = 0, x = PX0 + 0.75; x <= PX1 - 0.6; i++, x += 0.6) {
+    const sl = add(i % 2 ? tbl : drawer, slatGeo, i % 2 ? M.steelD : M.slat, x, 0, 0);
     sl.castShadow = false;
   }
   // úchyty – ovládacie prvky (ľavý a pravý)
@@ -531,25 +529,25 @@ export function buildBrevis({ kit, det, M, grp }) {
 
   // ---------- portál: priečny nosník (os Y stroja), vozík s hlavou, os Z ----------
   const gan = grp('portal', frame);
-  // vedenia v bočných stenách (ploché, aby ich nezachytili zasúvané dvere)
-  [X0 + 0.12, X1 - 0.3].forEach((x) => {
-    box(gan, x, x + 0.08, 14.3, 14.55, ZB + 0.3, 11.8, M.steel);
-    box(gan, x, x + 0.08, 15.0, 15.1, ZB + 0.3, 11.8, M.steel);
-  });
-  const gz = new THREE.Group(); // nosník – pohyb v z
+  // ľavý koniec nosníka jazdí na plochom vedení v ľavej stene, pravý na nohe po spodnom masívnom nosníku
+  box(gan, X0 + 0.12, X0 + 0.2, 12.9, 13.15, ZB + 0.3, 11.8, M.steel);
+  box(gan, X0 + 0.12, X0 + 0.2, 13.75, 13.85, ZB + 0.3, 11.8, M.steel);
+  const gz = new THREE.Group(); // masívny priečny nosník – pohyb v z
   gan.add(gz);
-  rbox(gz, X0 + 0.5, X1 - 0.5, 14.6, 15.85, -1.9, -0.75, M.black, 0.1);
-  box(gz, X0 + 0.6, X1 - 0.6, 15.15, 15.3, -0.76, -0.7, M.steel); // lineárne vedenie
-  box(gz, X0 + 0.6, X1 - 0.6, 14.75, 14.9, -0.76, -0.7, M.steel);
-  [X0 + 0.55, X1 - 0.55].forEach((x) => rbox(gz, x - 0.38, x + 0.38, 14.2, 15.9, -2.0, -0.65, M.dark, 0.08));
+  rbox(gz, X0 + 0.5, 9.8, 12.3, 14.3, -2.2, -0.65, M.black, 0.14);
+  box(gz, X0 + 0.6, 8.4, 13.6, 13.75, -0.66, -0.6, M.steel); // lineárne vedenie vozíka
+  box(gz, X0 + 0.6, 8.4, 12.75, 12.9, -0.66, -0.6, M.steel);
+  rbox(gz, X0 + 0.17, X0 + 0.95, 12.1, 14.5, -2.3, -0.55, M.dark, 0.08); // ľavý vozík
+  rbox(gz, 8.6, 9.8, 8.1, 12.3, -2.0, -0.85, M.black, 0.1); // pravá noha
+  rbox(gz, 8.4, 10.0, 8.08, 8.55, -2.3, -0.55, M.dark, 0.08); // pätka na vedení
   const gx = new THREE.Group(); // vozík – pohyb v x
   gz.add(gx);
-  rbox(gx, -0.95, 0.95, 11.6, 16.0, -0.7, 0.6, M.black, 0.12); // čierne puzdro hlavy
-  rbox(gx, -0.98, 0.98, 15.9, 16.55, -0.72, 0.62, M.red, 0.14); // červený kryt navrchu
-  box(gx, -0.6, 0.6, 12.2, 15.6, 0.6, 0.65, M.dark);
-  decal(gx, 0.5, 0.45, warn, -0.35, 14.9, 0.66, 0, 128);
-  decal(gx, 0.7, 0.28, label('LASER', YEL), 0.4, 14.95, 0.66, 0, 128);
-  decal(gx, 0.7, 0.28, label('DANGER', YEL), 0.4, 14.5, 0.66, 0, 128);
+  rbox(gx, -0.95, 0.95, 11.4, 15.3, -0.6, 0.6, M.black, 0.12); // čierne puzdro hlavy
+  rbox(gx, -0.98, 0.98, 15.2, 15.85, -0.62, 0.62, M.red, 0.14); // červený kryt navrchu
+  box(gx, -0.6, 0.6, 12.0, 14.9, 0.6, 0.65, M.dark);
+  decal(gx, 0.5, 0.45, warn, -0.35, 14.3, 0.66, 0, 128);
+  decal(gx, 0.7, 0.28, label('LASER', YEL), 0.4, 14.35, 0.66, 0, 128);
+  decal(gx, 0.7, 0.28, label('DANGER', YEL), 0.4, 13.9, 0.66, 0, 128);
   const gy = new THREE.Group(); // os Z – hrot dýzy v počiatku
   gx.add(gy);
   cylY(gy, 0.42, 0.42, 0.9, 3.6, 0, 0, M.black, 24);
@@ -559,9 +557,9 @@ export function buildBrevis({ kit, det, M, grp }) {
   cable(
     gx,
     [
-      [0.5, 16.5, -0.4],
-      [1.4, 17.3, -0.9],
-      [2.4, 17.4, -2.0],
+      [0.5, 15.8, -0.4],
+      [1.4, 16.6, -1.2],
+      [2.4, 16.9, -2.4],
     ],
     0.08,
     M.black,
@@ -573,14 +571,14 @@ export function buildBrevis({ kit, det, M, grp }) {
       box(gan, x + 0.1, x + 0.26, y + 0.22, y + 0.27, z - 0.25, z + 0.25, M.dark);
     }
   };
-  chain(0.5, 8.2, 15.7, -6.4);
-  chain(2.4, 8.2, 17.0, -6.4);
+  chain(0.5, 7.4, 15.7, -6.4);
+  chain(2.4, 7.4, 17.0, -6.4);
   for (let k = 0; k <= 10; k++) {
     const a = -Math.PI / 2 + (k / 10) * Math.PI;
     box(
       gan,
-      8.2 + Math.cos(a) * 0.65 - 0.2,
-      8.2 + Math.cos(a) * 0.65 + 0.2,
+      7.4 + Math.cos(a) * 0.65 - 0.2,
+      7.4 + Math.cos(a) * 0.65 + 0.2,
       16.35 + Math.sin(a) * 0.65 - 0.2,
       16.35 + Math.sin(a) * 0.65 + 0.2,
       -6.75,
@@ -741,13 +739,13 @@ export function buildBrevis({ kit, det, M, grp }) {
     laser: keySw(0.85, -1.98),
     reset: pbtn(0.85, -2.5, M.blue, { sq: true }),
     power: pbtn(1.45, -1.6, M.white, { r: 0.15 }),
+    pallet: pbtn(0.25, -1.82, M.yellow, { sq: true }), // vysunutie / zasunutie rezacej palety
   };
   // ďalšie (dekoratívne) tlačidlá a schéma
   pbtn(-1.72, -1.32, M.white, { sq: true, r: 0.1, ctl: false });
   pbtn(-1.42, -1.32, M.white, { sq: true, r: 0.1, ctl: false });
   pbtn(-0.45, -1.62, M.white, { sq: true, ctl: false });
   pbtn(-0.12, -1.62, M.white, { sq: true, ctl: false });
-  pbtn(0.25, -1.82, M.white, { sq: true, ctl: false });
   pbtn(1.45, -2.38, M.dark, { r: 0.15, ctl: false });
   lines([
     [-0.62, -1.42],
@@ -794,6 +792,7 @@ export function buildBrevis({ kit, det, M, grp }) {
     ['POWER', 1.45, -1.6, 0.25],
     ['LASER', 0.85, -1.98, -0.27],
     ['DOOR', 0.62, -1.48, 0.24],
+    ['PALLET', 0.25, -1.82, -0.24],
     ['START', -0.45, -2.42, -0.24],
     ['HOLD', -0.12, -2.42, -0.24],
     ['RESET', 0.85, -2.5, -0.24],
