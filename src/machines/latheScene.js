@@ -43,6 +43,7 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
   const snd = createSound('lathe');
   const dom = renderer.domElement;
   const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const SV = MD.style === 'sv'; // TOS SV 18 RA: staršie zaoblené odliatky, bez digitálneho odčítania polohy
 
   // ---------- materiály a textúry ----------
   const brassTex = mkTex(
@@ -89,7 +90,7 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
     1,
   );
   const M = {
-    ...baseMats(0x8db57d, 0x6d9461, 0x4f6e47),
+    ...(SV ? baseMats(0x9cc59a, 0x83ab82, 0x648c66) : baseMats(0x8db57d, 0x6d9461, 0x4f6e47)),
     wbrass: std(0xffffff, 0.3, 0.85, { map: brassTex, side: THREE.DoubleSide }),
     wsteel: std(LATHE_MATS.steel[0], 0.34, 0.85, { side: THREE.DoubleSide }),
     walu: std(LATHE_MATS.alu[0], 0.3, 0.7, { side: THREE.DoubleSide }),
@@ -115,6 +116,10 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
     detents,
     handwheel,
   } = kit;
+  const det0 = makeDetail(kit, M);
+  // odliatok: na SV 18 RA zaoblený (RoundedBox), na SN ostré hrany
+  const cast = (p, x0, x1, y0, y1, z0, z1, m, r = 0.3) =>
+    SV ? det0.rbox(p, x0, x1, y0, y1, z0, z1, m, r) : box(p, x0, x1, y0, y1, z0, z1, m);
 
   const root = new THREE.Group();
   scene.add(root);
@@ -136,15 +141,22 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
 
   // ---------- podstavce a vaňa ----------
   const base = grp('podstavec');
-  box(base, -10, -5.2, 0.15, 3.5, -1.9, 1.9, M.green);
+  cast(base, -10, -5.2, 0.15, 3.5, -1.9, 1.9, M.green, 0.35);
   box(base, -10.1, -5.1, 0, 0.15, -2.0, 2.0, M.greenDeep);
   box(base, -9.5, -5.7, 0.55, 3.05, 1.9, 1.94, M.greenDark);
   cylZ(base, 0.08, 0.08, 1.94, 2.04, -6.0, 1.8, M.black);
-  box(base, 9.6, 12, 0.15, 3.5, -1.7, 1.7, M.green);
+  cast(base, 9.6, 12, 0.15, 3.5, -1.7, 1.7, M.green, 0.35);
   box(base, 9.5, 12.1, 0, 0.15, -1.8, 1.8, M.greenDeep);
   box(base, 10.0, 11.6, 0.55, 3.05, 1.7, 1.74, M.greenDark);
   box(base, -5.2, 9.6, 1.4, 1.55, -2.0, 2.8, M.greenDark);
   box(base, -5.2, 9.6, 1.55, 2.05, 2.7, 2.8, M.greenDark);
+  if (SV) {
+    // vetracie mriežky na podstavcoch a šikmý predný okraj vane
+    for (let k = 0; k < 7; k++) box(base, -9.3, -7.0, 0.8 + k * 0.28, 0.92 + k * 0.28, 1.9, 1.98, M.greenDeep);
+    for (let k = 0; k < 5; k++) box(base, 10.1, 11.5, 2.0 + k * 0.22, 2.1 + k * 0.22, 1.7, 1.76, M.greenDeep);
+    const lip = box(base, -5.2, 9.6, 2.05, 2.55, 2.55, 2.62, M.greenDark);
+    lip.rotation.x = -0.35;
+  }
   box(base, -5.2, 9.6, 1.55, 2.4, -2.0, -1.9, M.greenDark);
   const baseK = (3.5 + lift) / 3.5;
   base.position.y = -lift;
@@ -154,7 +166,7 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
 
   // ---------- lôžko s vodiacimi plochami ----------
   const bed = grp('lozko');
-  box(bed, -10, 12, 3.5, 5.0, -1.5, 1.5, M.green);
+  cast(bed, -10, 12, 3.5, 5.0, -1.5, 1.5, M.green, 0.12);
   const vway = (z) => {
     const m = add(bed, new THREE.BoxGeometry(17.2, 0.26, 0.26), M.ways, 3.4, 5.0, z);
     m.rotation.x = Math.PI / 4;
@@ -168,9 +180,16 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
 
   // ---------- vretenník ----------
   const hs = grp('vretennik');
-  box(hs, -10, -5.0, 5.0, 9.0, -1.85, 1.85, M.green);
-  box(hs, -9.9, -5.1, 9.0, 9.25, -1.75, 1.75, M.greenDark);
-  box(hs, -10.6, -10.0, 3.6, 9.1, -1.6, 1.6, M.green); // kryt výmenných kolies
+  cast(hs, -10, -5.0, 5.0, 9.0, -1.85, 1.85, M.green, 0.45);
+  if (SV) {
+    // oblý vrch vretenníka (veko) – charakteristický tvar starších sústruhov TOS
+    const lid = cylX(hs, 1.75, 1.75, -9.95, -5.05, 8.75, 0, M.green, 40);
+    lid.scale.set(1, 0.42, 1);
+    cast(hs, -10.6, -9.95, 3.6, 9.1, -1.6, 1.6, M.green, 0.3); // zaoblený kryt výmenných kolies
+  } else {
+    box(hs, -9.9, -5.1, 9.0, 9.25, -1.75, 1.75, M.greenDark);
+    box(hs, -10.6, -10.0, 3.6, 9.1, -1.6, 1.6, M.green); // kryt výmenných kolies
+  }
   cylX(hs, 1.15, 1.15, -5.05, -4.85, AXIS_Y, 0, M.green, 40);
   box(hs, -7.7, -6.2, 7.75, 8.6, 1.85, 1.87, M.white); // tabuľka otáčok
   cylZ(hs, 0.22, 0.22, 1.85, 1.875, -5.55, 8.35, M.blue, 28);
@@ -179,6 +198,15 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
     [-8.4, 7.0],
     [-9.3, 6.0],
   ].forEach(([x, y]) => cylZ(hs, 0.32, 0.28, 1.85, 2.05, x, y, M.black, 28));
+  if (SV)
+    // veľké okrúhle štítky voličov otáčok pod pákami
+    [
+      [-9.3, 7.0],
+      [-8.4, 7.0],
+    ].forEach(([x, y]) => {
+      cylZ(hs, 0.46, 0.46, 1.85, 1.9, x, y, M.steelDark, 32);
+      cylZ(hs, 0.4, 0.4, 1.9, 1.92, x, y, M.white, 32);
+    });
   detents(hs, -9.3, 7.0, 2.05, 0.21, A_ANG);
   detents(hs, -8.4, 7.0, 2.05, 0.21, B_ANG);
   const levA = pivotLever(hs, -9.3, 7.0, 2.05, 0.5, 1.15),
@@ -186,7 +214,9 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
   lever(hs, -9.3, 6.0, 2.05, 0.5, 1.15, 0.5);
   lever(hs, -9.4, 9.25, -0.9, 0.95, -0.35, 0.15);
   lever(hs, -8.9, 9.25, -1.1, 0.8, -0.5, -0.1);
-  box(hs, -8.9, -7.3, 9.25, 10.35, 0.5, 1.1, M.panel); // ovládací panel
+  if (SV)
+    cast(hs, -8.9, -7.3, 9.0, 10.3, 0.5, 1.1, M.greenDark, 0.18); // liata skrinka tlačidiel
+  else box(hs, -8.9, -7.3, 9.25, 10.35, 0.5, 1.1, M.panel); // ovládací panel
   const pbtn = (x, m) => {
     const g = new THREE.Group();
     g.position.set(x, 9.6, 1.1);
@@ -200,7 +230,7 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
     btnLight = pbtn(-7.8, M.blue);
   cylZ(hs, 0.12, 0.12, 1.1, 1.16, -7.55, 10.0, M.white, 20);
   ball(hs, 0.12, -8.6, 10.02, 1.1, M.lamp);
-  box(hs, -6.75, -5.85, 5.55, 6.45, 1.85, 1.87, M.yellow); // hlavný vypínač
+  box(hs, -6.75, -5.85, 5.55, 6.45, 1.85, 1.87, SV ? M.steelDark : M.yellow); // hlavný vypínač (SV: kovový štítok)
   box(hs, -6.32, -6.28, 6.33, 6.43, 1.87, 1.88, M.black); // značky „I“ a „0“
   add(hs, new THREE.TorusGeometry(0.035, 0.01, 6, 16), M.black, -6.66, 6.0, 1.875);
   const mainSwitch = new THREE.Group();
@@ -226,7 +256,7 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
   }
   // ---------- prevodovka posuvov ----------
   const gb = grp('prevodovka');
-  box(gb, -9.9, -5.25, 2.5, 4.95, 1.5, 2.35, M.green);
+  cast(gb, -9.9, -5.25, 2.5, 4.95, 1.5, 2.35, M.green, 0.25);
   box(gb, -9.7, -8.4, 3.9, 4.7, 2.35, 2.37, M.white);
   [-7.8, -6.9, -6.0].forEach((x) => cylZ(gb, 0.22, 0.18, 2.35, 2.6, x, 3.4, M.black));
   detents(gb, -7.8, 3.4, 2.6, 0.15, FEED_ANG, 0.02);
@@ -373,8 +403,8 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
 
   // ---------- koník ----------
   const tail = grp('konik');
-  box(tail, 0, 2.4, 5.14, 5.75, -1.45, 1.45, M.green);
-  box(tail, 0.15, 2.25, 5.75, 7.4, -0.95, 0.95, M.green);
+  cast(tail, 0, 2.4, 5.14, 5.75, -1.45, 1.45, M.green, 0.15);
+  cast(tail, 0.15, 2.25, 5.75, 7.4, -0.95, 0.95, M.green, 0.3);
   cylX(tail, 0.78, 0.78, 0, 2.35, AXIS_Y, 0, M.green, 40);
   cylX(tail, 0.82, 0.82, -0.02, 0.12, AXIS_Y, 0, M.greenDark, 40);
   const quill = new THREE.Group();
@@ -392,8 +422,8 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
 
   // ---------- suport ----------
   const car = grp('suport');
-  box(car, -1.4, 1.4, 5.14, 5.6, -1.9, 3.0, M.green); // pozdĺžne sane
-  box(car, -1.8, 1.8, 2.6, 5.14, 1.5, 2.15, M.green); // zámková skriňa
+  cast(car, -1.4, 1.4, 5.14, 5.6, -1.9, 3.0, M.green, 0.12); // pozdĺžne sane
+  cast(car, -1.8, 1.8, 2.6, 5.14, 1.5, 2.15, M.green, 0.25); // zámková skriňa
   box(car, -0.75, 0.75, 5.6, 5.7, -1.9, 2.9, M.ways); // rybinové vedenie
   box(car, -0.3, 0.3, 5.45, 6.05, 3.0, 3.15, M.green);
   cylZ(car, 0.08, 0.08, 3.0, 3.35, 0, 5.8, M.steel, 12);
@@ -403,31 +433,36 @@ export function createLatheScene({ MD, S, SPD, U, U2, apiRef, ctl, layerRef, mou
   const wheelZ = handwheel(car, 0.65, -0.9, 3.9, 2.4, 'z', 0.5);
   const levFeed = pivotLever(car, 0.9, 3.3, 2.15, 0.55, 1.2); // páka automatického posuvu
   const levNut = pivotLever(car, 0.4, 4.4, 2.15, 0.5, 1.1); // páka matice vodiacej skrutky (závitovanie)
-  box(car, 1.05, 1.65, 4.25, 4.85, 2.15, 2.35, M.yellow);
+  const eStopPlate = box(car, 1.05, 1.65, 4.25, 4.85, 2.15, 2.35, M.yellow);
   const eStop = new THREE.Group();
   eStop.position.set(1.35, 4.55, 2.35);
   car.add(eStop); // núdzový STOP
   cylZ(eStop, 0.09, 0.09, 0, 0.07, 0, 0, M.steelDark, 16);
   cylZ(eStop, 0.2, 0.19, 0.07, 0.16, 0, 0, M.red, 24);
   hitProxy(eStop, 0.27, 0, 0, 0.1);
-  cylY(car, 0.07, 0.07, 5.6, 9.85, 1.25, -1.75, M.steel, 12); // rameno DRO
-  cylZ(car, 0.06, 0.06, -1.75, -0.6, 1.25, 9.8, M.steel, 12);
-  box(car, 0.55, 1.95, 9.45, 10.15, -0.6, -0.35, M.panel);
+  if (SV) eStop.visible = eStopPlate.visible = false; // SV 18 RA nemá núdzové tlačidlo na zámkovej skrini
+  // digitálne odčítanie polohy (DRO) len na novšom SN – SV 18 RA má len nóniusy na kolesách
   const droCanvas = document.createElement('canvas');
   droCanvas.width = 256;
   droCanvas.height = 112;
   const droTex = new THREE.CanvasTexture(droCanvas);
   droTex.colorSpace = THREE.SRGBColorSpace;
-  add(
-    car,
-    new THREE.PlaneGeometry(1.25, 0.55),
-    new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }),
-    1.25,
-    9.8,
-    -0.344,
-  );
+  if (!SV) {
+    cylY(car, 0.07, 0.07, 5.6, 9.85, 1.25, -1.75, M.steel, 12); // rameno DRO
+    cylZ(car, 0.06, 0.06, -1.75, -0.6, 1.25, 9.8, M.steel, 12);
+    box(car, 0.55, 1.95, 9.45, 10.15, -0.6, -0.35, M.panel);
+    add(
+      car,
+      new THREE.PlaneGeometry(1.25, 0.55),
+      new THREE.MeshBasicMaterial({ map: droTex, toneMapped: false }),
+      1.25,
+      9.8,
+      -0.344,
+    );
+  }
   let droKey = '';
   const drawDro = (x, z) => {
+    if (SV) return;
     const key = `${x.toFixed(2)}|${z.toFixed(2)}`;
     if (key === droKey) return;
     droKey = key; // textúra sa mení len pri zmene údaja
