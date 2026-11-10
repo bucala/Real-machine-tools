@@ -10,10 +10,12 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 - Nový moderný stroj: vláknový laser Amada BREVIS 1212 AJ (3 kW, 1 270 × 1 270 mm, AMNC 3i). Tvar podľa siete odhadnutej
   z fotografií (Meshy) a fotografií, rozmery podľa letáku (šírka 2 389, dĺžka 3 088, výška 1 900 mm): úzke čelo s
   červeným stĺpom (žltý dvojpruh, znak AMADA, BREVIS 1212 AJ), šikmé čelné dvere z dvoch krídel so zaoblenými tmavými
-  oknami a čiernym klinom s madlom. Otváranie: dvere sa vysunú nahor a dozadu pod strechu, potom sa pravý bok so
-  strechou – delený na predný a stredný diel – teleskopicky zasunie dozadu nad nižšiu skriňu zdroja aj s pravým predným
-  rohom, takže čelo, strecha aj pravý bok rezacieho priestoru sú celé prístupné. Pod dverami výsuvná červená paleta s
-  čiernou zásterou, dlhým madlom a špicatým lôžkom; boky z troch sekcií (predná s oknom, znakom a typovým označením,
+  oknami a čiernym klinom s madlom. Otváranie: krídla sa posúvajú kaskádovo doľava (pravé pod ľavé, potom obe spolu pod
+  pevný červený stĺp, úplne otvorené prečnievajú cez ľavý bok o 20 % krídla), potom sa pravý bok so strechou – delený na
+  predný a stredný diel – kaskádovo zasunie dozadu (predný diel cez stredný, potom oba spolu) nad nižšiu skriňu zdroja
+  aj s pravým predným rohom, bez presahu za stroj, takže čelo, strecha aj pravý bok rezacieho priestoru sú celé
+  prístupné. Pod dverami výsuvná červená paleta s čiernou zásterou, dlhým madlom a špicatým lôžkom; ľavý bok ako čierne
+  pokračovanie červeného stĺpa až za stroj, pravý bok z troch sekcií (predná s oknom, znakom a typovým označením,
   stredná s podpisom FL, nižšia tmavá skriňa laserového zdroja), päť červených pruhov, čierne kliny s madlami, ustúpený
   čierny podstavec s podložkami nôh a štítkami. Vnútri čierne steny, LED pás, priečny nosník s čiernou hlavou s červeným
   krytom a energetická reťaz. Robustný tablet AMNC 3i na výšku (gumené rohy, rebrované úchopy, horné držadlo, strieborná

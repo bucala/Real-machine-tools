@@ -33,7 +33,7 @@ import {
 } from './precision/laserProcess';
 
 // =====================================================================
-// VLÁKNOVÝ LASER AMADA BREVIS 1212 AJ – 3 kW, tabuľa 1 250 × 1 250, čelné dvere zasúvané pod strechu, výsuvná paleta, AMNC 3i
+// VLÁKNOVÝ LASER AMADA BREVIS 1212 AJ – 3 kW, tabuľa 1 250 × 1 250, čelné posuvné dvere, posuvné diely, výsuvná paleta, AMNC 3i
 // =====================================================================
 const EDGE = () => ({
   ok: L('čistý rez', 'clean cut'),
@@ -65,8 +65,8 @@ const brevisParts = () =>
       'Front door and sliding sections',
       'Dvere so zaoblenými oknami, pravý bok so strechou z dvoch dielov',
       'Door with rounded windows, two-part right side with roof',
-      'Čelné dvere sa vysunú nahor a dozadu pod strechu predného dielu. Potom sa pravý bok so strechou – delený na predný a stredný diel – teleskopicky zasunie dozadu nad nižšiu skriňu laserového zdroja: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
-      'The front door slides up and back under the roof of the front section. Then the right side with the roof – split into a front and a middle section – telescopes back over the lower laser source cabinet: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
+      'Dve čelné krídla sa posúvajú kaskádovo doľava: pravé zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp a úplne otvorené prečnievajú cez ľavý bok o 20 % krídla. Potom sa pravý bok so strechou – delený na predný a stredný diel – kaskádovo zasunie dozadu – predný diel cez stredný, potom oba spolu nad nižšiu skriňu laserového zdroja, bez presahu za stroj: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
+      'The two front leaves slide to the left in cascade: the right one goes under the left one, then both move together under the fixed red column and, fully open, protrude past the left side by 20 % of a leaf. Then the right side with the roof – split into a front and a middle section – slides back in cascade – the front section over the middle one, then both together over the lower laser source cabinet, without protruding behind the machine: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
     ],
     [
       'stol',
@@ -285,7 +285,7 @@ function AmadaSimulator({ onBack, params }) {
         copper: [0xc37b45, 0.3, 0.85],
         panelL: [0x34373b, 0.5, 0.3],
         green: [0x2e9b4a, 0.45, 0.1],
-        rear: [0x3b3e43, 0.55, 0.3],
+        rear: [0x26282c, 0.55, 0.3],
         glass: new THREE.MeshStandardMaterial({
           color: 0x24402a,
           transparent: true,
@@ -917,7 +917,10 @@ function buildAmada(x) {
   btn(
     B.door,
     LL('Dvere', 'Door'),
-    LL('Vysunie čelné dvere pod strechu alebo ich zatvorí.', 'Slides the front door up under the roof or closes it.'),
+    LL(
+      'Odsunie čelné dvere doľava pod červený stĺp alebo ich zatvorí.',
+      'Slides the front door left under the red column or closes it.',
+    ),
     act.door,
   );
   btn(
@@ -976,8 +979,8 @@ function buildAmada(x) {
     model.door,
     LL('Madlo čelných dverí', 'Front door handle'),
     LL(
-      'Vysunie dvere pod strechu a zasunie posuvné diely dozadu, alebo všetko zatvorí.',
-      'Slides the door under the roof and the sliding sections back, or closes everything.',
+      'Odsunie dvere doľava a zasunie posuvné diely dozadu, alebo všetko zatvorí.',
+      'Slides the door to the left and the sliding sections back, or closes everything.',
     ),
     act.door,
     () => (c.door ? L('otvorené', 'open') : L('zatvorené', 'closed')),
@@ -1060,14 +1063,14 @@ function buildAmada(x) {
     st.laserT = c.laser && c.power && !c.estop ? st.laserT + dt : 0;
     st.laserReady = st.laserT > 3;
     // dvere, stôl, servisné dvere
-    // otváranie: čelné dvere sa vysunú pod strechu, potom sa posuvné diely (strecha + pravý bok) zasunú dozadu;
+    // otváranie: čelné krídla sa kaskádovo odsunú doľava pod stĺp, potom sa posuvné diely (strecha + pravý bok) zasunú dozadu;
     // zatváranie v opačnom poradí
     st.shellK = approach(st.shellK, c.door && st.doorK > 0.98 ? 1 : 0, 0.32 * dt);
-    st.doorK = approach(st.doorK, c.door ? 1 : st.shellK > 0.001 ? st.doorK : 0, 0.6 * dt);
+    st.doorK = approach(st.doorK, c.door ? 1 : st.shellK > 0.001 ? st.doorK : 0, 0.35 * dt);
     st.drawerK = approach(st.drawerK, c.drawer ? 1 : 0, 0.6 * dt);
     st.side = st.side.map((k, i) => approach(k, [c.sideL, c.sideR1, c.sideR2][i] ? 1 : 0, 1.2 * dt));
     const e = (k) => k * k * (3 - 2 * k);
-    model.setDoor(e(st.doorK)); // horná hrana po dráhe pod strechou, spodná po čele nahor
+    model.setDoor(e(st.doorK)); // pravé krídlo pod ľavé, potom obe spolu pod stĺp
     model.setShells(e(st.shellK));
     model.drawer.position.z = BV.DRAWER * e(st.drawerK);
     model.ext.forEach((m) => (m.position.z = (BV.DRAWER * e(st.drawerK)) / 2));
