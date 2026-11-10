@@ -70,12 +70,12 @@ const brevisParts = () =>
     ],
     [
       'stol',
-      'Výsuvný stôl',
-      'Pull-out table',
-      'Paleta s lamelami',
-      'Slat pallet',
-      'Stôl s lamelami sa vysúva k obsluhe na nakladanie tabule 1 250 × 1 250 mm a vyberanie dielov.',
-      'The slat table pulls out to the operator for loading the 1,250 × 1,250 mm sheet and unloading the parts.',
+      'Rezacia paleta',
+      'Cutting pallet',
+      'Výsuvná paleta s hrotovým roštom',
+      'Pull-out pallet with a pin grate',
+      'Rezacia paleta sa vysúva k obsluhe na nakladanie tabule 1 250 × 1 250 mm a vyberanie dielov. Rošt má dve sady lamiel: párne sa vysúvajú s paletou, nepárne ostávajú v stroji. Pri vysúvaní sa paleta s plechom mierne nadvihne nad pevné lamely, po zasunutí klesne a plech znova leží na hrotoch všetkých lamiel.',
+      'The cutting pallet pulls out to the operator for loading the 1,250 × 1,250 mm sheet and unloading the parts. The grate has two sets of slats: the even ones travel with the pallet, the odd ones stay in the machine. When pulled out the pallet with the sheet lifts slightly above the fixed slats; pushed in, it lowers and the sheet rests on the tips of all slats again.',
     ],
     [
       'portal',
@@ -101,8 +101,8 @@ const brevisParts = () =>
       'AMNC 3i panel',
       'Robustný tablet na konzole na čele stroja',
       'Rugged tablet on a bracket on the machine front',
-      'Tablet na výšku s gumenými rohmi a bočnými úchopmi na ramene pripevnenom na červenom stĺpe. Pod obrazovkou strieborná doska: núdzový stop, regulátor rýchlosti rezu, štvorcové tlačidlá štartu, zastavenia, dverí a resetu, kľúčový spínač laseru a tlačidlo napájania. Obrazovka ukazuje program a priebeh rezania; vpravo dole je nožný pedál dverí.',
-      'Portrait tablet with rubber corners and side grips on an arm fixed to the red column. Below the screen a silver plate: emergency stop, cutting speed override, square start, hold, door and reset buttons, laser key switch and power button. The screen shows the program and cutting progress; the door foot pedal is at the front right.',
+      'Tablet na výšku s gumenými rohmi a bočnými úchopmi na ramene pripevnenom na červenom stĺpe. Pod obrazovkou strieborná doska: núdzový stop, regulátor rýchlosti rezu, štvorcové tlačidlá štartu, zastavenia, dverí, palety (PALLET) a resetu, kľúčový spínač laseru a tlačidlo napájania. Obrazovka ukazuje program a priebeh rezania; vpravo dole je nožný pedál dverí.',
+      'Portrait tablet with rubber corners and side grips on an arm fixed to the red column. Below the screen a silver plate: emergency stop, cutting speed override, square start, hold, door, PALLET and reset buttons, laser key switch and power button. The screen shows the program and cutting progress; the door foot pedal is at the front right.',
     ],
     [
       'prislusenstvo',
@@ -177,7 +177,7 @@ const mkTask = (id, title, desc) => {
     parts: () => L('Všetky diely prerezané bez chyby', 'All parts cut through without defects'),
     edge: () => L('Čistá rezná hrana', 'Clean cut edge'),
     door: () => L('Dvere počas rezu zatvorené', 'Door closed while cutting'),
-    unload: () => L('Diely vybraté zo stola', 'Parts unloaded from the table'),
+    unload: () => L('Diely vybraté z palety', 'Parts unloaded from the pallet'),
   };
   return {
     id,
@@ -194,8 +194,8 @@ const LASER_TASK_LIST = [
     () => L('Príruby z ocele 3 mm', 'Flanges from 3 mm steel'),
     () =>
       L(
-        'Otvor dvere, vysuň stôl a nalož oceľ S235 hrúbky 3 mm. Zvoľ program príruba, prevezmi rezné podmienky z tabuľky (kyslík) a zapni laser. Zasuň stôl, zatvor dvere a spusti program. Po dorezaní vyber diely.',
-        'Open the door, pull out the table and load S235 steel 3 mm thick. Select the flange program, take the cutting conditions from the table (oxygen) and switch the laser on. Push the table in, close the door and start. When finished, unload the parts.',
+        'Otvor dvere, vysuň rezaciu paletu a nalož oceľ S235 hrúbky 3 mm. Zvoľ program príruba, prevezmi rezné podmienky z tabuľky (kyslík) a zapni laser. Zasuň paletu, zatvor dvere a spusti program. Po dorezaní vyber diely.',
+        'Open the door, pull out the cutting pallet and load S235 steel 3 mm thick. Select the flange program, take the cutting conditions from the table (oxygen) and switch the laser on. Push the pallet in, close the door and start. When finished, unload the parts.',
       ),
   ),
   mkTask(
@@ -214,8 +214,8 @@ const LASER_SAFETY = () => [
     'Class 1 laser – the beam is safe only with the doors closed; the windows are protective glass.',
   ),
   L(
-    'Pred spustením je stôl zasunutý, dvere zatvorené a odsávanie beží.',
-    'Before starting the table is pushed in, the doors closed and extraction running.',
+    'Pred spustením je rezacia paleta zasunutá, dvere zatvorené a odsávanie beží.',
+    'Before starting the cutting pallet is pushed in, the doors closed and extraction running.',
   ),
   L(
     'Diely beriem v rukaviciach – hrany sú ostré a ešte horúce.',
@@ -326,8 +326,8 @@ function AmadaSimulator({ onBack, params }) {
           ),
           door: L('Čelné dvere nie sú zatvorené.', 'The front door is not closed.'),
           side: L('Servisné dvere sú otvorené.', 'A service door is open.'),
-          drawer: L('Stôl nie je zasunutý.', 'The table is not pushed in.'),
-          sheet: L('Na stole nie je plech.', 'There is no sheet on the table.'),
+          drawer: L('Rezacia paleta nie je zasunutá.', 'The cutting pallet is not pushed in.'),
+          sheet: L('Na palete nie je plech.', 'There is no sheet on the pallet.'),
           cut: L(
             'Plech je už vyrezaný – vyber diely a nalož nový.',
             'The sheet is already cut – unload the parts and load a new one.',
@@ -403,11 +403,7 @@ function AmadaSimulator({ onBack, params }) {
               ['power', ui.power, ui.power ? L('Stroj I', 'Machine I') : L('Stroj 0', 'Machine 0')],
               ['laser', ui.laser, L('Laser', 'Laser')],
               ['door', ui.door, ui.door ? L('Zatvoriť dvere', 'Close door') : L('Otvoriť dvere', 'Open door')],
-              [
-                'drawer',
-                ui.drawer,
-                ui.drawer ? L('Zasunúť stôl', 'Push table in') : L('Vysunúť stôl', 'Pull table out'),
-              ],
+              ['drawer', ui.drawer, ui.drawer ? L('Zasunúť paletu', 'Pallet in') : L('Vysunúť paletu', 'Pallet out')],
               ['light', ui.light, L('Svetlo', 'Light')],
               ['start', false, L('▶ Štart', '▶ Start')],
               ['hold', false, L('Stop', 'Hold')],
@@ -436,8 +432,8 @@ function AmadaSimulator({ onBack, params }) {
         }
         tips={[
           L(
-            'Čelné dvere otvoríš tlačidlom na paneli, nožným pedálom alebo za madlo; stôl vysunieš za rukoväte palety.',
-            'Open the front door with the panel button, the foot pedal or by its handle; pull the table out by the pallet handles.',
+            'Čelné dvere otvoríš tlačidlom na paneli, nožným pedálom alebo za madlo; rezaciu paletu vysunieš tlačidlom PALLET alebo za jej rukoväte.',
+            'Open the front door with the panel button, the foot pedal or by its handle; pull the cutting pallet out with the PALLET button or by its handles.',
           ),
         ]}
       />
@@ -492,7 +488,11 @@ function AmadaSimulator({ onBack, params }) {
             <Toggle on={ui.laser} label={L('Laserový zdroj', 'Laser source')} onClick={() => act('laser')} />
             <Toggle on={ui.estop} label={L('Núdzový stop', 'Emergency stop')} onClick={() => act('estop')} />
             <Toggle on={ui.door} label={L('Čelné dvere otvorené', 'Front door open')} onClick={() => act('door')} />
-            <Toggle on={ui.drawer} label={L('Stôl vysunutý', 'Table pulled out')} onClick={() => act('drawer')} />
+            <Toggle
+              on={ui.drawer}
+              label={L('Rezacia paleta vysunutá', 'Cutting pallet out')}
+              onClick={() => act('drawer')}
+            />
             <Toggle on={ui.light} label={L('Osvetlenie priestoru', 'Work area light')} onClick={() => act('light')} />
             <div className="flex gap-2 mt-2">
               <button type="button" className="btn flex-1" onClick={() => act('loadSheet')}>
@@ -852,8 +852,9 @@ function buildAmada(x) {
       push(key, !c[key]);
     },
     loadSheet: () => {
-      if (!c.drawer || st.drawerK < 0.98) return say(L('Vysuň stôl k obsluhe.', 'Pull the table out to the operator.'));
-      if (st.sheet) return say(L('Na stole už je plech.', 'There is already a sheet on the table.'));
+      if (!c.drawer || st.drawerK < 0.98)
+        return say(L('Vysuň rezaciu paletu k obsluhe.', 'Pull the cutting pallet out to the operator.'));
+      if (st.sheet) return say(L('Na palete už je plech.', 'There is already a sheet on the pallet.'));
       if (c.t > BREVIS.maxT[c.mat])
         return say(L('Táto hrúbka presahuje rozsah stroja.', 'This thickness exceeds the machine range.'));
       st.sheet = { mat: c.mat, t: c.t, cut: false };
@@ -863,7 +864,8 @@ function buildAmada(x) {
       model.sheet.mesh.visible = true;
     },
     unload: () => {
-      if (!c.drawer || st.drawerK < 0.98) return say(L('Vysuň stôl k obsluhe.', 'Pull the table out to the operator.'));
+      if (!c.drawer || st.drawerK < 0.98)
+        return say(L('Vysuň rezaciu paletu k obsluhe.', 'Pull the cutting pallet out to the operator.'));
       if (!st.sheet || proc.S.phase !== 'done')
         return say(L('Diely sa vyberajú po dokončení programu.', 'The parts are unloaded after the program ends.'));
       proc.S.ops.forEach((o, i) => {
@@ -877,7 +879,8 @@ function buildAmada(x) {
       );
     },
     skeleton: () => {
-      if (!c.drawer || st.drawerK < 0.98) return say(L('Vysuň stôl k obsluhe.', 'Pull the table out to the operator.'));
+      if (!c.drawer || st.drawerK < 0.98)
+        return say(L('Vysuň rezaciu paletu k obsluhe.', 'Pull the cutting pallet out to the operator.'));
       if (running()) return;
       st.sheet = null;
       model.sheet.mesh.visible = false;
@@ -954,6 +957,16 @@ function buildAmada(x) {
     () => (st.laserReady ? 'READY' : c.laser ? '…' : 'OFF'),
   );
   btn(
+    B.pallet,
+    LL('PALLET – rezacia paleta', 'PALLET – cutting pallet'),
+    LL(
+      'Vysunie alebo zasunie rezaciu paletu (dvere musia byť otvorené).',
+      'Pulls the cutting pallet out or pushes it in (the door must be open).',
+    ),
+    act.drawer,
+    () => (c.drawer ? L('vysunutá', 'out') : L('zasunutá', 'in')),
+  );
+  btn(
     B.door,
     LL('Dvere', 'Door'),
     LL(
@@ -966,8 +979,8 @@ function buildAmada(x) {
     B.start,
     LL('CYCLE START', 'CYCLE START'),
     LL(
-      'Spustí program (dvere zatvorené, stôl zasunutý, laser pripravený).',
-      'Starts the program (door closed, table in, laser ready).',
+      'Spustí program (dvere zatvorené, paleta zasunutá, laser pripravený).',
+      'Starts the program (door closed, pallet in, laser ready).',
     ),
     act.start,
   );
@@ -1042,10 +1055,10 @@ function buildAmada(x) {
   model.handles.forEach((h) =>
     btn(
       h,
-      LL('Rukoväť stola', 'Table handle'),
+      LL('Rukoväť rezacej palety', 'Cutting pallet handle'),
       LL(
-        'Vysunie stôl k obsluhe alebo ho zasunie do stroja (dvere musia byť otvorené).',
-        'Pulls the table out to the operator or pushes it in (the door must be open).',
+        'Vysunie rezaciu paletu k obsluhe alebo ju zasunie do stroja (dvere musia byť otvorené).',
+        'Pulls the cutting pallet out to the operator or pushes it in (the door must be open).',
       ),
       act.drawer,
       () => (c.drawer ? L('vysunutý', 'out') : L('zasunutý', 'in')),
@@ -1101,7 +1114,7 @@ function buildAmada(x) {
     // laser: zahriatie 3 s
     st.laserT = c.laser && c.power && !c.estop ? st.laserT + dt : 0;
     st.laserReady = st.laserT > 3;
-    // dvere, stôl, servisné dvere
+    // dvere, rezacia paleta, servisné dvere
     // otváranie: čelné krídla sa kaskádovo odsunú doľava pod stĺp, potom sa posuvné diely (strecha + pravý bok) zasunú dozadu;
     // zatváranie v opačnom poradí
     st.shellK = approach(st.shellK, c.door && st.doorK > 0.98 ? 1 : 0, 0.32 * dt);
@@ -1112,6 +1125,8 @@ function buildAmada(x) {
     model.setDoor(e(st.doorK)); // pravé krídlo pod ľavé, potom obe spolu pod stĺp
     model.setShells(e(st.shellK));
     model.drawer.position.z = BV.DRAWER * e(st.drawerK);
+    // pri vysúvaní sa paleta s plechom nadvihne nad pevné lamely, pri zasunutí klesne späť na všetky hroty
+    model.drawer.position.y = 0.22 * e(clamp(st.drawerK / 0.08, 0, 1));
     model.ext.forEach((m) => (m.position.z = (BV.DRAWER * e(st.drawerK)) / 2));
     model.doorsSide.forEach((d, i) => (d.pivot.rotation.y = d.ry0 - d.span * 1.75 * e(st.side[i])));
     // proces

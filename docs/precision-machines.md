@@ -217,8 +217,11 @@ zdroja) a výsuvná paleta so špicatým lôžkom (vyťahuje sa po úplnom otvor
 zastavenia, dverí a resetu, kľúčovým spínačom laseru a tlačidlom napájania; závesný ovládač na špirálovom kábli. Štart
 cyklu vyžaduje zatvorené dvere, zasunutú paletu a pripravený laser. Ľavý bok je odskočeným (užším a nižším) pokračovaním
 červeného stĺpa – čierna stena až dozadu, ohnutá za stroj; zadná skriňa a servisné dvere sú čierne. Portál: masívny
-priečny nosník je nižšie, pod masívnou osou vpravo hore; vľavo jazdí po vedení v stene, vpravo nohou po spodnom masívnom
-nosníku. Nad scénou sú tlačidlá ako na HMI (stroj, laser, dvere, stôl, svetlo, štart, stop, reset, núdzový stop).
+priečny nosník je nižšie; vľavo jazdí po vedení v stene, vpravo nohou po spodnom masívnom nosníku. Nad scénou sú
+tlačidlá ako na HMI (stroj, laser, dvere, paleta, svetlo, štart, stop, reset, núdzový stop). Rezacia paleta (cutting
+pallet) sa vysúva tlačidlom PALLET na HMI, v aplikácii alebo za rukoväte: párne lamely hrotového roštu sa vysúvajú s
+ňou, nepárne ostávajú v stroji; pri vysúvaní sa paleta s plechom mierne nadvihne nad pevné lamely, po zasunutí klesne a
+plech leží na hrotoch všetkých lamiel.
 
 Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
 hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku
