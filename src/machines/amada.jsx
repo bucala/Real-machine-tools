@@ -65,8 +65,8 @@ const brevisParts = () =>
       'Front door and sliding sections',
       'Dvere so zaoblenými oknami, pravý bok so strechou z dvoch dielov',
       'Door with rounded windows, two-part right side with roof',
-      'Dve čelné krídla sa posúvajú kaskádovo doľava: pravé zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp a úplne otvorené prečnievajú cez ľavý bok o 20 % krídla. Potom sa pravý bok so strechou – delený na predný a stredný diel – teleskopicky zasunie dozadu nad nižšiu skriňu laserového zdroja: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
-      'The two front leaves slide to the left in cascade: the right one goes under the left one, then both move together under the fixed red column and, fully open, protrude past the left side by 20 % of a leaf. Then the right side with the roof – split into a front and a middle section – telescopes back over the lower laser source cabinet: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
+      'Dve čelné krídla sa posúvajú kaskádovo doľava: pravé zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp a úplne otvorené prečnievajú cez ľavý bok o 20 % krídla. Potom sa pravý bok so strechou – delený na predný a stredný diel – kaskádovo zasunie dozadu – predný diel cez stredný, potom oba spolu nad nižšiu skriňu laserového zdroja, bez presahu za stroj: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
+      'The two front leaves slide to the left in cascade: the right one goes under the left one, then both move together under the fixed red column and, fully open, protrude past the left side by 20 % of a leaf. Then the right side with the roof – split into a front and a middle section – slides back in cascade – the front section over the middle one, then both together over the lower laser source cabinet, without protruding behind the machine: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
     ],
     [
       'stol',
@@ -285,7 +285,7 @@ function AmadaSimulator({ onBack, params }) {
         copper: [0xc37b45, 0.3, 0.85],
         panelL: [0x34373b, 0.5, 0.3],
         green: [0x2e9b4a, 0.45, 0.1],
-        rear: [0x3b3e43, 0.55, 0.3],
+        rear: [0x26282c, 0.55, 0.3],
         glass: new THREE.MeshStandardMaterial({
           color: 0x24402a,
           transparent: true,

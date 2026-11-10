@@ -243,7 +243,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   const { RT, SLIDE1, SLIDE2 } = BV;
   // ľavý červený stĺp: profil s čelom a zaobleným vrcholom, strieborná vnútorná hrana
   profile(frame, -W, X0, sideShape(ZM, 4.7), M.red);
-  box(frame, -W - 0.03, -W, 8.9, 18.85, 12.65, FZ - 0.35, M.cab); // strieborný bok stĺpa pred servisnými dverami
+  box(frame, -W - 0.03, -W, 8.9, 18.85, 12.65, FZ - 0.35, M.black); // čierny bok stĺpa pred servisnými dverami
   box(frame, X0, X0 + 0.03, 4.75, 18.3, 12.4, FZ - 0.25, M.cab); // vnútorná hrana pri otvore
   decal(frame, 2.0, 0.85, yellowBars, -10.2, 17.75, zf(17.75) + 0.02, 0, 256, slant);
   decal(frame, 3.9, 0.62, (g, w, h) => logo(g, w, h, '#FFFFFF', RED), -9.1, 16.6, zf(16.6) + 0.02, 0, 512, slant);
@@ -261,11 +261,11 @@ export function buildBrevis({ kit, det, M, grp }) {
   );
   const ZP = 12.6; // zadná hrana pravého predného rohu (roh je súčasťou predného posuvného dielu)
   // ľavá pevná stena strednej sekcie a spodný pás s pruhmi na ľavom boku
-  box(frame, -11.8, X0, 4.7, RT, ZB, ZM, M.dark);
-  rbox(frame, -W - 0.02, -W + 0.35, 4.7, 8.9, ZM - 0.05, FZ - 0.3, M.cab, 0.08);
-  rbox(frame, -11.82, -11.5, 4.7, 8.9, ZB + 0.05, ZM, M.cab, 0.08);
-  decal(frame, FZ - 0.3 - ZM, 3.3, stripes(5), -W - 0.04, 6.75, (FZ - 0.3 + ZM) / 2, -Math.PI / 2, 512);
-  decal(frame, ZM - ZB - 0.1, 3.3, stripes(5), -11.84, 6.75, (ZM + ZB) / 2, -Math.PI / 2, 512);
+  // ľavý bok: červený stĺp pokračuje v rovnakej výške čiernou stenou až dozadu a ohýba sa za stroj
+  rbox(frame, -11.83, X0, 4.7, 19.0, ZR, ZM + 0.02, M.black, 0.12);
+  rbox(frame, -W - 0.02, -W + 0.35, 4.7, 8.9, ZM - 0.05, FZ - 0.3, M.black, 0.08);
+  rbox(frame, -W, -W + 0.4, 4.7, 8.9, ZR, ZM, M.black, 0.08);
+  rbox(frame, -W, W, 4.7, 19.0, ZR - 0.3, ZR + 0.02, M.black, 0.12); // zadná stena za strojom (posuvné diely končia pri nej)
   // pravý spodný rám (pod posuvnými dielmi) a pozdĺžny nosník pravého vedenia portálu
   // (všetko je vnútri x < X1, aby nad tým prešiel pravý predný roh pri zasúvaní)
   box(frame, 7.9, X1 - 0.04, 4.7, 8.0, ZB, 12.8, M.black);
@@ -273,7 +273,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   box(frame, X1 - 0.22, X1 - 0.02, 8.0, 13.9, ZB, ZB + 0.6, M.black); // zadný stojan nosníka
   box(frame, X1 - 0.22, X1 - 0.02, 8.0, 13.9, 12.0, 12.4, M.black); // predný stojan nosníka
   // zadná nižšia tmavá skriňa (laserový zdroj)
-  rbox(frame, -11.6, 11.6, 4.7, RT, ZR, ZB, M.rear, 0.3);
+  rbox(frame, -11.6, 11.6, 4.7, RT, ZR + 0.02, ZB, M.rear, 0.3);
   [-1, 1].forEach((s) =>
     box(frame, s > 0 ? 11.55 : -11.59, s > 0 ? 11.59 : -11.55, 6.0, 16.6, ZR + 0.8, ZB - 0.6, M.dark),
   );
@@ -314,16 +314,16 @@ export function buildBrevis({ kit, det, M, grp }) {
   };
   const doorsSide = [
     // ľavá pevná stena strednej sekcie (pánt vpredu, voľná hrana vzadu)
-    sideDoor(-11.8, ZM - 0.05, 9.6, 8.95, 17.3, -Math.PI / 2, -1, M.cab, (pv, fe, dir) =>
+    sideDoor(-11.83, ZM - 0.05, 9.6, 8.95, 17.6, -Math.PI / 2, -1, M.black, (pv, fe, dir) =>
       decal(pv, 3.6, 0.6, (g, w, h) => logo(g, w, h), fe + dir * 6.0, 16.3, 0.13),
     ),
     // zadná stena skrine laserového zdroja (pánt vpravo)
-    sideDoor(4.2, ZR, 8.4, 6.0, 16.6, Math.PI, 1, M.rear, (pv, fe, dir) => {
+    sideDoor(4.2, ZR - 0.3, 8.4, 6.0, 16.6, Math.PI, 1, M.black, (pv, fe, dir) => {
       for (let k = 0; k < 6; k++) box(pv, 1.2 + k * 1.1, 1.75 + k * 1.1, 12.2, 15.6, 0.12, 0.14, M.dark); // mriežka
       decal(pv, 3.2, 0.55, (g, w, h) => logo(g, w, h), fe + dir * 4.6, 10.5, 0.13);
     }),
     // ľavý bok červeného stĺpa (pánt vpredu, voľná hrana vzadu)
-    sideDoor(-W, 12.0, 9.1, 8.95, 18.3, -Math.PI / 2, -1, M.cab, (pv, fe, dir) =>
+    sideDoor(-W, 12.0, 9.1, 8.95, 18.3, -Math.PI / 2, -1, M.black, (pv, fe, dir) =>
       decal(pv, 3.4, 0.56, (g, w, h) => logo(g, w, h), fe + dir * 6.4, 17.2, 0.13),
     ),
   ];
@@ -361,8 +361,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   // stredný diel
   const S1B = 17.6,
     S1T = 18.05;
-  rbox(sh1, -W + 0.15, 11.8, S1B, S1T, ZB, ZM, M.cab, 0.12); // strecha
-  box(sh1, -11.8, -11.66, 17.55, S1T - 0.05, ZB, ZM, M.cab); // ľavá obruba strechy
+  rbox(sh1, X0 + 0.02, 11.8, S1B, S1T, ZB, ZM, M.cab, 0.12); // strecha (od čiernej ľavej steny)
   box(sh1, X0, X1, S1B - 0.04, S1B, ZB, ZM, M.black);
   rbox(sh1, 11.66, 11.8, 4.7, S1T, ZB, ZM, M.cab, 0.05); // pravý bok
   box(sh1, 11.62, 11.66, 8.9, S1B, ZB, ZM, M.black);
@@ -385,9 +384,12 @@ export function buildBrevis({ kit, det, M, grp }) {
   decal(sh2, 5.0, 0.62, textDraw('BREVIS 1212 AJ', '#1E1F21', { size: 0.8 }), W + 0.02, 10.9, 5.6, Math.PI / 2);
   decal(sh2, ZP - ZM - 0.1, 3.3, stripes(5), W + 0.02, 6.75, (ZP + ZM) / 2, Math.PI / 2, 512);
   const grip2 = sideGrip(sh2, W, ZP - 0.05, -1, 8.95);
+  // kaskáda ako pri čelných dverách: predný diel sa najprv zasunie cez stredný, potom idú oba spolu nad skriňu
+  // zdroja; úplne otvorené končia pri zadnej stene (neprečnievajú za stroj). Zatváranie v opačnom poradí.
   const setShells = (k) => {
-    sh1.position.z = -SLIDE1 * k;
-    sh2.position.z = -SLIDE2 * k;
+    const s = k * SLIDE2;
+    sh2.position.z = -s;
+    sh1.position.z = -Math.max(0, s - (SLIDE2 - SLIDE1));
   };
 
   // ---------- čelné dvere: dve posuvné krídla so zaoblenými oknami, kaskádovo doľava pod červený stĺp ----------

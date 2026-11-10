@@ -204,17 +204,19 @@ vzadu – s piatimi červenými pruhmi a čiernymi klinmi s madlami. Polepy sú 
 
 Dverný systém: dve čelné krídla sa posúvajú kaskádovo doľava – pravé zájde pod ľavé, potom idú obe spolu pod pevný
 červený stĺp; úplne otvorené prečnievajú cez ľavý bok stroja o 20 % šírky krídla. Pri zatváraní idú najprv obe spolu,
-potom samo pravé krídlo. Potom sa pravý bok so strechou, delený na predný a stredný posuvný diel, teleskopicky zasunie
-dozadu: predný diel nad stredný, oba nad nižšiu skriňu laserového zdroja (výšky striech 1 900 / 1 805 / 1 750 mm
-zodpovedajú vnoreniu dielov). Čelo, strecha aj pravý bok rezacieho priestoru sú potom otvorené; zatvára sa v opačnom
-poradí. Ovláda sa tlačidlom na paneli, nožným pedálom, madlom dverí alebo madlami posuvných dielov. Pravý predný roh sa
-posúva spolu s predným dielom, takže čelo aj pravý bok sú celé prístupné; ľavý červený stĺp, ľavá stena a skriňa zdroja
-sú pevné. Mimo rezu parkuje hlava vzadu. Tri blokované servisné dvere (ľavá stena, ľavý
-bok stĺpa, zadná stena skrine zdroja) a výsuvná paleta so špicatým lôžkom (vyťahuje sa po úplnom otvorení dverí).
-Robustný tablet AMNC 3i na výšku (gumené rohy, rebrované úchopy, horné držadlo) na konzole pripevnenej len na čele
-červeného stĺpa: veľká obrazovka so živým programom a pod ňou strieborná doska s núdzovým stopom, regulátorom rýchlosti,
-štvorcovými tlačidlami štartu, zastavenia, dverí a resetu, kľúčovým spínačom laseru a tlačidlom napájania; závesný
-ovládač na špirálovom kábli. Štart cyklu vyžaduje zatvorené dvere, zasunutú paletu a pripravený laser.
+potom samo pravé krídlo. Potom sa pravý bok so strechou, delený na predný a stredný posuvný diel, kaskádovo zasunie
+dozadu: predný diel sa najprv presunie cez stredný, potom idú oba spolu nad nižšiu skriňu laserového zdroja a úplne
+otvorené končia pri zadnej stene, neprečnievajú za stroj (výšky striech 1 900 / 1 805 / 1 750 mm zodpovedajú vnoreniu
+dielov). Čelo, strecha aj pravý bok rezacieho priestoru sú potom otvorené; zatvára sa v opačnom poradí. Ovláda sa
+tlačidlom na paneli, nožným pedálom, madlom dverí alebo madlami posuvných dielov. Pravý predný roh sa posúva spolu s
+predným dielom, takže čelo aj pravý bok sú celé prístupné; ľavý červený stĺp, ľavá stena a skriňa zdroja sú pevné. Mimo
+rezu parkuje hlava vzadu. Tri blokované servisné dvere (ľavá stena, ľavý bok stĺpa, zadná stena skrine zdroja) a výsuvná
+paleta so špicatým lôžkom (vyťahuje sa po úplnom otvorení dverí). Robustný tablet AMNC 3i na výšku (gumené rohy,
+rebrované úchopy, horné držadlo) na konzole pripevnenej len na čele červeného stĺpa: veľká obrazovka so živým programom
+a pod ňou strieborná doska s núdzovým stopom, regulátorom rýchlosti, štvorcovými tlačidlami štartu, zastavenia, dverí a
+resetu, kľúčovým spínačom laseru a tlačidlom napájania; závesný ovládač na špirálovom kábli. Štart cyklu vyžaduje
+zatvorené dvere, zasunutú paletu a pripravený laser. Ľavý bok je pokračovaním červeného stĺpa v rovnakej výške – čierna
+stena až dozadu, ohnutá za stroj; zadná skriňa a servisné dvere sú čierne.
 
 Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
 hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku
