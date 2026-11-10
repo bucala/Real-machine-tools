@@ -33,7 +33,7 @@ import {
 } from './precision/laserProcess';
 
 // =====================================================================
-// VLÁKNOVÝ LASER AMADA BREVIS 1212 AJ – 3 kW, tabuľa 1 250 × 1 250, posuvné čelo so strechou, výsuvný stôl, AMNC 3i
+// VLÁKNOVÝ LASER AMADA BREVIS 1212 AJ – 3 kW, tabuľa 1 250 × 1 250, čelné dvere zasúvané pod strechu, výsuvná paleta, AMNC 3i
 // =====================================================================
 const EDGE = () => ({
   ok: L('čistý rez', 'clean cut'),
@@ -56,17 +56,17 @@ const brevisParts = () =>
       'Enclosure',
       'Laserová ochranná kabína',
       'Laser safety enclosure',
-      'Uzavretá kabína triedy 1 so zelenými ochrannými oknami. Čelné posuvné panely so strechou (otvára ich aj nožný pedál) a tri servisné dvere sú blokované – ich otvorenie zastaví lúč. Predloha: Amada BREVIS 1212 AJ – 3 088 × 2 389 × 1 900 mm.',
-      'Class 1 enclosure with green protective windows. The sliding front panels with the roof (also opened by the foot pedal) and three service doors are interlocked – opening them stops the beam. Model: Amada BREVIS 1212 AJ – 3,088 × 2,389 × 1,900 mm.',
+      'Uzavretá kabína triedy 1 s tmavými ochrannými oknami: úzke čelo s červeným stĺpom, boky z troch sekcií s piatimi červenými pruhmi a nižšia tmavá skriňa laserového zdroja vzadu. Čelné dvere s posuvnými dielmi (otvára ich aj nožný pedál) a tri servisné dvere sú blokované – ich otvorenie zastaví lúč. Predloha: Amada BREVIS 1212 AJ – 3 088 × 2 389 × 1 900 mm.',
+      'Class 1 enclosure with dark protective windows: narrow front with a red column, three-section sides with five red stripes and a lower dark laser source cabinet at the back. The front door with the sliding sections (also opened by the foot pedal) and three service doors are interlocked – opening them stops the beam. Model: Amada BREVIS 1212 AJ – 3,088 × 2,389 × 1,900 mm.',
     ],
     [
       'dvere',
-      'Čelo a strecha',
-      'Front and roof',
-      'Posuvné panely so zelenými oknami',
-      'Sliding panels with green windows',
-      'Dva veľké panely sa zasunú doprava do skrine a predná polovica strechy sa zdvihne – celý pracovný priestor je dostupný pre výsuvný stôl aj žeriav.',
-      'Two large panels slide into the right cabinet and the front half of the roof lifts – the whole work area is accessible for the pull-out table and a crane.',
+      'Čelné dvere a posuvné diely',
+      'Front door and sliding sections',
+      'Dvere so zaoblenými oknami, pravý bok so strechou z dvoch dielov',
+      'Door with rounded windows, two-part right side with roof',
+      'Čelné dvere sa vysunú nahor a dozadu pod strechu predného dielu. Potom sa pravý bok so strechou – delený na predný a stredný diel – teleskopicky zasunie dozadu nad nižšiu skriňu laserového zdroja: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
+      'The front door slides up and back under the roof of the front section. Then the right side with the roof – split into a front and a middle section – telescopes back over the lower laser source cabinet: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
     ],
     [
       'stol',
@@ -99,10 +99,10 @@ const brevisParts = () =>
       'panel',
       'Panel AMNC 3i',
       'AMNC 3i panel',
-      'Robustný tablet na otočnom ramene',
-      'Rugged tablet on a swing arm',
-      'Napájanie, laser, dvere, štart, zastavenie, reset, núdzový stop a regulátor rýchlosti rezu. Obrazovka ukazuje program a priebeh rezania. Vedľa je nožný pedál dverí.',
-      'Power, laser, door, start, hold, reset, emergency stop and the cutting speed override. The screen shows the program and cutting progress. Next to it is the door foot pedal.',
+      'Robustný tablet na konzole na čele stroja',
+      'Rugged tablet on a bracket on the machine front',
+      'Tablet na výšku s gumenými rohmi a bočnými úchopmi na ramene pripevnenom na červenom stĺpe. Pod obrazovkou strieborná doska: núdzový stop, regulátor rýchlosti rezu, štvorcové tlačidlá štartu, zastavenia, dverí a resetu, kľúčový spínač laseru a tlačidlo napájania. Obrazovka ukazuje program a priebeh rezania; vpravo dole je nožný pedál dverí.',
+      'Portrait tablet with rubber corners and side grips on an arm fixed to the red column. Below the screen a silver plate: emergency stop, cutting speed override, square start, hold, door and reset buttons, laser key switch and power button. The screen shows the program and cutting progress; the door foot pedal is at the front right.',
     ],
     [
       'prislusenstvo',
@@ -285,10 +285,11 @@ function AmadaSimulator({ onBack, params }) {
         copper: [0xc37b45, 0.3, 0.85],
         panelL: [0x34373b, 0.5, 0.3],
         green: [0x2e9b4a, 0.45, 0.1],
+        rear: [0x3b3e43, 0.55, 0.3],
         glass: new THREE.MeshStandardMaterial({
-          color: 0x3fa04a,
+          color: 0x24402a,
           transparent: true,
-          opacity: 0.28,
+          opacity: 0.62,
           roughness: 0.1,
           metalness: 0.1,
           side: THREE.DoubleSide,
@@ -323,7 +324,7 @@ function AmadaSimulator({ onBack, params }) {
             'Laser nie je pripravený – zapni ho a počkaj na zahriatie.',
             'The laser is not ready – switch it on and wait for warm-up.',
           ),
-          door: L('Čelo alebo strecha nie je zatvorená.', 'The front or the roof is not closed.'),
+          door: L('Čelné dvere nie sú zatvorené.', 'The front door is not closed.'),
           side: L('Servisné dvere sú otvorené.', 'A service door is open.'),
           drawer: L('Stôl nie je zasunutý.', 'The table is not pushed in.'),
           sheet: L('Na stole nie je plech.', 'There is no sheet on the table.'),
@@ -399,7 +400,7 @@ function AmadaSimulator({ onBack, params }) {
         tips={[
           L(
             'Čelné dvere otvoríš tlačidlom na paneli, nožným pedálom alebo za madlo; stôl vysunieš za rukoväte palety.',
-            'Open the front and roof with the panel button, the foot pedal or by its handle; pull the table out by the pallet handles.',
+            'Open the front door with the panel button, the foot pedal or by its handle; pull the table out by the pallet handles.',
           ),
         ]}
       />
@@ -453,11 +454,7 @@ function AmadaSimulator({ onBack, params }) {
             <Toggle on={ui.power} label={L('Napájanie', 'Power')} onClick={() => act('power')} />
             <Toggle on={ui.laser} label={L('Laserový zdroj', 'Laser source')} onClick={() => act('laser')} />
             <Toggle on={ui.estop} label={L('Núdzový stop', 'Emergency stop')} onClick={() => act('estop')} />
-            <Toggle
-              on={ui.door}
-              label={L('Čelo a strecha otvorené', 'Front and roof open')}
-              onClick={() => act('door')}
-            />
+            <Toggle on={ui.door} label={L('Čelné dvere otvorené', 'Front door open')} onClick={() => act('door')} />
             <Toggle on={ui.drawer} label={L('Stôl vysunutý', 'Table pulled out')} onClick={() => act('drawer')} />
             <div className="flex gap-2 mt-2">
               <button type="button" className="btn flex-1" onClick={() => act('loadSheet')}>
@@ -584,7 +581,7 @@ function AmadaSimulator({ onBack, params }) {
               ['celok', L('Celok', 'Overview')],
               ['obsluha', L('Miesto obsluhy', 'Operator')],
               ['priestor', L('Rezací priestor', 'Cutting area')],
-              ['zhora', L('Zhora (strecha)', 'From above (roof)')],
+              ['zhora', L('Paleta zhora', 'Pallet from above')],
               ['panel', L('Panel', 'Panel')],
               ['zboku', L('Pravý bok', 'Right side')],
             ]}
@@ -743,7 +740,7 @@ function buildAmada(x) {
   // ---------- stav ----------
   Object.assign(st, {
     doorK: 0,
-    roofK: 0,
+    shellK: 0,
     drawerK: 0,
     side: [0, 0, 0],
     laserT: 0,
@@ -768,7 +765,7 @@ function buildAmada(x) {
     if (!c.power) return 'power';
     if (c.estop) return 'estop';
     if (!st.laserReady) return 'laser';
-    if (c.door || st.doorK > 0.01 || st.roofK > 0.01) return 'door';
+    if (c.door || st.doorK > 0.01 || st.shellK > 0.01) return 'door';
     if (sidesOpen()) return 'side';
     if (c.drawer || st.drawerK > 0.01) return 'drawer';
     if (!st.sheet) return 'sheet';
@@ -920,7 +917,7 @@ function buildAmada(x) {
   btn(
     B.door,
     LL('Dvere', 'Door'),
-    LL('Otvorí alebo zatvorí posuvné čelo so strechou.', 'Opens or closes the sliding front and the roof.'),
+    LL('Vysunie čelné dvere pod strechu alebo ich zatvorí.', 'Slides the front door up under the roof or closes it.'),
     act.door,
   );
   btn(
@@ -977,13 +974,28 @@ function buildAmada(x) {
   );
   btn(
     model.door,
-    LL('Úchytka čelného panela', 'Front panel handle'),
+    LL('Madlo čelných dverí', 'Front door handle'),
     LL(
-      'Odsunie panely a zdvihne strechu alebo ich zatvorí.',
-      'Slides the panels away and lifts the roof, or closes them.',
+      'Vysunie dvere pod strechu a zasunie posuvné diely dozadu, alebo všetko zatvorí.',
+      'Slides the door under the roof and the sliding sections back, or closes everything.',
     ),
     act.door,
     () => (c.door ? L('otvorené', 'open') : L('zatvorené', 'closed')),
+  );
+  model.grips.forEach((h, k) =>
+    btn(
+      h,
+      [
+        LL('Madlo predného posuvného dielu', 'Front sliding section grip'),
+        LL('Madlo stredného posuvného dielu', 'Middle sliding section grip'),
+      ][k],
+      LL(
+        'Pravý bok so strechou je delený na dva diely – zasunú sa dozadu nad skriňu zdroja (spolu s čelnými dverami).',
+        'The right side with the roof is split into two sections – they slide back over the source cabinet (together with the front door).',
+      ),
+      act.door,
+      () => (c.door ? L('otvorené', 'open') : L('zatvorené', 'closed')),
+    ),
   );
   model.handles.forEach((h) =>
     btn(
@@ -1002,8 +1014,8 @@ function buildAmada(x) {
       d.pivot,
       [
         LL('Ľavé servisné dvere', 'Left service door'),
-        LL('Pravé zadné servisné dvere', 'Right rear service door'),
-        LL('Pravé predné servisné dvere', 'Right front service door'),
+        LL('Zadné dvere skrine zdroja', 'Laser source cabinet rear door'),
+        LL('Servisné dvere ľavého stĺpa', 'Left column service door'),
       ][k],
       LL(
         'Servisné dvere sú blokované – otvorenie zastaví lúč.',
@@ -1014,28 +1026,28 @@ function buildAmada(x) {
   );
   // ---------- pohľady a popisy ----------
   Object.assign(anchors, {
-    podstavec: () => v3(12, 4.4, BV.FZ),
-    kryt: () => v3(-13.8, 18.9, BV.FZ),
-    dvere: () => v3(-3.3, 17.5, BV.FZ),
-    stol: () => v3(-8.5, BV.TY, 8 + st.drawerK * BV.DRAWER),
-    portal: () => v3(model.gx.position.x, 14.7, model.gz.position.z),
+    podstavec: () => v3(10.5, 3.0, 13.4),
+    kryt: () => v3(-9.2, 19.0, 12.0),
+    dvere: () => v3(5.5, 16.5, 13.4),
+    stol: () => v3(-4.2, BV.TY, BV.FZ + 0.6 + st.drawerK * BV.DRAWER),
+    portal: () => v3(model.gx.position.x, 16.6, model.gz.position.z),
     plech: () => v3(BV.SX, BV.TY, BV.SZ + st.drawerK * BV.DRAWER),
-    panel: () => v3(-17.3, 15.8, 12.6),
-    prislusenstvo: () => v3(-3, 7, -16),
+    panel: () => v3(-14.65, 17.9, BV.FZ + 1.2),
+    prislusenstvo: () => v3(-5.6, 6.6, -19.4),
   });
   Object.assign(views, {
     celok: () => [
-      [19, 19, 31],
-      [-2, 9, 0],
+      [30, 22, 40],
+      [0, 9, 2],
     ],
     obsluha: () => [
-      [-6, 19, 30],
-      [-4, 9, 3],
+      [-2, 19, 38],
+      [1, 9, 10],
     ],
-    priestor: () => [[-3.2, 15.5, 25], [-3.2, 9.5, 0], true],
-    zhora: () => [[-3, 36, 24], [-3, 11, 0], true],
-    panel: () => [[-14.5, 14.5, 18.5], [-17.3, 13.2, 12.6], true],
-    zboku: () => [[46, 16, 8], [6, 9, 0], true],
+    priestor: () => [[6.5, 22.5, 24], [3.0, 8.6, 6], true], // cez pravé okno dverí
+    zhora: () => [[1, 31, 38], [0.6, 8.6, 15], true], // vysunutá paleta zhora
+    panel: () => [[-13.4, 15.0, 25.4], [-14.65, 13.6, 15.45], true],
+    zboku: () => [[50, 15, 2], [0, 9, 0], true],
   });
   // ---------- slučka ----------
   let last = 0;
@@ -1048,16 +1060,16 @@ function buildAmada(x) {
     st.laserT = c.laser && c.power && !c.estop ? st.laserT + dt : 0;
     st.laserReady = st.laserT > 3;
     // dvere, stôl, servisné dvere
-    // čelné panely sa odsúvajú, potom sa zdvihne strecha; pri zatváraní najprv klesne strecha
-    st.roofK = approach(st.roofK, c.door && st.doorK > 0.6 ? 1 : 0, 0.5 * dt);
-    st.doorK = approach(st.doorK, c.door ? 1 : st.roofK > 0.3 ? st.doorK : 0, 0.7 * dt);
+    // otváranie: čelné dvere sa vysunú pod strechu, potom sa posuvné diely (strecha + pravý bok) zasunú dozadu;
+    // zatváranie v opačnom poradí
+    st.shellK = approach(st.shellK, c.door && st.doorK > 0.98 ? 1 : 0, 0.32 * dt);
+    st.doorK = approach(st.doorK, c.door ? 1 : st.shellK > 0.001 ? st.doorK : 0, 0.6 * dt);
     st.drawerK = approach(st.drawerK, c.drawer ? 1 : 0, 0.6 * dt);
     st.side = st.side.map((k, i) => approach(k, [c.sideL, c.sideR1, c.sideR2][i] ? 1 : 0, 1.2 * dt));
     const e = (k) => k * k * (3 - 2 * k);
-    model.panels.forEach((pn) => (pn.g.position.x = pn.travel * e(st.doorK)));
-    model.hood.rotation.x = -1.2 * e(st.roofK);
+    model.setDoor(e(st.doorK)); // horná hrana po dráhe pod strechou, spodná po čele nahor
+    model.setShells(e(st.shellK));
     model.drawer.position.z = BV.DRAWER * e(st.drawerK);
-    model.handles.forEach((h) => (h.visible = st.doorK > 0.5)); // za zatvorenými dverami nie sú prístupné
     model.ext.forEach((m) => (m.position.z = (BV.DRAWER * e(st.drawerK)) / 2));
     model.doorsSide.forEach((d, i) => (d.pivot.rotation.y = d.ry0 - d.span * 1.75 * e(st.side[i])));
     // proces
@@ -1108,8 +1120,9 @@ function buildAmada(x) {
         );
     });
     // hlava
+    // mimo rezu hlava parkuje vzadu v strede – dráha zasúvaných dverí ostáva voľná
     const H = proc.S.head,
-      [wx, wz] = sheetToWorld(clamp(H.x, -10, 1260), clamp(H.y, -10, 1260));
+      [wx, wz] = running() ? sheetToWorld(clamp(H.x, -10, 1260), clamp(H.y, -10, 1260)) : sheetToWorld(625, 1250);
     model.gx.position.x = approach(model.gx.position.x, wx, 30 * dt);
     model.gz.position.z = approach(model.gz.position.z, wz, 30 * dt);
     const hz = proc.S.phase === 'run' || proc.S.phase === 'hold' ? H.z : 30;
@@ -1133,17 +1146,17 @@ function buildAmada(x) {
       s.life -= dt;
       s.v.y -= 9 * dt;
       s.m.position.addScaledVector(s.v, dt);
-      if (s.life <= 0 || s.m.position.y < 4.6) {
+      if (s.life <= 0 || s.m.position.y < 5.5) {
         x.scene.remove(s.m);
         s.m.geometry.dispose();
         return false;
       }
       return true;
     });
-    model.led.material.emissiveIntensity = c.power ? 1.2 : 0; // zdieľaný materiál oboch LED pásov
+    model.led.material.emissiveIntensity = c.power ? 1.2 : 0;
     model.cabLight.intensity = c.power ? 40 : 0;
-    model.knob.rotation.z = ((c.ovr - 100) / 20) * TAU;
-    B.estop.position.z = c.estop ? 0.0 : 0.06;
+    model.knob.rotation.z = -((c.ovr - 100) / 50) * 0.75 * Math.PI; // 50–150 % na stupnici ±135°
+    B.estop.position.z = c.estop ? 0.0 : 0.07;
     // obrazovka každých 0,2 s
     if (scr && t - last > 0.2) {
       last = t;
