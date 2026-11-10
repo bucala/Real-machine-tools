@@ -7,6 +7,9 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 10. 11. 2026
 
+- Dokumentácia: prepracovaný README (stručný prehľad, kategórie strojov s náhľadmi, rozbaľovacie sekcie pre
+  ovládanie, HMI, exporty a vývoj) a nová [dokumentácia strojov](docs/machines/README.md) – všetkých 32 strojov
+  s aktuálnymi snímkami 3D scén, parametrami, odkazom do simulátora a rozbaľovacím opisom častí.
 - CI: test v prehliadači (Playwright, ~25 min) beží len na vyžiadanie – ručné spustenie workflow so zaškrtnutým „e2e“
   alebo štítok `e2e` na pull requeste. Animácia otočenia plechu na Bystronic používa skutočný čas (test nevyprší pri
   nízkej snímkovej frekvencii).
