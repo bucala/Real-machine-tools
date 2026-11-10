@@ -5,6 +5,8 @@ import { L, LL } from '../core/i18n';
 import { TAU, approach, clamp } from '../core/util';
 import { ExportSection, TaskSection } from '../ui/tools';
 import { SectionInfo } from '../ui/sectionInfo';
+import { WorkAreaButton } from '../ui/workAreaWindow';
+import { useTouchScreen } from '../ui/touchScreen';
 import {
   HelpFooter,
   PanelHeader,
@@ -15,10 +17,12 @@ import {
   Toggle,
   ViewSection,
   mkParts,
+  SoundToggle,
   useMachine,
   useTele,
 } from '../ui/common';
 import { createClassicScene } from './classic/scaffold';
+import { workAreaFeed } from '../core/workAreaFeed';
 import { BV, buildBrevis, sheetToWorld } from './precision/brevisModel';
 import {
   BREVIS,
@@ -658,11 +662,20 @@ const rect = (x0, x1, y0, y1, style = {}) => ({
 function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
   const canvasRef = useRef(null),
     closeRef = useRef(null);
+  // dotykový displej: klik na plátno prejde na obrazovku stroja (stránky, voľby), hneď sa prekreslí
+  const paint = () => {
+    apiRef.current.paintHmi?.();
+    const src = apiRef.current.getHmiCanvas?.(),
+      cv = canvasRef.current;
+    if (src && cv) cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height);
+  };
+  const touch = useTouchScreen(apiRef, paint);
   useEffect(() => {
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeRef.current?.focus({ preventScroll: true });
     const key = (e) => {
+      if (document.querySelector('.work-area-dialog[open]')) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -762,11 +775,10 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
   const ovr = (d) => set('ovr', clamp(ui.ovr + d, 50, 150));
   return createPortal(
     <div
-      className="hmi-fullscreen"
+      className="hmi-fullscreen amada-hmi"
       role="dialog"
       aria-modal="true"
       aria-labelledby="amada-hmi-title"
-      style={{ gridTemplateRows: '48px minmax(0,1fr)' }}
       onKeyDown={(e) => e.stopPropagation()}
     >
       <header className="hmi-full-toolbar">
@@ -776,6 +788,8 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
         <span className={`hmi-full-message ${tele.alarm || ui.estop ? 'alarm' : ''}`} role="status">
           {message}
         </span>
+        <WorkAreaButton apiRef={apiRef} />
+        <SoundToggle className="scene-btn" />
         <button
           ref={closeRef}
           type="button"
@@ -788,6 +802,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
         </button>
       </header>
       <section
+        className="amada-tablet-pane"
         aria-label={L('Tablet AMNC 3i', 'AMNC 3i tablet')}
         style={{
           minHeight: 0,
@@ -849,8 +864,9 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
             ref={canvasRef}
             width="800"
             height="500"
-            aria-label={L('Obrazovka AMNC 3i', 'AMNC 3i screen')}
-            style={rect(-2.25, 2.25, 1.2 - 1.405, 1.2 + 1.405, { display: 'block' })}
+            {...touch}
+            aria-label={L('Dotyková obrazovka AMNC 3i', 'AMNC 3i touch screen')}
+            style={rect(-2.25, 2.25, 1.2 - 1.405, 1.2 + 1.405, { display: 'block', outline: 'none' })}
           />
           <span
             aria-hidden="true"
@@ -909,7 +925,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
           {/* núdzový stop so žltým krúžkom */}
           <i
             aria-hidden="true"
-            style={rect(-1.6 - 0.39, -1.6 + 0.39, -2.0 - 0.39, -2.0 + 0.39, {
+            style={rect(-1.7 - 0.3625, -1.7 + 0.3625, -2.0 - 0.3625, -2.0 + 0.3625, {
               background: '#f2b705',
               borderRadius: '50%',
             })}
@@ -921,7 +937,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
             }
             aria-pressed={!!ui.estop}
             onClick={() => act('estop')}
-            style={rect(-1.87, -1.33, -2.27, -1.73, {
+            style={rect(-1.95, -1.45, -2.25, -1.75, {
               borderRadius: '50%',
               background: 'radial-gradient(circle at 40% 35%, #f04848, #b5121c)',
               border: 'none',
@@ -943,7 +959,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
               if (['ArrowLeft', 'ArrowDown'].includes(e.key)) ovr(-5);
               if (['ArrowRight', 'ArrowUp'].includes(e.key)) ovr(5);
             }}
-            style={rect(-1.21, -0.83, -2.19, -1.81, {
+            style={rect(-1.14, -0.76, -2.19, -1.81, {
               borderRadius: '50%',
               background: '#f4f5f6',
               border: '0.3cqh solid #9aa0a5',
@@ -956,7 +972,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
               backgroundRepeat: 'no-repeat',
             })}
           />
-          {lbl(`OVERRIDE ${ui.ovr}%`, -1.02, -2.4)}
+          {lbl(`OVERRIDE ${ui.ovr}%`, -0.95, -2.4)}
           {sq('light', -1.72, -1.32, 0.1, '#f2f3f4', L('Pracovné osvetlenie', 'Work light'), ui.light, 'LIGHT', 0.2)}
           {sq(null, -1.42, -1.32, 0.1, '#f2f3f4', '')}
           {sq('cover', -0.45, -1.62, 0.13, '#f2f3f4', L('Bočné kryty', 'Side covers'), ui.cover, 'COVER', 0.26)}
@@ -1012,6 +1028,7 @@ function AmadaHmi({ apiRef, ui, tele, set, onClose }) {
 }
 
 // ---------- obrazovka AMNC 3i (zjednodušená) ----------
+// spoločné vykreslenie obrazovky AMNC 3i: hlavička, (pri PROGRAM / CONDITION) nesting vľavo, dotykové prvky stránky
 function drawHmi(g, W, H, d) {
   g.fillStyle = '#0d1b2a';
   g.fillRect(0, 0, W, H);
@@ -1029,61 +1046,55 @@ function drawHmi(g, W, H, d) {
   g.fillStyle = '#0d1b2a';
   g.font = 'bold 18px Arial';
   g.fillText(d.alarm ? 'ALARM' : ph, W - 160, 29);
-  // nesting
-  const S = 330,
-    ox = 16,
-    oy = 58,
-    k = S / 1250;
-  g.fillStyle = '#1d2b3a';
-  g.fillRect(ox, oy, S, S);
-  g.strokeStyle = '#5b6b7b';
-  g.strokeRect(ox, oy, S, S);
-  d.ops.forEach((o, i) => {
-    g.strokeStyle =
-      i < d.op
-        ? d.results[i] && d.results[i].edge !== 'ok'
-          ? '#ff8a1f'
-          : '#5bd27a'
-        : i === d.op && d.phase === 'run'
-          ? '#ffd166'
-          : '#8fa3b6';
-    g.lineWidth = i === d.op ? 2 : 1;
+  if (d.nest) {
+    const S = 330,
+      ox = 16,
+      oy = 58,
+      k = S / 1250;
+    g.fillStyle = '#1d2b3a';
+    g.fillRect(ox, oy, S, S);
+    g.strokeStyle = '#5b6b7b';
+    g.lineWidth = 1;
+    g.strokeRect(ox, oy, S, S);
+    d.ops.forEach((o, i) => {
+      g.strokeStyle =
+        i < d.op
+          ? d.results[i] && d.results[i].edge !== 'ok'
+            ? '#ff8a1f'
+            : '#5bd27a'
+          : i === d.op && d.phase === 'run'
+            ? '#ffd166'
+            : '#8fa3b6';
+      g.lineWidth = i === d.op ? 2 : 1;
+      g.beginPath();
+      o.pts.forEach(([u, v], j) => (j ? g.lineTo(ox + u * k, oy + S - v * k) : g.moveTo(ox + u * k, oy + S - v * k)));
+      g.closePath();
+      g.stroke();
+    });
+    g.fillStyle = '#ff5a4f';
     g.beginPath();
-    o.pts.forEach(([u, v], j) => (j ? g.lineTo(ox + u * k, oy + S - v * k) : g.moveTo(ox + u * k, oy + S - v * k)));
-    g.closePath();
-    g.stroke();
+    g.arc(ox + d.hx * k, oy + S - d.hy * k, 4, 0, TAU);
+    g.fill();
+  }
+  // texty stránky: [text, x, y, farba, písmo]
+  d.texts.forEach(([t, x, y, col = '#e6f0fa', font = '17px Arial']) => {
+    g.fillStyle = col;
+    g.font = font;
+    g.fillText(t, x, y);
   });
-  g.fillStyle = '#ff5a4f';
-  g.beginPath();
-  g.arc(ox + d.hx * k, oy + S - d.hy * k, 4, 0, TAU);
-  g.fill();
-  // údaje
-  g.fillStyle = '#cfe0f0';
-  g.font = '17px Arial';
-  const rows = [
-    ['MAT', d.mat],
-    ['GAS', `${d.gas}  ${d.pressure.toFixed(1)} bar`],
-    ['F', `${d.speed.toFixed(1)} m/min  (${d.ovr}%)`],
-    ['P', `${Math.round((BREVIS.power * d.pw) / 100)} W`],
-    ['FOCUS', `${d.focus.toFixed(1)} mm`],
-    ['X / Y', `${d.hx.toFixed(1)} / ${d.hy.toFixed(1)}`],
-    ['PROG', `${Math.min(d.op + 1, d.ops.length)} / ${d.ops.length}`],
-    ['TIME', `${Math.floor(d.time / 60)}:${String(Math.floor(d.time % 60)).padStart(2, '0')}`],
-    ['LASER', d.laser ? (d.beam ? 'BEAM ON' : 'READY') : 'OFF'],
-  ];
-  rows.forEach(([a, b], i) => {
-    g.fillStyle = '#7f95aa';
-    g.fillText(a, 366, 86 + i * 34);
-    g.fillStyle = a === 'LASER' && d.beam ? '#ffb347' : '#e6f0fa';
-    g.fillText(b, 450, 86 + i * 34);
-  });
-  // spodné tlačidlá
-  ['PROGRAM', 'CONDITION', 'MANUAL', 'SETUP', 'MAINT'].forEach((t, i) => {
-    g.fillStyle = i === 1 ? '#2d6aa3' : '#22384f';
-    g.fillRect(16 + i * 124, H - 46, 116, 34);
-    g.fillStyle = '#ffffff';
-    g.font = 'bold 14px Arial';
-    g.fillText(t, 26 + i * 124, H - 23);
+  // dotykové tlačidlá (aj spodné voľby stránok)
+  d.widgets.forEach((w) => {
+    g.fillStyle = w.on ? '#2d6aa3' : w.dis ? '#1a2633' : '#22384f';
+    g.fillRect(w.x, w.y, w.w, w.h);
+    if (w.on || w.hot) {
+      g.strokeStyle = w.hot ? '#ffd166' : '#7fb6ff';
+      g.lineWidth = 2;
+      g.strokeRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+    }
+    g.fillStyle = w.dis ? '#6b7d8f' : '#ffffff';
+    g.font = `bold ${w.fs || 14}px Arial`;
+    const tw = g.measureText(w.label).width;
+    g.fillText(w.label, w.x + (w.w - tw) / 2, w.y + w.h / 2 + (w.fs || 14) * 0.36);
   });
 }
 
@@ -1158,9 +1169,13 @@ function buildAmada(x) {
   // ---------- stav ----------
   Object.assign(st, {
     doorK: 0,
+    doorTgt: 0, // cieľ čelných krídel: 0 zatvorené, doorStep pravé pod ľavým, 1 obe pod stĺpom
     shellK: 0,
     pedalDir: 1,
     pedal: null,
+    page: 'condition', // stránka dotykovej obrazovky AMNC 3i
+    view: null, // naposledy vykreslené dotykové prvky
+    beamT: 0,
     pendingCover: false,
     drawerK: 0,
     side: [0, 0, 0],
@@ -1193,6 +1208,10 @@ function buildAmada(x) {
     if (st.sheet.t > BREVIS.maxT[st.sheet.mat]) return 'thick';
     return null;
   };
+  const setDoorTgt = (v) => {
+    st.doorTgt = v;
+    push('door', v > 0);
+  };
   const act = {
     power: () => {
       if (running()) return say(L('Najprv zastav program.', 'Stop the program first.'));
@@ -1220,7 +1239,7 @@ function buildAmada(x) {
         st.doorAlarm = true;
       }
       if (c.door && c.cover) push('cover', false); // pri zatváraní sa najprv vrátia bočné kryty
-      push('door', !c.door);
+      setDoorTgt(c.door ? 0 : 1);
     },
     // bočné posuvné kryty (pravý bok so strechou) – otvárajú sa až pri úplne otvorených čelných dverách
     cover: () => {
@@ -1232,20 +1251,24 @@ function buildAmada(x) {
       }
       push('cover', !c.cover);
     },
-    // pedál – krátke stlačenie: dvere → kryty → späť kryty → späť dvere; dlhé podržanie: všetko naraz
+    // pedál – krátke stlačenie posúva len čelné krídla po jednom: pravé pod ľavé → obe pod stĺp → späť pravé
+    // → zatvorené; dlhé podržanie otvorí / zatvorí čelo aj bočné kryty naraz
     pedalStep: () => {
+      const k = model.doorStep;
+      if (!c.door && !c.power)
+        return say(L('Dvere sa ovládajú pri zapnutom stroji.', 'The door works with the machine powered.'));
+      if (st.doorTgt >= 1) st.pedalDir = -1;
+      else if (st.doorTgt <= 0) st.pedalDir = 1;
       if (st.pedalDir > 0) {
-        if (!c.door) act.door();
-        else if (!c.cover) {
-          if (st.doorK < 0.98) return;
-          act.cover();
-          st.pedalDir = -1;
+        if (!c.door && running()) {
+          proc.hold('dooropen');
+          st.doorAlarm = true;
         }
-      } else if (c.cover) act.cover();
-      else if (c.door) {
-        act.door();
-        st.pedalDir = 1;
-      } else st.pedalDir = 1;
+        setDoorTgt(st.doorTgt < k ? k : 1);
+      } else {
+        if (c.cover) push('cover', false); // krídla sa pohnú až po zasunutí bočných krytov
+        setDoorTgt(st.doorTgt > k ? k : 0);
+      }
     },
     pedalAll: () => {
       if (c.door || c.cover) {
@@ -1346,6 +1369,212 @@ function buildAmada(x) {
     },
   };
   apiRef.current.act = act;
+  // ---------- dotyková obrazovka AMNC 3i: stránky PROGRAM, CONDITION, MANUAL, SETUP, MAINT ----------
+  const PAGES = [
+    ['program', 'PROGRAM'],
+    ['condition', 'CONDITION'],
+    ['manual', 'MANUAL'],
+    ['setup', 'SETUP'],
+    ['maint', 'MAINT'],
+  ];
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const mmss = (v) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}`;
+  const busy = () => {
+    if (!running()) return false;
+    say(L('Počas rezu sa toto nastavenie nemení.', 'This setting is not changed while cutting.'));
+    return true;
+  };
+  const adj = (key, d, lo, hi) => push(key, r1(clamp(c[key] + d, lo, hi)));
+  const screenView = () => {
+    const H = proc.S.head,
+      T = [],
+      Wd = [];
+    const b = (x, y, w, h, label, fn, o = {}) => Wd.push({ x, y, w, h, label, fn, ...o });
+    const row = (lab, val, x, y, col) => {
+      T.push([lab, x, y, '#7f95aa']);
+      T.push([val, x + 130, y, col]);
+    };
+    PAGES.forEach(([k, t], i) => b(16 + i * 124, 454, 116, 34, t, () => (st.page = k), { on: st.page === k }));
+    const shut = !c.door && !c.cover && st.doorK < 0.01 && st.shellK < 0.01;
+    const sideOpen = c.sideL || c.sideR1 || c.sideR2;
+    let nest = false;
+    if (st.page === 'program') {
+      nest = true;
+      T.push(['PROGRAM', 366, 78, '#7fb6ff', 'bold 17px Arial']);
+      const progs = Object.entries(PROGRAMS);
+      progs.forEach(([k, p], i) =>
+        b(366, 92 + i * 52, 418, 44, L(p.sk, p.en), () => !busy() && push('prog', k), { on: c.prog === k, fs: 15 }),
+      );
+      const y0 = 92 + progs.length * 52 + 34,
+        ops = proc.S.ops.length ? proc.S.ops : operations(c.prog);
+      row('CONTOURS', `${Math.min(proc.S.op + 1, ops.length)} / ${ops.length}`, 366, y0);
+      row('SHEET', st.sheet ? `${st.sheet.mat}  ${st.sheet.t} mm` : '—', 366, y0 + 32);
+      row('TIME', mmss(proc.S.time), 366, y0 + 64);
+      row(
+        'STATUS',
+        proc.S.alarm ? 'ALARM' : proc.S.phase.toUpperCase(),
+        366,
+        y0 + 96,
+        proc.S.alarm ? '#ff5a4f' : undefined,
+      );
+    } else if (st.page === 'condition') {
+      nest = true;
+      const gases = ['O2', 'N2', 'AIR'];
+      [
+        [
+          'F  m/min',
+          `${r1((c.speed * c.ovr) / 100).toFixed(1)}${c.ovr !== 100 ? `  (${c.ovr}%)` : ''}`,
+          'speed',
+          0.1,
+          0.3,
+          30,
+        ],
+        ['P', `${c.pw} %  ·  ${Math.round((BREVIS.power * c.pw) / 100)} W`, 'pw', 5, 10, 100],
+        ['GAS', c.gas, 'gas'],
+        ['PRESS  bar', c.pressure.toFixed(1), 'pressure', 0.1, 0.3, 20],
+        ['FOCUS  mm', c.focus.toFixed(1), 'focus', 0.5, -5, 5],
+      ].forEach(([lab, val, key, step, lo, hi], i) => {
+        const y = 60 + i * 48;
+        T.push([lab, 366, y + 26, '#7f95aa']);
+        T.push([val, 466, y + 26]);
+        if (key === 'gas')
+          b(650, y, 130, 38, 'O2 / N2 / AIR', () => {
+            if (!busy()) push('gas', gases[(gases.indexOf(c.gas) + 1) % gases.length]);
+          });
+        else {
+          b(650, y, 60, 38, '−', () => adj(key, -step, lo, hi), { fs: 22 });
+          b(720, y, 60, 38, '+', () => adj(key, step, lo, hi), { fs: 22 });
+        }
+      });
+      b(366, 300, 414, 38, 'E-TABLE  →  CONDITION', () => !busy() && act.table());
+      row('X / Y', `${H.x.toFixed(1)} / ${H.y.toFixed(1)}`, 366, 372);
+      row(
+        'LASER',
+        st.laserReady ? (proc.S.beam && running() ? 'BEAM ON' : 'READY') : 'OFF',
+        366,
+        402,
+        proc.S.beam && running() ? '#ffb347' : undefined,
+      );
+      row('TIME', mmss(proc.S.time), 366, 432);
+    } else if (st.page === 'manual') {
+      [
+        ['DOOR', c.door, act.door],
+        ['COVER', c.cover, act.cover],
+        ['PALLET', c.drawer, act.drawer],
+        ['LIGHT', c.light, act.light],
+        ['LASER', c.laser, act.laser],
+        ['RESET', false, act.reset],
+        ['LOAD SHEET', false, act.loadSheet],
+        ['UNLOAD PARTS', false, act.unload],
+        ['REMOVE SKELETON', false, act.skeleton],
+      ].forEach(([t, on, fn], i) => b(16 + (i % 3) * 256, 60 + Math.floor(i / 3) * 70, 246, 60, t, fn, { on, fs: 17 }));
+      row('X / Y', `${H.x.toFixed(1)} / ${H.y.toFixed(1)} mm`, 24, 300);
+      row('SHEET', st.sheet ? `${st.sheet.mat}  ${st.sheet.t} mm` : '—', 24, 332);
+      row('PALLET', st.drawerK > 0.99 ? 'OUT' : st.drawerK < 0.01 ? 'IN' : 'MOVING', 24, 364);
+      row('INTERLOCK', shut && !sideOpen ? 'CLOSED' : 'OPEN', 24, 396, shut && !sideOpen ? '#5bd27a' : '#ffb347');
+      row('FRONT DOOR', `${Math.round(st.doorK * 100)} %`, 420, 300);
+      row('SIDE COVERS', `${Math.round(st.shellK * 100)} %`, 420, 332);
+      row('LIGHT', c.light ? 'ON' : 'OFF', 420, 364);
+      row('OVERRIDE', `${c.ovr} %`, 420, 396);
+    } else if (st.page === 'setup') {
+      T.push(['MATERIAL', 16, 80, '#7fb6ff', 'bold 16px Arial']);
+      Object.entries(MATERIALS).forEach(([k, m], i) =>
+        b(
+          16 + i * 258,
+          92,
+          248,
+          44,
+          `${k}  ${L(m.sk, m.en)}`,
+          () => {
+            if (busy()) return;
+            push('mat', k);
+            if (!m.thick.includes(c.t)) push('t', m.thick[0]);
+          },
+          { on: c.mat === k, fs: 14 },
+        ),
+      );
+      T.push(['THICKNESS  mm', 16, 170, '#7fb6ff', 'bold 16px Arial']);
+      MATERIALS[c.mat].thick.forEach((v, i) =>
+        b(16 + i * 154, 182, 144, 44, String(v), () => !busy() && push('t', v), { on: c.t === v, fs: 17 }),
+      );
+      T.push(['SIMULATION SPEED', 16, 260, '#7fb6ff', 'bold 16px Arial']);
+      [1, 5, 20, 60].forEach((v, i) =>
+        b(16 + i * 154, 272, 144, 44, `${v}×`, () => push('ts', v), { on: c.ts === v, fs: 17 }),
+      );
+      row('LOADED', st.sheet ? `${st.sheet.mat}  ${st.sheet.t} mm` : '—', 16, 360);
+      row('MAX', `${BREVIS.maxT[c.mat]} mm`, 16, 392);
+      row('WORK AREA', '1270 × 1270 mm', 420, 360);
+      row('SOURCE', `FIBER ${BREVIS.power / 1000} kW`, 420, 392);
+    } else {
+      const ok = (v) => (v ? 'OK' : 'CHECK'),
+        rows = [
+          ['SOURCE', `FIBER ${BREVIS.power / 1000} kW`],
+          ['BEAM ON', mmss(st.beamT)],
+          ['CUT TIME', mmss(proc.S.time)],
+          ['CHILLER', c.power ? 'RUN' : 'OFF'],
+          ['GAS', `${c.gas}  ${c.pressure.toFixed(1)} bar`],
+          ['NOZZLE', '1.5 mm  SINGLE'],
+          ['PROT. GLASS', ok(true)],
+          ['FRONT DOOR', c.door ? 'OPEN' : 'CLOSED'],
+          ['SIDE COVERS', c.cover ? 'OPEN' : 'CLOSED'],
+          ['SERVICE', sideOpen ? 'OPEN' : 'CLOSED'],
+          ['E-STOP', c.estop ? 'ACTIVE' : 'OK'],
+          ['ALARM', proc.S.alarm ? String(proc.S.alarm).toUpperCase() : '—'],
+        ];
+      rows.forEach(([a, v], i) =>
+        row(a, v, i < 6 ? 24 : 420, 82 + (i % 6) * 36, /OPEN|ACTIVE|CHECK/.test(v) ? '#ffb347' : undefined),
+      );
+      b(16, 300 + 2 * 36, 246, 50, 'ALARM RESET', act.reset, { fs: 16 });
+    }
+    return { nest, texts: T, widgets: Wd, page: st.page };
+  };
+  const drawScreen = () => {
+    if (!scr) return;
+    const g = scr.cv.getContext('2d');
+    if (!c.power) {
+      st.view = null;
+      g.fillStyle = '#05080b';
+      g.fillRect(0, 0, 800, 500);
+    } else {
+      const H = proc.S.head;
+      st.view = screenView();
+      drawHmi(g, 800, 500, {
+        ...st.view,
+        progName: L(PROGRAMS[c.prog].sk, PROGRAMS[c.prog].en),
+        phase: proc.S.phase,
+        alarm: proc.S.alarm,
+        ops: proc.S.ops.length ? proc.S.ops : operations(c.prog),
+        op: proc.S.op,
+        results: proc.S.results,
+        hx: H.x,
+        hy: H.y,
+      });
+    }
+    scr.tx.needsUpdate = true;
+  };
+  const hitAt = (x, y) => st.view?.widgets.find((w) => x >= w.x && x <= w.x + w.w && y >= w.y && y <= w.y + w.h);
+  apiRef.current.hmiPoint = (x, y) => {
+    const w = hitAt(x, y);
+    if (!w) return null;
+    w.fn();
+    return { id: w.label };
+  };
+  apiRef.current.hmiHover = (x, y) => !!hitAt(x, y);
+  apiRef.current.paintHmi = drawScreen;
+  // živý pohľad do rezacieho priestoru (Priestor / Split v HMI): kamera vnútri krytu vpredu hore, sleduje hlavu
+  const look = new THREE.Vector3(BV.SX, BV.TY, BV.SZ),
+    headW = new THREE.Vector3();
+  apiRef.current.mountWorkArea = workAreaFeed({
+    scene: x.scene,
+    camera: x.camera,
+    renderer: x.renderer,
+    fov: 62,
+    view: () => {
+      model.gy.getWorldPosition(headW);
+      look.lerp(headW.set(headW.x * 0.35 + BV.SX * 0.65, BV.TY, headW.z * 0.35 + BV.SZ * 0.65), 0.12);
+      return [[-3.0, 17.0, 12.4], look.toArray()]; // pod strechou za čelným sklom, celý plech v zábere
+    },
+  });
   apiRef.current.toggleRun = () => (running() ? act.hold() : act.start());
   apiRef.current.newBlank = () => {
     if (running()) return false;
@@ -1445,8 +1674,8 @@ function buildAmada(x) {
     model.pedal,
     LL('Nožný pedál dverí', 'Door foot pedal'),
     LL(
-      'Krátke stlačenie: čelné dvere, potom bočné kryty, potom späť kryty a dvere. Dlhé podržanie otvorí alebo zatvorí všetko naraz.',
-      'Short press: front door, then side covers, then covers and door back. A long press opens or closes everything at once.',
+      'Krátke stlačenie posúva len čelné krídla po jednom: pravé pod ľavé, obe pod stĺp, späť pravé, zatvorené. Dlhé podržanie otvorí alebo zatvorí čelo aj bočné kryty naraz.',
+      'A short press moves only the front leaves one at a time: right under left, both under the column, right back, closed. A long press opens or closes the front and the side covers at once.',
     ),
     () => {
       st.pedal = { t0: performance.now(), fired: false };
@@ -1586,11 +1815,15 @@ function buildAmada(x) {
         st.pedal = null;
       }
     }
-    st.doorK = approach(st.doorK, c.door ? 1 : st.shellK > 0.001 ? st.doorK : 0, 0.35 * dt);
+    if (!c.door) st.doorTgt = 0;
+    else if (st.doorTgt <= 0) st.doorTgt = 1; // obnovený stav alebo iné ovládanie
+    st.doorK = approach(st.doorK, st.shellK > 0.001 ? st.doorK : st.doorTgt, 0.35 * dt);
     st.drawerK = approach(st.drawerK, c.drawer ? 1 : 0, 0.6 * dt);
     st.side = st.side.map((k, i) => approach(k, [c.sideL, c.sideR1, c.sideR2][i] ? 1 : 0, 1.2 * dt));
     const e = (k) => k * k * (3 - 2 * k);
-    model.setDoor(e(st.doorK)); // pravé krídlo pod ľavé, potom obe spolu pod stĺp
+    // pravé krídlo pod ľavé, potom obe spolu pod stĺp; plynulý rozbeh a dobeh aj v medzipolohe pedálu
+    const ks = model.doorStep;
+    model.setDoor(st.doorK <= ks ? ks * e(st.doorK / ks) : ks + (1 - ks) * e((st.doorK - ks) / (1 - ks)));
     model.setShells(e(st.shellK));
     model.drawer.position.z = BV.DRAWER * e(st.drawerK);
     // pri vysúvaní sa paleta s plechom nadvihne nad pevné lamely, pri zasunutí klesne späť na všetky hroty
@@ -1653,6 +1886,7 @@ function buildAmada(x) {
     const hz = proc.S.phase === 'run' || proc.S.phase === 'hold' ? H.z : 30;
     model.gy.position.y = BV.TY + 0.02 + hz / 100;
     const beam = proc.S.beam && running();
+    if (beam) st.beamT += dt;
     model.glow.visible = beam;
     model.beamLight.intensity = beam ? 6 + Math.random() * 3 : 0;
     // iskry pod plechom
@@ -1686,32 +1920,7 @@ function buildAmada(x) {
     // obrazovka každých 0,2 s
     if (scr && t - last > 0.2) {
       last = t;
-      const g = scr.cv.getContext('2d');
-      if (!c.power) {
-        g.fillStyle = '#05080b';
-        g.fillRect(0, 0, 800, 500);
-      } else
-        drawHmi(g, 800, 500, {
-          progName: L(PROGRAMS[c.prog].sk, PROGRAMS[c.prog].en),
-          phase: proc.S.phase,
-          alarm: proc.S.alarm,
-          ops: proc.S.ops.length ? proc.S.ops : operations(c.prog),
-          op: proc.S.op,
-          results: proc.S.results,
-          hx: H.x,
-          hy: H.y,
-          mat: st.sheet ? `${st.sheet.mat}  ${st.sheet.t} mm` : '—',
-          gas: c.gas,
-          pressure: c.pressure,
-          speed: (c.speed * c.ovr) / 100,
-          ovr: c.ovr,
-          pw: c.pw,
-          focus: c.focus,
-          time: proc.S.time,
-          laser: st.laserReady,
-          beam,
-        });
-      scr.tx.needsUpdate = true;
+      drawScreen();
     }
   };
   const measure = () => {
