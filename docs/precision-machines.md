@@ -217,11 +217,14 @@ zdroja) a výsuvná paleta so špicatým lôžkom (vyťahuje sa po úplnom otvor
 zastavenia, dverí a resetu, kľúčovým spínačom laseru a tlačidlom napájania; závesný ovládač na špirálovom kábli. Štart
 cyklu vyžaduje zatvorené dvere, zasunutú paletu a pripravený laser. Ľavý bok je odskočeným (užším a nižším) pokračovaním
 červeného stĺpa – čierna stena až dozadu, ohnutá za stroj; zadná skriňa a servisné dvere sú čierne. Portál: masívny
-priečny nosník je nižšie; vľavo jazdí po vedení v stene, vpravo nohou po spodnom masívnom nosníku. Nad scénou sú
-tlačidlá ako na HMI (stroj, laser, dvere, paleta, svetlo, štart, stop, reset, núdzový stop). Rezacia paleta (cutting
-pallet) sa vysúva tlačidlom PALLET na HMI, v aplikácii alebo za rukoväte: párne lamely hrotového roštu sa vysúvajú s
-ňou, nepárne ostávajú v stroji; pri vysúvaní sa paleta s plechom mierne nadvihne nad pevné lamely, po zasunutí klesne a
-plech leží na hrotoch všetkých lamiel.
+priečny nosník je nižšie; vľavo jazdí po vedení v stene, vpravo nohou po spodnom masívnom nosníku. Rezacia paleta
+(cutting pallet) sa vysúva tlačidlom PALLET na HMI, v aplikácii alebo za rukoväte: párne lamely hrotového roštu sa
+vysúvajú s ňou, nepárne ostávajú v stroji; pri vysúvaní sa paleta s plechom mierne nadvihne nad pevné lamely, po
+zasunutí klesne a plech leží na hrotoch všetkých lamiel. Ovládanie zjednotené ako pri iných strojoch: nad scénou len
+Pozrieť obrobok a HMI, v paneli sekcia Prevádzka s tlačidlami (štart, zastaviť, reset, stroj, laser, núdzový STOP,
+dvere, bočné kryty, paleta) a prepínačom osvetlenia; dvojklik na obrazovku v ručnom režime otvorí HMI AMNC 3i na celú
+obrazovku s ovládacím panelom. Pedál: krátke stlačenie po krokoch (dvere, kryty, späť kryty, späť dvere), dlhé podržanie
+otvorí alebo zatvorí všetko; voľné tlačidlá HMI ovládajú svetlo (LIGHT) a bočné kryty (COVER).
 
 Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
 hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku

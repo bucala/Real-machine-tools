@@ -87,6 +87,7 @@ export function createClassicScene({
   const ctx = {
     scene,
     camera,
+    dom,
     root,
     kit,
     det,
