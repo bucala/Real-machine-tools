@@ -227,8 +227,13 @@ obrazovku. Fullscreen je verná kópia tabletu z modelu v rovnakých proporciác
 držadlo, logá, strieborná doska s čiernym panelom) so živou obrazovkou zo scény; núdzový STOP, regulátor OVERRIDE (klik
 na ľavú/pravú polovicu, koliesko, šípky), kľúčový spínač laseru, POWER a štvorcové tlačidlá sú na rovnakých miestach ako
 na modeli a ovládajú stroj. Dekoratívne prvky nie sú interaktívne. Tablet sa prispôsobí výške aj šírke displeja; Esc ho
-zavrie. Pedál: krátke stlačenie po krokoch (dvere, kryty, späť kryty, späť dvere), dlhé podržanie otvorí alebo zatvorí
-všetko; voľné tlačidlá HMI ovládajú svetlo (LIGHT) a bočné kryty (COVER).
+zavrie. Lišta má ako pri iných strojoch tlačidlá Priestor (živý uzamknutý pohľad kamerou pod strechou za čelným sklom,
+sleduje hlavu), Split (pohľad vedľa HMI) a zvuk. Displej je dotykový: PROGRAM (výber programu, obrysy, čas), CONDITION
+(rýchlosť, výkon, plyn, tlak, ohnisko tlačidlami −/+, prevzatie z tabuľky), MANUAL (dvere, kryty, paleta, svetlo, laser,
+reset, plech a diely), SETUP (materiál, hrúbka, zrýchlenie simulácie) a MAINT (diagnostika zdroja, plynu, blokovaní a
+alarmov). Núdzový STOP je posunutý doľava, aby sa neprekrýval s regulátorom OVERRIDE. Pedál: krátke stlačenie posúva len
+čelné krídla po jednom (pravé pod ľavé, obe pod stĺp, späť pravé, zatvorené), dlhé podržanie otvorí alebo zatvorí čelo
+aj bočné kryty; voľné tlačidlá HMI ovládajú svetlo (LIGHT) a bočné kryty (COVER).
 
 Rezné podmienky (rýchlosť, plyn, tlak, ohnisko) sú orientačné hodnoty simulátora pre 3 kW, nie údaje výrobcu. Kvalita
 hrany: príliš rýchly rez neprereže plech alebo nechá otrep, príliš pomalý prepáli hranu, kyslík na nereze / hliníku

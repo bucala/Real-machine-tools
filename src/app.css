@@ -1454,6 +1454,14 @@ html[data-mode='modern-menu'] {
   isolation: isolate;
   overscroll-behavior: contain;
 }
+/* Amada AMNC 3i: tablet podľa modelu v jednom paneli; pri split-screen zaberá stĺpec HMI. */
+.hmi-fullscreen.amada-hmi:not(.work-split) {
+  grid-template-rows: 48px minmax(0, 1fr);
+}
+.work-split > .amada-tablet-pane {
+  grid-row: display-start / controls-end;
+  grid-column: display-start / display-end;
+}
 .hmi-full-toolbar {
   display: flex;
   align-items: center;

@@ -732,7 +732,7 @@ export function buildBrevis({ kit, det, M, grp }) {
     return g;
   };
   const btn = {
-    estop: pbtn(-1.6, -2.0, M.red, { r: 0.27, mush: true }),
+    estop: pbtn(-1.7, -2.0, M.red, { r: 0.25, mush: true }), // posunutý doľava – voľné miesto pre OVERRIDE
     start: pbtn(-0.45, -2.42, M.green, { sq: true }),
     hold: pbtn(-0.12, -2.42, M.white, { sq: true }),
     door: pbtn(0.62, -1.48, M.white, { sq: true }),
@@ -777,14 +777,14 @@ export function buildBrevis({ kit, det, M, grp }) {
         g.stroke();
       }
     },
-    -1.02,
+    -0.95,
     -2.0,
     0.075,
     0,
     128,
   );
   const knob = new THREE.Group();
-  knob.position.set(-1.02, -2.0, 0.07);
+  knob.position.set(-0.95, -2.0, 0.07);
   head.add(knob);
   cylZ(knob, 0.19, 0.17, 0, 0.16, 0, 0, M.white, 28);
   box(knob, -0.018, 0.018, 0.02, 0.17, 0.16, 0.175, M.black);
@@ -798,7 +798,7 @@ export function buildBrevis({ kit, det, M, grp }) {
     ['START', -0.45, -2.42, -0.24],
     ['HOLD', -0.12, -2.42, -0.24],
     ['RESET', 0.85, -2.5, -0.24],
-    ['OVERRIDE', -1.02, -2.0, -0.4],
+    ['OVERRIDE', -0.95, -2.0, -0.4],
   ].forEach(([t, x, y, dy]) =>
     decal(
       head,
@@ -867,6 +867,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   return {
     door,
     setDoor,
+    doorStep: D / T2, // pravé krídlo zasunuté pod ľavé (medzipoloha pedálu)
     setShells,
     grips: [grip2, grip1],
     doorsSide,

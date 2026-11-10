@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 // A separate locked camera renders the same live scene. No controls, machine
 // state or main-camera pose are changed while this viewer is open.
-export function workAreaFeed({ scene, camera, renderer, view }) {
+export function workAreaFeed({ scene, camera, renderer, view, fov }) {
   return (canvas) => {
     const detail = camera.clone(),
       out = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -10,6 +10,7 @@ export function workAreaFeed({ scene, camera, renderer, view }) {
     out.outputColorSpace = renderer.outputColorSpace;
     out.toneMapping = renderer.toneMapping;
     out.toneMappingExposure = renderer.toneMappingExposure;
+    if (fov) detail.fov = fov; // napr. širokouhlá kamera vnútri krytu stroja
     detail.aspect = 800 / 500;
     detail.updateProjectionMatrix();
     let disposed = false,
