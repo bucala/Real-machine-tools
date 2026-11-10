@@ -217,15 +217,18 @@ export function LaserArt() {
     <Svg>
       <g fillOpacity=".16">
         <rect x="70" y="50" width="200" height="90" rx="6" />
-        <rect x="70" y="140" width="200" height="20" rx="3" />
+        <rect x="70" y="140" width="200" height="20" rx="3" fillOpacity=".4" />
       </g>
-      <rect x="70" y="50" width="22" height="90" fill="#d2232e" fillOpacity=".75" stroke="none" />
-      <rect x="104" y="66" width="44" height="38" rx="3" fill="#2f8f3a" fillOpacity=".45" />
-      <rect x="156" y="66" width="56" height="38" rx="3" fill="#2f8f3a" fillOpacity=".45" />
-      <path d="M226 118h36M226 124h36M226 130h36" stroke="#d2232e" strokeWidth="2.5" />
+      <rect x="70" y="46" width="24" height="94" rx="5" fill="#d2232e" fillOpacity=".8" stroke="none" />
+      <path d="M76 62l4-4h10l-4 4zM76 70l4-4h10l-4 4z" fill="#f2b705" stroke="none" />
+      <rect x="100" y="64" width="62" height="44" rx="3" fill="#2f8f3a" fillOpacity=".45" />
+      <rect x="168" y="64" width="62" height="44" rx="3" fill="#2f8f3a" fillOpacity=".45" />
+      <path d="M166 76v24" stroke="#111" strokeWidth="3" />
+      <path d="M236 112h30M236 118h30M236 124h30" stroke="#d2232e" strokeWidth="2.5" />
+      <path d="M96 138h150" stroke="#d2232e" strokeWidth="3" />
       <path d="M40 160V70" fill="none" strokeWidth="3" />
-      <rect x="26" y="52" width="30" height="40" rx="3" fillOpacity=".35" />
-      <path d="M180 84l6 10" stroke="#ffb347" strokeWidth="3" />
+      <rect x="26" y="52" width="30" height="40" rx="4" fillOpacity=".35" />
+      <path d="M150 90l6 10" stroke="#ffb347" strokeWidth="3" />
     </Svg>
   );
 }

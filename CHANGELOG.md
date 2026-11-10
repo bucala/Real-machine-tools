@@ -7,12 +7,16 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 10. 11. 2026
 
-- Nový moderný stroj: vláknový laser Amada BREVIS 1212 AJ (3 kW, 1 270 × 1 270 mm, AMNC 3i) podľa fotografií –
-  detailný model so sivými krytmi, červeným stĺpom a pásmi, polepmi a zelenými oknami; výklopné čelné dvere (panel,
-  nožný pedál, madlo), tri blokované servisné dvere, výsuvný stôl s lamelami, portál s rezacou hlavou, panel AMNC 3i
-  na otočnom ramene so živou obrazovkou, závesný ovládač, odsávanie a chladič. Rezanie tabule podľa programu (príruby,
-  konzoly) s rezným plynom, tlakom, ohniskom a rýchlosťou, kvalita hrany, vypadávanie výrezov, vyberanie dielov;
-  úlohy príruby z ocele 3 mm a konzoly z nerezu 2 mm.
+- Nový moderný stroj: vláknový laser Amada BREVIS 1212 AJ (3 kW, 1 270 × 1 270 mm, AMNC 3i) podľa 14 fotografií –
+  červený hlavový blok vľavo so žltým dvojpruhom a typovým označením, dva veľké strieborné posuvné čelné panely so
+  zelenými oknami a čiernymi úchytkami, strieborná skriňa vpravo so znakom AMADA, nápisom, podpisom FL a červenými
+  pruhmi, čierny podstavec s červeným pásom, nivelačnými nohami a žltými výstražnými štítkami, čierne vnútro s LED
+  pásmi, červená paleta so špicatým lôžkom a energetická reťaz. Otvorenie čela: panely sa zasunú doprava do skrine
+  a predná polovica strechy sa zdvihne (prístup pre žeriav); ovláda sa tlačidlom na paneli, nožným pedálom alebo
+  úchytkou. Tri blokované servisné dvere, výsuvná paleta, portál s červenou hlavou, robustný tablet AMNC 3i na otočnom
+  ramene so živou obrazovkou a červenou doskou BREVIS, závesný ovládač, odsávanie a chladič. Rezanie tabule podľa
+  programu (príruby, konzoly) s rezným plynom, tlakom, ohniskom a rýchlosťou, kvalita hrany, vypadávanie výrezov,
+  vyberanie dielov; úlohy príruby z ocele 3 mm a konzoly z nerezu 2 mm. Nový pohľad zhora (otvorená strecha).
 - Nový stroj: kovací buchar Šmeral KHZ 2 (energia úderu 20 kJ, baran 920 kg, zdvih 400 mm) podľa fotiek – zúžený
   rám s pracovným oknom, valec na vrchu, ploché kovadlá, ovládacie stojany a pedál; plynová kovacia pec s dvierkami
   a regulátorom teploty, kliešte. Kovanie hranola so zachovaním objemu a rozširovaním, energia úderu voličom,
