@@ -65,8 +65,8 @@ const brevisParts = () =>
       'Front door and sliding sections',
       'Dvere so zaoblenými oknami, pravý bok so strechou z dvoch dielov',
       'Door with rounded windows, two-part right side with roof',
-      'Dve čelné krídla sa posúvajú kaskádovo doľava: pravé zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp a úplne otvorené prečnievajú cez ľavý bok o 20 % krídla. Potom sa pravý bok so strechou – delený na predný a stredný diel – kaskádovo zasunie dozadu – predný diel cez stredný, potom oba spolu nad nižšiu skriňu laserového zdroja, bez presahu za stroj: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
-      'The two front leaves slide to the left in cascade: the right one goes under the left one, then both move together under the fixed red column and, fully open, protrude past the left side by 20 % of a leaf. Then the right side with the roof – split into a front and a middle section – slides back in cascade – the front section over the middle one, then both together over the lower laser source cabinet, without protruding behind the machine: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
+      'Dve čelné krídla sa posúvajú kaskádovo doľava: pravé zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp a úplne otvorené sú celé mimo otvoru, prečnievajú cez ľavý bok pod stĺpom. Potom sa pravý bok so strechou – delený na predný a stredný diel – kaskádovo zasunie dozadu – predný diel cez stredný, potom oba spolu nad nižšiu skriňu laserového zdroja, bez presahu za stroj: čelo, strecha aj pravý bok rezacieho priestoru sú otvorené pre paletu, žeriav a údržbu.',
+      'The two front leaves slide to the left in cascade: the right one goes under the left one, then both move together under the fixed red column and, fully open, clear the opening completely, protruding past the left side under the column. Then the right side with the roof – split into a front and a middle section – slides back in cascade – the front section over the middle one, then both together over the lower laser source cabinet, without protruding behind the machine: the front, roof and right side of the cutting area open for the pallet, a crane and maintenance.',
     ],
     [
       'stol',
@@ -397,6 +397,43 @@ function AmadaSimulator({ onBack, params }) {
         chips={chips}
         onBack={onBack}
         apiRef={apiRef}
+        tools={
+          <div className="flex flex-wrap justify-end gap-2" style={{ maxWidth: 420 }}>
+            {[
+              ['power', ui.power, ui.power ? L('Stroj I', 'Machine I') : L('Stroj 0', 'Machine 0')],
+              ['laser', ui.laser, L('Laser', 'Laser')],
+              ['door', ui.door, ui.door ? L('Zatvoriť dvere', 'Close door') : L('Otvoriť dvere', 'Open door')],
+              [
+                'drawer',
+                ui.drawer,
+                ui.drawer ? L('Zasunúť stôl', 'Push table in') : L('Vysunúť stôl', 'Pull table out'),
+              ],
+              ['light', ui.light, L('Svetlo', 'Light')],
+              ['start', false, L('▶ Štart', '▶ Start')],
+              ['hold', false, L('Stop', 'Hold')],
+              ['reset', false, 'RESET'],
+            ].map(([k, on, t]) => (
+              <button
+                key={k}
+                type="button"
+                className={`scene-btn ${on ? 'on' : ''}`}
+                aria-pressed={k === 'start' || k === 'hold' || k === 'reset' ? undefined : !!on}
+                onClick={() => act(k)}
+              >
+                {t}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`scene-btn ${ui.estop ? 'on' : ''}`}
+              style={{ background: '#c8102e', color: '#fff' }}
+              aria-pressed={!!ui.estop}
+              onClick={() => act('estop')}
+            >
+              {L('Núdzový STOP', 'E-STOP')}
+            </button>
+          </div>
+        }
         tips={[
           L(
             'Čelné dvere otvoríš tlačidlom na paneli, nožným pedálom alebo za madlo; stôl vysunieš za rukoväte palety.',
@@ -456,6 +493,7 @@ function AmadaSimulator({ onBack, params }) {
             <Toggle on={ui.estop} label={L('Núdzový stop', 'Emergency stop')} onClick={() => act('estop')} />
             <Toggle on={ui.door} label={L('Čelné dvere otvorené', 'Front door open')} onClick={() => act('door')} />
             <Toggle on={ui.drawer} label={L('Stôl vysunutý', 'Table pulled out')} onClick={() => act('drawer')} />
+            <Toggle on={ui.light} label={L('Osvetlenie priestoru', 'Work area light')} onClick={() => act('light')} />
             <div className="flex gap-2 mt-2">
               <button type="button" className="btn flex-1" onClick={() => act('loadSheet')}>
                 {L('Naložiť plech', 'Load sheet')}
@@ -783,6 +821,7 @@ function buildAmada(x) {
       if (running()) return say(L('Laser sa nevypína počas rezu.', 'The laser is not switched off while cutting.'));
       push('laser', !c.laser);
     },
+    light: () => push('light', !c.light),
     estop: () => {
       push('estop', !c.estop);
       if (c.estop) {
@@ -1156,8 +1195,9 @@ function buildAmada(x) {
       }
       return true;
     });
-    model.led.material.emissiveIntensity = c.power ? 1.2 : 0;
-    model.cabLight.intensity = c.power ? 40 : 0;
+    const lit = c.power && c.light; // osvetlenie pracovného priestoru (tlačidlo svetla)
+    model.led.material.emissiveIntensity = lit ? 1.2 : 0;
+    model.cabLight.intensity = lit ? 40 : 0;
     model.knob.rotation.z = -((c.ovr - 100) / 50) * 0.75 * Math.PI; // 50–150 % na stupnici ±135°
     B.estop.position.z = c.estop ? 0.0 : 0.07;
     // obrazovka každých 0,2 s
