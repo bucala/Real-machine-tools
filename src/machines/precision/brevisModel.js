@@ -1,9 +1,9 @@
 // 3D model laseru Amada BREVIS 1212 AJ (mierka 1 = 100 mm, obsluha vpredu +z). Rozmery podľa letáku Amada:
 // šírka 2 389 (x), dĺžka 3 088 (z), výška 1 900 mm. Tvar podľa siete odhadnutej z fotografií (Meshy) a fotografií:
-// úzke čelo s červeným stĺpom vľavo, dvoje čelné dvere so zaoblenými oknami, ktoré sa vysúvajú nahor a dozadu pod
-// strechu prednej sekcie, pod nimi výsuvná červená paleta s čiernou zásterou a madlom; boky z troch sekcií (predná
+// úzke čelo s červeným stĺpom vľavo, dve čelné posuvné krídla so zaoblenými oknami, ktoré sa kaskádovo
+// zasúvajú doľava pod červený stĺp, pod nimi výsuvná červená paleta s čiernou zásterou a madlom; boky z troch sekcií (predná
 // s oknom, stredná s podpisom FL, nižšia tmavá zadná skriňa laserového zdroja), päť červených pruhov, čierny podstavec;
-// robustný tablet AMNC 3i na ramene vľavo pred strojom, závesný ovládač a nožný pedál.
+// robustný tablet AMNC 3i na konzole na čele stĺpa, závesný ovládač a nožný pedál.
 import * as THREE from 'three';
 
 const FZ = 14.25; // čelo stĺpa a palety
@@ -16,7 +16,7 @@ const zf = (y) => (y <= DOOR_Y0 ? FZ : FZ - (y - DOOR_Y0) * SLOPE); // čelná p
 export const BV = {
   TY: 8.6, // horná hrana hrotov lôžka (pracovná rovina)
   SX: 0.55, // stred tabule (x)
-  SZ: 5.9, // stred tabule (z) – predná hrana tabule ostáva za zatvorenými dverami aj s hlavou
+  SZ: 5.4, // stred tabule (z) – predná hrana tabule ostáva za zatvorenými dverami aj s hlavou
   HALF: 6.25, // polovica tabule 1 250 mm
   FZ,
   DRAWER: 11.0, // vysunutie palety
@@ -323,7 +323,7 @@ export function buildBrevis({ kit, det, M, grp }) {
       decal(pv, 3.2, 0.55, (g, w, h) => logo(g, w, h), fe + dir * 4.6, 10.5, 0.13);
     }),
     // ľavý bok červeného stĺpa (pánt vpredu, voľná hrana vzadu)
-    sideDoor(-W, 12.6, 9.7, 8.95, 18.3, -Math.PI / 2, -1, M.cab, (pv, fe, dir) =>
+    sideDoor(-W, 12.0, 9.1, 8.95, 18.3, -Math.PI / 2, -1, M.cab, (pv, fe, dir) =>
       decal(pv, 3.4, 0.56, (g, w, h) => logo(g, w, h), fe + dir * 6.4, 17.2, 0.13),
     ),
   ];
@@ -390,12 +390,20 @@ export function buildBrevis({ kit, det, M, grp }) {
     sh2.position.z = -SLIDE2 * k;
   };
 
-  // ---------- čelné dvere: dve krídla so zaoblenými oknami, vysúvajú sa nahor a dozadu pod strechu predného dielu ----------
+  // ---------- čelné dvere: dve posuvné krídla so zaoblenými oknami, kaskádovo doľava pod červený stĺp ----------
+  // pravé krídlo zájde pod ľavé, potom idú obe spolu pod pevný červený stĺp; úplne otvorené prečnievajú cez ľavý
+  // bok stroja o 20 % šírky krídla. Pri zatváraní najprv idú obe spolu, potom samo pravé krídlo.
   const door = new THREE.Group();
-  sh2.add(door);
-  const DH = Math.hypot(CEIL - DOOR_Y0, zf(DOOR_Y0) - zf(CEIL)); // dĺžka krídla (od hornej hrany po spodnú)
+  fd.add(door);
+  const DH = Math.hypot(CEIL - DOOR_Y0, zf(DOOR_Y0) - zf(CEIL)); // výška krídla (pozdĺž šikmého čela)
   const DT = 0.26; // hrúbka
-  const leaf = (xa, xb, wa, wb) => {
+  door.position.set(0, CEIL, zf(CEIL) - 0.1);
+  door.rotation.x = -Math.atan(SLOPE);
+  const leafL = new THREE.Group();
+  const leafR = new THREE.Group();
+  leafR.position.z = -(DT + 0.12); // pravé krídlo jazdí v zadnej dráhe (zasunie sa pod ľavé)
+  door.add(leafL, leafR);
+  const leaf = (g, xa, xb, wa, wb) => {
     const s = new THREE.Shape();
     s.moveTo(xa, -DH);
     s.lineTo(xb, -DH);
@@ -403,7 +411,7 @@ export function buildBrevis({ kit, det, M, grp }) {
     s.lineTo(xa, 0);
     s.closePath();
     s.holes.push(rrect(new THREE.Path(), wa, -5.0, wb, -2.15, 0.45));
-    const g = new THREE.ExtrudeGeometry(s, {
+    const geo = new THREE.ExtrudeGeometry(s, {
       depth: DT - 0.06,
       bevelEnabled: true,
       bevelThickness: 0.03,
@@ -411,47 +419,47 @@ export function buildBrevis({ kit, det, M, grp }) {
       bevelSegments: 1,
       curveSegments: 6,
     });
-    g.translate(0, 0, -DT + 0.03);
-    add(door, g, M.cab, 0, 0, 0);
+    geo.translate(0, 0, -DT + 0.03);
+    add(g, geo, M.cab, 0, 0, 0);
     // čierne tesnenie okna a tmavé ochranné sklo
     const ring = rrect(new THREE.Shape(), wa - 0.14, -5.14, wb + 0.14, -2.01, 0.55);
     ring.holes.push(rrect(new THREE.Path(), wa, -5.0, wb, -2.15, 0.45));
     add(
-      door,
+      g,
       new THREE.ExtrudeGeometry(ring, { depth: 0.03, bevelEnabled: false, curveSegments: 6 }),
       M.black,
       0,
       0,
       0.005,
     );
-    const gl = add(door, new THREE.PlaneGeometry(wb - wa, 2.85), M.glass, (wa + wb) / 2, -3.575, -DT / 2);
+    const gl = add(g, new THREE.PlaneGeometry(wb - wa, 2.85), M.glass, (wa + wb) / 2, -3.575, -DT / 2);
     gl.userData.noMerge = true;
   };
   const XS = 2.15; // stretnutie krídel
-  leaf(X0 + 0.24, XS - 0.02, -5.25, 0.1);
-  leaf(XS + 0.02, X1 - 0.32, 3.25, 8.5);
-  box(door, XS - 0.02, XS + 0.02, -DH, 0, -DT, -0.02, M.dark); // škára medzi krídlami
-  // čierny klin s madlom v pravom dolnom rohu pravého krídla
+  const LA = X0 + 0.1; // ľavá hrana ľavého krídla (zatvorené)
+  leaf(leafL, LA, XS + 0.15, -5.25, 0.1);
+  leaf(leafR, XS - 0.15, X1 - 0.32, 3.25, 8.5);
+  box(leafL, XS + 0.1, XS + 0.15, -DH, 0, -DT, 0.01, M.dark); // tesniaca lišta na styku krídel
+  // čierny klin so zapusteným madlom v pravom dolnom rohu pravého krídla
   const wedge = new THREE.Shape();
   wedge.moveTo(X1 - 0.32, -DH);
   wedge.lineTo(X1 - 0.32, -DH + 3.1);
   wedge.lineTo(X1 - 3.4, -DH);
   wedge.closePath();
-  add(door, new THREE.ExtrudeGeometry(wedge, { depth: 0.05, bevelEnabled: false }), M.black, 0, 0, 0.005);
+  add(leafR, new THREE.ExtrudeGeometry(wedge, { depth: 0.04, bevelEnabled: false }), M.black, 0, 0, 0.005);
   const hx = X1 - 0.82;
-  rbox(door, hx - 0.1, hx + 0.1, -DH + 0.55, -DH + 2.35, 0.08, 0.36, M.black, 0.05);
-  box(door, hx - 0.07, hx + 0.07, -DH + 0.6, -DH + 0.8, 0, 0.25, M.black);
-  box(door, hx - 0.07, hx + 0.07, -DH + 2.1, -DH + 2.3, 0, 0.25, M.black);
-  hitProxy(door, 1.1, hx, -DH + 1.4, 0.35);
-  decal(door, 0.8, 0.72, warn, 9.4, -DH + 3.9, 0.01, 0, 128);
-  // kinematika: horná hrana jazdí po dráhe pod strechou, spodná po šikmom čele nahor
+  rbox(leafR, hx - 0.1, hx + 0.1, -DH + 0.55, -DH + 2.35, 0.0, 0.09, M.dark, 0.04);
+  hitProxy(leafR, 1.1, hx, -DH + 1.4, 0.3);
+  decal(leafR, 0.8, 0.72, warn, 9.4, -DH + 3.9, 0.01, 0, 128);
+  // dráhy: pravé krídlo najprv samo pod ľavé (D), potom obe spolu, až kým ľavá hrana nepresahuje bok o 20 % krídla
+  const WL = XS + 0.15 - LA;
+  const D = XS - 0.15 - LA,
+    T1 = LA - (-W - 0.2 * WL),
+    T2 = D + T1;
   const setDoor = (k) => {
-    const by = DOOR_Y0 + (CEIL - DOOR_Y0) * k,
-      bz = zf(by) - 0.1,
-      dy = CEIL - by,
-      tz = bz - Math.sqrt(Math.max(0, DH * DH - dy * dy));
-    door.position.set(0, CEIL, tz);
-    door.rotation.x = Math.atan2(-(bz - tz), -(by - CEIL));
+    const s = k * T2;
+    leafR.position.x = -s;
+    leafL.position.x = -Math.max(0, s - D);
   };
   setDoor(0);
 
@@ -461,7 +469,7 @@ export function buildBrevis({ kit, det, M, grp }) {
   tbl.add(drawer);
   const PX0 = -6.2,
     PX1 = 7.3,
-    PZ0 = -0.9;
+    PZ0 = -1.4;
   [X0 + 0.25, 7.75].forEach((x) => box(tbl, x - 0.15, x + 0.15, 5.45, 5.65, -6.0, 13.9, M.steelD)); // vedenie
   const ext = [X0 + 0.25, 7.75].map((x) => box(tbl, x - 0.12, x + 0.12, 5.65, 5.85, 3.0, 13.9, M.black)); // výsuvy
   rbox(drawer, PX0, PX0 + 0.45, 5.85, TY - 0.15, PZ0, 14.1, M.red, 0.06);
