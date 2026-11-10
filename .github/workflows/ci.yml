@@ -4,7 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: 'Spustiť aj test v prehliadači (Playwright, ~25 min)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,9 +40,13 @@ jobs:
             git status --short -- public
             exit 1
           fi
+      # Test v prehliadači len na vyžiadanie: Actions → CI → Run workflow so zaškrtnutým „e2e“
+      # alebo štítok „e2e“ na pull requeste.
       - name: Prehliadač pre test (Chromium)
+        if: (github.event_name == 'workflow_dispatch' && inputs.e2e) || contains(github.event.pull_request.labels.*.name, 'e2e')
         run: npx playwright install --with-deps chromium
       - name: Test v prehliadači (všetky stroje, CNC program, ohyb, elektroerózia)
+        if: (github.event_name == 'workflow_dispatch' && inputs.e2e) || contains(github.event.pull_request.labels.*.name, 'e2e')
         run: npm run test:e2e
 
   # Nasadenie na Cloudflare Workers: po každom pushi (zlúčení) do main, ak prešli kontroly.

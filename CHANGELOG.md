@@ -7,6 +7,9 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 10. 11. 2026
 
+- CI: test v prehliadači (Playwright, ~25 min) beží len na vyžiadanie – ručné spustenie workflow so zaškrtnutým „e2e“
+  alebo štítok `e2e` na pull requeste. Animácia otočenia plechu na Bystronic používa skutočný čas (test nevyprší pri
+  nízkej snímkovej frekvencii).
 - Nový moderný stroj: vláknový laser Amada BREVIS 1212 AJ (3 kW, 1 270 × 1 270 mm, AMNC 3i). Tvar podľa siete odhadnutej
   z fotografií (Meshy) a fotografií, rozmery podľa letáku (šírka 2 389, dĺžka 3 088, výška 1 900 mm): úzke čelo s
   červeným stĺpom (žltý dvojpruh, znak AMADA, BREVIS 1212 AJ), šikmé čelné dvere z dvoch krídel so zaoblenými tmavými
