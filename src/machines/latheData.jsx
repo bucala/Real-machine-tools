@@ -34,7 +34,13 @@ export const LATHE_MODELS = {
 // samostatné stroje so spoločným simulátorom (vlastná karta v menu, bez voľby veľkosti)
 // SV 18 RA (TOS Trenčín): točný priemer nad lôžkom 380 mm, výška hrotov 190 mm, vreteno Ø41, 6 kW; otáčky orientačné
 export const LATHE_VARIANTS = {
-  sv18: { name: 'SV 18 RA', S: 0.76, axisH: 7.0, speeds: [31.5, 45, 63, 90, 125, 180, 250, 355, 500, 710, 1000, 1400] },
+  sv18: {
+    name: 'SV 18 RA',
+    style: 'sv',
+    S: 0.76,
+    axisH: 7.0,
+    speeds: [31.5, 45, 63, 90, 125, 180, 250, 355, 500, 710, 1000, 1400],
+  },
 };
 export const MODEL_KEY = 'rmt.lathe.model';
 export const FEED_BASE = [0.05, 0.07, 0.1, 0.14, 0.2, 0.25, 0.35, 0.5],

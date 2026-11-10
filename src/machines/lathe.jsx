@@ -318,26 +318,30 @@ function LatheCore({ onBack, params, model, onModel, fixed = false }) {
                 </p>
               </SectionInfo>
             </div>
-            <Toggle
-              on={ui.guard}
-              label={L('Ochranný kryt skľučovadla s mikrospínačom', 'Chuck guard with microswitch')}
-              onClick={() => set('guard', !ui.guard)}
-            />
-            {ui.guard && (
-              <div className="flex gap-2 mb-2">
-                <button
-                  type="button"
-                  className={`btn ${ui.guardOpen ? 'active' : ''}`}
-                  onClick={() => set('guardOpen', !ui.guardOpen)}
-                >
-                  {ui.guardOpen ? L('Zatvoriť kryt', 'Close the guard') : L('Otvoriť kryt', 'Open the guard')}
-                </button>
-                <span className="text-xs muted self-center">
-                  {ui.guardOpen
-                    ? L('otvorený – vreteno sa nespustí', 'open – the spindle will not start')
-                    : L('zatvorený', 'closed')}
-                </span>
-              </div>
+            {!fixed && (
+              <>
+                <Toggle
+                  on={ui.guard}
+                  label={L('Ochranný kryt skľučovadla s mikrospínačom', 'Chuck guard with microswitch')}
+                  onClick={() => set('guard', !ui.guard)}
+                />
+                {ui.guard && (
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      className={`btn ${ui.guardOpen ? 'active' : ''}`}
+                      onClick={() => set('guardOpen', !ui.guardOpen)}
+                    >
+                      {ui.guardOpen ? L('Zatvoriť kryt', 'Close the guard') : L('Otvoriť kryt', 'Open the guard')}
+                    </button>
+                    <span className="text-xs muted self-center">
+                      {ui.guardOpen
+                        ? L('otvorený – vreteno sa nespustí', 'open – the spindle will not start')
+                        : L('zatvorený', 'closed')}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
             <Toggle
               on={ui.coolant}
