@@ -110,7 +110,9 @@ for (const route of ['', 'moderne', ...MACHINES]) {
 // 1b) klasické stroje: každý ovládač v scéne (tlačidlo, páka, koleso, posuvný diel) sa dá aktivovať bez výnimky
 //     a každý viditeľný ovládač na obrazovke je z predvoleného pohľadu klikateľný (zakružovačka mala panel otočený
 //     k stojanu, nožnice hlavný vypínač v stolíku)
-for (const route of MACHINES.filter((m) => !['hermle', 'roeders', 'shuangli', 'oscarmax', 'bystronic'].includes(m))) {
+for (const route of MACHINES.filter(
+  (m) => !['hermle', 'roeders', 'shuangli', 'oscarmax', 'bystronic', 'amada'].includes(m),
+)) {
   const { page, ctx, problems } = await open(route, { debug: true });
   try {
     await until(page, () => window.__stage?.controls?.entries().length);
