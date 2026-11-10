@@ -182,6 +182,6 @@ detaily). Nové stroje boli postavené podľa konkrétnych overených modelov:
 | 20  | Brúska nožov (`#dvojkotuc`)                          | TOS BBT 350 – dva kotúče brúsiace čelom, naklápacie stoly 560 × 210 mm, vreteno ≈ 1 560 ot/min (inzerát equipt, fotky používateľa) |
 | 21  | Vodorovná pásová píla (`#pasovka`)                   | Pilous ARG 200 PLUS (Česko, nie TOS) – kruh do Ø200, pás 20 × 0,9 mm, 40 / 80 m/min, 60° / 45° (directindustry) |
 | 21  | Ohýbačka rúr                                         | konkrétny model TOS sa nenašiel – zostáva na ďalšie kolo                                      |
-| 22  | Buchar                                               | Šmeral KJH 2 (hydraulicko-pneumatický, baran 650 kg, 20 kJ, smeral.cz) – zostáva na ďalšie kolo |
+| 22  | Kovací buchar (`#buchar`)                           | Šmeral KHZ 2 – 20 kJ, baran 920 kg, zdvih 400 mm, 60 úderov/min (inzerát exapro); KJH 2 sa overiť nepodarilo, KJH 4 je protiúderový zápustkový buchar |
 
 Údaje, ktoré sa nepodarilo overiť (napr. stupne zdvihov HOV 25), sú v simulátore označené ako orientačné.

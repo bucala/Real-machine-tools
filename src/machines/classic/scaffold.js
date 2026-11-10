@@ -26,6 +26,7 @@ export function createClassicScene({
   name,
   sound,
   debugKey,
+  orbitOptions,
   build,
 }) {
   const { renderer, scene, camera, dispose: disposeStage, snapshot } = createStage(mount);
@@ -74,6 +75,7 @@ export function createClassicScene({
     onPick: (k) => apiRef.current.onPick(k),
     blockPick: () => ctrl.isUsed() || c.unclamped,
     onHL: () => ctrl.invalidate(),
+    orbitOptions,
   });
   ctrl = createControls({ dom, mount, camera, root, tipEl, c, getT: () => t, getHL: insp.hl });
   const { push, pend } = ctrl;

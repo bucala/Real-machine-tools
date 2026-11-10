@@ -54,6 +54,7 @@ const PROFILES = {
   mig: { motor: [95, 210], arc: true }, // invertor nehučí – počuť podávač drôtu a oblúk
   folder: {},
   bender: { motor: [52, 118], cut: 420, q: 1.5, cutGain: 0.1 }, // prevodovka valcov a vŕzganie profilu pri ohybe
+  hammer: { motor: [32, 75], cut: 180, q: 0.7, cutGain: 0.6 }, // hydraulické čerpadlo a tupý úder baranu
 };
 
 function createSound(kind) {

@@ -35,6 +35,7 @@ import {
   FguArt,
   FnkArt,
   HBandSawArt,
+  HammerArt,
   HovArt,
   KaruselArt,
   SvArt,
@@ -70,6 +71,7 @@ const BbtSimulator = lazy(() => import('./machines/bbt'));
 const BbjSimulator = lazy(() => import('./machines/bbj'));
 const HovSimulator = lazy(() => import('./machines/hov'));
 const PasovkaSimulator = lazy(() => import('./machines/pasovka'));
+const BucharSimulator = lazy(() => import('./machines/buchar'));
 const SvSimulator = lazy(() => import('./machines/lathe').then((m) => ({ default: m.SvSimulator })));
 const BandSawSimulator = lazy(() => import('./machines/saw'));
 const WeldingSimulator = lazy(() => import('./machines/weld'));
@@ -560,6 +562,25 @@ const MACHINES = [
         L('Kruh do Ø200 mm', 'Round up to Ø200 mm'),
         L('Pás 20 × 0,9 mm, 40 / 80 m/min', 'Band 20 × 0.9 mm, 40 / 80 m/min'),
         L('Šikmo 60° vpravo, 45° vľavo', 'Mitre 60° right, 45° left'),
+      ],
+    }),
+  },
+  {
+    id: 'buchar',
+    Art: HammerArt,
+    Comp: BucharSimulator,
+    t: () => ({
+      meta: L('Kovací buchar', 'Forging hammer'),
+      name: L('Hydraulický kovací buchar s pecou', 'Hydraulic forging hammer with furnace'),
+      model: 'Šmeral KHZ 2',
+      desc: L(
+        'Voľné kovanie hranola: ohrev v plynovej peci, prenos kliešťami, energia úderu voličom a pedál, otáčanie o 90°, kovacia teplota 1 200 – 850 °C, trhliny za studena a spálenie materiálu.',
+        'Open-die forging of a bar: heating in a gas furnace, carrying with tongs, blow energy by selector and pedal, turning 90°, forging temperature 1,200 – 850 °C, cold cracks and burnt steel.',
+      ),
+      specs: [
+        L('Energia úderu 20 kJ', 'Blow energy 20 kJ'),
+        L('Baran 920 kg, zdvih 400 mm', 'Ram 920 kg, stroke 400 mm'),
+        L('Kovanie 1 200 – 850 °C', 'Forging 1,200 – 850 °C'),
       ],
     }),
   },

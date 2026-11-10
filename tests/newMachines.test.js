@@ -1,4 +1,5 @@
-// Výpočtové jadrá nových klasických strojov: TOS FGU 32, FNK 25, SK 12, BN 102 / BBT 350, BBJ 6, HOV 25 a píla Pilous ARG.
+// Výpočtové jadrá nových klasických strojov: TOS FGU 32, FNK 25, SK 12, BN 102 / BBT 350, BBJ 6, HOV 25, píla Pilous ARG
+// a buchar Šmeral KHZ 2.
 import { describe, expect, it } from 'vitest';
 import { FGU, cuttingSpeed, discBottom, isClimb } from '../src/machines/fguMath';
 import { toolAxis } from '../src/machines/fnkMath';
@@ -8,6 +9,7 @@ import { BBJ, grindPass, pinsInfo, throughFeed } from '../src/machines/bbjMath';
 import { ringCut } from '../src/machines/slotterMath';
 import { HOV_TOOLS, arcInfo, hovBlank, hovChecks, hovToolRect, keywaysInfo, pitchErr } from '../src/machines/hovMath';
 import { ARG, argChecks, chord, cutWidth, piecesInfo, qMax } from '../src/machines/pasovkaMath';
+import { KHZ, blank, blow, bucharChecks, cool, flowStress, heat, turn } from '../src/machines/bucharMath';
 
 describe('frézky FGU 32 a FNK 25', () => {
   it('rezná rýchlosť kotúčovej frézy Ø100 pri 63 ot/min je ≈ 19,8 m/min', () => {
@@ -148,5 +150,35 @@ describe('pásová píla Pilous ARG 200 PLUS', () => {
     const p = (aR) => ({ l: 150, aL: 45, aR, rough: false, loose: false, bad: false });
     expect(piecesInfo([p(45), p(45)], 150, 45).ok).toBe(2);
     expect(piecesInfo([p(0), p(45)], 150, 45).ok).toBe(1);
+  });
+});
+
+describe('kovací buchar Šmeral KHZ 2', () => {
+  it('úder zachová objem, zníži výšku a rozšíri hranol', () => {
+    const b = blank(),
+      r = blow(b, 2, 1200);
+    expect(r.h).toBeLessThan(b.h);
+    expect(r.w).toBeGreaterThan(b.w);
+    expect(r.h * r.w * r.L).toBeCloseTo(b.h * b.w * b.L, 3);
+  });
+  it('studený materiál sa pretvorí menej a slabý úder menej ako silný', () => {
+    const b = blank();
+    expect(blow(b, 2, 900).d).toBeLessThan(blow(b, 2, 1200).d);
+    expect(blow(b, 0, 1200).d).toBeLessThan(blow(b, 4, 1200).d);
+    expect(flowStress(850)).toBeGreaterThan(flowStress(1200));
+  });
+  it('otočenie vymení výšku a šírku, pec ohrieva a vzduch chladí', () => {
+    expect(turn({ h: 40, w: 66, L: 160 })).toEqual({ h: 66, w: 40, L: 160 });
+    expect(heat(20, 30, 60, 1220)).toBeGreaterThan(1000);
+    expect(cool(1200, 60, 60)).toBeLessThan(1000);
+    expect(cool(1200, 60, 30)).toBeLessThan(cool(1200, 60, 60));
+  });
+  it('kontrola úlohy plochá tyč 40 × 60', () => {
+    const ok = bucharChecks.plochy({ b: { h: 40.3, w: 61.5, L: 175 }, cold: 0, crack: false, burnt: false });
+    expect(ok.every((c) => c.ok)).toBe(true);
+    const bad = bucharChecks.plochy({ b: { h: 40.3, w: 67, L: 160 }, cold: 2, crack: false, burnt: false });
+    expect(bad.find((c) => c.key === 'w').ok).toBe(false);
+    expect(bad.find((c) => c.key === 'cold').ok).toBe(false);
+    expect(KHZ.E).toBe(20000);
   });
 });
