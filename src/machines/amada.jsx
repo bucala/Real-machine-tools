@@ -1561,19 +1561,17 @@ function buildAmada(x) {
   };
   apiRef.current.hmiHover = (x, y) => !!hitAt(x, y);
   apiRef.current.paintHmi = drawScreen;
-  // živý pohľad do rezacieho priestoru (Priestor / Split v HMI): kamera vnútri krytu vpredu hore, sleduje hlavu
-  const look = new THREE.Vector3(BV.SX, BV.TY, BV.SZ),
-    headW = new THREE.Vector3();
+  // živý pohľad do rezacieho priestoru (Priestor / Split v HMI): pevná širokouhlá kamera vnútri krytu
+  // pod strechou za čelným sklom – celý plech a portál v zábere bez pohybu kamery
   apiRef.current.mountWorkArea = workAreaFeed({
     scene: x.scene,
     camera: x.camera,
     renderer: x.renderer,
-    fov: 62,
-    view: () => {
-      model.gy.getWorldPosition(headW);
-      look.lerp(headW.set(headW.x * 0.35 + BV.SX * 0.65, BV.TY, headW.z * 0.35 + BV.SZ * 0.65), 0.12);
-      return [[-3.0, 17.0, 12.4], look.toArray()]; // pod strechou za čelným sklom, celý plech v zábere
-    },
+    fov: 84,
+    view: () => [
+      [-3.0, 17.0, 12.4],
+      [BV.SX, BV.TY, BV.SZ - 1.0],
+    ],
   });
   apiRef.current.toggleRun = () => (running() ? act.hold() : act.start());
   apiRef.current.newBlank = () => {
@@ -1786,6 +1784,54 @@ function buildAmada(x) {
   });
   // ---------- slučka ----------
   let last = 0;
+  // pohyb dverí, krytov, palety a servisných dverí (beží aj počas prehliadky obrobku)
+  const enclosure = (dt) => {
+    if (!c.door) st.doorTgt = 0;
+    else if (st.doorTgt <= 0) st.doorTgt = 1; // obnovený stav alebo iné ovládanie
+    st.doorK = approach(st.doorK, st.shellK > 0.001 ? st.doorK : st.doorTgt, 0.35 * dt);
+    // paleta vyjde až pri úplne otvorenom čele
+    st.drawerK = approach(st.drawerK, c.drawer && st.doorK > 0.98 ? 1 : 0, 0.6 * dt);
+    st.side = st.side.map((k, i) => approach(k, [c.sideL, c.sideR1, c.sideR2][i] ? 1 : 0, 1.2 * dt));
+    const e = (k) => k * k * (3 - 2 * k);
+    // pravé krídlo pod ľavé, potom obe spolu pod stĺp; plynulý rozbeh a dobeh aj v medzipolohe pedálu
+    const ks = model.doorStep;
+    model.setDoor(st.doorK <= ks ? ks * e(st.doorK / ks) : ks + (1 - ks) * e((st.doorK - ks) / (1 - ks)));
+    model.setShells(e(st.shellK));
+    model.drawer.position.z = BV.DRAWER * e(st.drawerK);
+    // pri vysúvaní sa paleta s plechom nadvihne nad pevné lamely, pri zasunutí klesne späť na všetky hroty
+    model.drawer.position.y = 0.22 * e(clamp(st.drawerK / 0.08, 0, 1));
+    model.ext.forEach((m) => (m.position.z = (BV.DRAWER * e(st.drawerK)) / 2));
+    model.doorsSide.forEach((d, i) => (d.pivot.rotation.y = d.ry0 - d.span * 1.75 * e(st.side[i])));
+  };
+  // Pozrieť obrobok: pri vypnutom alebo nečinnom stroji sa úplne otvorí čelo a vysunie paleta, plech sa vyberie
+  // na prehliadku; po vrátení sa dvere a paleta vrátia do pôvodného stavu
+  let before = null;
+  const inspect = {
+    workObj: () => model.sheet.mesh,
+    workSpot: () => v3(BV.SX, BV.TY + 4.5, BV.SZ + BV.DRAWER + 7),
+    canInspect: () =>
+      running() || proc.S.phase === 'hold'
+        ? L(
+            'Plech sa dá pozrieť pri vypnutom alebo nečinnom stroji.',
+            'The sheet can be inspected with the machine off or idle.',
+          )
+        : !st.sheet
+          ? L('Na palete nie je plech.', 'There is no sheet on the pallet.')
+          : null,
+    prepareInspect: () => {
+      before = { tgt: st.doorTgt, drawer: c.drawer };
+      setDoorTgt(1);
+      push('drawer', true);
+    },
+    canDetach: () => st.doorK > 0.99 && st.drawerK > 0.99,
+    restoreInspect: () => {
+      if (!before) return;
+      push('drawer', before.drawer);
+      setDoorTgt(before.tgt);
+      before = null;
+    },
+    idleUpdate: (dt) => enclosure(dt),
+  };
   const update = (dt, t) => {
     if (!c.power) {
       if (running()) proc.hold('power');
@@ -1815,21 +1861,7 @@ function buildAmada(x) {
         st.pedal = null;
       }
     }
-    if (!c.door) st.doorTgt = 0;
-    else if (st.doorTgt <= 0) st.doorTgt = 1; // obnovený stav alebo iné ovládanie
-    st.doorK = approach(st.doorK, st.shellK > 0.001 ? st.doorK : st.doorTgt, 0.35 * dt);
-    st.drawerK = approach(st.drawerK, c.drawer ? 1 : 0, 0.6 * dt);
-    st.side = st.side.map((k, i) => approach(k, [c.sideL, c.sideR1, c.sideR2][i] ? 1 : 0, 1.2 * dt));
-    const e = (k) => k * k * (3 - 2 * k);
-    // pravé krídlo pod ľavé, potom obe spolu pod stĺp; plynulý rozbeh a dobeh aj v medzipolohe pedálu
-    const ks = model.doorStep;
-    model.setDoor(st.doorK <= ks ? ks * e(st.doorK / ks) : ks + (1 - ks) * e((st.doorK - ks) / (1 - ks)));
-    model.setShells(e(st.shellK));
-    model.drawer.position.z = BV.DRAWER * e(st.drawerK);
-    // pri vysúvaní sa paleta s plechom nadvihne nad pevné lamely, pri zasunutí klesne späť na všetky hroty
-    model.drawer.position.y = 0.22 * e(clamp(st.drawerK / 0.08, 0, 1));
-    model.ext.forEach((m) => (m.position.z = (BV.DRAWER * e(st.drawerK)) / 2));
-    model.doorsSide.forEach((d, i) => (d.pivot.rotation.y = d.ry0 - d.span * 1.75 * e(st.side[i])));
+    enclosure(dt);
     // proces
     proc.setCond(cond());
     if (running()) {
@@ -1936,6 +1968,7 @@ function buildAmada(x) {
   };
   return {
     update,
+    ...inspect,
     tele: () => ({
       phase: proc.S.phase,
       op: proc.S.op,

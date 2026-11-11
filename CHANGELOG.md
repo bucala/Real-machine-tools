@@ -7,6 +7,9 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
 
 ## 10. 11. 2026
 
+- Dokumentácia: prepracovaný README (stručný prehľad, kategórie strojov s náhľadmi, rozbaľovacie sekcie pre
+  ovládanie, HMI, exporty a vývoj) a nová [dokumentácia strojov](docs/machines/README.md) – všetkých 32 strojov
+  s aktuálnymi snímkami 3D scén, parametrami, odkazom do simulátora a rozbaľovacím opisom častí.
 - CI: test v prehliadači (Playwright, ~25 min) beží len na vyžiadanie – ručné spustenie workflow so zaškrtnutým „e2e“
   alebo štítok `e2e` na pull requeste. Animácia otočenia plechu na Bystronic používa skutočný čas (test nevyprší pri
   nízkej snímkovej frekvencii).
@@ -33,11 +36,13 @@ moderných strojov sú v [docs/precision-machines.md](docs/precision-machines.md
   núdzový STOP, dvere, bočné kryty, paleta) a prepínačom osvetlenia; dvojklik na obrazovku v ručnom režime otvorí HMI
   AMNC 3i na celú obrazovku ako vernú kópiu tabletu z modelu (rovnaký tvar, gumené rohy, úchopy, živá obrazovka, núdzový
   STOP, regulátor OVERRIDE, kľúčový spínač laseru a tlačidlá na rovnakých miestach a funkčné). Kolízia núdzového STOP s
-  regulátorom OVERRIDE odstránená posunom doľava. Lišta HMI má ako pri iných strojoch Priestor (živý pohľad kamerou
-  vnútri krytu na plech a hlavu), Split a zvuk; displej je dotykový so stránkami PROGRAM, CONDITION, MANUAL, SETUP a
-  MAINT. Pedál: krátke stlačenie posúva len čelné krídla po jednom (pravé pod ľavé, obe pod stĺp, späť pravé,
-  zatvorené), dlhé podržanie otvorí alebo zatvorí čelo aj bočné kryty; voľné tlačidlá HMI ovládajú svetlo (LIGHT) a
-  bočné kryty (COVER).
+  regulátorom OVERRIDE odstránená posunom doľava. Lišta HMI má ako pri iných strojoch Priestor (pevný širokouhlý pohľad
+  kamerou vnútri krytu na celý plech a portál), Split a zvuk; displej je dotykový so stránkami PROGRAM, CONDITION,
+  MANUAL, SETUP a MAINT. Pedál: krátke stlačenie posúva len čelné krídla po jednom (pravé pod ľavé, obe pod stĺp, späť
+  pravé, zatvorené), dlhé podržanie otvorí alebo zatvorí čelo aj bočné kryty; voľné tlačidlá HMI ovládajú svetlo (LIGHT)
+  a bočné kryty (COVER). Pozrieť obrobok pri vypnutom alebo nečinnom stroji úplne otvorí čelo, vysunie paletu a plech
+  vyberie na prehliadku; po vrátení sa dvere a paleta vrátia do pôvodného stavu. Odstránený čierny prah nad vysunutou
+  paletou.
 - Nový stroj: kovací buchar Šmeral KHZ 2 (energia úderu 20 kJ, baran 920 kg, zdvih 400 mm) podľa fotiek – zúžený
   rám s pracovným oknom, valec na vrchu, ploché kovadlá, ovládacie stojany a pedál; plynová kovacia pec s dvierkami
   a regulátorom teploty, kliešte. Kovanie hranola so zachovaním objemu a rozširovaním, energia úderu voličom,
